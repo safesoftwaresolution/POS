@@ -5,12 +5,10 @@ import {
   ShoppingCart,
   Package,
   Tag,
-  Truck,
   Users,
   FileText,
   FileCheck2,
   BarChart3,
-  RotateCcw,
   Settings,
   HelpCircle,
   LogOut,
@@ -35,10 +33,8 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
       title: 'Operación',
       items: [
         { path: '/pos', label: 'Punto de Venta', icon: ShoppingCart },
-        { path: '/returns', label: 'Devoluciones', icon: RotateCcw },
         { path: '/products', label: 'Productos', icon: Tag },
         { path: '/inventory', label: 'Inventario', icon: Package },
-        { path: '/suppliers', label: 'Proveedores', icon: Truck },
       ],
     },
     {

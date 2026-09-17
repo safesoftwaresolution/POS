@@ -283,15 +283,15 @@ export default function POSBento() {
 
       {/* Top Banner */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-5">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-black tracking-tight text-[#161b22] dark:text-white flex items-center gap-2">
+        <div className="shrink-0">
+          <h1 className="text-xl sm:text-2xl font-black tracking-tight text-[#161b22] dark:text-white flex items-center gap-2 whitespace-nowrap">
             Punto de Venta <span className="text-xs font-bold px-2.5 py-1 bg-[#B3654A]/10 dark:bg-[#B3654A]/20 text-[#B3654A] dark:text-[#D0906D] rounded-full border border-[#B3654A]/25">Caja Principal</span>
           </h1>
           <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Registra tus ventas de forma rápida y en equilibrio</p>
         </div>
 
         {/* Scrollable Categories List */}
-        <div className="flex items-center gap-2 overflow-x-auto text-nowrap pb-1 max-w-full">
+        <div className="flex items-center gap-2 overflow-x-auto text-nowrap pb-1 min-w-0 md:flex-1">
           <span className="text-xs font-bold text-gray-500 dark:text-gray-400 shrink-0">Categorías:</span>
           <div className="flex gap-1.5 shrink-0">
             {categoriesList.map(cat => (

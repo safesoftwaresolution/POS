@@ -18,12 +18,10 @@ import StoreOnboardingBento from './pages/onboarding/StoreOnboardingBento';
 import DashboardBento from './pages/DashboardBento';
 import POSBento from './pages/POSBento';
 import InventoryBento from './pages/InventoryBento';
-import SuppliersBento from './pages/SuppliersBento';
 import ProductsBento from './pages/ProductsBento';
 import CustomersBento from './pages/CustomersBento';
 import InvoicingBento from './pages/InvoicingBento';
 import ReportsBento from './pages/ReportsBento';
-import ReturnsBento from './pages/ReturnsBento';
 import SettingsBento from './pages/SettingsBento';
 import DocumentsBento from './pages/DocumentsBento';
 import StoresBento from './pages/backoffice/StoresBento';
@@ -130,12 +128,12 @@ function ProtectedLayoutContent({ mobileSidebarOpen, setMobileSidebarOpen, sideb
             <Route path="/" element={<DashboardBento />} />
             <Route path="/pos" element={<POSBento />} />
             <Route path="/inventory" element={<InventoryBento />} />
-            <Route path="/suppliers" element={<SuppliersBento />} />
+            <Route path="/suppliers" element={<Navigate to="/inventory?tab=suppliers" replace />} />
             <Route path="/products" element={<ProductsBento />} />
             <Route path="/customers" element={<CustomersBento />} />
             <Route path="/invoicing" element={<InvoicingBento />} />
             <Route path="/reports" element={<ReportsBento />} />
-            <Route path="/returns" element={<ReturnsBento />} />
+            <Route path="/returns" element={<Navigate to="/inventory?tab=returns" replace />} />
             <Route path="/documents" element={<DocumentsBento />} />
             <Route path="/settings" element={<SettingsBento />} />
             <Route path="*" element={<Navigate to="/" replace />} />

@@ -3,12 +3,13 @@ import {
   Plus,
   Search,
   Trash2,
+  Edit3,
   Barcode,
   Package,
   AlertCircle,
   ImagePlus
 } from 'lucide-react';
-import { getProductsApi, createProductApi, deleteProductApi } from '../services/productsApi';
+import { getProductsApi, createProductApi, updateProductApi, deleteProductApi } from '../services/productsApi';
 import { getCategoriesApi } from '../services/categoriesApi';
 import { getSubcategoriesApi, createSubcategoryApi } from '../services/subcategoriesApi';
 import { createInventoryMovementApi } from '../services/inventoryApi';
@@ -17,11 +18,13 @@ import { uploadFileApi } from '../services/http';
 import BarcodeModal from '../components/BarcodeModal';
 
 const EMPTY_PRODUCT = {
+  id: null,
   name: '',
   barcode: '',
   internalCode: '',
   categoryId: '',
   subcategoryId: '',
+  purchasePrice: null,
   price: '',
   stock: '',
   minStock: 5,
@@ -98,26 +101,65 @@ export default function ProductsBento() {
     }
   };
 
-  const handleAddProduct = async (e) => {
+  const openCreateModal = () => {
+    setNewProduct(EMPTY_PRODUCT);
+    setErrorMsg('');
+    setShowAddModal(true);
+  };
+
+  const openEditModal = (p) => {
+    const category = categories.find(c => c.name === p.categoryName);
+    setNewProduct({
+      id: p.id,
+      name: p.name || '',
+      barcode: p.barcode || '',
+      internalCode: p.internalCode || '',
+      categoryId: category ? String(category.id) : '',
+      subcategoryId: p.subcategoryId ? String(p.subcategoryId) : '',
+      purchasePrice: p.purchasePrice ?? null,
+      price: p.salePrice ?? p.price ?? '',
+      stock: '',
+      minStock: p.minStock ?? 5,
+      imageUrl: p.imageUrl || ''
+    });
+    setErrorMsg('');
+    setShowAddModal(true);
+  };
+
+  const handleSubmitProduct = async (e) => {
     e.preventDefault();
     setErrorMsg('');
     if (!newProduct.name || !newProduct.price || !newProduct.categoryId) return;
 
     try {
-      const created = await createProductApi({
-        name: newProduct.name,
-        barcode: newProduct.barcode || `${Math.floor(1000000000000 + Math.random() * 9000000000000)}`,
-        internalCode: newProduct.internalCode || `PROD-00${products.length + 1}`,
-        categoryId: Number(newProduct.categoryId),
-        subcategoryId: newProduct.subcategoryId ? Number(newProduct.subcategoryId) : null,
-        price: parseFloat(newProduct.price),
-        minStock: parseInt(newProduct.minStock) || 5,
-        imageUrl: newProduct.imageUrl || null
-      });
+      if (newProduct.id) {
+        await updateProductApi(newProduct.id, {
+          name: newProduct.name,
+          description: newProduct.name,
+          categoryId: Number(newProduct.categoryId),
+          subcategoryId: newProduct.subcategoryId ? Number(newProduct.subcategoryId) : null,
+          purchasePrice: parseFloat(newProduct.purchasePrice ?? newProduct.price * 0.7),
+          salePrice: parseFloat(newProduct.price),
+          barcode: newProduct.barcode,
+          minStock: parseInt(newProduct.minStock) || 5,
+          imageUrl: newProduct.imageUrl || null
+        });
+      } else {
+        const created = await createProductApi({
+          name: newProduct.name,
+          barcode: newProduct.barcode || `${Math.floor(1000000000000 + Math.random() * 9000000000000)}`,
+          internalCode: newProduct.internalCode || `PROD-00${products.length + 1}`,
+          categoryId: Number(newProduct.categoryId),
+          subcategoryId: newProduct.subcategoryId ? Number(newProduct.subcategoryId) : null,
+          price: parseFloat(newProduct.price),
+          minStock: parseInt(newProduct.minStock) || 5,
+          imageUrl: newProduct.imageUrl || null
+        });
 
-      const initialStock = parseInt(newProduct.stock) || 0;
-      if (initialStock > 0) {
-        await createInventoryMovementApi(created.id, 'ENTRY', initialStock, 'Stock inicial al crear el producto');
+        const initialStock = parseInt(newProduct.stock) || 0;
+        if (initialStock > 0) {
+          await createInventoryMovementApi(created.id, 'ENTRY', initialStock, 'Stock inicial al crear el producto');
+        }
       }
 
       setShowAddModal(false);
@@ -173,7 +215,7 @@ export default function ProductsBento() {
         </div>
 
         <button
-          onClick={() => setShowAddModal(true)}
+          onClick={openCreateModal}
           className="px-4 py-2.5 bg-[#B3654A] hover:bg-[#96503A] text-white rounded-2xl text-xs font-bold flex items-center gap-2 shadow-md shadow-[#B3654A]/20 cursor-pointer transition-all"
         >
           <Plus className="w-4 h-4" /> Crear Nuevo Producto
@@ -207,7 +249,7 @@ export default function ProductsBento() {
               <p className="text-[11px] text-gray-400 dark:text-gray-500">Crea tu primer producto para empezar a registrar ventas</p>
             </div>
             <button
-              onClick={() => setShowAddModal(true)}
+              onClick={openCreateModal}
               className="px-4 py-2 bg-[#B3654A] text-white rounded-xl text-xs font-extrabold shadow-sm hover:bg-[#96503A] cursor-pointer"
             >
               + Registrar Primer Producto
@@ -265,6 +307,13 @@ export default function ProductsBento() {
                       <Barcode className="w-4 h-4" />
                     </button>
                     <button
+                      onClick={() => openEditModal(p)}
+                      title="Editar producto"
+                      className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-[#B3654A] dark:hover:text-[#D0906D] rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer"
+                    >
+                      <Edit3 className="w-4 h-4" />
+                    </button>
+                    <button
                       onClick={() => handleDelete(p.id)}
                       title="Eliminar producto"
                       className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer"
@@ -282,8 +331,10 @@ export default function ProductsBento() {
       {/* Add Product Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <form onSubmit={handleAddProduct} className="bento-card max-w-md w-full bg-white dark:bg-[#161b22] p-6 rounded-3xl shadow-2xl space-y-4 border border-gray-200 dark:border-[#262f38]">
-            <h3 className="font-extrabold text-base text-[#161b22] dark:text-white">Crear Nuevo Producto</h3>
+          <form onSubmit={handleSubmitProduct} className="bento-card max-w-md w-full bg-white dark:bg-[#161b22] p-6 rounded-3xl shadow-2xl space-y-4 border border-gray-200 dark:border-[#262f38]">
+            <h3 className="font-extrabold text-base text-[#161b22] dark:text-white">
+              {newProduct.id ? 'Editar Producto' : 'Crear Nuevo Producto'}
+            </h3>
 
             {errorMsg && (
               <div className="p-3 bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800/40 rounded-xl text-xs font-bold flex items-center gap-2">
@@ -426,12 +477,13 @@ export default function ProductsBento() {
                     value={newProduct.internalCode}
                     onChange={e => setNewProduct({ ...newProduct, internalCode: e.target.value })}
                     placeholder="PROD-101"
-                    className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-gray-300 dark:border-[#262f38] rounded-2xl font-mono text-xs text-[#161b22] dark:text-white focus:outline-none focus:border-[#B3654A]"
+                    disabled={!!newProduct.id}
+                    className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-gray-300 dark:border-[#262f38] rounded-2xl font-mono text-xs text-[#161b22] dark:text-white disabled:opacity-60 focus:outline-none focus:border-[#B3654A]"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
+              <div className={newProduct.id ? '' : 'grid grid-cols-2 gap-2'}>
                 <div>
                   <label className="font-bold text-gray-700 dark:text-gray-300 block mb-1">Precio Venta ($ COP):</label>
                   <input
@@ -443,17 +495,24 @@ export default function ProductsBento() {
                     required
                   />
                 </div>
-                <div>
-                  <label className="font-bold text-gray-700 dark:text-gray-300 block mb-1">Stock Inicial:</label>
-                  <input
-                    type="number"
-                    value={newProduct.stock}
-                    onChange={e => setNewProduct({ ...newProduct, stock: e.target.value })}
-                    placeholder="50"
-                    className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-gray-300 dark:border-[#262f38] rounded-2xl font-bold text-[#161b22] dark:text-white focus:outline-none focus:border-[#B3654A]"
-                  />
-                </div>
+                {!newProduct.id && (
+                  <div>
+                    <label className="font-bold text-gray-700 dark:text-gray-300 block mb-1">Stock Inicial:</label>
+                    <input
+                      type="number"
+                      value={newProduct.stock}
+                      onChange={e => setNewProduct({ ...newProduct, stock: e.target.value })}
+                      placeholder="50"
+                      className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-gray-300 dark:border-[#262f38] rounded-2xl font-bold text-[#161b22] dark:text-white focus:outline-none focus:border-[#B3654A]"
+                    />
+                  </div>
+                )}
               </div>
+              {newProduct.id && (
+                <p className="text-[10px] text-gray-400 dark:text-gray-500">
+                  Para ajustar el stock ve al módulo de Inventario.
+                </p>
+              )}
             </div>
 
             <div className="flex gap-2 pt-2">
@@ -469,7 +528,7 @@ export default function ProductsBento() {
                 disabled={categories.length === 0}
                 className="w-1/2 py-3 bg-[#B3654A] hover:bg-[#96503A] disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-2xl text-xs font-extrabold shadow-md shadow-[#B3654A]/20 cursor-pointer"
               >
-                Guardar Producto
+                {newProduct.id ? 'Guardar Cambios' : 'Guardar Producto'}
               </button>
             </div>
           </form>

@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import {
   Package,
   AlertTriangle,
   ArrowUpRight,
   Search,
   Truck,
+  RotateCcw,
   RefreshCw,
   Barcode
 } from 'lucide-react';
@@ -14,9 +15,20 @@ import { createPurchaseApi } from '../services/inventoryApi';
 import { getSuppliersApi } from '../services/suppliersApi';
 import { useModal } from '../context/ModalContext';
 import BarcodeModal from '../components/BarcodeModal';
+import ReturnsBento from './ReturnsBento';
+import SuppliersBento from './SuppliersBento';
+
+const TABS = [
+  { id: 'stock', label: 'Stock', icon: Package },
+  { id: 'returns', label: 'Devoluciones', icon: RotateCcw },
+  { id: 'suppliers', label: 'Proveedores', icon: Truck },
+];
 
 export default function InventoryBento() {
   const { notify } = useModal();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = TABS.some(t => t.id === searchParams.get('tab')) ? searchParams.get('tab') : 'stock';
+  const setActiveTab = (tab) => setSearchParams(tab === 'stock' ? {} : { tab }, { replace: true });
   const [productsList, setProductsList] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -97,24 +109,51 @@ export default function InventoryBento() {
       {/* Header banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-[#161b22] dark:text-white">Control de Inventario</h1>
-          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Kardex real y reabastecimiento directo de existencias en BentoPOS</p>
+          <h1 className="text-2xl font-black text-[#161b22] dark:text-white">Inventario</h1>
+          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Stock, devoluciones y proveedores en un solo módulo de BentoPOS</p>
         </div>
 
-        <button
-          onClick={() => {
-            if (productsList.length > 0) {
-              openPurchaseModal(productsList[0]);
-            } else {
-              notify('Debes crear primero un producto en el catálogo.', { danger: false });
-            }
-          }}
-          className="px-4 py-2.5 bg-[#B3654A] hover:bg-[#96503A] text-white rounded-2xl text-xs font-bold flex items-center gap-2 shadow-md shadow-[#B3654A]/20 cursor-pointer transition-all"
-        >
-          <Truck className="w-4 h-4" /> Registrar Compra (+Stock)
-        </button>
+        {activeTab === 'stock' && (
+          <button
+            onClick={() => {
+              if (productsList.length > 0) {
+                openPurchaseModal(productsList[0]);
+              } else {
+                notify('Debes crear primero un producto en el catálogo.', { danger: false });
+              }
+            }}
+            className="px-4 py-2.5 bg-[#B3654A] hover:bg-[#96503A] text-white rounded-2xl text-xs font-bold flex items-center gap-2 shadow-md shadow-[#B3654A]/20 cursor-pointer transition-all"
+          >
+            <Truck className="w-4 h-4" /> Registrar Compra (+Stock)
+          </button>
+        )}
       </div>
 
+      {/* Tab Switcher */}
+      <div className="flex bg-gray-100 dark:bg-[#262f38] rounded-full p-1 border border-gray-200 dark:border-gray-700 w-fit">
+        {TABS.map(tab => {
+          const Icon = tab.icon;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`px-4 py-2 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                activeTab === tab.id
+                  ? 'bg-[#B3654A] text-white shadow-xs'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-[#B3654A] dark:hover:text-[#D0906D]'
+              }`}
+            >
+              <Icon className="w-4 h-4" /> {tab.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {activeTab === 'returns' && <ReturnsBento />}
+      {activeTab === 'suppliers' && <SuppliersBento />}
+
+      {activeTab === 'stock' && (
+      <>
       {/* Bento Stats Row */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         <div className="bento-card p-6 flex items-center justify-between bg-white dark:bg-[#161b22] border-[#e2e8f0] dark:border-[#262f38]">
@@ -256,7 +295,13 @@ export default function InventoryBento() {
                 <AlertTriangle className="w-4 h-4 shrink-0" />
                 <span>
                   Aún no tienes proveedores registrados.{' '}
-                  <Link to="/suppliers" className="underline">Crea uno aquí</Link> antes de registrar una compra.
+                  <button
+                    type="button"
+                    onClick={() => { setShowPurchaseModal(false); setActiveTab('suppliers'); }}
+                    className="underline font-bold cursor-pointer"
+                  >
+                    Crea uno aquí
+                  </button> antes de registrar una compra.
                 </span>
               </div>
             )}
@@ -311,6 +356,8 @@ export default function InventoryBento() {
       )}
 
       <BarcodeModal product={barcodeProduct} onClose={() => setBarcodeProduct(null)} />
+      </>
+      )}
     </div>
   );
 }

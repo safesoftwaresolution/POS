@@ -14,7 +14,6 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import logoIcon from '../../assets/logo-icon.png';
 
 export default function BackofficeSidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }) {
   const { logout } = useAuth();
@@ -76,9 +75,9 @@ export default function BackofficeSidebar({ isOpen, onClose, isCollapsed, onTogg
           isCollapsed ? 'px-3 justify-center' : 'px-5 justify-between'
         }`}>
           <div className="flex items-center gap-3 min-w-0">
-            <img 
-              src={logoIcon} 
-              alt="BentoPOS" 
+            <img
+              src="/logo-icon.png"
+              alt="BentoPOS"
               className="w-10 h-10 rounded-2xl object-cover shadow-sm shrink-0 border border-black/5 dark:border-white/10"
             />
             {(!isCollapsed || isOpen) && (

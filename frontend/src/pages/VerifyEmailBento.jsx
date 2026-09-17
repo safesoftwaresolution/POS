@@ -3,7 +3,6 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 import { verifyEmailApi } from '../services/authApi';
 import { useAuth } from '../context/AuthContext';
-import logoIcon from '../assets/logo-icon.png';
 
 export default function VerifyEmailBento() {
   const [searchParams] = useSearchParams();
@@ -43,9 +42,9 @@ export default function VerifyEmailBento() {
       <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#e25845]/10 rounded-full blur-3xl pointer-events-none"></div>
 
       <div className="max-w-md w-full bento-card bg-[#161b22] border-[#262f38] p-8 rounded-3xl shadow-2xl space-y-6 relative z-10 text-center">
-        <img 
-          src={logoIcon} 
-          alt="BentoPOS" 
+        <img
+          src="/logo-icon.png"
+          alt="BentoPOS"
           className="w-16 h-16 rounded-2xl mx-auto object-cover shadow-lg border border-white/10"
         />
 

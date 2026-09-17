@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { User, KeyRound, ArrowRight, AlertCircle } from 'lucide-react';
-import logoFull from '../assets/logo-full.png';
 
 export default function LoginBento() {
   const { login, loading } = useAuth();
@@ -32,9 +31,9 @@ export default function LoginBento() {
         
         {/* Brand Header */}
         <div className="text-center space-y-3">
-          <img 
-            src={logoFull} 
-            alt="BentoPOS" 
+          <img
+            src="/logo-full.png"
+            alt="BentoPOS"
             className="h-28 mx-auto object-contain drop-shadow-md hover:scale-102 transition-transform duration-300"
           />
           <p className="text-xs text-gray-400 font-semibold tracking-wide">

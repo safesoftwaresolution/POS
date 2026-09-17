@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User, Mail, KeyRound, IdCard, ArrowRight, AlertCircle, MailCheck } from 'lucide-react';
 import { registerApi } from '../services/authApi';
-import logoFull from '../assets/logo-full.png';
 
 const EMPTY_FORM = { fullName: '', username: '', email: '', password: '' };
 
@@ -38,9 +37,9 @@ export default function RegisterBento() {
       <div className="max-w-md w-full bento-card bg-[#161b22] border-[#262f38] p-8 rounded-3xl shadow-2xl space-y-6 relative z-10">
 
         <div className="text-center space-y-3">
-          <img 
-            src={logoFull} 
-            alt="BentoPOS" 
+          <img
+            src="/logo-full.png"
+            alt="BentoPOS"
             className="h-24 mx-auto object-contain drop-shadow-md"
           />
           <p className="text-xs text-gray-400 font-semibold tracking-wide">

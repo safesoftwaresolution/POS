@@ -38,8 +38,8 @@ export default function VerifyEmailBento() {
 
   return (
     <div className="min-h-screen bg-[#0d1117] text-white flex items-center justify-center p-4 relative overflow-hidden select-none">
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#c83824]/15 rounded-full blur-3xl pointer-events-none"></div>
-      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#e25845]/10 rounded-full blur-3xl pointer-events-none"></div>
+      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#B3654A]/15 rounded-full blur-3xl pointer-events-none"></div>
+      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#D0906D]/10 rounded-full blur-3xl pointer-events-none"></div>
 
       <div className="max-w-md w-full bento-card bg-[#161b22] border-[#262f38] p-8 rounded-3xl shadow-2xl space-y-6 relative z-10 text-center">
         <img
@@ -50,7 +50,7 @@ export default function VerifyEmailBento() {
 
         {status === 'verifying' && (
           <div className="space-y-3">
-            <Loader2 className="w-8 h-8 text-[#c83824] mx-auto animate-spin" />
+            <Loader2 className="w-8 h-8 text-[#B3654A] mx-auto animate-spin" />
             <p className="text-sm font-bold text-white">Verificando tu correo...</p>
           </div>
         )}
@@ -71,7 +71,7 @@ export default function VerifyEmailBento() {
             <button
               type="button"
               onClick={() => navigate('/login')}
-              className="text-xs font-extrabold text-[#c83824] hover:text-[#ea6a58] hover:underline cursor-pointer transition-colors"
+              className="text-xs font-extrabold text-[#B3654A] hover:text-[#D0906D] hover:underline cursor-pointer transition-colors"
             >
               Volver a iniciar sesión
             </button>

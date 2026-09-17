@@ -174,7 +174,7 @@ export default function ProductsBento() {
 
         <button
           onClick={() => setShowAddModal(true)}
-          className="px-4 py-2.5 bg-[#c83824] hover:bg-[#a82917] text-white rounded-2xl text-xs font-bold flex items-center gap-2 shadow-md shadow-[#c83824]/20 cursor-pointer transition-all"
+          className="px-4 py-2.5 bg-[#B3654A] hover:bg-[#96503A] text-white rounded-2xl text-xs font-bold flex items-center gap-2 shadow-md shadow-[#B3654A]/20 cursor-pointer transition-all"
         >
           <Plus className="w-4 h-4" /> Crear Nuevo Producto
         </button>
@@ -189,7 +189,7 @@ export default function ProductsBento() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Filtrar por nombre o código de barras..."
-              className="w-full pl-10 pr-3 py-1.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl text-xs font-semibold text-[#161b22] dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-[#c83824]"
+              className="w-full pl-10 pr-3 py-1.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl text-xs font-semibold text-[#161b22] dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-[#B3654A]"
             />
           </div>
           <span className="text-xs font-bold text-gray-400 dark:text-gray-500">{filtered.length} productos registrados</span>
@@ -208,7 +208,7 @@ export default function ProductsBento() {
             </div>
             <button
               onClick={() => setShowAddModal(true)}
-              className="px-4 py-2 bg-[#c83824] text-white rounded-xl text-xs font-extrabold shadow-sm hover:bg-[#a82917] cursor-pointer"
+              className="px-4 py-2 bg-[#B3654A] text-white rounded-xl text-xs font-extrabold shadow-sm hover:bg-[#96503A] cursor-pointer"
             >
               + Registrar Primer Producto
             </button>
@@ -216,7 +216,7 @@ export default function ProductsBento() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filtered.map(p => (
-              <div key={p.id} className="p-5 bg-white dark:bg-[#161b22] rounded-2xl border border-gray-200 dark:border-[#262f38] space-y-3 flex flex-col justify-between hover:border-[#c83824] dark:hover:border-[#c83824] transition-all shadow-xs group">
+              <div key={p.id} className="p-5 bg-white dark:bg-[#161b22] rounded-2xl border border-gray-200 dark:border-[#262f38] space-y-3 flex flex-col justify-between hover:border-[#B3654A] dark:hover:border-[#B3654A] transition-all shadow-xs group">
                 <div>
                   <div className="flex items-start gap-3">
                     <div className="w-12 h-12 rounded-xl bg-gray-50 dark:bg-[#0d1117] border border-gray-200 dark:border-[#262f38] flex items-center justify-center overflow-hidden shrink-0">
@@ -229,7 +229,7 @@ export default function ProductsBento() {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-1 flex-wrap">
-                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#c83824]/10 dark:bg-[#c83824]/20 text-[#c83824] dark:text-[#ea6a58] font-extrabold">
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#B3654A]/10 dark:bg-[#B3654A]/20 text-[#B3654A] dark:text-[#D0906D] font-extrabold">
                             {p.categoryName || 'General'}
                           </span>
                           {p.subcategoryName && (
@@ -240,7 +240,7 @@ export default function ProductsBento() {
                         </div>
                         <span className="text-[10px] font-mono text-gray-400 dark:text-gray-500 font-bold shrink-0">{p.internalCode}</span>
                       </div>
-                      <h3 className="font-extrabold text-sm text-[#161b22] dark:text-white mt-2 truncate group-hover:text-[#c83824] dark:group-hover:text-[#ea6a58] transition-colors">{p.name}</h3>
+                      <h3 className="font-extrabold text-sm text-[#161b22] dark:text-white mt-2 truncate group-hover:text-[#B3654A] dark:group-hover:text-[#D0906D] transition-colors">{p.name}</h3>
                       <p className="text-[11px] text-gray-500 dark:text-gray-400 font-mono mt-0.5 flex items-center gap-1">
                         <Barcode className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500 shrink-0" /> {p.barcode || 'Sin código'}
                       </p>
@@ -260,7 +260,7 @@ export default function ProductsBento() {
                     <button
                       onClick={() => setBarcodeProduct(p)}
                       title="Ver código de barras"
-                      className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-[#c83824] dark:hover:text-[#ea6a58] rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer"
+                      className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-[#B3654A] dark:hover:text-[#D0906D] rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer"
                     >
                       <Barcode className="w-4 h-4" />
                     </button>
@@ -329,7 +329,7 @@ export default function ProductsBento() {
                     setNewProduct({ ...newProduct, categoryId: e.target.value, subcategoryId: '' });
                     setShowNewSubcategory(false);
                   }}
-                  className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-gray-300 dark:border-[#262f38] rounded-2xl font-semibold text-[#161b22] dark:text-white focus:outline-none focus:border-[#c83824]"
+                  className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-gray-300 dark:border-[#262f38] rounded-2xl font-semibold text-[#161b22] dark:text-white focus:outline-none focus:border-[#B3654A]"
                   required
                   disabled={categories.length === 0}
                 >
@@ -348,7 +348,7 @@ export default function ProductsBento() {
                       <select
                         value={newProduct.subcategoryId}
                         onChange={e => setNewProduct({ ...newProduct, subcategoryId: e.target.value })}
-                        className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-gray-300 dark:border-[#262f38] rounded-2xl font-semibold text-[#161b22] dark:text-white focus:outline-none focus:border-[#c83824]"
+                        className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-gray-300 dark:border-[#262f38] rounded-2xl font-semibold text-[#161b22] dark:text-white focus:outline-none focus:border-[#B3654A]"
                       >
                         <option value="">Sin subcategoría</option>
                         {subcategoriesForSelectedCategory.map(sub => (
@@ -359,7 +359,7 @@ export default function ProductsBento() {
                         type="button"
                         onClick={() => setShowNewSubcategory(true)}
                         title="Crear nueva subcategoría"
-                        className="shrink-0 w-9 h-9 rounded-2xl bg-[#c83824]/10 dark:bg-[#c83824]/20 text-[#c83824] dark:text-[#ea6a58] hover:bg-[#c83824] hover:text-white flex items-center justify-center cursor-pointer transition-colors"
+                        className="shrink-0 w-9 h-9 rounded-2xl bg-[#B3654A]/10 dark:bg-[#B3654A]/20 text-[#B3654A] dark:text-[#D0906D] hover:bg-[#B3654A] hover:text-white flex items-center justify-center cursor-pointer transition-colors"
                       >
                         <Plus className="w-4 h-4" />
                       </button>
@@ -372,12 +372,12 @@ export default function ProductsBento() {
                         value={newSubcategoryName}
                         onChange={e => setNewSubcategoryName(e.target.value)}
                         placeholder="Ej. Gaseosas"
-                        className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-gray-300 dark:border-[#262f38] rounded-2xl font-semibold text-[#161b22] dark:text-white focus:outline-none focus:border-[#c83824]"
+                        className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-gray-300 dark:border-[#262f38] rounded-2xl font-semibold text-[#161b22] dark:text-white focus:outline-none focus:border-[#B3654A]"
                       />
                       <button
                         type="button"
                         onClick={handleCreateSubcategory}
-                        className="shrink-0 px-3 py-2 bg-[#c83824] hover:bg-[#a82917] text-white rounded-2xl text-xs font-bold cursor-pointer"
+                        className="shrink-0 px-3 py-2 bg-[#B3654A] hover:bg-[#96503A] text-white rounded-2xl text-xs font-bold cursor-pointer"
                       >
                         Crear
                       </button>
@@ -403,7 +403,7 @@ export default function ProductsBento() {
                   value={newProduct.name}
                   onChange={e => setNewProduct({ ...newProduct, name: e.target.value })}
                   placeholder="Ej. Arroz 1kg"
-                  className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-gray-300 dark:border-[#262f38] rounded-2xl font-semibold text-[#161b22] dark:text-white focus:outline-none focus:border-[#c83824]"
+                  className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-gray-300 dark:border-[#262f38] rounded-2xl font-semibold text-[#161b22] dark:text-white focus:outline-none focus:border-[#B3654A]"
                   required
                 />
               </div>
@@ -416,7 +416,7 @@ export default function ProductsBento() {
                     value={newProduct.barcode}
                     onChange={e => setNewProduct({ ...newProduct, barcode: e.target.value })}
                     placeholder="770..."
-                    className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-gray-300 dark:border-[#262f38] rounded-2xl font-mono text-xs text-[#161b22] dark:text-white focus:outline-none focus:border-[#c83824]"
+                    className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-gray-300 dark:border-[#262f38] rounded-2xl font-mono text-xs text-[#161b22] dark:text-white focus:outline-none focus:border-[#B3654A]"
                   />
                 </div>
                 <div>
@@ -426,7 +426,7 @@ export default function ProductsBento() {
                     value={newProduct.internalCode}
                     onChange={e => setNewProduct({ ...newProduct, internalCode: e.target.value })}
                     placeholder="PROD-101"
-                    className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-gray-300 dark:border-[#262f38] rounded-2xl font-mono text-xs text-[#161b22] dark:text-white focus:outline-none focus:border-[#c83824]"
+                    className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-gray-300 dark:border-[#262f38] rounded-2xl font-mono text-xs text-[#161b22] dark:text-white focus:outline-none focus:border-[#B3654A]"
                   />
                 </div>
               </div>
@@ -439,7 +439,7 @@ export default function ProductsBento() {
                     value={newProduct.price}
                     onChange={e => setNewProduct({ ...newProduct, price: e.target.value })}
                     placeholder="12000"
-                    className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-gray-300 dark:border-[#262f38] rounded-2xl font-bold text-[#161b22] dark:text-white focus:outline-none focus:border-[#c83824]"
+                    className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-gray-300 dark:border-[#262f38] rounded-2xl font-bold text-[#161b22] dark:text-white focus:outline-none focus:border-[#B3654A]"
                     required
                   />
                 </div>
@@ -450,7 +450,7 @@ export default function ProductsBento() {
                     value={newProduct.stock}
                     onChange={e => setNewProduct({ ...newProduct, stock: e.target.value })}
                     placeholder="50"
-                    className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-gray-300 dark:border-[#262f38] rounded-2xl font-bold text-[#161b22] dark:text-white focus:outline-none focus:border-[#c83824]"
+                    className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-gray-300 dark:border-[#262f38] rounded-2xl font-bold text-[#161b22] dark:text-white focus:outline-none focus:border-[#B3654A]"
                   />
                 </div>
               </div>
@@ -467,7 +467,7 @@ export default function ProductsBento() {
               <button
                 type="submit"
                 disabled={categories.length === 0}
-                className="w-1/2 py-3 bg-[#c83824] hover:bg-[#a82917] disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-2xl text-xs font-extrabold shadow-md shadow-[#c83824]/20 cursor-pointer"
+                className="w-1/2 py-3 bg-[#B3654A] hover:bg-[#96503A] disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-2xl text-xs font-extrabold shadow-md shadow-[#B3654A]/20 cursor-pointer"
               >
                 Guardar Producto
               </button>

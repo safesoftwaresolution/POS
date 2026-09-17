@@ -34,7 +34,7 @@ export default function StoreOnboardingBento() {
     <div className="min-h-screen bg-[#f8f9fa] dark:bg-[#0d1117] text-[#161b22] dark:text-[#f0f6fc] flex items-center justify-center p-4 select-none">
       <div className="max-w-lg w-full bento-card p-8 rounded-3xl shadow-xl space-y-6">
         <div className="text-center space-y-2">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-[#c83824] to-[#ea6a58] flex items-center justify-center mx-auto shadow-lg shadow-[#c83824]/30">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-[#B3654A] to-[#D0906D] flex items-center justify-center mx-auto shadow-lg shadow-[#B3654A]/30">
             <Store className="w-8 h-8 text-white" />
           </div>
           <h1 className="text-xl font-black tracking-tight">Registra tu local</h1>
@@ -58,7 +58,7 @@ export default function StoreOnboardingBento() {
               <input
                 type="text" value={form.name} onChange={handleChange('name')}
                 placeholder="Mi Tienda" required
-                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-[#0d1117] border border-gray-200 dark:border-[#262f38] rounded-2xl text-xs font-semibold focus:outline-none focus:border-[#c83824] transition-all"
+                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-[#0d1117] border border-gray-200 dark:border-[#262f38] rounded-2xl text-xs font-semibold focus:outline-none focus:border-[#B3654A] transition-all"
               />
             </div>
           </div>
@@ -70,7 +70,7 @@ export default function StoreOnboardingBento() {
               <input
                 type="email" value={form.email} onChange={handleChange('email')}
                 placeholder="contacto@mitienda.com" required
-                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-[#0d1117] border border-gray-200 dark:border-[#262f38] rounded-2xl text-xs font-semibold focus:outline-none focus:border-[#c83824] transition-all"
+                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-[#0d1117] border border-gray-200 dark:border-[#262f38] rounded-2xl text-xs font-semibold focus:outline-none focus:border-[#B3654A] transition-all"
               />
             </div>
           </div>
@@ -83,7 +83,7 @@ export default function StoreOnboardingBento() {
                 <input
                   type="text" value={form.phone} onChange={handleChange('phone')}
                   placeholder="3001234567"
-                  className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-[#0d1117] border border-gray-200 dark:border-[#262f38] rounded-2xl text-xs font-semibold focus:outline-none focus:border-[#c83824] transition-all"
+                  className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-[#0d1117] border border-gray-200 dark:border-[#262f38] rounded-2xl text-xs font-semibold focus:outline-none focus:border-[#B3654A] transition-all"
                 />
               </div>
             </div>
@@ -94,7 +94,7 @@ export default function StoreOnboardingBento() {
                 <input
                   type="text" value={form.taxId} onChange={handleChange('taxId')}
                   placeholder="900123456-7"
-                  className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-[#0d1117] border border-gray-200 dark:border-[#262f38] rounded-2xl text-xs font-semibold focus:outline-none focus:border-[#c83824] transition-all"
+                  className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-[#0d1117] border border-gray-200 dark:border-[#262f38] rounded-2xl text-xs font-semibold focus:outline-none focus:border-[#B3654A] transition-all"
                 />
               </div>
             </div>
@@ -107,7 +107,7 @@ export default function StoreOnboardingBento() {
               <input
                 type="text" value={form.address} onChange={handleChange('address')}
                 placeholder="Calle 123 #45-67"
-                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-[#0d1117] border border-gray-200 dark:border-[#262f38] rounded-2xl text-xs font-semibold focus:outline-none focus:border-[#c83824] transition-all"
+                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-[#0d1117] border border-gray-200 dark:border-[#262f38] rounded-2xl text-xs font-semibold focus:outline-none focus:border-[#B3654A] transition-all"
               />
             </div>
           </div>
@@ -119,7 +119,7 @@ export default function StoreOnboardingBento() {
               <input
                 type="text" value={form.website} onChange={handleChange('website')}
                 placeholder="https://mitienda.com"
-                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-[#0d1117] border border-gray-200 dark:border-[#262f38] rounded-2xl text-xs font-semibold focus:outline-none focus:border-[#c83824] transition-all"
+                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-[#0d1117] border border-gray-200 dark:border-[#262f38] rounded-2xl text-xs font-semibold focus:outline-none focus:border-[#B3654A] transition-all"
               />
             </div>
           </div>
@@ -127,7 +127,7 @@ export default function StoreOnboardingBento() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3.5 bg-[#c83824] hover:bg-[#a82917] text-white font-black text-xs rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-[#c83824]/30 active:scale-98 transition-all cursor-pointer disabled:opacity-50"
+            className="w-full py-3.5 bg-[#B3654A] hover:bg-[#96503A] text-white font-black text-xs rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-[#B3654A]/30 active:scale-98 transition-all cursor-pointer disabled:opacity-50"
           >
             <span>{loading ? 'Registrando local...' : 'Registrar mi local'}</span>
             <ArrowRight className="w-4 h-4" />

@@ -65,7 +65,7 @@ export default function BarcodeModal({ product, onClose }) {
             disabled={!hasBarcode}
             className={`w-1/2 py-2.5 rounded-2xl text-xs font-extrabold flex items-center justify-center gap-2 transition-all ${
               hasBarcode
-                ? 'bg-[#c83824] hover:bg-[#b02f1e] text-white cursor-pointer shadow-lg shadow-[#c83824]/20'
+                ? 'bg-[#B3654A] hover:bg-[#96503A] text-white cursor-pointer shadow-lg shadow-[#B3654A]/20'
                 : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
             }`}
           >

@@ -145,7 +145,7 @@ export default function ParametersBento() {
 
         <button
           onClick={() => { setTopicForm(EMPTY_TOPIC_FORM); setTopicError(''); setShowTopicForm(true); }}
-          className="px-4 py-2.5 bg-[#c83824] hover:bg-[#a82d1c] text-white rounded-2xl text-xs font-bold flex items-center gap-2 shadow-md shadow-[#c83824]/20 cursor-pointer"
+          className="px-4 py-2.5 bg-[#B3654A] hover:bg-[#96503A] text-white rounded-2xl text-xs font-bold flex items-center gap-2 shadow-md shadow-[#B3654A]/20 cursor-pointer"
         >
           <Plus className="w-4 h-4" /> Nuevo Tema
         </button>
@@ -167,8 +167,8 @@ export default function ParametersBento() {
                   onClick={() => selectTopic(t)}
                   className={`w-full text-left p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-2 ${
                     selectedTopic?.code === t.code
-                      ? 'bg-[#c83824] border-[#c83824] text-white'
-                      : 'bg-gray-50/60 dark:bg-white/5 border-[#e2e8f0] dark:border-[#262f38] hover:border-[#c83824]'
+                      ? 'bg-[#B3654A] border-[#B3654A] text-white'
+                      : 'bg-gray-50/60 dark:bg-white/5 border-[#e2e8f0] dark:border-[#262f38] hover:border-[#B3654A]'
                   }`}
                 >
                   <div className="min-w-0">
@@ -210,7 +210,7 @@ export default function ParametersBento() {
                 </div>
                 <button
                   onClick={openAddValue}
-                  className="px-3 py-1.5 bg-[#c83824] hover:bg-[#a82d1c] text-white rounded-xl text-[11px] font-bold flex items-center gap-1 shrink-0 cursor-pointer shadow-sm shadow-[#c83824]/20"
+                  className="px-3 py-1.5 bg-[#B3654A] hover:bg-[#96503A] text-white rounded-xl text-[11px] font-bold flex items-center gap-1 shrink-0 cursor-pointer shadow-sm shadow-[#B3654A]/20"
                 >
                   <Plus className="w-3.5 h-3.5" /> Nuevo Valor
                 </button>
@@ -251,7 +251,7 @@ export default function ParametersBento() {
                             <button
                               onClick={() => openEditValue(v)}
                               title="Editar valor"
-                              className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-[#c83824] dark:hover:text-[#ea6a58] rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer inline-flex"
+                              className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-[#B3654A] dark:hover:text-[#D0906D] rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer inline-flex"
                             >
                               <Edit3 className="w-3.5 h-3.5" />
                             </button>
@@ -300,7 +300,7 @@ export default function ParametersBento() {
                   value={topicForm.code}
                   onChange={e => setTopicForm({ ...topicForm, code: e.target.value })}
                   placeholder="LOYALTY_TIERS"
-                  className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl font-mono text-xs text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#c83824] dark:focus:border-[#ea6a58]"
+                  className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl font-mono text-xs text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#B3654A] dark:focus:border-[#D0906D]"
                   required
                 />
               </div>
@@ -311,7 +311,7 @@ export default function ParametersBento() {
                   value={topicForm.name}
                   onChange={e => setTopicForm({ ...topicForm, name: e.target.value })}
                   placeholder="Niveles de Fidelización"
-                  className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl font-semibold text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#c83824] dark:focus:border-[#ea6a58]"
+                  className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl font-semibold text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#B3654A] dark:focus:border-[#D0906D]"
                   required
                 />
               </div>
@@ -321,7 +321,7 @@ export default function ParametersBento() {
                   type="text"
                   value={topicForm.description}
                   onChange={e => setTopicForm({ ...topicForm, description: e.target.value })}
-                  className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl text-xs text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#c83824] dark:focus:border-[#ea6a58]"
+                  className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl text-xs text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#B3654A] dark:focus:border-[#D0906D]"
                 />
               </div>
             </div>
@@ -330,7 +330,7 @@ export default function ParametersBento() {
               <button type="button" onClick={() => setShowTopicForm(false)} className="w-1/2 py-3 bg-gray-100 dark:bg-[#262f38] hover:bg-gray-200 dark:hover:bg-[#303b47] text-gray-700 dark:text-gray-300 rounded-2xl text-xs font-bold cursor-pointer">
                 Cancelar
               </button>
-              <button type="submit" className="w-1/2 py-3 bg-[#c83824] hover:bg-[#a82d1c] text-white rounded-2xl text-xs font-extrabold cursor-pointer shadow-md shadow-[#c83824]/20">
+              <button type="submit" className="w-1/2 py-3 bg-[#B3654A] hover:bg-[#96503A] text-white rounded-2xl text-xs font-extrabold cursor-pointer shadow-md shadow-[#B3654A]/20">
                 Crear Tema
               </button>
             </div>
@@ -367,7 +367,7 @@ export default function ParametersBento() {
                   onChange={e => setValueForm({ ...valueForm, code: e.target.value })}
                   placeholder="GOLD"
                   disabled={!!valueForm.id}
-                  className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl font-mono text-xs text-[#161b22] dark:text-[#f0f6fc] disabled:opacity-60 focus:outline-none focus:border-[#c83824] dark:focus:border-[#ea6a58]"
+                  className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl font-mono text-xs text-[#161b22] dark:text-[#f0f6fc] disabled:opacity-60 focus:outline-none focus:border-[#B3654A] dark:focus:border-[#D0906D]"
                   required
                 />
               </div>
@@ -378,7 +378,7 @@ export default function ParametersBento() {
                   value={valueForm.label}
                   onChange={e => setValueForm({ ...valueForm, label: e.target.value })}
                   placeholder="Nivel Oro"
-                  className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl font-semibold text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#c83824] dark:focus:border-[#ea6a58]"
+                  className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl font-semibold text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#B3654A] dark:focus:border-[#D0906D]"
                   required
                 />
               </div>
@@ -389,7 +389,7 @@ export default function ParametersBento() {
                     type="text"
                     value={valueForm.extraValue}
                     onChange={e => setValueForm({ ...valueForm, extraValue: e.target.value })}
-                    className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl text-xs text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#c83824] dark:focus:border-[#ea6a58]"
+                    className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl text-xs text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#B3654A] dark:focus:border-[#D0906D]"
                   />
                 </div>
                 <div>
@@ -398,7 +398,7 @@ export default function ParametersBento() {
                     type="number"
                     value={valueForm.sortOrder}
                     onChange={e => setValueForm({ ...valueForm, sortOrder: e.target.value })}
-                    className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl text-xs text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#c83824] dark:focus:border-[#ea6a58]"
+                    className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl text-xs text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#B3654A] dark:focus:border-[#D0906D]"
                   />
                 </div>
               </div>
@@ -408,7 +408,7 @@ export default function ParametersBento() {
               <button type="button" onClick={() => setShowValueForm(false)} className="w-1/2 py-3 bg-gray-100 dark:bg-[#262f38] hover:bg-gray-200 dark:hover:bg-[#303b47] text-gray-700 dark:text-gray-300 rounded-2xl text-xs font-bold cursor-pointer">
                 Cancelar
               </button>
-              <button type="submit" className="w-1/2 py-3 bg-[#c83824] hover:bg-[#a82d1c] text-white rounded-2xl text-xs font-extrabold cursor-pointer shadow-md shadow-[#c83824]/20">
+              <button type="submit" className="w-1/2 py-3 bg-[#B3654A] hover:bg-[#96503A] text-white rounded-2xl text-xs font-extrabold cursor-pointer shadow-md shadow-[#B3654A]/20">
                 {valueForm.id ? 'Guardar Cambios' : 'Agregar Valor'}
               </button>
             </div>

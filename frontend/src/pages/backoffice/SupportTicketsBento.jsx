@@ -185,7 +185,7 @@ export default function SupportTicketsBento() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Buscar por título o radicado..."
-              className="w-full pl-10 pr-3 py-1.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl text-xs font-semibold text-[#161b22] dark:text-[#f0f6fc] placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-[#c83824] dark:focus:border-[#ea6a58]"
+              className="w-full pl-10 pr-3 py-1.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl text-xs font-semibold text-[#161b22] dark:text-[#f0f6fc] placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-[#B3654A] dark:focus:border-[#D0906D]"
             />
           </div>
 
@@ -341,7 +341,7 @@ export default function SupportTicketsBento() {
                       <select
                         value={statusDraft}
                         onChange={e => setStatusDraft(e.target.value)}
-                        className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl font-semibold text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#c83824] dark:focus:border-[#ea6a58]"
+                        className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl font-semibold text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#B3654A] dark:focus:border-[#D0906D]"
                       >
                         {STATUSES.map(s => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
                       </select>
@@ -351,7 +351,7 @@ export default function SupportTicketsBento() {
                       <select
                         value={priorityDraft}
                         onChange={e => setPriorityDraft(e.target.value)}
-                        className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl font-semibold text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#c83824] dark:focus:border-[#ea6a58]"
+                        className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl font-semibold text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#B3654A] dark:focus:border-[#D0906D]"
                       >
                         {PRIORITIES.map(p => <option key={p} value={p}>{PRIORITY_LABELS[p]}</option>)}
                       </select>
@@ -365,7 +365,7 @@ export default function SupportTicketsBento() {
                       onChange={e => setNotesDraft(e.target.value)}
                       placeholder="Notas internas sobre la resolución del ticket..."
                       rows={3}
-                      className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl text-xs text-[#161b22] dark:text-[#f0f6fc] resize-y focus:outline-none focus:border-[#c83824] dark:focus:border-[#ea6a58]"
+                      className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl text-xs text-[#161b22] dark:text-[#f0f6fc] resize-y focus:outline-none focus:border-[#B3654A] dark:focus:border-[#D0906D]"
                     />
                   </div>
                 </div>
@@ -382,7 +382,7 @@ export default function SupportTicketsBento() {
                     type="button"
                     onClick={handleSaveDetail}
                     disabled={savingDetail}
-                    className="w-1/2 py-3 bg-[#c83824] hover:bg-[#a82d1c] disabled:opacity-50 text-white rounded-2xl text-xs font-extrabold cursor-pointer shadow-md shadow-[#c83824]/20"
+                    className="w-1/2 py-3 bg-[#B3654A] hover:bg-[#96503A] disabled:opacity-50 text-white rounded-2xl text-xs font-extrabold cursor-pointer shadow-md shadow-[#B3654A]/20"
                   >
                     {savingDetail ? 'Guardando...' : 'Guardar Cambios'}
                   </button>

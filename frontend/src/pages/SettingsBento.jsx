@@ -170,7 +170,7 @@ export default function SettingsBento() {
                     type="text"
                     value={storeForm.name}
                     onChange={e => setStoreForm({ ...storeForm, name: e.target.value })}
-                    className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl font-semibold text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#c83824] dark:focus:border-[#ea6a58]"
+                    className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl font-semibold text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#B3654A] dark:focus:border-[#D0906D]"
                     required
                   />
                 </div>
@@ -182,7 +182,7 @@ export default function SettingsBento() {
                     type="text"
                     value={storeForm.phone}
                     onChange={e => setStoreForm({ ...storeForm, phone: e.target.value })}
-                    className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl font-semibold text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#c83824] dark:focus:border-[#ea6a58]"
+                    className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl font-semibold text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#B3654A] dark:focus:border-[#D0906D]"
                   />
                 </div>
                 <div className="md:col-span-2">
@@ -193,7 +193,7 @@ export default function SettingsBento() {
                     type="text"
                     value={storeForm.address}
                     onChange={e => setStoreForm({ ...storeForm, address: e.target.value })}
-                    className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl font-semibold text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#c83824] dark:focus:border-[#ea6a58]"
+                    className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl font-semibold text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#B3654A] dark:focus:border-[#D0906D]"
                   />
                 </div>
                 <div>
@@ -204,7 +204,7 @@ export default function SettingsBento() {
                     type="text"
                     value={storeForm.taxId}
                     onChange={e => setStoreForm({ ...storeForm, taxId: e.target.value })}
-                    className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl font-mono font-bold text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#c83824] dark:focus:border-[#ea6a58]"
+                    className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl font-mono font-bold text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#B3654A] dark:focus:border-[#D0906D]"
                   />
                 </div>
                 <div>
@@ -215,7 +215,7 @@ export default function SettingsBento() {
                     type="text"
                     value={storeForm.website}
                     onChange={e => setStoreForm({ ...storeForm, website: e.target.value })}
-                    className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl font-semibold text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#c83824] dark:focus:border-[#ea6a58]"
+                    className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl font-semibold text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#B3654A] dark:focus:border-[#D0906D]"
                   />
                 </div>
               </div>
@@ -250,7 +250,7 @@ export default function SettingsBento() {
             {/* Identidad del negocio */}
             <div className="bento-card p-6 space-y-4">
               <h3 className="font-extrabold text-sm text-[#161b22] dark:text-[#f0f6fc] flex items-center gap-2">
-                <Store className="w-4 h-4 text-[#c83824] dark:text-[#ea6a58]" /> Identidad del Negocio
+                <Store className="w-4 h-4 text-[#B3654A] dark:text-[#D0906D]" /> Identidad del Negocio
               </h3>
 
               <div className="flex items-center gap-4">
@@ -281,7 +281,7 @@ export default function SettingsBento() {
                   type="text"
                   value={config.businessName}
                   onChange={e => setConfig({ ...config, businessName: e.target.value })}
-                  className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl font-semibold text-xs text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#c83824] dark:focus:border-[#ea6a58]"
+                  className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl font-semibold text-xs text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#B3654A] dark:focus:border-[#D0906D]"
                   required
                 />
               </div>
@@ -290,7 +290,7 @@ export default function SettingsBento() {
             {/* Contacto y ubicación */}
             <div className="bento-card p-6 space-y-4">
               <h3 className="font-extrabold text-sm text-[#161b22] dark:text-[#f0f6fc] flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-[#c83824] dark:text-[#ea6a58]" /> Contacto y Ubicación
+                <MapPin className="w-4 h-4 text-[#B3654A] dark:text-[#D0906D]" /> Contacto y Ubicación
               </h3>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
@@ -302,7 +302,7 @@ export default function SettingsBento() {
                     type="email"
                     value={config.email}
                     onChange={e => setConfig({ ...config, email: e.target.value })}
-                    className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl font-semibold text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#c83824] dark:focus:border-[#ea6a58]"
+                    className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl font-semibold text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#B3654A] dark:focus:border-[#D0906D]"
                   />
                 </div>
                 <div>
@@ -313,7 +313,7 @@ export default function SettingsBento() {
                     type="text"
                     value={config.phone}
                     onChange={e => setConfig({ ...config, phone: e.target.value })}
-                    className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl font-semibold text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#c83824] dark:focus:border-[#ea6a58]"
+                    className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl font-semibold text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#B3654A] dark:focus:border-[#D0906D]"
                     required
                   />
                 </div>
@@ -325,7 +325,7 @@ export default function SettingsBento() {
                     type="text"
                     value={config.address}
                     onChange={e => setConfig({ ...config, address: e.target.value })}
-                    className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl font-semibold text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#c83824] dark:focus:border-[#ea6a58]"
+                    className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl font-semibold text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#B3654A] dark:focus:border-[#D0906D]"
                     required
                   />
                 </div>
@@ -335,7 +335,7 @@ export default function SettingsBento() {
             {/* Datos fiscales */}
             <div className="bento-card p-6 space-y-4">
               <h3 className="font-extrabold text-sm text-[#161b22] dark:text-[#f0f6fc] flex items-center gap-2">
-                <Hash className="w-4 h-4 text-[#c83824] dark:text-[#ea6a58]" /> Datos Fiscales
+                <Hash className="w-4 h-4 text-[#B3654A] dark:text-[#D0906D]" /> Datos Fiscales
               </h3>
               <div className="text-xs">
                 <label className="font-bold text-gray-700 dark:text-gray-300 block mb-1">NIT / Cédula Fiscal:</label>
@@ -343,7 +343,7 @@ export default function SettingsBento() {
                   type="text"
                   value={config.taxId}
                   onChange={e => setConfig({ ...config, taxId: e.target.value })}
-                  className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl font-mono font-bold text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#c83824] dark:focus:border-[#ea6a58]"
+                  className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl font-mono font-bold text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#B3654A] dark:focus:border-[#D0906D]"
                   required
                 />
               </div>
@@ -352,11 +352,11 @@ export default function SettingsBento() {
             {/* Factus API Credentials */}
             <div className="bento-card p-6 space-y-4">
               <h3 className="font-extrabold text-sm text-[#161b22] dark:text-[#f0f6fc] flex items-center gap-2">
-                <Key className="w-4 h-4 text-[#c83824] dark:text-[#ea6a58]" /> Facturación Electrónica Factus DIAN
+                <Key className="w-4 h-4 text-[#B3654A] dark:text-[#D0906D]" /> Facturación Electrónica Factus DIAN
               </h3>
 
-              <div className="p-4 bg-[#c83824]/5 dark:bg-[#c83824]/10 rounded-2xl border border-[#c83824]/20 text-xs space-y-1 text-[#161b22] dark:text-[#f0f6fc]">
-                <p className="font-extrabold text-[#c83824] dark:text-[#ea6a58]">Configuración activa del proveedor de facturación electrónica:</p>
+              <div className="p-4 bg-[#B3654A]/5 dark:bg-[#B3654A]/10 rounded-2xl border border-[#B3654A]/20 text-xs space-y-1 text-[#161b22] dark:text-[#f0f6fc]">
+                <p className="font-extrabold text-[#B3654A] dark:text-[#D0906D]">Configuración activa del proveedor de facturación electrónica:</p>
                 <p className="text-gray-600 dark:text-gray-300 font-medium">• URL Factus: <code className="font-mono bg-white dark:bg-[#0d1117] px-1.5 py-0.5 rounded border border-[#e2e8f0] dark:border-[#262f38]">https://api-sandbox.factus.com.co</code></p>
                 <p className="text-gray-600 dark:text-gray-300 font-medium">• Rango DIAN ID: <code className="font-mono bg-white dark:bg-[#0d1117] px-1.5 py-0.5 rounded border border-[#e2e8f0] dark:border-[#262f38]">8</code></p>
               </div>
@@ -364,7 +364,7 @@ export default function SettingsBento() {
 
             <button
               type="submit"
-              className="w-full py-3.5 bg-[#c83824] hover:bg-[#a82d1c] text-white font-extrabold text-xs rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-[#c83824]/30 cursor-pointer transition-all active:scale-[0.99]"
+              className="w-full py-3.5 bg-[#B3654A] hover:bg-[#96503A] text-white font-extrabold text-xs rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-[#B3654A]/30 cursor-pointer transition-all active:scale-[0.99]"
             >
               <Save className="w-4 h-4" /> Guardar Ajustes de Facturación
             </button>

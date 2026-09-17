@@ -38,11 +38,11 @@ function RankedBarRow({ label, value, max, formatValue = money }) {
     <div className="space-y-1" title={`${label}: ${formatValue(value)}`}>
       <div className="flex items-center justify-between text-xs">
         <span className="font-bold text-[#161b22] dark:text-[#f0f6fc] truncate pr-2">{label}</span>
-        <span className="font-extrabold text-[#c83824] dark:text-[#ea6a58] tabular-nums shrink-0">{formatValue(value)}</span>
+        <span className="font-extrabold text-[#B3654A] dark:text-[#D0906D] tabular-nums shrink-0">{formatValue(value)}</span>
       </div>
       <div className="h-2.5 w-full bg-[#f1f3f5] dark:bg-[#262f38] rounded-full overflow-hidden">
         <div
-          className="h-full bg-[#c83824] dark:bg-[#ea6a58] rounded-full transition-all duration-500"
+          className="h-full bg-[#B3654A] dark:bg-[#D0906D] rounded-full transition-all duration-500"
           style={{ width: `${pct}%` }}
         />
       </div>
@@ -69,7 +69,7 @@ function SectionCard({ icon: Icon, title, subtitle, children, action }) {
     <div className="bento-card p-6 bg-white dark:bg-[#161b22] rounded-3xl border border-[#e2e8f0] dark:border-[#262f38] shadow-xs">
       <div className="flex items-start justify-between gap-3 mb-5">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="w-10 h-10 rounded-full bg-[#c83824]/10 flex items-center justify-center text-[#c83824] dark:text-[#ea6a58] shrink-0">
+          <div className="w-10 h-10 rounded-full bg-[#B3654A]/10 flex items-center justify-center text-[#B3654A] dark:text-[#D0906D] shrink-0">
             <Icon className="w-5 h-5" />
           </div>
           <div className="min-w-0">
@@ -180,7 +180,7 @@ export default function ReportsBento() {
                 value={dateFrom}
                 max={dateTo}
                 onChange={(e) => setDateFrom(e.target.value)}
-                className="px-3 py-2 bg-white dark:bg-[#161b22] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl text-xs font-semibold text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#c83824] dark:focus:border-[#ea6a58]"
+                className="px-3 py-2 bg-white dark:bg-[#161b22] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl text-xs font-semibold text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#B3654A] dark:focus:border-[#D0906D]"
               />
               <span className="text-xs text-gray-400 font-bold">–</span>
               <input
@@ -189,13 +189,13 @@ export default function ReportsBento() {
                 min={dateFrom}
                 max={isoDaysAgo(0)}
                 onChange={(e) => setDateTo(e.target.value)}
-                className="px-3 py-2 bg-white dark:bg-[#161b22] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl text-xs font-semibold text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#c83824] dark:focus:border-[#ea6a58]"
+                className="px-3 py-2 bg-white dark:bg-[#161b22] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl text-xs font-semibold text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#B3654A] dark:focus:border-[#D0906D]"
               />
             </>
           )}
           <button
             onClick={load}
-            className="px-3.5 py-2 bg-[#c83824] hover:bg-[#a82d1c] text-white rounded-2xl text-xs font-bold flex items-center gap-1.5 shadow-md shadow-[#c83824]/20 cursor-pointer"
+            className="px-3.5 py-2 bg-[#B3654A] hover:bg-[#96503A] text-white rounded-2xl text-xs font-bold flex items-center gap-1.5 shadow-md shadow-[#B3654A]/20 cursor-pointer"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Actualizar
           </button>
@@ -211,7 +211,7 @@ export default function ReportsBento() {
 
       {isAdmin && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          <div className="bento-card p-6 bg-gradient-to-br from-[#c83824] via-[#b3301e] to-[#161b22] rounded-3xl text-white shadow-lg shadow-[#c83824]/15 border-none flex items-center justify-between">
+          <div className="bento-card p-6 bg-gradient-to-br from-[#B3654A] via-[#96503A] to-[#161b22] rounded-3xl text-white shadow-lg shadow-[#B3654A]/15 border-none flex items-center justify-between">
             <div>
               <span className="text-xs font-semibold text-red-100 uppercase tracking-wider">Total Vendido</span>
               <div className="text-3xl font-black mt-1 tabular-nums">{money(sales?.totalSold)}</div>
@@ -225,7 +225,7 @@ export default function ReportsBento() {
               <div className="text-3xl font-black mt-1 text-[#161b22] dark:text-[#f0f6fc] tabular-nums">{money(purchases?.totalInverted)}</div>
               <span className="text-[11px] text-gray-500 dark:text-gray-400 font-bold">{supplierEntries.length} proveedores en el período</span>
             </div>
-            <div className="p-3 bg-[#c83824]/10 text-[#c83824] dark:text-[#ea6a58] rounded-2xl border border-[#c83824]/20">
+            <div className="p-3 bg-[#B3654A]/10 text-[#B3654A] dark:text-[#D0906D] rounded-2xl border border-[#B3654A]/20">
               <ShoppingBag className="w-6 h-6" />
             </div>
           </div>
@@ -235,7 +235,7 @@ export default function ReportsBento() {
       {isAdmin && (
         <div className="bento-card p-6 bg-white dark:bg-[#161b22] rounded-3xl border border-[#e2e8f0] dark:border-[#262f38] shadow-xs">
           <div className="flex items-center gap-3 mb-5">
-            <div className="w-10 h-10 rounded-full bg-[#c83824]/10 flex items-center justify-center text-[#c83824] dark:text-[#ea6a58] shrink-0">
+            <div className="w-10 h-10 rounded-full bg-[#B3654A]/10 flex items-center justify-center text-[#B3654A] dark:text-[#D0906D] shrink-0">
               <Wallet className="w-5 h-5" />
             </div>
             <div>
@@ -262,7 +262,7 @@ export default function ReportsBento() {
                   value={countedCash}
                   onChange={(e) => setCountedCash(e.target.value)}
                   placeholder="Ingresa el total contado en caja..."
-                  className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl text-sm font-bold text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#c83824] dark:focus:border-[#ea6a58]"
+                  className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl text-sm font-bold text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#B3654A] dark:focus:border-[#D0906D]"
                 />
               </div>
 
@@ -334,7 +334,7 @@ export default function ReportsBento() {
                 type="checkbox"
                 checked={belowMinStock}
                 onChange={(e) => setBelowMinStock(e.target.checked)}
-                className="accent-[#c83824]"
+                className="accent-[#B3654A]"
               />
               Solo bajo mínimo
             </label>

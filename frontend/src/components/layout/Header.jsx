@@ -126,14 +126,14 @@ export default function Header({ onToggleMobileMenu }) {
           onClick={onToggleMobileMenu}
           className="lg:hidden p-2 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-[#262f38] rounded-xl transition-colors cursor-pointer"
         >
-          <Menu className="w-5 h-5 text-[#c83824] dark:text-[#ea6a58]" />
+          <Menu className="w-5 h-5 text-[#B3654A] dark:text-[#D0906D]" />
         </button>
 
         <div className="hidden md:flex gap-6 font-semibold text-sm text-[#161b22] dark:text-gray-200">
           <NavLink
             to="/"
             className={({ isActive }) =>
-              isActive ? "text-[#161b22] dark:text-white font-extrabold border-b-2 border-[#c83824] dark:border-[#ea6a58] pb-1" : "text-gray-500 dark:text-gray-400 hover:text-[#161b22] dark:hover:text-white transition-colors"
+              isActive ? "text-[#161b22] dark:text-white font-extrabold border-b-2 border-[#B3654A] dark:border-[#D0906D] pb-1" : "text-gray-500 dark:text-gray-400 hover:text-[#161b22] dark:hover:text-white transition-colors"
             }
           >
             Dashboard
@@ -141,7 +141,7 @@ export default function Header({ onToggleMobileMenu }) {
           <NavLink
             to="/pos"
             className={({ isActive }) =>
-              isActive ? "text-[#161b22] dark:text-white font-extrabold border-b-2 border-[#c83824] dark:border-[#ea6a58] pb-1" : "text-gray-500 dark:text-gray-400 hover:text-[#161b22] dark:hover:text-white transition-colors"
+              isActive ? "text-[#161b22] dark:text-white font-extrabold border-b-2 border-[#B3654A] dark:border-[#D0906D] pb-1" : "text-gray-500 dark:text-gray-400 hover:text-[#161b22] dark:hover:text-white transition-colors"
             }
           >
             Punto de Venta
@@ -149,7 +149,7 @@ export default function Header({ onToggleMobileMenu }) {
           <NavLink
             to="/invoicing"
             className={({ isActive }) =>
-              isActive ? "text-[#161b22] dark:text-white font-extrabold border-b-2 border-[#c83824] dark:border-[#ea6a58] pb-1" : "text-gray-500 dark:text-gray-400 hover:text-[#161b22] dark:hover:text-white transition-colors"
+              isActive ? "text-[#161b22] dark:text-white font-extrabold border-b-2 border-[#B3654A] dark:border-[#D0906D] pb-1" : "text-gray-500 dark:text-gray-400 hover:text-[#161b22] dark:hover:text-white transition-colors"
             }
           >
             Facturas DIAN
@@ -157,7 +157,7 @@ export default function Header({ onToggleMobileMenu }) {
           <NavLink
             to="/inventory"
             className={({ isActive }) =>
-              isActive ? "text-[#161b22] dark:text-white font-extrabold border-b-2 border-[#c83824] dark:border-[#ea6a58] pb-1" : "text-gray-500 dark:text-gray-400 hover:text-[#161b22] dark:hover:text-white transition-colors"
+              isActive ? "text-[#161b22] dark:text-white font-extrabold border-b-2 border-[#B3654A] dark:border-[#D0906D] pb-1" : "text-gray-500 dark:text-gray-400 hover:text-[#161b22] dark:hover:text-white transition-colors"
             }
           >
             Inventario
@@ -165,7 +165,7 @@ export default function Header({ onToggleMobileMenu }) {
           <NavLink
             to="/customers"
             className={({ isActive }) =>
-              isActive ? "text-[#161b22] dark:text-white font-extrabold border-b-2 border-[#c83824] dark:border-[#ea6a58] pb-1" : "text-gray-500 dark:text-gray-400 hover:text-[#161b22] dark:hover:text-white transition-colors"
+              isActive ? "text-[#161b22] dark:text-white font-extrabold border-b-2 border-[#B3654A] dark:border-[#D0906D] pb-1" : "text-gray-500 dark:text-gray-400 hover:text-[#161b22] dark:hover:text-white transition-colors"
             }
           >
             Clientes
@@ -200,7 +200,7 @@ export default function Header({ onToggleMobileMenu }) {
           >
             <Bell className="w-4.5 h-4.5" />
             {unreadCount > 0 && (
-              <span className="absolute top-1.5 right-1.5 min-w-[16px] h-4 px-1 bg-[#c83824] rounded-full border border-white dark:border-[#0d1117] text-[9px] font-extrabold text-white flex items-center justify-center">
+              <span className="absolute top-1.5 right-1.5 min-w-[16px] h-4 px-1 bg-[#B3654A] rounded-full border border-white dark:border-[#0d1117] text-[9px] font-extrabold text-white flex items-center justify-center">
                 {unreadCount > 9 ? '9+' : unreadCount}
               </span>
             )}
@@ -213,7 +213,7 @@ export default function Header({ onToggleMobileMenu }) {
                 {notifications.some(n => !n.read) && (
                   <button
                     onClick={handleMarkAllRead}
-                    className="flex items-center gap-1 text-[10px] font-bold text-[#c83824] dark:text-[#ea6a58] hover:underline cursor-pointer"
+                    className="flex items-center gap-1 text-[10px] font-bold text-[#B3654A] dark:text-[#D0906D] hover:underline cursor-pointer"
                   >
                     <CheckCheck className="w-3.5 h-3.5" /> Marcar todas
                   </button>
@@ -232,7 +232,7 @@ export default function Header({ onToggleMobileMenu }) {
                       <button
                         key={notif.id}
                         onClick={() => handleNotificationClick(notif)}
-                        className={`w-full text-left px-4 py-3 border-b border-[#e2e8f0] dark:border-[#262f38] last:border-b-0 flex gap-3 hover:bg-gray-50 dark:hover:bg-white/5 cursor-pointer ${!notif.read ? 'bg-[#c83824]/5 dark:bg-[#c83824]/10' : ''}`}
+                        className={`w-full text-left px-4 py-3 border-b border-[#e2e8f0] dark:border-[#262f38] last:border-b-0 flex gap-3 hover:bg-gray-50 dark:hover:bg-white/5 cursor-pointer ${!notif.read ? 'bg-[#B3654A]/5 dark:bg-[#B3654A]/10' : ''}`}
                       >
                         <div className="w-8 h-8 rounded-xl bg-gray-100 dark:bg-white/10 flex items-center justify-center shrink-0">
                           <Icon className="w-4 h-4 text-gray-500 dark:text-gray-300" />
@@ -242,7 +242,7 @@ export default function Header({ onToggleMobileMenu }) {
                           <p className="text-[11px] text-gray-500 dark:text-gray-400 line-clamp-2">{notif.message}</p>
                           <p className="text-[10px] text-gray-400 dark:text-gray-500 font-semibold mt-0.5">{formatRelativeTime(notif.createdAt)}</p>
                         </div>
-                        {!notif.read && <span className="w-2 h-2 rounded-full bg-[#c83824] dark:bg-[#ea6a58] shrink-0 mt-1.5" />}
+                        {!notif.read && <span className="w-2 h-2 rounded-full bg-[#B3654A] dark:bg-[#D0906D] shrink-0 mt-1.5" />}
                       </button>
                     );
                   })}
@@ -260,7 +260,7 @@ export default function Header({ onToggleMobileMenu }) {
         {/* Action Button "+ Nueva Venta" */}
         <button
           onClick={() => navigate('/pos')}
-          className="flex items-center gap-1.5 bg-[#c83824] hover:bg-[#a82917] text-white font-bold text-xs rounded-full px-4 py-2 transition-all shadow-md shadow-[#c83824]/20 cursor-pointer"
+          className="flex items-center gap-1.5 bg-[#B3654A] hover:bg-[#96503A] text-white font-bold text-xs rounded-full px-4 py-2 transition-all shadow-md shadow-[#B3654A]/20 cursor-pointer"
         >
           <Plus className="w-4 h-4 text-white" />
           <span className="hidden sm:inline">Nueva Venta</span>

@@ -103,7 +103,7 @@ export default function SuppliersBento() {
 
         <button
           onClick={openCreate}
-          className="px-4 py-2.5 bg-[#c83824] hover:bg-[#a82917] text-white rounded-2xl text-xs font-bold flex items-center gap-2 shadow-md shadow-[#c83824]/20 cursor-pointer transition-all"
+          className="px-4 py-2.5 bg-[#B3654A] hover:bg-[#96503A] text-white rounded-2xl text-xs font-bold flex items-center gap-2 shadow-md shadow-[#B3654A]/20 cursor-pointer transition-all"
         >
           <Plus className="w-4 h-4" /> Nuevo Proveedor
         </button>
@@ -118,7 +118,7 @@ export default function SuppliersBento() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Buscar por nombre, NIT o contacto..."
-              className="w-full pl-10 pr-3 py-1.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl text-xs font-semibold text-[#161b22] dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-[#c83824]"
+              className="w-full pl-10 pr-3 py-1.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl text-xs font-semibold text-[#161b22] dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-[#B3654A]"
             />
           </div>
           <span className="text-xs font-bold text-gray-400 dark:text-gray-500">{filtered.length} proveedores registrados</span>
@@ -137,7 +137,7 @@ export default function SuppliersBento() {
             </div>
             <button
               onClick={openCreate}
-              className="px-4 py-2 bg-[#c83824] text-white rounded-xl text-xs font-extrabold shadow-sm hover:bg-[#a82917] cursor-pointer"
+              className="px-4 py-2 bg-[#B3654A] text-white rounded-xl text-xs font-extrabold shadow-sm hover:bg-[#96503A] cursor-pointer"
             >
               + Registrar Primer Proveedor
             </button>
@@ -145,12 +145,12 @@ export default function SuppliersBento() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filtered.map(s => (
-              <div key={s.id} className="p-5 bg-white dark:bg-[#161b22] rounded-2xl border border-gray-200 dark:border-[#262f38] space-y-3 flex flex-col justify-between hover:border-[#c83824] transition-all shadow-xs group">
+              <div key={s.id} className="p-5 bg-white dark:bg-[#161b22] rounded-2xl border border-gray-200 dark:border-[#262f38] space-y-3 flex flex-col justify-between hover:border-[#B3654A] transition-all shadow-xs group">
                 <div>
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] font-mono font-bold text-gray-500 dark:text-gray-400">NIT: {s.taxId}</span>
                   </div>
-                  <h3 className="font-extrabold text-sm text-[#161b22] dark:text-white mt-2 group-hover:text-[#c83824] transition-colors">{s.companyName}</h3>
+                  <h3 className="font-extrabold text-sm text-[#161b22] dark:text-white mt-2 group-hover:text-[#B3654A] transition-colors">{s.companyName}</h3>
                   {s.contactName && <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">Contacto: {s.contactName}</p>}
                   <div className="mt-2 space-y-1 text-xs text-gray-500 dark:text-gray-400 font-medium">
                     <p className="flex items-center gap-1.5"><Mail className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" /> {s.email || 'Sin correo'}</p>
@@ -162,7 +162,7 @@ export default function SuppliersBento() {
                   <button
                     onClick={() => openEdit(s)}
                     title="Editar proveedor"
-                    className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-[#c83824] dark:hover:text-[#ea6a58] rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer"
+                    className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-[#B3654A] dark:hover:text-[#D0906D] rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer"
                   >
                     <Edit3 className="w-4 h-4" />
                   </button>
@@ -202,7 +202,7 @@ export default function SuppliersBento() {
                   value={form.companyName}
                   onChange={e => setForm({ ...form, companyName: e.target.value })}
                   placeholder="Distribuidora Central S.A.S."
-                  className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-gray-300 dark:border-[#262f38] rounded-2xl font-semibold text-[#161b22] dark:text-white focus:outline-none focus:border-[#c83824]"
+                  className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-gray-300 dark:border-[#262f38] rounded-2xl font-semibold text-[#161b22] dark:text-white focus:outline-none focus:border-[#B3654A]"
                   required
                 />
               </div>
@@ -215,7 +215,7 @@ export default function SuppliersBento() {
                   onChange={e => setForm({ ...form, taxId: e.target.value })}
                   placeholder="900123456-7"
                   disabled={!!form.id}
-                  className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-gray-300 dark:border-[#262f38] rounded-2xl font-mono text-xs text-[#161b22] dark:text-white disabled:opacity-60 focus:outline-none focus:border-[#c83824]"
+                  className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-gray-300 dark:border-[#262f38] rounded-2xl font-mono text-xs text-[#161b22] dark:text-white disabled:opacity-60 focus:outline-none focus:border-[#B3654A]"
                   required
                 />
               </div>
@@ -227,7 +227,7 @@ export default function SuppliersBento() {
                   value={form.contactName}
                   onChange={e => setForm({ ...form, contactName: e.target.value })}
                   placeholder="María Rodríguez"
-                  className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-gray-300 dark:border-[#262f38] rounded-2xl text-xs text-[#161b22] dark:text-white focus:outline-none focus:border-[#c83824]"
+                  className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-gray-300 dark:border-[#262f38] rounded-2xl text-xs text-[#161b22] dark:text-white focus:outline-none focus:border-[#B3654A]"
                 />
               </div>
 
@@ -239,7 +239,7 @@ export default function SuppliersBento() {
                     value={form.email}
                     onChange={e => setForm({ ...form, email: e.target.value })}
                     placeholder="contacto@proveedor.com"
-                    className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-gray-300 dark:border-[#262f38] rounded-2xl text-xs text-[#161b22] dark:text-white focus:outline-none focus:border-[#c83824]"
+                    className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-gray-300 dark:border-[#262f38] rounded-2xl text-xs text-[#161b22] dark:text-white focus:outline-none focus:border-[#B3654A]"
                   />
                 </div>
                 <div>
@@ -249,7 +249,7 @@ export default function SuppliersBento() {
                     value={form.phone}
                     onChange={e => setForm({ ...form, phone: e.target.value })}
                     placeholder="3001234567"
-                    className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-gray-300 dark:border-[#262f38] rounded-2xl text-xs text-[#161b22] dark:text-white focus:outline-none focus:border-[#c83824]"
+                    className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-gray-300 dark:border-[#262f38] rounded-2xl text-xs text-[#161b22] dark:text-white focus:outline-none focus:border-[#B3654A]"
                   />
                 </div>
               </div>
@@ -261,7 +261,7 @@ export default function SuppliersBento() {
                   value={form.address}
                   onChange={e => setForm({ ...form, address: e.target.value })}
                   placeholder="Zona Industrial # 15-30, Bogotá"
-                  className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-gray-300 dark:border-[#262f38] rounded-2xl text-xs text-[#161b22] dark:text-white focus:outline-none focus:border-[#c83824]"
+                  className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-gray-300 dark:border-[#262f38] rounded-2xl text-xs text-[#161b22] dark:text-white focus:outline-none focus:border-[#B3654A]"
                 />
               </div>
             </div>
@@ -276,7 +276,7 @@ export default function SuppliersBento() {
               </button>
               <button
                 type="submit"
-                className="w-1/2 py-3 bg-[#c83824] hover:bg-[#a82917] text-white rounded-2xl text-xs font-extrabold shadow-md shadow-[#c83824]/20 cursor-pointer"
+                className="w-1/2 py-3 bg-[#B3654A] hover:bg-[#96503A] text-white rounded-2xl text-xs font-extrabold shadow-md shadow-[#B3654A]/20 cursor-pointer"
               >
                 {form.id ? 'Guardar Cambios' : 'Crear Proveedor'}
               </button>

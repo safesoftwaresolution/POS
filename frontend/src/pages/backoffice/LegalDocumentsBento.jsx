@@ -101,7 +101,7 @@ export default function LegalDocumentsBento() {
 
         <button
           onClick={openCreate}
-          className="px-4 py-2.5 bg-[#c83824] hover:bg-[#a82d1c] text-white rounded-2xl text-xs font-bold flex items-center gap-2 shadow-md shadow-[#c83824]/20 cursor-pointer"
+          className="px-4 py-2.5 bg-[#B3654A] hover:bg-[#96503A] text-white rounded-2xl text-xs font-bold flex items-center gap-2 shadow-md shadow-[#B3654A]/20 cursor-pointer"
         >
           <Plus className="w-4 h-4" /> Nuevo Documento
         </button>
@@ -162,14 +162,14 @@ export default function LegalDocumentsBento() {
                         <button
                           onClick={() => handleTogglePublish(doc)}
                           title={doc.published ? 'Despublicar' : 'Publicar'}
-                          className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-[#c83824] dark:hover:text-[#ea6a58] rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer"
+                          className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-[#B3654A] dark:hover:text-[#D0906D] rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer"
                         >
                           {doc.published ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                         </button>
                         <button
                           onClick={() => openEdit(doc)}
                           title="Editar documento"
-                          className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-[#c83824] dark:hover:text-[#ea6a58] rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer"
+                          className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-[#B3654A] dark:hover:text-[#D0906D] rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer"
                         >
                           <Edit3 className="w-4 h-4" />
                         </button>
@@ -223,7 +223,7 @@ export default function LegalDocumentsBento() {
                   value={form.title}
                   onChange={e => setForm({ ...form, title: e.target.value })}
                   placeholder="Ej. Términos y Condiciones"
-                  className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl font-semibold text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#c83824] dark:focus:border-[#ea6a58]"
+                  className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl font-semibold text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#B3654A] dark:focus:border-[#D0906D]"
                   required
                 />
               </div>
@@ -236,7 +236,7 @@ export default function LegalDocumentsBento() {
                     value={form.slug}
                     onChange={e => setForm({ ...form, slug: e.target.value })}
                     placeholder="terminos-y-condiciones"
-                    className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl font-mono text-xs text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#c83824] dark:focus:border-[#ea6a58]"
+                    className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl font-mono text-xs text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#B3654A] dark:focus:border-[#D0906D]"
                     required
                     disabled={!!form.id}
                   />
@@ -248,7 +248,7 @@ export default function LegalDocumentsBento() {
                     value={form.version}
                     onChange={e => setForm({ ...form, version: e.target.value })}
                     placeholder="1.0"
-                    className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl text-xs text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#c83824] dark:focus:border-[#ea6a58]"
+                    className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl text-xs text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#B3654A] dark:focus:border-[#D0906D]"
                     required
                   />
                 </div>
@@ -261,7 +261,7 @@ export default function LegalDocumentsBento() {
                   onChange={e => setForm({ ...form, content: e.target.value })}
                   placeholder="Contenido del documento legal..."
                   rows={10}
-                  className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl text-xs text-[#161b22] dark:text-[#f0f6fc] resize-y focus:outline-none focus:border-[#c83824] dark:focus:border-[#ea6a58]"
+                  className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl text-xs text-[#161b22] dark:text-[#f0f6fc] resize-y focus:outline-none focus:border-[#B3654A] dark:focus:border-[#D0906D]"
                   required
                 />
               </div>
@@ -277,7 +277,7 @@ export default function LegalDocumentsBento() {
               </button>
               <button
                 type="submit"
-                className="w-1/2 py-3 bg-[#c83824] hover:bg-[#a82d1c] text-white rounded-2xl text-xs font-extrabold cursor-pointer shadow-md shadow-[#c83824]/20"
+                className="w-1/2 py-3 bg-[#B3654A] hover:bg-[#96503A] text-white rounded-2xl text-xs font-extrabold cursor-pointer shadow-md shadow-[#B3654A]/20"
               >
                 {form.id ? 'Guardar Cambios' : 'Crear Documento'}
               </button>

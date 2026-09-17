@@ -52,7 +52,7 @@ export function ModalProvider({ children }) {
               <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${
                 modal.danger
                   ? 'bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400'
-                  : 'bg-[#c83824]/10 dark:bg-[#c83824]/20 text-[#c83824]'
+                  : 'bg-[#B3654A]/10 dark:bg-[#B3654A]/20 text-[#B3654A]'
               }`}>
                 {modal.type === 'confirm'
                   ? <HelpCircle className="w-5 h-5" />
@@ -79,7 +79,7 @@ export function ModalProvider({ children }) {
                   className={`w-1/2 py-2.5 text-white rounded-2xl text-xs font-extrabold cursor-pointer transition-all shadow-md ${
                     modal.danger
                       ? 'bg-red-500 hover:bg-red-600 shadow-red-500/20'
-                      : 'bg-[#c83824] hover:bg-[#b02f1e] shadow-[#c83824]/25'
+                      : 'bg-[#B3654A] hover:bg-[#96503A] shadow-[#B3654A]/25'
                   }`}
                 >
                   {modal.confirmText}
@@ -90,7 +90,7 @@ export function ModalProvider({ children }) {
                 <button
                   type="button"
                   onClick={() => close()}
-                  className="w-full py-2.5 bg-[#c83824] hover:bg-[#b02f1e] text-white rounded-2xl text-xs font-extrabold cursor-pointer transition-all shadow-lg shadow-[#c83824]/25"
+                  className="w-full py-2.5 bg-[#B3654A] hover:bg-[#96503A] text-white rounded-2xl text-xs font-extrabold cursor-pointer transition-all shadow-lg shadow-[#B3654A]/25"
                 >
                   {modal.confirmText}
                 </button>

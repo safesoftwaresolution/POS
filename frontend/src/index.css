@@ -10,8 +10,8 @@
     --text-primary: #161b22;
     --text-secondary: #57606a;
     --text-muted: #8c959f;
-    --color-primary: #c83824;
-    --color-primary-hover: #a82917;
+    --color-primary: #B3654A;
+    --color-primary-hover: #96503A;
   }
 
   html.dark {
@@ -21,8 +21,8 @@
     --text-primary: #f0f6fc;
     --text-secondary: #8b949e;
     --text-muted: #6e7681;
-    --color-primary: #e25845;
-    --color-primary-hover: #c83824;
+    --color-primary: #D0906D;
+    --color-primary-hover: #B3654A;
   }
 
   body {
@@ -57,10 +57,10 @@
     background: #30363d;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: #c83824;
+    background: #B3654A;
   }
   html.dark ::-webkit-scrollbar-thumb:hover {
-    background: #e25845;
+    background: #D0906D;
   }
 
   /* Bento card styling */

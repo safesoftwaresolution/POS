@@ -19,7 +19,7 @@ export default function BackofficeHeader({ onToggleMobileMenu }) {
           onClick={onToggleMobileMenu}
           className="lg:hidden p-2 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-[#262f38] rounded-xl transition-colors cursor-pointer"
         >
-          <Menu className="w-5 h-5 text-[#c83824] dark:text-[#ea6a58]" />
+          <Menu className="w-5 h-5 text-[#B3654A] dark:text-[#D0906D]" />
         </button>
         <span className="text-xs font-extrabold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
           Panel de Super Administración

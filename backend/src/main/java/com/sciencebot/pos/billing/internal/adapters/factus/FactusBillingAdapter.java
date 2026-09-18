@@ -5,15 +5,14 @@ import com.sciencebot.pos.billing.NumberingRangeDto;
 import com.sciencebot.pos.billing.internal.adapters.ElectronicInvoicingProvider;
 import com.sciencebot.pos.billing.internal.adapters.dto.InvoiceRequest;
 import com.sciencebot.pos.billing.internal.adapters.dto.InvoiceResult;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestClient;
 
 import java.util.List;
 
 /**
  * Adaptador de Facturación Electrónica para Factus (API REST DIAN v2).
- * Compone y delega a {@link FactusInvoiceClient} y {@link FactusNumberingRangeClient}.
+ * Compone y delega a {@link FactusInvoiceClient} y
+ * {@link FactusNumberingRangeClient}.
  */
 @Component("factusBillingProvider")
 public class FactusBillingAdapter implements ElectronicInvoicingProvider {
@@ -21,41 +20,9 @@ public class FactusBillingAdapter implements ElectronicInvoicingProvider {
     private final FactusInvoiceClient invoiceClient;
     private final FactusNumberingRangeClient rangeClient;
 
-    @Autowired
     public FactusBillingAdapter(FactusInvoiceClient invoiceClient, FactusNumberingRangeClient rangeClient) {
         this.invoiceClient = invoiceClient;
         this.rangeClient = rangeClient;
-    }
-
-    // Constructores de compatibilidad y testing
-    public FactusBillingAdapter(
-            FactusTokenManager tokenManager,
-            FactusSaleMapper saleMapper,
-            FactusNumberingRangeMapper rangeMapper
-    ) {
-        FactusClientHelper helper = new FactusClientHelper(tokenManager);
-        this.invoiceClient = new FactusInvoiceClient(helper, saleMapper);
-        this.rangeClient = new FactusNumberingRangeClient(helper, rangeMapper);
-    }
-
-    public FactusBillingAdapter(
-            FactusTokenManager tokenManager,
-            FactusSaleMapper saleMapper
-    ) {
-        this(tokenManager, saleMapper, new FactusNumberingRangeMapper());
-    }
-
-    public FactusBillingAdapter(
-            FactusTokenManager tokenManager,
-            FactusSaleMapper saleMapper,
-            FactusNumberingRangeMapper rangeMapper,
-            RestClient restClient,
-            String factusUrl,
-            int numberingRangeId
-    ) {
-        FactusClientHelper helper = new FactusClientHelper(tokenManager, restClient, factusUrl);
-        this.invoiceClient = new FactusInvoiceClient(helper, saleMapper, numberingRangeId);
-        this.rangeClient = new FactusNumberingRangeClient(helper, rangeMapper);
     }
 
     @Override

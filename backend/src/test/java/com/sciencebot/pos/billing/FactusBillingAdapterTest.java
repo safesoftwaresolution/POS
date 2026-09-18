@@ -1,13 +1,10 @@
 package com.sciencebot.pos.billing;
 
-import com.sciencebot.pos.billing.internal.adapters.dto.CustomerBillingData;
-import com.sciencebot.pos.billing.internal.adapters.dto.InvoiceItemData;
 import com.sciencebot.pos.billing.internal.adapters.dto.InvoiceRequest;
 import com.sciencebot.pos.billing.internal.adapters.dto.InvoiceResult;
 import com.sciencebot.pos.billing.internal.adapters.factus.FactusBillingAdapter;
-import com.sciencebot.pos.billing.internal.adapters.factus.FactusNumberingRangeMapper;
-import com.sciencebot.pos.billing.internal.adapters.factus.FactusSaleMapper;
-import com.sciencebot.pos.billing.internal.adapters.factus.FactusTokenManager;
+import com.sciencebot.pos.billing.internal.adapters.factus.FactusInvoiceClient;
+import com.sciencebot.pos.billing.internal.adapters.factus.FactusNumberingRangeClient;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -15,25 +12,24 @@ import org.mockito.MockitoAnnotations;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 class FactusBillingAdapterTest {
 
     @Mock
-    private FactusTokenManager tokenManager;
+    private FactusInvoiceClient invoiceClient;
 
-    private FactusSaleMapper saleMapper;
-    private FactusNumberingRangeMapper rangeMapper;
+    @Mock
+    private FactusNumberingRangeClient rangeClient;
+
     private FactusBillingAdapter adapter;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        saleMapper = new FactusSaleMapper();
-        rangeMapper = new FactusNumberingRangeMapper();
-        adapter = new FactusBillingAdapter(tokenManager, saleMapper, rangeMapper);
+        adapter = new FactusBillingAdapter(invoiceClient, rangeClient);
     }
 
     @Test
@@ -41,137 +37,140 @@ class FactusBillingAdapterTest {
         assertEquals("factus", adapter.getProviderName());
     }
 
+    // --- Pruebas de delegación hacia FactusInvoiceClient ---
+
     @Test
-    void emitInvoice_NullSaleId_ReturnsErrorResult() {
-        InvoiceRequest request = new InvoiceRequest(null, "FACT-001", "10", null, List.of(), BigDecimal.TEN);
+    void emitInvoice_DelegatesToInvoiceClient() {
+        InvoiceRequest request = new InvoiceRequest(1L, "FACT-001", "10", null, List.of(), BigDecimal.TEN);
+        InvoiceResult expectedResult = InvoiceResult.success("FACT-001", "cufe-123", "qr-url", "public-url");
+
+        when(invoiceClient.emitInvoice(request)).thenReturn(expectedResult);
+
         InvoiceResult result = adapter.emitInvoice(request);
 
-        assertNotNull(result);
-        assertFalse(result.isSuccess());
-        assertEquals("ERROR", result.status());
-        assertTrue(result.errorMessage().contains("ID de la venta es obligatorio"));
+        assertSame(expectedResult, result);
+        verify(invoiceClient).emitInvoice(request);
     }
 
     @Test
-    void queryInvoice_ReturnsPending() {
+    void queryInvoice_DelegatesToInvoiceClient() {
+        InvoiceResult expectedResult = InvoiceResult.success("FACT-001", "cufe-123", "qr-url", "public-url");
+        when(invoiceClient.queryInvoice("FACT-001")).thenReturn(expectedResult);
+
         InvoiceResult result = adapter.queryInvoice("FACT-001");
-        assertNotNull(result);
-        assertEquals("PENDING", result.status());
-        assertTrue(result.errorMessage().contains("FACT-001"));
+
+        assertSame(expectedResult, result);
+        verify(invoiceClient).queryInvoice("FACT-001");
     }
 
     @Test
-    void sendInvoiceEmail_NullArguments_ThrowsException() {
-        assertThrows(NullPointerException.class, () -> adapter.sendInvoiceEmail(null, "correo@tienda.com"));
-        assertThrows(NullPointerException.class, () -> adapter.sendInvoiceEmail("FACT-001", null));
+    void downloadInvoicePDF_DelegatesToInvoiceClient() {
+        byte[] expectedPdf = new byte[]{1, 2, 3};
+        when(invoiceClient.downloadInvoicePDF("FACT-001")).thenReturn(expectedPdf);
+
+        byte[] result = adapter.downloadInvoicePDF("FACT-001");
+
+        assertSame(expectedPdf, result);
+        verify(invoiceClient).downloadInvoicePDF("FACT-001");
     }
 
     @Test
-    void numberingRanges_NullArguments_ThrowsException() {
-        assertThrows(NullPointerException.class, () -> adapter.getNumberingRange(null));
-        assertThrows(NullPointerException.class, () -> adapter.createNumberingRange(null));
-        assertThrows(NullPointerException.class, () -> adapter.deleteNumberingRange(null));
-        assertThrows(NullPointerException.class, () -> adapter.toggleNumberingRangeStatus(null));
+    void downloadInvoiceXML_DelegatesToInvoiceClient() {
+        byte[] expectedXml = new byte[]{4, 5, 6};
+        when(invoiceClient.downloadInvoiceXML("FACT-001")).thenReturn(expectedXml);
+
+        byte[] result = adapter.downloadInvoiceXML("FACT-001");
+
+        assertSame(expectedXml, result);
+        verify(invoiceClient).downloadInvoiceXML("FACT-001");
     }
 
     @Test
-    @SuppressWarnings("unchecked")
-    void saleMapper_TransformsInvoiceRequest_StandardFactusV2Payload() {
-        CustomerBillingData customer = new CustomerBillingData("123456789", "1", "Empresa XYZ", "info@xyz.com", 1, 1, 11001);
-        InvoiceItemData item = new InvoiceItemData("REF-01", "Laptop", 2, BigDecimal.valueOf(1500.0), BigDecimal.ZERO, BigDecimal.valueOf(3000.0));
-        InvoiceRequest request = new InvoiceRequest(10L, "FACT-000010", "10", customer, List.of(item), BigDecimal.valueOf(3000.0));
+    void deleteUnvalidatedInvoice_DelegatesToInvoiceClient() {
+        when(invoiceClient.deleteUnvalidatedInvoice("FACT-001")).thenReturn(true);
 
-        Map<String, Object> payload = saleMapper.toFactusRequestPayload(request, 8);
+        boolean result = adapter.deleteUnvalidatedInvoice("FACT-001");
 
-        assertNotNull(payload);
-        assertEquals("01", payload.get("document"));
-        assertEquals("10", payload.get("operation_type"));
-        assertEquals(8, payload.get("numbering_range_id"));
-        assertEquals("0.00", payload.get("cash_rounding_amount"));
-
-        // Validar payment_details
-        assertTrue(payload.containsKey("payment_details"));
-        List<Map<String, Object>> paymentDetails = (List<Map<String, Object>>) payload.get("payment_details");
-        assertEquals(1, paymentDetails.size());
-        assertEquals("1", paymentDetails.get(0).get("payment_form"));
-        assertEquals("10", paymentDetails.get(0).get("payment_method_code"));
-        assertEquals("3000.00", paymentDetails.get(0).get("amount"));
-
-        // Validar customer (Persona Jurídica)
-        assertTrue(payload.containsKey("customer"));
-        Map<String, Object> customerMap = (Map<String, Object>) payload.get("customer");
-        assertEquals("123456789", customerMap.get("identification"));
-        assertEquals("1", customerMap.get("dv"));
-        assertEquals("1", customerMap.get("legal_organization_code"));
-        assertEquals("Empresa XYZ", customerMap.get("company"));
-        assertEquals("info@xyz.com", customerMap.get("email"));
-        assertEquals("CO", customerMap.get("country_code"));
-        assertEquals("11001", customerMap.get("municipality_code"));
-
-        // Validar items
-        assertTrue(payload.containsKey("items"));
-        List<Map<String, Object>> items = (List<Map<String, Object>>) payload.get("items");
-        assertEquals(1, items.size());
-        Map<String, Object> itemMap = items.get(0);
-        assertEquals("REF-01", itemMap.get("code_reference"));
-        assertEquals("Laptop", itemMap.get("name"));
-        assertEquals("2.00", itemMap.get("quantity"));
-        assertEquals("1500.00", itemMap.get("price"));
-        assertEquals("0.00", itemMap.get("discount_rate"));
-        assertEquals("94", itemMap.get("unit_measure_code"));
-        assertEquals("999", itemMap.get("standard_code"));
-
-        // Validar taxes dentro del item
-        assertTrue(itemMap.containsKey("taxes"));
-        List<Map<String, Object>> taxes = (List<Map<String, Object>>) itemMap.get("taxes");
-        assertEquals(1, taxes.size());
-        assertEquals("01", taxes.get(0).get("code"));
-        assertEquals("0.00", taxes.get(0).get("rate"));
+        assertTrue(result);
+        verify(invoiceClient).deleteUnvalidatedInvoice("FACT-001");
     }
 
     @Test
-    @SuppressWarnings("unchecked")
-    void saleMapper_TransformsNaturalPersonCustomer_SetsNamesNotCompany() {
-        CustomerBillingData customer = new CustomerBillingData(
-                "13",
-                "1020304050",
-                "",
-                "2",
-                "ZZ",
-                List.of("R-99-PN"),
-                "Carlos Perez",
-                null,
-                null,
-                "carlos@email.com",
-                "3001234567",
-                "Calle 10 # 5-20",
-                "CO",
-                "11001"
+    void sendInvoiceEmail_DelegatesToInvoiceClient() {
+        when(invoiceClient.sendInvoiceEmail("FACT-001", "cliente@tienda.com")).thenReturn(true);
+
+        boolean result = adapter.sendInvoiceEmail("FACT-001", "cliente@tienda.com");
+
+        assertTrue(result);
+        verify(invoiceClient).sendInvoiceEmail("FACT-001", "cliente@tienda.com");
+    }
+
+    // --- Pruebas de delegación hacia FactusNumberingRangeClient ---
+
+    @Test
+    void queryDianNumberingRanges_DelegatesToRangeClient() {
+        List<NumberingRangeDto> expectedList = List.of();
+        when(rangeClient.queryDianNumberingRanges()).thenReturn(expectedList);
+
+        List<NumberingRangeDto> result = adapter.queryDianNumberingRanges();
+
+        assertSame(expectedList, result);
+        verify(rangeClient).queryDianNumberingRanges();
+    }
+
+    @Test
+    void listNumberingRanges_DelegatesToRangeClient() {
+        List<NumberingRangeDto> expectedList = List.of();
+        when(rangeClient.listNumberingRanges()).thenReturn(expectedList);
+
+        List<NumberingRangeDto> result = adapter.listNumberingRanges();
+
+        assertSame(expectedList, result);
+        verify(rangeClient).listNumberingRanges();
+    }
+
+    @Test
+    void getNumberingRange_DelegatesToRangeClient() {
+        NumberingRangeDto expectedDto = new NumberingRangeDto(1L, "01", "SETP", "18764", 1L, 1000L, 1L, "2026-01-01", "2027-01-01", "key-xyz", true);
+        when(rangeClient.getNumberingRange(1L)).thenReturn(expectedDto);
+
+        NumberingRangeDto result = adapter.getNumberingRange(1L);
+
+        assertSame(expectedDto, result);
+        verify(rangeClient).getNumberingRange(1L);
+    }
+
+    @Test
+    void createNumberingRange_DelegatesToRangeClient() {
+        CreateNumberingRangeRequest request = new CreateNumberingRangeRequest(
+                "01", "SETP", "18764000001234", 1L, "2026-01-01", "2027-01-01", 1L, 5000L, "key-xyz"
         );
-        InvoiceItemData item = new InvoiceItemData("PROD-1", "Servicio", 1, BigDecimal.valueOf(100.0), BigDecimal.ZERO, BigDecimal.valueOf(100.0));
-        InvoiceRequest request = new InvoiceRequest(20L, "FACT-000020", "10", customer, List.of(item), BigDecimal.valueOf(100.0));
+        NumberingRangeDto expectedDto = new NumberingRangeDto(2L, "01", "SETP", "18764000001234", 1L, 5000L, 1L, "2026-01-01", "2027-01-01", "key-xyz", true);
+        when(rangeClient.createNumberingRange(request)).thenReturn(expectedDto);
 
-        Map<String, Object> payload = saleMapper.toFactusRequestPayload(request, 8);
-        Map<String, Object> customerMap = (Map<String, Object>) payload.get("customer");
+        NumberingRangeDto result = adapter.createNumberingRange(request);
 
-        assertEquals("13", customerMap.get("identification_document_code"));
-        assertEquals("1020304050", customerMap.get("identification"));
-        assertEquals("2", customerMap.get("legal_organization_code"));
-        assertEquals("Carlos Perez", customerMap.get("names"));
-        assertNull(customerMap.get("company"));
+        assertSame(expectedDto, result);
+        verify(rangeClient).createNumberingRange(request);
     }
 
     @Test
-    @SuppressWarnings("unchecked")
-    void saleMapper_DefaultGenericCustomer_MapsCorrectly() {
-        InvoiceRequest request = new InvoiceRequest(30L, "FACT-000030", "10", null, List.of(), BigDecimal.ZERO);
-        Map<String, Object> payload = saleMapper.toFactusRequestPayload(request, 8);
+    void deleteNumberingRange_DelegatesToRangeClient() {
+        when(rangeClient.deleteNumberingRange(1L)).thenReturn(true);
 
-        Map<String, Object> customerMap = (Map<String, Object>) payload.get("customer");
-        assertEquals("13", customerMap.get("identification_document_code"));
-        assertEquals("222222222222", customerMap.get("identification"));
-        assertEquals("2", customerMap.get("legal_organization_code"));
-        assertEquals("Consumidor Final", customerMap.get("names"));
-        assertEquals("consumidorfinal@tienda.com", customerMap.get("email"));
+        boolean result = adapter.deleteNumberingRange(1L);
+
+        assertTrue(result);
+        verify(rangeClient).deleteNumberingRange(1L);
+    }
+
+    @Test
+    void toggleNumberingRangeStatus_DelegatesToRangeClient() {
+        when(rangeClient.toggleNumberingRangeStatus(1L)).thenReturn(true);
+
+        boolean result = adapter.toggleNumberingRangeStatus(1L);
+
+        assertTrue(result);
+        verify(rangeClient).toggleNumberingRangeStatus(1L);
     }
 }

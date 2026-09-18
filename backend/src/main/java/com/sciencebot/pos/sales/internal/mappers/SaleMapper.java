@@ -50,6 +50,8 @@ public class SaleMapper {
 
         return new SaleDto(
                 sale.getId(),
+                sale.getStoreId(),
+                sale.getCustomerId(),
                 sale.getInvoiceNumber(),
                 sale.getCreatedAt(),
                 customerName,
@@ -77,7 +79,9 @@ public class SaleMapper {
                 productName,
                 item.getQuantity(),
                 item.getUnitPrice(),
-                item.getSubtotal()
+                item.getSubtotal(),
+                item.getTaxRate() != null ? item.getTaxRate() : java.math.BigDecimal.ZERO,
+                item.getTaxAmount() != null ? item.getTaxAmount() : java.math.BigDecimal.ZERO
         );
     }
 }

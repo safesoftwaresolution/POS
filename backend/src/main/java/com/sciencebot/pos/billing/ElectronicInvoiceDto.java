@@ -7,6 +7,8 @@ import java.time.LocalDateTime;
 public record ElectronicInvoiceDto(
         @Schema(description = "Identificador interno de la factura electrónica", example = "1")
         Long id,
+        @Schema(description = "ID de la tienda o local", example = "1")
+        Long storeId,
         @Schema(description = "ID de la venta asociada", example = "5")
         Long saleId,
         @Schema(description = "Número de factura asignado por Factus", example = "SETP990000001")
@@ -25,4 +27,9 @@ public record ElectronicInvoiceDto(
         String pdfUrl,
         @Schema(description = "Fecha y hora de validación por la DIAN", example = "2025-03-15T10:35:00")
         LocalDateTime validatedAt
-) {}
+) {
+    public ElectronicInvoiceDto(Long id, Long saleId, String factusNumber, String cufe, String qrCode,
+                                String status, String errorMessage, String pdfUrl, LocalDateTime validatedAt) {
+        this(id, null, saleId, factusNumber, cufe, qrCode, status, errorMessage, pdfUrl, validatedAt);
+    }
+}

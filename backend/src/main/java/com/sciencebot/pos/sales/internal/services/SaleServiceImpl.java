@@ -173,12 +173,19 @@ public class SaleServiceImpl implements SaleFacade {
             BigDecimal subtotal = product.salePrice().multiply(BigDecimal.valueOf(itemCommand.quantity()));
             total = total.add(subtotal);
 
+            BigDecimal taxRate = product.taxRate() != null ? product.taxRate() : BigDecimal.ZERO;
+            BigDecimal taxFactor = BigDecimal.ONE.add(taxRate.divide(BigDecimal.valueOf(100), 4, java.math.RoundingMode.HALF_UP));
+            BigDecimal netSubtotal = subtotal.divide(taxFactor, 2, java.math.RoundingMode.HALF_UP);
+            BigDecimal taxAmount = subtotal.subtract(netSubtotal);
+
             SaleItem saleItem = new SaleItem();
             saleItem.setSale(sale);
             saleItem.setProductId(itemCommand.productId());
             saleItem.setQuantity(itemCommand.quantity());
             saleItem.setUnitPrice(product.salePrice());
             saleItem.setSubtotal(subtotal);
+            saleItem.setTaxRate(taxRate);
+            saleItem.setTaxAmount(taxAmount);
             items.add(saleItem);
         }
 

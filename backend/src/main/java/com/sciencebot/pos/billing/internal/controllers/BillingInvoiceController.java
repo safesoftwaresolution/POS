@@ -11,13 +11,16 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/v1/billing/sales")
+@RequestMapping("/api/v1/billing")
 @Tag(name = "📄 Facturación Electrónica - Facturas", description = "Emisión, consulta y reintento de facturas electrónicas de venta ante la DIAN / Factus")
 public class BillingInvoiceController {
 
@@ -27,7 +30,20 @@ public class BillingInvoiceController {
         this.invoiceService = invoiceService;
     }
 
-    @GetMapping("/{saleId}")
+    @GetMapping("/invoices")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'SUPERVISOR', 'SELLER')")
+    @Operation(
+            summary = "Listar facturas electrónicas de la tienda",
+            description = "Retorna el historial paginado de facturas electrónicas para la tienda del usuario autenticado, con filtro opcional por estado."
+    )
+    public ResponseEntity<Page<ElectronicInvoiceDto>> listInvoices(
+            @Parameter(description = "Paginación y ordenamiento") Pageable pageable,
+            @Parameter(description = "Filtro opcional por estado: PENDING, VALIDATED, ERROR", example = "VALIDATED")
+            @RequestParam(required = false) String status) {
+        return ResponseEntity.ok(invoiceService.listInvoices(pageable, status));
+    }
+
+    @GetMapping("/sales/{saleId}")
     @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'SUPERVISOR', 'SELLER')")
     @Operation(
             summary = "Consultar factura electrónica de una venta",
@@ -57,7 +73,7 @@ public class BillingInvoiceController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    @PostMapping("/{saleId}/retry")
+    @PostMapping("/sales/{saleId}/retry")
     @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'SUPERVISOR')")
     @Operation(
             summary = "Reintentar facturación electrónica",
@@ -87,7 +103,7 @@ public class BillingInvoiceController {
         return ResponseEntity.ok(result);
     }
 
-    @PostMapping("/{saleId}/send-email")
+    @PostMapping("/sales/{saleId}/send-email")
     @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'SUPERVISOR', 'SELLER')")
     @Operation(
             summary = "Enviar factura electrónica por correo electrónico",
@@ -108,5 +124,49 @@ public class BillingInvoiceController {
             @Valid @RequestBody SendInvoiceEmailRequest request) {
         invoiceService.sendInvoiceEmail(saleId, request.email());
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/sales/{saleId}/pdf")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'SUPERVISOR', 'SELLER')")
+    @Operation(
+            summary = "Descargar PDF de la factura electrónica",
+            description = "Descarga el archivo PDF legal emitido por Factus / DIAN para la venta especificada."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "PDF descargado exitosamente",
+                    content = @Content(mediaType = MediaType.APPLICATION_PDF_VALUE)),
+            @ApiResponse(responseCode = "404", description = "Venta o factura no encontrada"),
+            @ApiResponse(responseCode = "400", description = "La factura no ha sido validada")
+    })
+    public ResponseEntity<byte[]> downloadPdf(
+            @Parameter(description = "ID de la venta", example = "1", required = true)
+            @PathVariable Long saleId) {
+        byte[] pdf = invoiceService.downloadInvoicePDF(saleId);
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"factura-" + saleId + ".pdf\"")
+                .body(pdf);
+    }
+
+    @GetMapping("/sales/{saleId}/xml")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'SUPERVISOR', 'SELLER')")
+    @Operation(
+            summary = "Descargar XML legal de la factura electrónica",
+            description = "Descarga el archivo XML firmado ante la DIAN para la venta especificada."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "XML descargado exitosamente",
+                    content = @Content(mediaType = MediaType.APPLICATION_XML_VALUE)),
+            @ApiResponse(responseCode = "404", description = "Venta o factura no encontrada"),
+            @ApiResponse(responseCode = "400", description = "La factura no ha sido validada")
+    })
+    public ResponseEntity<byte[]> downloadXml(
+            @Parameter(description = "ID de la venta", example = "1", required = true)
+            @PathVariable Long saleId) {
+        byte[] xml = invoiceService.downloadInvoiceXML(saleId);
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_XML)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"factura-" + saleId + ".xml\"")
+                .body(xml);
     }
 }

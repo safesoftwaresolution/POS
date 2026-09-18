@@ -1,5 +1,6 @@
 package com.sciencebot.pos.auth.internal.services;
 
+import com.sciencebot.pos.auth.LoginResponse;
 import com.sciencebot.pos.config.JwtService;
 import com.sciencebot.pos.config.PosUserDetails;
 import com.sciencebot.pos.shared.email.EmailSender;
@@ -52,7 +53,7 @@ public class AuthService {
         String link = frontendUrl + "/verify-email?token=" + rawToken;
         emailSender.send(
                 created.email(),
-                "Verifica tu correo - ProPOS",
+                "Verifica tu cor reo - ProPOS",
                 "<p>Hola " + created.fullName() + ",</p>"
                         + "<p>Gracias por registrarte en ProPOS. Confirma tu correo para activar tu cuenta:</p>"
                         + "<p><a href=\"" + link + "\">Verificar mi correo</a></p>"
@@ -214,13 +215,4 @@ public class AuthService {
             return lockedUntil > System.currentTimeMillis();
         }
     }
-
-    public record LoginResponse(
-            String token,
-            String refreshToken,
-            String username,
-            String role,
-            Long storeId,
-            long expiresIn
-    ) {}
 }

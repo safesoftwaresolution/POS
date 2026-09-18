@@ -22,5 +22,14 @@ public record UpdateProductCommand(
     @Schema(description = "Stock mínimo para alerta", example = "20")
     int minStock,
     @Schema(description = "URL de imagen del producto", example = "https://storage.example.com/products/arroz.jpg")
-    String imageUrl
-) {}
+    String imageUrl,
+    @Schema(description = "Nueva tasa de impuesto / IVA del producto (0.00, 5.00, 19.00)", example = "19.00")
+    BigDecimal taxRate,
+    @Schema(description = "Nuevo código estándar UNSPSC para facturación electrónica DIAN", example = "50202301")
+    String unspscCode
+) {
+    public UpdateProductCommand(String name, String description, Long categoryId, Long subcategoryId,
+                                BigDecimal purchasePrice, BigDecimal salePrice, String barcode, int minStock, String imageUrl) {
+        this(name, description, categoryId, subcategoryId, purchasePrice, salePrice, barcode, minStock, imageUrl, null, null);
+    }
+}

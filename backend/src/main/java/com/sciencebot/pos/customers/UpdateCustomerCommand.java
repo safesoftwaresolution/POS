@@ -11,5 +11,17 @@ public record UpdateCustomerCommand(
         @Schema(description = "Número de teléfono", example = "+57 310 123 4567")
         String phone,
         @Schema(description = "Dirección postal", example = "Calle 123 # 45-67, Bogotá")
-        String address
-) {}
+        String address,
+        @Schema(description = "Dígito de verificación DIAN (para NIT)", example = "9")
+        String dv,
+        @Schema(description = "Tipo de organización jurídica DIAN (1=Persona Jurídica, 13=Persona Natural)", example = "13")
+        Integer legalOrganizationId,
+        @Schema(description = "Tipo de tributo / responsabilidad DIAN (01=IVA, 21=Consumidor Final / No Responsable)", example = "21")
+        Integer tributeId,
+        @Schema(description = "Código de municipio DANE (ej. 11001 Bogotá)", example = "11001")
+        Integer municipalityId
+) {
+    public UpdateCustomerCommand(String fullName, String email, String phone, String address) {
+        this(fullName, email, phone, address, null, null, null, null);
+    }
+}

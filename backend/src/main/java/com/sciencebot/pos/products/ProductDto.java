@@ -30,5 +30,16 @@ public record ProductDto(
     @Schema(description = "Si el producto está activo y disponible para la venta", example = "true")
     boolean active,
     @Schema(description = "URL de la imagen del producto", example = "https://storage.example.com/products/arroz.jpg")
-    String imageUrl
-) {}
+    String imageUrl,
+    @Schema(description = "Tasa de impuesto / IVA del producto (0.00, 5.00, 19.00)", example = "19.00")
+    BigDecimal taxRate,
+    @Schema(description = "Código estándar UNSPSC para facturación electrónica DIAN", example = "50202301")
+    String unspscCode
+) {
+    public ProductDto(Long id, String internalCode, String barcode, String name, String categoryName,
+                      Long subcategoryId, String subcategoryName, BigDecimal purchasePrice, BigDecimal salePrice,
+                      int quantityAvailable, int minStock, boolean active, String imageUrl) {
+        this(id, internalCode, barcode, name, categoryName, subcategoryId, subcategoryName, purchasePrice, salePrice,
+                quantityAvailable, minStock, active, imageUrl, BigDecimal.ZERO, null);
+    }
+}

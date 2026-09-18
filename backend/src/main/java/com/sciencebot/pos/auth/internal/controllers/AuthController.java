@@ -13,6 +13,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import com.sciencebot.pos.auth.LoginRequest;
+import com.sciencebot.pos.auth.LoginResponse;
 
 import java.util.Map;
 
@@ -56,15 +58,11 @@ public class AuthController {
             summary = "Iniciar sesion",
             description = "Autentica al usuario con credenciales username y password."
     )
-    public ResponseEntity<AuthService.LoginResponse> login(@RequestBody Map<String, String> credentials) {
-        if (credentials == null || !credentials.containsKey("username") || !credentials.containsKey("password")
-                || credentials.get("username") == null || credentials.get("password") == null) {
-            throw new IllegalArgumentException("Los campos username y password son requeridos");
-        }
-
-        String username = credentials.get("username");
-        String password = credentials.get("password");
-        AuthService.LoginResponse response = authService.login(username, password);
+    public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest loginRequest) {
+        if (loginRequest == null) {
+        throw new IllegalArgumentException("Los campos username y password son requeridos");
+    }
+        LoginResponse response = authService.login(loginRequest.username(), loginRequest.password());
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, accessCookie(response.token(), response.expiresIn()).toString())
@@ -89,8 +87,8 @@ public class AuthController {
             summary = "Verificar correo",
             description = "Consume el token del enlace de verificacion, activa el correo del usuario y lo autologuea."
     )
-    public ResponseEntity<AuthService.LoginResponse> verifyEmail(@RequestParam String token) {
-        AuthService.LoginResponse response = authService.verifyEmail(token);
+    public ResponseEntity<LoginResponse> verifyEmail(@RequestParam String token) {
+        LoginResponse response = authService.verifyEmail(token);
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, accessCookie(response.token(), response.expiresIn()).toString())
@@ -104,12 +102,12 @@ public class AuthController {
             summary = "Renovar sesion",
             description = "Emite un nuevo access token usando el refresh token (cookie HttpOnly o campo refreshToken en el body). Rota el refresh token."
     )
-    public ResponseEntity<AuthService.LoginResponse> refresh(
+    public ResponseEntity<LoginResponse> refresh(
             @RequestBody(required = false) Map<String, String> body,
             HttpServletRequest request
     ) {
         String rawRefreshToken = extractRefreshToken(body, request);
-        AuthService.LoginResponse response = authService.refresh(rawRefreshToken);
+        LoginResponse response = authService.refresh(rawRefreshToken);
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, accessCookie(response.token(), response.expiresIn()).toString())

@@ -16,5 +16,13 @@ public record SaleItemDto(
         @Schema(description = "Precio unitario al momento de la venta", example = "3200.00")
         BigDecimal unitPrice,
         @Schema(description = "Subtotal del ítem (unitPrice × quantity)", example = "9600.00")
-        BigDecimal subtotal
-) {}
+        BigDecimal subtotal,
+        @Schema(description = "Tasa de impuesto / IVA aplicada", example = "19.00")
+        BigDecimal taxRate,
+        @Schema(description = "Monto de impuesto / IVA calculado", example = "1532.77")
+        BigDecimal taxAmount
+) {
+    public SaleItemDto(Long id, Long productId, String productName, int quantity, BigDecimal unitPrice, BigDecimal subtotal) {
+        this(id, productId, productName, quantity, unitPrice, subtotal, BigDecimal.ZERO, BigDecimal.ZERO);
+    }
+}

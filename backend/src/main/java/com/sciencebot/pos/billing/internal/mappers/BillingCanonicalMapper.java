@@ -5,12 +5,16 @@ import com.sciencebot.pos.billing.internal.adapters.dto.InvoiceItemData;
 import com.sciencebot.pos.billing.internal.adapters.dto.InvoiceRequest;
 import com.sciencebot.pos.customers.CustomerDto;
 import com.sciencebot.pos.customers.CustomerFacade;
+import com.sciencebot.pos.products.ProductDto;
+import com.sciencebot.pos.products.ProductFacade;
 import com.sciencebot.pos.sales.SaleDto;
 import com.sciencebot.pos.sales.SaleItemDto;
+import com.sciencebot.pos.settings.SettingsFacade;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -19,9 +23,17 @@ import java.util.Optional;
 public class BillingCanonicalMapper {
 
     private final CustomerFacade customerFacade;
+    private final ProductFacade productFacade;
+    private final SettingsFacade settingsFacade;
 
-    public BillingCanonicalMapper(@Lazy CustomerFacade customerFacade) {
+    public BillingCanonicalMapper(
+            @Lazy CustomerFacade customerFacade,
+            @Lazy ProductFacade productFacade,
+            @Lazy SettingsFacade settingsFacade
+    ) {
         this.customerFacade = customerFacade;
+        this.productFacade = productFacade;
+        this.settingsFacade = settingsFacade;
     }
 
     public InvoiceRequest toInvoiceRequest(SaleDto sale) {
@@ -29,14 +41,24 @@ public class BillingCanonicalMapper {
             return null;
         }
 
-        CustomerBillingData customerData = resolveCustomer(sale.customerName());
+        CustomerBillingData customerData = resolveCustomer(sale.customerId());
         List<InvoiceItemData> items = mapItems(sale.items());
+        String paymentMethodCode = resolveDianPaymentMethod(sale.paymentMethod());
+
+        Integer numberingRangeId = null;
+        if (sale.storeId() != null && settingsFacade != null) {
+            numberingRangeId = settingsFacade.getBillingConfig(sale.storeId())
+                    .map(cfg -> cfg.factusNumberingRangeId())
+                    .orElse(null);
+        }
 
         return new InvoiceRequest(
                 sale.id(),
+                sale.storeId(),
+                numberingRangeId,
                 sale.invoiceNumber(),
-                "1",  // 1 = Contado (Estándar DIAN)
-                "10", // 10 = Efectivo (Estándar DIAN)
+                "1", // 1 = Contado (Estándar DIAN)
+                paymentMethodCode,
                 customerData,
                 items,
                 sale.totalAmount(),
@@ -44,47 +66,60 @@ public class BillingCanonicalMapper {
         );
     }
 
-    private CustomerBillingData resolveCustomer(String customerIdentifier) {
-        if (customerIdentifier != null && !customerIdentifier.isBlank() && !customerIdentifier.equalsIgnoreCase("Cliente General")) {
-            Optional<CustomerDto> customerOpt = customerFacade.getByIdentification(customerIdentifier);
+    private CustomerBillingData resolveCustomer(Long customerId) {
+        if (customerId != null) {
+            Optional<CustomerDto> customerOpt = customerFacade.getById(customerId);
             if (customerOpt.isPresent()) {
                 CustomerDto customer = customerOpt.get();
                 String rawId = customer.identification() != null ? customer.identification().trim() : "";
-                
-                // Limpieza de identificación (sin guión ni DV si vinieran incluidos)
-                String idClean = rawId.replaceAll("[^0-9a-zA-Z]", "");
-                String dv = "";
-                if (rawId.contains("-")) {
-                    String[] parts = rawId.split("-");
-                    if (parts.length > 1) {
-                        idClean = parts[0].trim();
-                        dv = parts[1].trim();
+
+                // Si no es el consumidor final genérico
+                if (!"222222222222".equals(rawId) && !"Cliente General".equalsIgnoreCase(customer.fullName())) {
+                    String idClean = rawId;
+                    String dv = customer.dv() != null && !customer.dv().isBlank() ? customer.dv().trim() : "";
+                    if (rawId.contains("-")) {
+                        String[] parts = rawId.split("-");
+                        idClean = parts[0].trim().replaceAll("[^0-9a-zA-Z]", "");
+                        if (dv.isBlank() && parts.length > 1) {
+                            dv = parts[1].trim();
+                        }
+                    } else {
+                        idClean = rawId.replaceAll("[^0-9a-zA-Z]", "");
                     }
+
+                    boolean isJuridica = (customer.legalOrganizationId() != null && customer.legalOrganizationId() == 1)
+                            || idClean.length() == 9
+                            || !dv.isBlank();
+
+                    String docCode = isJuridica ? "31" : "13"; // 31 = NIT, 13 = Cédula de ciudadanía
+                    String orgCode = isJuridica ? "1" : "2";   // 1 = Jurídica, 2 = Natural
+                    String company = isJuridica ? customer.fullName() : null;
+                    String names = !isJuridica ? customer.fullName() : null;
+
+                    String tributeCode = (customer.tributeId() != null && customer.tributeId() == 1) ? "01" : "ZZ";
+                    List<String> responsibilities = isJuridica ? List.of("O-13", "R-99-PN") : List.of("R-99-PN");
+
+                    String munCode = customer.municipalityId() != null
+                            ? String.valueOf(customer.municipalityId())
+                            : "11001";
+
+                    return new CustomerBillingData(
+                            docCode,
+                            idClean,
+                            dv,
+                            orgCode,
+                            tributeCode,
+                            responsibilities,
+                            names,
+                            company,
+                            null,
+                            (customer.email() != null && !customer.email().isBlank()) ? customer.email().trim() : "cliente@tienda.com",
+                            customer.phone(),
+                            customer.address(),
+                            "CO",
+                            munCode
+                    );
                 }
-
-                // Determinación de persona jurídica vs natural
-                boolean isNit = idClean.length() == 9 || (rawId.contains("-") && !dv.isBlank());
-                String docCode = isNit ? "31" : "13"; // 31 = NIT, 13 = Cédula de ciudadanía
-                String orgCode = isNit ? "1" : "2";   // 1 = Jurídica, 2 = Natural
-                String company = isNit ? customer.fullName() : null;
-                String names = !isNit ? customer.fullName() : null;
-
-                return new CustomerBillingData(
-                        docCode,
-                        idClean,
-                        dv,
-                        orgCode,
-                        "ZZ",
-                        List.of("R-99-PN"),
-                        names,
-                        company,
-                        null,
-                        (customer.email() != null && !customer.email().isBlank()) ? customer.email() : "cliente@tienda.com",
-                        customer.phone(),
-                        customer.address(),
-                        "CO",
-                        "11001" // Código estándar Bogotá / Municipio
-                );
             }
         }
 
@@ -107,24 +142,54 @@ public class BillingCanonicalMapper {
         );
     }
 
+    private String resolveDianPaymentMethod(String paymentMethod) {
+        if (paymentMethod == null || paymentMethod.isBlank()) {
+            return "10"; // Default: Efectivo
+        }
+        return switch (paymentMethod.trim().toUpperCase()) {
+            case "TRANSFER" -> "31";
+            case "NEQUI", "DAVIPLATA" -> "42";
+            case "CARD" -> "48";
+            default -> "10";
+        };
+    }
+
     private List<InvoiceItemData> mapItems(List<SaleItemDto> items) {
         List<InvoiceItemData> list = new ArrayList<>();
         if (items != null) {
             for (SaleItemDto item : items) {
                 String cleanName = item.productName() != null ? item.productName().replaceAll("[^a-zA-Z0-9]", "") : "PROD";
                 String productCode = "REF-" + cleanName;
+
+                BigDecimal taxRate = item.taxRate() != null ? item.taxRate() : BigDecimal.ZERO;
+                BigDecimal taxFactor = BigDecimal.ONE.add(taxRate.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP));
+                BigDecimal netUnitPrice = item.unitPrice().divide(taxFactor, 2, RoundingMode.HALF_UP);
+                BigDecimal netSubtotal = netUnitPrice.multiply(BigDecimal.valueOf(item.quantity()));
+
+                String standardCode = "999";
+                if (item.productId() != null && productFacade != null) {
+                    try {
+                        Optional<ProductDto> prodOpt = productFacade.getById(item.productId());
+                        if (prodOpt.isPresent() && prodOpt.get().unspscCode() != null && !prodOpt.get().unspscCode().isBlank()) {
+                            standardCode = prodOpt.get().unspscCode().trim();
+                        }
+                    } catch (Exception e) {
+                        // fallback a "999"
+                    }
+                }
+
                 list.add(new InvoiceItemData(
                         productCode,
                         item.productName(),
                         BigDecimal.valueOf(item.quantity()),
-                        item.unitPrice(),
-                        BigDecimal.ZERO,
-                        item.subtotal(),
+                        netUnitPrice,
+                        taxRate,
+                        netSubtotal,
                         "94",  // 94 = Unidad estándar DIAN
-                        "999", // 999 = Estándar del contribuyente
+                        standardCode,
                         "01",  // 01 = IVA estándar DIAN
                         BigDecimal.ZERO,
-                        false
+                        taxRate.compareTo(BigDecimal.ZERO) == 0
                 ));
             }
         }

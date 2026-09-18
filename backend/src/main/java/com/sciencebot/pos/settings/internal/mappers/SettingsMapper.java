@@ -12,13 +12,20 @@ public class SettingsMapper {
             return null;
         }
 
+        boolean hasSecret = setting.getFactusClientSecret() != null && !setting.getFactusClientSecret().isBlank();
+
         return new SettingsDto(
                 setting.getBusinessName(),
                 setting.getAddress(),
                 setting.getPhone(),
                 setting.getTaxId(),
                 setting.getEmail(),
-                setting.getLogoUrl()
+                setting.getLogoUrl(),
+                setting.getFactusClientId(),
+                hasSecret,
+                setting.getFactusUsername(),
+                setting.getFactusNumberingRangeId(),
+                setting.isFactusEnabled()
         );
     }
 }

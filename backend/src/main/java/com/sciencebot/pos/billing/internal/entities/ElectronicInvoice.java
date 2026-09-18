@@ -11,6 +11,9 @@ public class ElectronicInvoice {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "store_id", nullable = false)
+    private Long storeId;
+
     @Column(name = "sale_id", nullable = false, unique = true)
     private Long saleId;
 
@@ -54,6 +57,9 @@ public class ElectronicInvoice {
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
+
+    public Long getStoreId() { return storeId; }
+    public void setStoreId(Long storeId) { this.storeId = storeId; }
 
     public Long getSaleId() { return saleId; }
     public void setSaleId(Long saleId) { this.saleId = saleId; }

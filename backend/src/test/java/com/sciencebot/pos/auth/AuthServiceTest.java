@@ -68,7 +68,7 @@ class AuthServiceTest {
         when(jwtService.getExpirationTime()).thenReturn(900L);
         when(refreshTokenService.issue(7L)).thenReturn("testRefreshToken");
 
-        AuthService.LoginResponse response = authService.login("admin", "Password123");
+        LoginResponse response = authService.login("admin", "Password123");
 
         assertNotNull(response);
         assertEquals("testToken", response.token());
@@ -88,7 +88,7 @@ class AuthServiceTest {
         when(jwtService.generateToken("admin", "ADMINISTRATOR", 1L)).thenReturn("newAccess");
         when(jwtService.getExpirationTime()).thenReturn(900L);
 
-        AuthService.LoginResponse response = authService.refresh("oldRefresh");
+        LoginResponse response = authService.refresh("oldRefresh");
 
         assertEquals("newAccess", response.token());
         assertEquals("newRefresh", response.refreshToken());
@@ -167,7 +167,7 @@ class AuthServiceTest {
         when(jwtService.getExpirationTime()).thenReturn(900L);
         when(refreshTokenService.issue(3L)).thenReturn("newRefresh");
 
-        AuthService.LoginResponse response = authService.verifyEmail("raw-token");
+        LoginResponse response = authService.verifyEmail("raw-token");
 
         assertEquals("newAccess", response.token());
         assertEquals("newRefresh", response.refreshToken());

@@ -1,0 +1,280 @@
+package com.sciencebot.pos.settings.internal.services;
+
+import com.sciencebot.pos.billing.internal.adapters.factus.FactusTokenManager;
+import com.sciencebot.pos.config.TenantContext;
+import com.sciencebot.pos.settings.CompanyLogoResponseDto;
+import com.sciencebot.pos.settings.CompanyLogoService;
+import com.sciencebot.pos.settings.internal.entities.Setting;
+import com.sciencebot.pos.settings.internal.repositories.SettingsRepository;
+import com.sciencebot.pos.storage.StorageFacade;
+import com.sciencebot.pos.storage.StorageUploadResult;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientResponseException;
+import org.springframework.web.multipart.MultipartFile;
+
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Set;
+import java.util.UUID;
+
+@Service
+public class CompanyLogoServiceImpl implements CompanyLogoService {
+
+    private static final Logger log = LoggerFactory.getLogger(CompanyLogoServiceImpl.class);
+
+    private static final long MAX_FILE_SIZE_BYTES = 200 * 1024; // 200 KB = 204,800 bytes
+    private static final int MAX_WIDTH_PX = 300;
+    private static final int MAX_HEIGHT_PX = 300;
+
+    private static final Set<String> ALLOWED_EXTENSIONS = Set.of(".png", ".jpg", ".jpeg");
+    private static final Set<String> ALLOWED_MIME_TYPES = Set.of(
+            "image/png",
+            "image/jpeg",
+            "image/jpg",
+            "image/pjpeg"
+    );
+
+    private final SettingsRepository settingsRepository;
+    private final FactusTokenManager factusTokenManager;
+    private final StorageFacade storageFacade;
+    private final RestClient restClient;
+
+    @Value("${factus.url:https://api-sandbox.factus.com.co}")
+    private String factusBaseUrl;
+
+    @Autowired
+    public CompanyLogoServiceImpl(SettingsRepository settingsRepository,
+                                  FactusTokenManager factusTokenManager,
+                                  @Autowired(required = false) StorageFacade storageFacade) {
+        this(settingsRepository, factusTokenManager, storageFacade, RestClient.create(), "https://api-sandbox.factus.com.co");
+    }
+
+    public CompanyLogoServiceImpl(SettingsRepository settingsRepository,
+                                  FactusTokenManager factusTokenManager,
+                                  StorageFacade storageFacade,
+                                  RestClient restClient,
+                                  String factusBaseUrl) {
+        this.settingsRepository = settingsRepository;
+        this.factusTokenManager = factusTokenManager;
+        this.storageFacade = storageFacade;
+        this.restClient = restClient != null ? restClient : RestClient.create();
+        this.factusBaseUrl = factusBaseUrl != null ? factusBaseUrl : "https://api-sandbox.factus.com.co";
+    }
+
+    @Override
+    @Transactional
+    public CompanyLogoResponseDto updateLogo(MultipartFile file) {
+        // 1. Validar presencia del archivo
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("Debe proporcionar un archivo de imagen no vacío.");
+        }
+
+        // 2. Validar formato (solo PNG, JPG o JPEG)
+        String originalFilename = file.getOriginalFilename();
+        validateFileFormat(originalFilename, file.getContentType());
+
+        // 3. Validar peso (< 200 KB)
+        if (file.getSize() > MAX_FILE_SIZE_BYTES) {
+            throw new IllegalArgumentException(String.format(
+                    "El archivo pesa %.2f KB, superando el límite máximo permitido de 200 KB.",
+                    file.getSize() / 1024.0
+            ));
+        }
+
+        // 4. Validar dimensiones (<= 300x300 px) usando librerías estándar de Java
+        BufferedImage image = validateImageDimensions(file);
+        int width = image.getWidth();
+        int height = image.getHeight();
+
+        // 5. Guardado local en base de datos (entidad Setting)
+        String localLogoUrl = saveLocally(file, originalFilename);
+
+        // 6. Petición y sincronización con Factus API
+        syncLogoWithFactus(file, originalFilename);
+
+        log.info("Logo de la empresa actualizado y sincronizado correctamente. URL local: {}", localLogoUrl);
+
+        return new CompanyLogoResponseDto(
+                localLogoUrl,
+                originalFilename != null ? originalFilename : "logo",
+                width,
+                height,
+                file.getSize(),
+                true,
+                "Logo actualizado en base de datos local y sincronizado exitosamente con Factus."
+        );
+    }
+
+    /**
+     * Valida la extensión y el Content-Type del archivo.
+     */
+    private void validateFileFormat(String filename, String contentType) {
+        String ext = "";
+        if (filename != null && filename.contains(".")) {
+            ext = filename.substring(filename.lastIndexOf('.')).toLowerCase();
+        }
+
+        if (!ALLOWED_EXTENSIONS.contains(ext)) {
+            throw new IllegalArgumentException("Formato no permitido. Solo se aceptan imágenes PNG, JPG o JPEG.");
+        }
+
+        if (contentType != null && !contentType.isBlank()) {
+            String mime = contentType.toLowerCase().trim();
+            if (!ALLOWED_MIME_TYPES.contains(mime)) {
+                throw new IllegalArgumentException("Formato no permitido. Solo se aceptan imágenes PNG, JPG o JPEG.");
+            }
+        }
+    }
+
+    /**
+     * Lee la imagen con javax.imageio.ImageIO y valida que sus dimensiones sean <= 300x300 píxeles.
+     */
+    private BufferedImage validateImageDimensions(MultipartFile file) {
+        BufferedImage image;
+        try (InputStream is = file.getInputStream()) {
+            image = ImageIO.read(is);
+        } catch (IOException e) {
+            throw new IllegalArgumentException("Error al leer el archivo de imagen: " + e.getMessage(), e);
+        }
+
+        if (image == null) {
+            throw new IllegalArgumentException("El archivo suministrado no es una imagen válida o está corrupto.");
+        }
+
+        int width = image.getWidth();
+        int height = image.getHeight();
+
+        if (width > MAX_WIDTH_PX || height > MAX_HEIGHT_PX) {
+            throw new IllegalArgumentException(String.format(
+                    "Las dimensiones de la imagen (%dx%d px) exceden el límite máximo de %dx%d píxeles.",
+                    width, height, MAX_WIDTH_PX, MAX_HEIGHT_PX
+            ));
+        }
+
+        return image;
+    }
+
+    /**
+     * Guarda la imagen localmente (vía Cloudflare R2 si está configurado, o URL relativa)
+     * y actualiza el campo logoUrl en la entidad Setting de la base de datos.
+     */
+    private String saveLocally(MultipartFile file, String originalFilename) {
+        String resolvedLogoUrl;
+
+        if (storageFacade != null) {
+            try {
+                StorageUploadResult uploadResult = storageFacade.uploadFile(file, "logos");
+                resolvedLogoUrl = uploadResult.url();
+            } catch (Exception e) {
+                log.warn("No se pudo subir a Cloudflare R2, generando referencia local fallback: {}", e.getMessage());
+                resolvedLogoUrl = "/uploads/logos/" + UUID.randomUUID() + "_" + sanitizeFilename(originalFilename);
+            }
+        } else {
+            resolvedLogoUrl = "/uploads/logos/" + UUID.randomUUID() + "_" + sanitizeFilename(originalFilename);
+        }
+
+        Long storeId = TenantContext.getStoreId();
+        Setting setting = resolveSetting(storeId);
+        setting.setLogoUrl(resolvedLogoUrl);
+        settingsRepository.save(setting);
+
+        return resolvedLogoUrl;
+    }
+
+    /**
+     * Obtiene o crea la entidad Setting correspondiente al storeId actual.
+     */
+    private Setting resolveSetting(Long storeId) {
+        if (storeId != null) {
+            return settingsRepository.findById(storeId).orElseGet(() -> {
+                Setting s = new Setting();
+                s.setId(storeId);
+                s.setBusinessName("Mi Negocio");
+                s.setAddress("Por definir");
+                s.setPhone("Por definir");
+                return settingsRepository.save(s);
+            });
+        }
+
+        // Fallback cuando no hay storeId en contexto (ej. monotenant o test)
+        return settingsRepository.findAll().stream().findFirst().orElseGet(() -> {
+            Setting s = new Setting();
+            s.setId(1L);
+            s.setBusinessName("Mi Negocio");
+            s.setAddress("Por definir");
+            s.setPhone("Por definir");
+            return settingsRepository.save(s);
+        });
+    }
+
+    /**
+     * Sincroniza la imagen con Factus API enviando un POST multipart/form-data a /v2/companies/logo.
+     */
+    private void syncLogoWithFactus(MultipartFile file, String originalFilename) {
+        String token = factusTokenManager != null ? factusTokenManager.getAccessToken() : null;
+        if (token == null || token.isBlank()) {
+            throw new IllegalStateException("No se pudo obtener el token de autenticación para Factus API.");
+        }
+
+        String targetUrl = (factusBaseUrl != null && !factusBaseUrl.isBlank())
+                ? factusBaseUrl.replaceAll("/+$", "") + "/v2/companies/logo"
+                : "https://api-sandbox.factus.com.co/v2/companies/logo";
+
+        try {
+            byte[] fileBytes = file.getBytes();
+            String filename = (originalFilename != null && !originalFilename.isBlank()) ? originalFilename : "logo.png";
+
+            ByteArrayResource resource = new ByteArrayResource(fileBytes) {
+                @Override
+                public String getFilename() {
+                    return filename;
+                }
+            };
+
+            MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+            body.add("image", resource);
+
+            restClient.post()
+                    .uri(targetUrl)
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                    .header(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
+                    .contentType(MediaType.MULTIPART_FORM_DATA)
+                    .body(body)
+                    .retrieve()
+                    .toBodilessEntity();
+
+            log.info("Logo sincronizado exitosamente con Factus API en: {}", targetUrl);
+
+        } catch (RestClientResponseException ex) {
+            log.error("Error devuelto por Factus API (HTTP {}): {}", ex.getStatusCode(), ex.getResponseBodyAsString());
+            throw new IllegalStateException(
+                    "Factus API rechazó el logo (HTTP " + ex.getStatusCode().value() + "): " + ex.getResponseBodyAsString(),
+                    ex
+            );
+        } catch (IOException ex) {
+            log.error("Error de E/S al preparar el archivo para Factus: {}", ex.getMessage());
+            throw new IllegalStateException("Error al procesar los bytes de la imagen para Factus: " + ex.getMessage(), ex);
+        } catch (Exception ex) {
+            log.error("Error inesperado al conectar con Factus API: {}", ex.getMessage());
+            throw new IllegalStateException("Error de comunicación al sincronizar con Factus API: " + ex.getMessage(), ex);
+        }
+    }
+
+    private String sanitizeFilename(String filename) {
+        if (filename == null) return "logo.png";
+        return filename.replaceAll("[^a-zA-Z0-9._-]", "_");
+    }
+}

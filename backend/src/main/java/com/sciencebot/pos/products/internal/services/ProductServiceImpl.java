@@ -86,6 +86,8 @@ public class ProductServiceImpl implements ProductFacade, CategoryDeleteValidato
         product.setMinStock(command.minStock());
         product.setDescription(command.description() != null ? command.description().trim() : null);
         product.setImageUrl(command.imageUrl() != null ? command.imageUrl().trim() : null);
+        product.setTaxRate(command.taxRate() != null ? command.taxRate() : BigDecimal.ZERO);
+        product.setUnspscCode(command.unspscCode() != null ? command.unspscCode().trim() : null);
         product.setQuantityAvailable(0);
         product.setActive(true);
 
@@ -124,6 +126,12 @@ public class ProductServiceImpl implements ProductFacade, CategoryDeleteValidato
         product.setBarcode(command.barcode() != null ? command.barcode().trim() : null);
         product.setDescription(command.description() != null ? command.description().trim() : null);
         product.setImageUrl(command.imageUrl() != null ? command.imageUrl().trim() : null);
+        if (command.taxRate() != null) {
+            product.setTaxRate(command.taxRate());
+        }
+        if (command.unspscCode() != null) {
+            product.setUnspscCode(command.unspscCode().trim());
+        }
 
         Product saved = productRepository.save(product);
         return productMapper.toDto(saved);

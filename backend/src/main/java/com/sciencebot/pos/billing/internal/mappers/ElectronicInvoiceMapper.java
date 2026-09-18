@@ -14,6 +14,7 @@ public class ElectronicInvoiceMapper {
 
         return new ElectronicInvoiceDto(
                 entity.getId(),
+                entity.getStoreId(),
                 entity.getSaleId(),
                 entity.getFactusNumber(),
                 entity.getCufe(),

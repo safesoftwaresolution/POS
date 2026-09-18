@@ -55,10 +55,13 @@ public class FactusInvoiceClient implements InvoiceProvider {
         }
 
         try {
-            Map<String, Object> payload = saleMapper.toFactusRequestPayload(request, numberingRangeId);
+            int targetRangeId = (request.numberingRangeId() != null && request.numberingRangeId() > 0)
+                    ? request.numberingRangeId()
+                    : numberingRangeId;
+            Map<String, Object> payload = saleMapper.toFactusRequestPayload(request, targetRangeId);
 
             @SuppressWarnings("unchecked")
-            Map<String, Object> response = httpHelper.authorizedPost("/v2/bills/validate")
+            Map<String, Object> response = httpHelper.authorizedPost("/v2/bills/validate", request.storeId())
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(payload)
                     .retrieve()

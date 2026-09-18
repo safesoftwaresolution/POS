@@ -35,27 +35,43 @@ public class FactusClientHelper {
     }
 
     public RestClient.RequestBodySpec authorizedPost(String path) {
+        return authorizedPost(path, null);
+    }
+
+    public RestClient.RequestBodySpec authorizedPost(String path, Long storeId) {
         return restClient.post()
                 .uri(buildUrl(path))
-                .header("Authorization", "Bearer " + tokenManager.getAccessToken());
+                .header("Authorization", "Bearer " + tokenManager.getAccessToken(storeId));
     }
 
     public RestClient.RequestHeadersSpec<?> authorizedGet(String path) {
+        return authorizedGet(path, null);
+    }
+
+    public RestClient.RequestHeadersSpec<?> authorizedGet(String path, Long storeId) {
         return restClient.get()
                 .uri(buildUrl(path))
-                .header("Authorization", "Bearer " + tokenManager.getAccessToken());
+                .header("Authorization", "Bearer " + tokenManager.getAccessToken(storeId));
     }
 
     public RestClient.RequestHeadersSpec<?> authorizedDelete(String path) {
+        return authorizedDelete(path, null);
+    }
+
+    public RestClient.RequestHeadersSpec<?> authorizedDelete(String path, Long storeId) {
         return restClient.delete()
                 .uri(buildUrl(path))
-                .header("Authorization", "Bearer " + tokenManager.getAccessToken());
+                .header("Authorization", "Bearer " + tokenManager.getAccessToken(storeId));
     }
 
     public RestClient.RequestBodySpec authorizedPatch(String path) {
+        return authorizedPatch(path, null);
+    }
+
+    public RestClient.RequestBodySpec authorizedPatch(String path, Long storeId) {
         return restClient.patch()
                 .uri(buildUrl(path))
-                .header("Authorization", "Bearer " + tokenManager.getAccessToken());
+                .header("Authorization", "Bearer " + tokenManager.getAccessToken(storeId));
     }
 
     public String truncateError(String message) {

@@ -62,6 +62,10 @@ public class CustomerServiceImpl implements CustomerFacade {
         customer.setEmail(command.email() != null ? command.email().trim() : null);
         customer.setPhone(command.phone() != null ? command.phone().trim() : null);
         customer.setAddress(command.address() != null ? command.address().trim() : null);
+        customer.setDv(command.dv() != null ? command.dv().trim() : null);
+        customer.setLegalOrganizationId(command.legalOrganizationId() != null ? command.legalOrganizationId() : 13);
+        customer.setTributeId(command.tributeId() != null ? command.tributeId() : 21);
+        customer.setMunicipalityId(command.municipalityId());
         customer.setActive(true);
 
         Customer saved = customerRepository.save(customer);
@@ -85,6 +89,10 @@ public class CustomerServiceImpl implements CustomerFacade {
         customer.setEmail(command.email() != null ? command.email().trim() : null);
         customer.setPhone(command.phone() != null ? command.phone().trim() : null);
         customer.setAddress(command.address() != null ? command.address().trim() : null);
+        if (command.dv() != null) customer.setDv(command.dv().trim());
+        if (command.legalOrganizationId() != null) customer.setLegalOrganizationId(command.legalOrganizationId());
+        if (command.tributeId() != null) customer.setTributeId(command.tributeId());
+        if (command.municipalityId() != null) customer.setMunicipalityId(command.municipalityId());
 
         Customer saved = customerRepository.save(customer);
         return customerMapper.toDto(saved);

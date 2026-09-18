@@ -15,4 +15,7 @@ public interface SettingsFacade {
 
     /** Valor concreto (activo o no) por tema y código. */
     Optional<ParameterValueDto> getValueByTopicAndCode(String topicCode, String valueCode);
+
+    /** Consulta la configuración y credenciales de facturación electrónica para una tienda específica. */
+    Optional<StoreBillingConfigDto> getBillingConfig(Long storeId);
 }

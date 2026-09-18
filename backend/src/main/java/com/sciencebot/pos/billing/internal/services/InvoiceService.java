@@ -17,4 +17,10 @@ public interface InvoiceService {
     ElectronicInvoiceDto retryInvoice(Long saleId);
 
     void sendInvoiceEmail(Long saleId, String email);
+
+    org.springframework.data.domain.Page<ElectronicInvoiceDto> listInvoices(org.springframework.data.domain.Pageable pageable, String status);
+
+    byte[] downloadInvoicePDF(Long saleId);
+
+    byte[] downloadInvoiceXML(Long saleId);
 }

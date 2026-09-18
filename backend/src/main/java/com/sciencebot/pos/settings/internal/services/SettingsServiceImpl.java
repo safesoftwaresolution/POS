@@ -74,6 +74,25 @@ public class SettingsServiceImpl implements SettingsFacade {
         setting.setEmail(command.email() != null ? command.email().trim() : null);
         setting.setLogoUrl(command.logoUrl() != null ? command.logoUrl().trim() : null);
 
+        if (command.factusClientId() != null) {
+            setting.setFactusClientId(command.factusClientId().trim());
+        }
+        if (command.factusClientSecret() != null && !command.factusClientSecret().isBlank()) {
+            setting.setFactusClientSecret(command.factusClientSecret().trim());
+        }
+        if (command.factusUsername() != null) {
+            setting.setFactusUsername(command.factusUsername().trim());
+        }
+        if (command.factusPassword() != null && !command.factusPassword().isBlank()) {
+            setting.setFactusPassword(command.factusPassword().trim());
+        }
+        if (command.factusNumberingRangeId() != null) {
+            setting.setFactusNumberingRangeId(command.factusNumberingRangeId());
+        }
+        if (command.factusEnabled() != null) {
+            setting.setFactusEnabled(command.factusEnabled());
+        }
+
         Setting saved = settingsRepository.save(setting);
         return settingsMapper.toDto(saved);
     }
@@ -105,6 +124,23 @@ public class SettingsServiceImpl implements SettingsFacade {
     @Override
     public Optional<ParameterValueDto> getValueByTopicAndCode(String topicCode, String valueCode) {
         return parameterService.getValueByTopicAndCode(topicCode, valueCode);
+    }
+
+    @Override
+    public Optional<StoreBillingConfigDto> getBillingConfig(Long storeId) {
+        if (storeId == null) {
+            return Optional.empty();
+        }
+        return settingsRepository.findById(storeId)
+                .map(s -> new StoreBillingConfigDto(
+                        s.getId(),
+                        s.isFactusEnabled(),
+                        s.getFactusClientId(),
+                        s.getFactusClientSecret(),
+                        s.getFactusUsername(),
+                        s.getFactusPassword(),
+                        s.getFactusNumberingRangeId()
+                ));
     }
 
     private static Long requireCurrentStoreId() {

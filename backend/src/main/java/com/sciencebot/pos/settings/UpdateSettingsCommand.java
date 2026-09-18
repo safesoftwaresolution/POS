@@ -15,5 +15,21 @@ public record UpdateSettingsCommand(
         @Schema(description = "Correo electrónico del negocio", example = "info@tienda.com")
         String email,
         @Schema(description = "URL del logo del negocio", example = "https://storage.example.com/logo.png")
-        String logoUrl
-) {}
+        String logoUrl,
+        @Schema(description = "Client ID para Factus API", example = "client_xyz")
+        String factusClientId,
+        @Schema(description = "Client Secret para Factus API (opcional, no modificar si es null o vacío)", example = "secret_123")
+        String factusClientSecret,
+        @Schema(description = "Username para Factus API", example = "empresa@factus.co")
+        String factusUsername,
+        @Schema(description = "Contraseña para Factus API (opcional, no modificar si es null o vacío)", example = "password_123")
+        String factusPassword,
+        @Schema(description = "ID del rango de numeración DIAN en Factus", example = "8")
+        Integer factusNumberingRangeId,
+        @Schema(description = "Indica si la facturación electrónica Factus está habilitada", example = "true")
+        Boolean factusEnabled
+) {
+    public UpdateSettingsCommand(String businessName, String address, String phone, String taxId, String email, String logoUrl) {
+        this(businessName, address, phone, taxId, email, logoUrl, null, null, null, null, null, null);
+    }
+}

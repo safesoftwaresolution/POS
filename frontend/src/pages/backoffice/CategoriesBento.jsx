@@ -76,13 +76,13 @@ export default function CategoriesBento() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-[#161b22] dark:text-[#f0f6fc]">Categorías de Locales</h1>
+          <h1 className="text-2xl font-black text-[#0A0A0A] dark:text-[#F4F4F6]">Categorías de Locales</h1>
           <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Clasificación de los comercios registrados en la plataforma</p>
         </div>
 
         <button
           onClick={openCreate}
-          className="px-4 py-2.5 bg-[#067A57] hover:bg-[#055C43] text-white rounded-2xl text-xs font-bold flex items-center gap-2 shadow-md shadow-[#067A57]/20 cursor-pointer"
+          className="px-4 py-2.5 bg-[#0A0A0A] hover:bg-[#202020] text-white rounded-2xl text-xs font-bold flex items-center gap-2 shadow-md shadow-[#0A0A0A]/10 cursor-pointer"
         >
           <Plus className="w-4 h-4" /> Nueva Categoría
         </button>
@@ -104,22 +104,22 @@ export default function CategoriesBento() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {categories.map(cat => (
-              <div key={cat.id} className="p-5 bg-gray-50/60 dark:bg-white/5 rounded-2xl border border-[#e2e8f0] dark:border-[#262f38] space-y-3 flex flex-col justify-between hover:bg-white dark:hover:bg-[#161b22] hover:border-[#067A57] transition-all shadow-xs">
+              <div key={cat.id} className="p-5 bg-gray-50/60 dark:bg-white/5 rounded-2xl border border-[#EAEAEA] dark:border-[#272730] space-y-3 flex flex-col justify-between hover:bg-white dark:hover:bg-[#0A0A0A] hover:border-[#D0D0CE] transition-all shadow-xs">
                 <div>
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-extrabold">
                       Activa
                     </span>
                   </div>
-                  <h3 className="font-extrabold text-sm text-[#161b22] dark:text-[#f0f6fc] mt-2">{cat.name}</h3>
+                  <h3 className="font-extrabold text-sm text-[#0A0A0A] dark:text-[#F4F4F6] mt-2">{cat.name}</h3>
                   <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">{cat.description || 'Sin descripción'}</p>
                 </div>
 
-                <div className="pt-3 border-t border-[#e2e8f0] dark:border-[#262f38] flex items-center justify-end gap-1">
+                <div className="pt-3 border-t border-[#EAEAEA] dark:border-[#272730] flex items-center justify-end gap-1">
                   <button
                     onClick={() => openEdit(cat)}
                     title="Editar categoría"
-                    className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-[#067A57] dark:hover:text-[#00D47E] rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer"
+                    className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-[#FF5520] dark:hover:text-[#FF5520] rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer"
                   >
                     <Edit3 className="w-4 h-4" />
                   </button>
@@ -139,9 +139,9 @@ export default function CategoriesBento() {
 
       {showForm && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <form onSubmit={handleSubmit} className="bento-card max-w-md w-full bg-white dark:bg-[#161b22] p-6 rounded-3xl shadow-2xl space-y-4">
+          <form onSubmit={handleSubmit} className="bento-card max-w-md w-full bg-white dark:bg-[#17171B] p-6 rounded-3xl shadow-2xl space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="font-extrabold text-base text-[#161b22] dark:text-[#f0f6fc]">
+              <h3 className="font-extrabold text-base text-[#0A0A0A] dark:text-[#F4F4F6]">
                 {form.id ? 'Editar Categoría' : 'Nueva Categoría'}
               </h3>
               <button
@@ -168,7 +168,7 @@ export default function CategoriesBento() {
                   value={form.name}
                   onChange={e => setForm({ ...form, name: e.target.value })}
                   placeholder="Ej. Restaurante"
-                  className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl font-semibold text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#067A57] dark:focus:border-[#00D47E]"
+                  className="w-full p-2.5 bg-[#F7F7F5] dark:bg-[#0E0E12] border border-[#EAEAEA] dark:border-[#272730] rounded-2xl font-semibold text-[#0A0A0A] dark:text-[#F4F4F6] focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#FF5520]"
                   required
                 />
               </div>
@@ -179,7 +179,7 @@ export default function CategoriesBento() {
                   value={form.description}
                   onChange={e => setForm({ ...form, description: e.target.value })}
                   placeholder="Locales de comida"
-                  className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl text-xs text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#067A57] dark:focus:border-[#00D47E]"
+                  className="w-full p-2.5 bg-[#F7F7F5] dark:bg-[#0E0E12] border border-[#EAEAEA] dark:border-[#272730] rounded-2xl text-xs text-[#0A0A0A] dark:text-[#F4F4F6] focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#FF5520]"
                 />
               </div>
             </div>
@@ -188,13 +188,13 @@ export default function CategoriesBento() {
               <button
                 type="button"
                 onClick={() => setShowForm(false)}
-                className="w-1/2 py-3 bg-gray-100 dark:bg-[#262f38] hover:bg-gray-200 dark:hover:bg-[#303b47] text-gray-700 dark:text-gray-300 rounded-2xl text-xs font-bold cursor-pointer"
+                className="w-1/2 py-3 bg-gray-100 dark:bg-[#272730] hover:bg-gray-200 dark:hover:bg-[#2C2C36] text-gray-700 dark:text-gray-300 rounded-2xl text-xs font-bold cursor-pointer"
               >
                 Cancelar
               </button>
               <button
                 type="submit"
-                className="w-1/2 py-3 bg-[#067A57] hover:bg-[#055C43] text-white rounded-2xl text-xs font-extrabold cursor-pointer shadow-md shadow-[#067A57]/20"
+                className="w-1/2 py-3 bg-[#0A0A0A] hover:bg-[#202020] text-white rounded-2xl text-xs font-extrabold cursor-pointer shadow-md shadow-[#0A0A0A]/10"
               >
                 {form.id ? 'Guardar Cambios' : 'Crear Categoría'}
               </button>

@@ -277,14 +277,14 @@ export default function ProductsBento() {
     <div className="space-y-6 select-none">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-[#161b22] dark:text-white">Productos</h1>
+          <h1 className="text-2xl font-black text-[#0A0A0A] dark:text-white">Productos</h1>
           <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Catálogo y subcategorías de tu tienda en BentoPOS</p>
         </div>
 
         {activeTab === 'catalog' && (
           <button
             onClick={openCreateModal}
-            className="px-4 py-2.5 bg-[#067A57] hover:bg-[#055C43] text-white rounded-2xl text-xs font-bold flex items-center gap-2 shadow-md shadow-[#067A57]/20 cursor-pointer transition-all"
+            className="px-4 py-2.5 bg-[#0A0A0A] hover:bg-[#202020] text-white rounded-2xl text-xs font-bold flex items-center gap-2 shadow-md shadow-[#0A0A0A]/10 cursor-pointer transition-all"
           >
             <Plus className="w-4 h-4" /> Crear Nuevo Producto
           </button>
@@ -292,7 +292,7 @@ export default function ProductsBento() {
         {activeTab === 'subcategories' && canManageSubcategories && (
           <button
             onClick={openCreateSubModal}
-            className="px-4 py-2.5 bg-[#067A57] hover:bg-[#055C43] text-white rounded-2xl text-xs font-bold flex items-center gap-2 shadow-md shadow-[#067A57]/20 cursor-pointer transition-all"
+            className="px-4 py-2.5 bg-[#0A0A0A] hover:bg-[#202020] text-white rounded-2xl text-xs font-bold flex items-center gap-2 shadow-md shadow-[#0A0A0A]/10 cursor-pointer transition-all"
           >
             <Plus className="w-4 h-4" /> Nueva Subcategoría
           </button>
@@ -300,7 +300,7 @@ export default function ProductsBento() {
       </div>
 
       {/* Tab Switcher */}
-      <div className="flex bg-gray-100 dark:bg-[#262f38] rounded-full p-1 border border-gray-200 dark:border-gray-700 w-fit">
+      <div className="flex bg-gray-100 dark:bg-[#272730] rounded-full p-1 border border-gray-200 dark:border-gray-700 w-fit">
         {TABS.map(tab => {
           const Icon = tab.icon;
           return (
@@ -309,8 +309,8 @@ export default function ProductsBento() {
               onClick={() => setActiveTab(tab.id)}
               className={`px-4 py-2 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
                 activeTab === tab.id
-                  ? 'bg-[#067A57] text-white shadow-xs'
-                  : 'text-gray-500 dark:text-gray-400 hover:text-[#067A57] dark:hover:text-[#00D47E]'
+                  ? 'bg-[#0A0A0A] text-white shadow-xs'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-[#FF5520] dark:hover:text-[#FF5520]'
               }`}
             >
               <Icon className="w-4 h-4" /> {tab.label}
@@ -329,7 +329,7 @@ export default function ProductsBento() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Filtrar por nombre o código de barras..."
-              className="w-full pl-10 pr-3 py-1.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl text-xs font-semibold text-[#161b22] dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-[#067A57]"
+              className="w-full pl-10 pr-3 py-1.5 bg-[#F7F7F5] dark:bg-[#0E0E12] border border-[#EAEAEA] dark:border-[#272730] rounded-2xl text-xs font-semibold text-[#0A0A0A] dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-[#0A0A0A]"
             />
           </div>
           <span className="text-xs font-bold text-gray-400 dark:text-gray-500">{filtered.length} productos registrados</span>
@@ -348,80 +348,104 @@ export default function ProductsBento() {
             </div>
             <button
               onClick={openCreateModal}
-              className="px-4 py-2 bg-[#067A57] text-white rounded-xl text-xs font-extrabold shadow-sm hover:bg-[#055C43] cursor-pointer"
+              className="px-4 py-2 bg-[#0A0A0A] text-white rounded-xl text-xs font-extrabold shadow-sm hover:bg-[#202020] cursor-pointer"
             >
               + Registrar Primer Producto
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filtered.map(p => (
-              <div key={p.id} className="p-5 bg-white dark:bg-[#161b22] rounded-2xl border border-gray-200 dark:border-[#262f38] space-y-3 flex flex-col justify-between hover:border-[#067A57] dark:hover:border-[#067A57] transition-all shadow-xs group">
-                <div>
-                  <div className="flex items-start gap-3">
-                    <div className="w-12 h-12 rounded-xl bg-gray-50 dark:bg-[#0d1117] border border-gray-200 dark:border-[#262f38] flex items-center justify-center overflow-hidden shrink-0">
-                      {p.imageUrl ? (
-                        <img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover" />
-                      ) : (
-                        <Package className="w-5 h-5 text-gray-300 dark:text-gray-600" />
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center justify-between gap-2">
+          <div className="overflow-x-auto -mx-6">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="border-b border-gray-100 dark:border-[#272730] bg-gray-50/50 dark:bg-[#0E0E12] text-gray-400 dark:text-gray-500 uppercase text-[10px] tracking-wider font-extrabold">
+                  <th className="py-3 px-6">Producto</th>
+                  <th className="py-3 px-3">Código</th>
+                  <th className="py-3 px-3">Categoría</th>
+                  <th className="py-3 px-3 text-right">Precio</th>
+                  <th className="py-3 px-3">Stock</th>
+                  <th className="py-3 px-6 text-right">Acciones</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-[#272730]">
+                {filtered.map(p => {
+                  const stockVal = p.quantityAvailable ?? p.stock ?? 0;
+                  const isLow = stockVal <= (p.minStock || 5);
+                  return (
+                    <tr
+                      key={p.id}
+                      className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer group"
+                      onClick={() => openEditModal(p)}
+                    >
+                      <td className="py-3 px-6">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-gray-50 dark:bg-[#0E0E12] border border-gray-200 dark:border-[#272730] flex items-center justify-center overflow-hidden shrink-0">
+                            {p.imageUrl ? (
+                              <img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover" />
+                            ) : (
+                              <Package className="w-4 h-4 text-gray-300 dark:text-gray-600" />
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <span className="font-bold text-sm text-[#0A0A0A] dark:text-white block truncate group-hover:text-[#FF5520] dark:group-hover:text-[#FF5520] transition-colors">
+                              {p.name}
+                            </span>
+                            <span className="text-[11px] text-gray-500 dark:text-gray-400 font-mono flex items-center gap-1">
+                              <Barcode className="w-3 h-3 shrink-0" /> {p.barcode || 'Sin código'}
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-3 px-3 font-mono font-semibold text-gray-500 dark:text-gray-400">{p.internalCode}</td>
+                      <td className="py-3 px-3">
                         <div className="flex items-center gap-1 flex-wrap">
-                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#067A57]/10 dark:bg-[#067A57]/20 text-[#067A57] dark:text-[#00D47E] font-extrabold">
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#FF5520]/10 dark:bg-[#FF5520]/20 text-[#FF5520] font-extrabold">
                             {p.categoryName || 'General'}
                           </span>
                           {p.subcategoryName && (
-                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 dark:bg-[#262f38] text-gray-600 dark:text-gray-300 font-extrabold">
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 dark:bg-[#272730] text-gray-600 dark:text-gray-300 font-extrabold">
                               {p.subcategoryName}
                             </span>
                           )}
                         </div>
-                        <span className="text-[10px] font-mono text-gray-400 dark:text-gray-500 font-bold shrink-0">{p.internalCode}</span>
-                      </div>
-                      <h3 className="font-extrabold text-sm text-[#161b22] dark:text-white mt-2 truncate group-hover:text-[#067A57] dark:group-hover:text-[#00D47E] transition-colors">{p.name}</h3>
-                      <p className="text-[11px] text-gray-500 dark:text-gray-400 font-mono mt-0.5 flex items-center gap-1">
-                        <Barcode className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500 shrink-0" /> {p.barcode || 'Sin código'}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="pt-3 border-t border-gray-200 dark:border-[#262f38] flex items-center justify-between">
-                  <div>
-                    <span className="text-[10px] text-gray-400 dark:text-gray-500 block font-semibold">Precio de venta</span>
-                    <span className="text-base font-black text-[#161b22] dark:text-white tabular-nums">
-                      ${(p.salePrice || p.price || 0).toLocaleString('es-CO')} COP
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => setBarcodeProduct(p)}
-                      title="Ver código de barras"
-                      className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-[#067A57] dark:hover:text-[#00D47E] rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer"
-                    >
-                      <Barcode className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => openEditModal(p)}
-                      title="Editar producto"
-                      className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-[#067A57] dark:hover:text-[#00D47E] rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer"
-                    >
-                      <Edit3 className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(p.id)}
-                      title="Eliminar producto"
-                      className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
+                      </td>
+                      <td className="py-3 px-3 text-right font-black text-sm text-[#0A0A0A] dark:text-white tabular-nums">
+                        ${(p.salePrice || p.price || 0).toLocaleString('es-CO')}
+                      </td>
+                      <td className="py-3 px-3">
+                        <span className={`font-bold tabular-nums ${isLow ? 'text-amber-600 dark:text-amber-400' : 'text-[#0A0A0A] dark:text-white'}`}>
+                          {stockVal} {isLow && '(Bajo)'}
+                        </span>
+                      </td>
+                      <td className="py-3 px-6 text-right" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            onClick={() => setBarcodeProduct(p)}
+                            title="Ver código de barras"
+                            className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-[#FF5520] dark:hover:text-[#FF5520] rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer"
+                          >
+                            <Barcode className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => openEditModal(p)}
+                            title="Editar producto"
+                            className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-[#FF5520] dark:hover:text-[#FF5520] rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer"
+                          >
+                            <Edit3 className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(p.id)}
+                            title="Eliminar producto"
+                            className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         )}
       </div>
@@ -432,7 +456,7 @@ export default function ProductsBento() {
           {/* Global categories overview */}
           <div className="bento-card p-6 space-y-3">
             <div>
-              <h2 className="text-sm font-extrabold text-[#161b22] dark:text-white">Categorías Globales</h2>
+              <h2 className="text-sm font-extrabold text-[#0A0A0A] dark:text-white">Categorías Globales</h2>
               <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium">
                 Catálogo compartido por todas las tiendas — cada subcategoría tuya vive dentro de una de estas
               </p>
@@ -446,7 +470,7 @@ export default function ProductsBento() {
                 {categories.map(cat => (
                   <span
                     key={cat.id}
-                    className="text-xs font-bold px-3 py-1.5 rounded-full bg-[#067A57]/10 dark:bg-[#067A57]/20 text-[#067A57] dark:text-[#00D47E] border border-[#067A57]/25"
+                    className="text-xs font-bold px-3 py-1.5 rounded-full bg-[#FF5520]/10 dark:bg-[#FF5520]/20 text-[#FF5520] dark:text-[#FF5520] border border-[#FF5520]/25"
                   >
                     {cat.name}
                     <span className="ml-1.5 opacity-70 font-semibold">
@@ -468,7 +492,7 @@ export default function ProductsBento() {
                   value={subSearch}
                   onChange={(e) => setSubSearch(e.target.value)}
                   placeholder="Buscar subcategoría o categoría..."
-                  className="w-full pl-10 pr-3 py-1.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl text-xs font-semibold text-[#161b22] dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-[#067A57]"
+                  className="w-full pl-10 pr-3 py-1.5 bg-[#F7F7F5] dark:bg-[#0E0E12] border border-[#EAEAEA] dark:border-[#272730] rounded-2xl text-xs font-semibold text-[#0A0A0A] dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-[#0A0A0A]"
                 />
               </div>
               <span className="text-xs font-bold text-gray-400 dark:text-gray-500">{filteredSubcategories.length} subcategorías</span>
@@ -488,7 +512,7 @@ export default function ProductsBento() {
                 {canManageSubcategories && categories.length > 0 && (
                   <button
                     onClick={openCreateSubModal}
-                    className="px-4 py-2 bg-[#067A57] text-white rounded-xl text-xs font-extrabold shadow-sm hover:bg-[#055C43] cursor-pointer"
+                    className="px-4 py-2 bg-[#0A0A0A] text-white rounded-xl text-xs font-extrabold shadow-sm hover:bg-[#202020] cursor-pointer"
                   >
                     + Crear Primera Subcategoría
                   </button>
@@ -497,28 +521,28 @@ export default function ProductsBento() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {filteredSubcategories.map(sub => (
-                  <div key={sub.id} className="p-5 bg-white dark:bg-[#161b22] rounded-2xl border border-gray-200 dark:border-[#262f38] space-y-3 flex flex-col justify-between hover:border-[#067A57] dark:hover:border-[#067A57] transition-all shadow-xs group">
+                  <div key={sub.id} className="p-5 bg-white dark:bg-[#17171B] rounded-2xl border border-gray-200 dark:border-[#272730] space-y-3 flex flex-col justify-between hover:border-[#D0D0CE] dark:hover:border-[#D0D0CE] transition-all shadow-xs group">
                     <div>
                       <div className="flex items-center justify-between gap-2">
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 dark:bg-[#262f38] text-gray-600 dark:text-gray-300 font-extrabold truncate">
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 dark:bg-[#272730] text-gray-600 dark:text-gray-300 font-extrabold truncate">
                           {sub.categoryName}
                         </span>
                         <span className="text-[10px] font-mono text-gray-400 dark:text-gray-500 font-bold shrink-0">
                           {sub.productCount} {sub.productCount === 1 ? 'producto' : 'productos'}
                         </span>
                       </div>
-                      <h3 className="font-extrabold text-sm text-[#161b22] dark:text-white mt-2 group-hover:text-[#067A57] dark:group-hover:text-[#00D47E] transition-colors">
+                      <h3 className="font-extrabold text-sm text-[#0A0A0A] dark:text-white mt-2 group-hover:text-[#FF5520] dark:group-hover:text-[#FF5520] transition-colors">
                         {sub.name}
                       </h3>
                       <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">{sub.description || 'Sin descripción'}</p>
                     </div>
 
                     {canManageSubcategories && (
-                      <div className="pt-3 border-t border-gray-200 dark:border-[#262f38] flex items-center justify-end gap-1">
+                      <div className="pt-3 border-t border-gray-200 dark:border-[#272730] flex items-center justify-end gap-1">
                         <button
                           onClick={() => openEditSubModal(sub)}
                           title="Editar subcategoría"
-                          className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-[#067A57] dark:hover:text-[#00D47E] rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer"
+                          className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-[#FF5520] dark:hover:text-[#FF5520] rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer"
                         >
                           <Edit3 className="w-4 h-4" />
                         </button>
@@ -542,8 +566,8 @@ export default function ProductsBento() {
       {/* Create/Edit Subcategory Modal */}
       {showSubModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <form onSubmit={handleSubmitSubcategory} className="bento-card max-w-md w-full bg-white dark:bg-[#161b22] p-6 rounded-3xl shadow-2xl space-y-4 border border-gray-200 dark:border-[#262f38]">
-            <h3 className="font-extrabold text-base text-[#161b22] dark:text-white">
+          <form onSubmit={handleSubmitSubcategory} className="bento-card max-w-md w-full bg-white dark:bg-[#17171B] p-6 rounded-3xl shadow-2xl space-y-4 border border-gray-200 dark:border-[#272730]">
+            <h3 className="font-extrabold text-base text-[#0A0A0A] dark:text-white">
               {subForm.id ? 'Editar Subcategoría' : 'Nueva Subcategoría'}
             </h3>
 
@@ -561,7 +585,7 @@ export default function ProductsBento() {
                   value={subForm.categoryId}
                   onChange={e => setSubForm({ ...subForm, categoryId: e.target.value })}
                   disabled={!!subForm.id}
-                  className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-gray-300 dark:border-[#262f38] rounded-2xl font-semibold text-[#161b22] dark:text-white disabled:opacity-60 focus:outline-none focus:border-[#067A57]"
+                  className="w-full p-2.5 bg-[#F7F7F5] dark:bg-[#0E0E12] border border-gray-300 dark:border-[#272730] rounded-2xl font-semibold text-[#0A0A0A] dark:text-white disabled:opacity-60 focus:outline-none focus:border-[#0A0A0A]"
                   required
                 >
                   <option value="" disabled>Selecciona una categoría...</option>
@@ -578,7 +602,7 @@ export default function ProductsBento() {
                   value={subForm.name}
                   onChange={e => setSubForm({ ...subForm, name: e.target.value })}
                   placeholder="Ej. Gaseosas"
-                  className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-gray-300 dark:border-[#262f38] rounded-2xl font-semibold text-[#161b22] dark:text-white focus:outline-none focus:border-[#067A57]"
+                  className="w-full p-2.5 bg-[#F7F7F5] dark:bg-[#0E0E12] border border-gray-300 dark:border-[#272730] rounded-2xl font-semibold text-[#0A0A0A] dark:text-white focus:outline-none focus:border-[#0A0A0A]"
                   required
                 />
               </div>
@@ -590,7 +614,7 @@ export default function ProductsBento() {
                   value={subForm.description}
                   onChange={e => setSubForm({ ...subForm, description: e.target.value })}
                   placeholder="Bebidas carbonatadas"
-                  className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-gray-300 dark:border-[#262f38] rounded-2xl text-xs text-[#161b22] dark:text-white focus:outline-none focus:border-[#067A57]"
+                  className="w-full p-2.5 bg-[#F7F7F5] dark:bg-[#0E0E12] border border-gray-300 dark:border-[#272730] rounded-2xl text-xs text-[#0A0A0A] dark:text-white focus:outline-none focus:border-[#0A0A0A]"
                 />
               </div>
             </div>
@@ -599,13 +623,13 @@ export default function ProductsBento() {
               <button
                 type="button"
                 onClick={() => setShowSubModal(false)}
-                className="w-1/2 py-3 bg-gray-100 dark:bg-[#262f38] hover:bg-gray-200 dark:hover:bg-[#38434f] text-gray-700 dark:text-gray-300 rounded-2xl text-xs font-bold cursor-pointer"
+                className="w-1/2 py-3 bg-gray-100 dark:bg-[#272730] hover:bg-gray-200 dark:hover:bg-[#2C2C36] text-gray-700 dark:text-gray-300 rounded-2xl text-xs font-bold cursor-pointer"
               >
                 Cancelar
               </button>
               <button
                 type="submit"
-                className="w-1/2 py-3 bg-[#067A57] hover:bg-[#055C43] text-white rounded-2xl text-xs font-extrabold shadow-md shadow-[#067A57]/20 cursor-pointer"
+                className="w-1/2 py-3 bg-[#0A0A0A] hover:bg-[#202020] text-white rounded-2xl text-xs font-extrabold shadow-md shadow-[#0A0A0A]/10 cursor-pointer"
               >
                 {subForm.id ? 'Guardar Cambios' : 'Crear Subcategoría'}
               </button>
@@ -617,8 +641,8 @@ export default function ProductsBento() {
       {/* Add Product Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <form onSubmit={handleSubmitProduct} className="bento-card max-w-md w-full bg-white dark:bg-[#161b22] p-6 rounded-3xl shadow-2xl space-y-4 border border-gray-200 dark:border-[#262f38]">
-            <h3 className="font-extrabold text-base text-[#161b22] dark:text-white">
+          <form onSubmit={handleSubmitProduct} className="bento-card max-w-md w-full bg-white dark:bg-[#17171B] p-6 rounded-3xl shadow-2xl space-y-4 border border-gray-200 dark:border-[#272730]">
+            <h3 className="font-extrabold text-base text-[#0A0A0A] dark:text-white">
               {newProduct.id ? 'Editar Producto' : 'Crear Nuevo Producto'}
             </h3>
 
@@ -638,7 +662,7 @@ export default function ProductsBento() {
 
             <div className="space-y-3 text-xs">
               <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-2xl bg-gray-50 dark:bg-[#0d1117] border border-gray-200 dark:border-[#262f38] flex items-center justify-center overflow-hidden shrink-0">
+                <div className="w-16 h-16 rounded-2xl bg-gray-50 dark:bg-[#0E0E12] border border-gray-200 dark:border-[#272730] flex items-center justify-center overflow-hidden shrink-0">
                   {newProduct.imageUrl ? (
                     <img src={newProduct.imageUrl} alt="Imagen del producto" className="w-full h-full object-cover" />
                   ) : (
@@ -666,7 +690,7 @@ export default function ProductsBento() {
                     setNewProduct({ ...newProduct, categoryId: e.target.value, subcategoryId: '' });
                     setShowNewSubcategory(false);
                   }}
-                  className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-gray-300 dark:border-[#262f38] rounded-2xl font-semibold text-[#161b22] dark:text-white focus:outline-none focus:border-[#067A57]"
+                  className="w-full p-2.5 bg-[#F7F7F5] dark:bg-[#0E0E12] border border-gray-300 dark:border-[#272730] rounded-2xl font-semibold text-[#0A0A0A] dark:text-white focus:outline-none focus:border-[#0A0A0A]"
                   required
                   disabled={categories.length === 0}
                 >
@@ -685,7 +709,7 @@ export default function ProductsBento() {
                       <select
                         value={newProduct.subcategoryId}
                         onChange={e => setNewProduct({ ...newProduct, subcategoryId: e.target.value })}
-                        className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-gray-300 dark:border-[#262f38] rounded-2xl font-semibold text-[#161b22] dark:text-white focus:outline-none focus:border-[#067A57]"
+                        className="w-full p-2.5 bg-[#F7F7F5] dark:bg-[#0E0E12] border border-gray-300 dark:border-[#272730] rounded-2xl font-semibold text-[#0A0A0A] dark:text-white focus:outline-none focus:border-[#0A0A0A]"
                       >
                         <option value="">Sin subcategoría</option>
                         {subcategoriesForSelectedCategory.map(sub => (
@@ -696,7 +720,7 @@ export default function ProductsBento() {
                         type="button"
                         onClick={() => setShowNewSubcategory(true)}
                         title="Crear nueva subcategoría"
-                        className="shrink-0 w-9 h-9 rounded-2xl bg-[#067A57]/10 dark:bg-[#067A57]/20 text-[#067A57] dark:text-[#00D47E] hover:bg-[#067A57] hover:text-white flex items-center justify-center cursor-pointer transition-colors"
+                        className="shrink-0 w-9 h-9 rounded-2xl bg-[#FF5520]/10 dark:bg-[#FF5520]/20 text-[#FF5520] dark:text-[#FF5520] hover:bg-[#0A0A0A] hover:text-white flex items-center justify-center cursor-pointer transition-colors"
                       >
                         <Plus className="w-4 h-4" />
                       </button>
@@ -709,12 +733,12 @@ export default function ProductsBento() {
                         value={newSubcategoryName}
                         onChange={e => setNewSubcategoryName(e.target.value)}
                         placeholder="Ej. Gaseosas"
-                        className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-gray-300 dark:border-[#262f38] rounded-2xl font-semibold text-[#161b22] dark:text-white focus:outline-none focus:border-[#067A57]"
+                        className="w-full p-2.5 bg-[#F7F7F5] dark:bg-[#0E0E12] border border-gray-300 dark:border-[#272730] rounded-2xl font-semibold text-[#0A0A0A] dark:text-white focus:outline-none focus:border-[#0A0A0A]"
                       />
                       <button
                         type="button"
                         onClick={handleCreateSubcategory}
-                        className="shrink-0 px-3 py-2 bg-[#067A57] hover:bg-[#055C43] text-white rounded-2xl text-xs font-bold cursor-pointer"
+                        className="shrink-0 px-3 py-2 bg-[#0A0A0A] hover:bg-[#202020] text-white rounded-2xl text-xs font-bold cursor-pointer"
                       >
                         Crear
                       </button>
@@ -740,7 +764,7 @@ export default function ProductsBento() {
                   value={newProduct.name}
                   onChange={e => setNewProduct({ ...newProduct, name: e.target.value })}
                   placeholder="Ej. Arroz 1kg"
-                  className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-gray-300 dark:border-[#262f38] rounded-2xl font-semibold text-[#161b22] dark:text-white focus:outline-none focus:border-[#067A57]"
+                  className="w-full p-2.5 bg-[#F7F7F5] dark:bg-[#0E0E12] border border-gray-300 dark:border-[#272730] rounded-2xl font-semibold text-[#0A0A0A] dark:text-white focus:outline-none focus:border-[#0A0A0A]"
                   required
                 />
               </div>
@@ -753,7 +777,7 @@ export default function ProductsBento() {
                     value={newProduct.barcode}
                     onChange={e => setNewProduct({ ...newProduct, barcode: e.target.value })}
                     placeholder="770..."
-                    className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-gray-300 dark:border-[#262f38] rounded-2xl font-mono text-xs text-[#161b22] dark:text-white focus:outline-none focus:border-[#067A57]"
+                    className="w-full p-2.5 bg-[#F7F7F5] dark:bg-[#0E0E12] border border-gray-300 dark:border-[#272730] rounded-2xl font-mono text-xs text-[#0A0A0A] dark:text-white focus:outline-none focus:border-[#0A0A0A]"
                   />
                 </div>
                 <div>
@@ -764,7 +788,7 @@ export default function ProductsBento() {
                     onChange={e => setNewProduct({ ...newProduct, internalCode: e.target.value })}
                     placeholder="PROD-101"
                     disabled={!!newProduct.id}
-                    className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-gray-300 dark:border-[#262f38] rounded-2xl font-mono text-xs text-[#161b22] dark:text-white disabled:opacity-60 focus:outline-none focus:border-[#067A57]"
+                    className="w-full p-2.5 bg-[#F7F7F5] dark:bg-[#0E0E12] border border-gray-300 dark:border-[#272730] rounded-2xl font-mono text-xs text-[#0A0A0A] dark:text-white disabled:opacity-60 focus:outline-none focus:border-[#0A0A0A]"
                   />
                 </div>
               </div>
@@ -777,7 +801,7 @@ export default function ProductsBento() {
                     value={newProduct.price}
                     onChange={e => setNewProduct({ ...newProduct, price: e.target.value })}
                     placeholder="12000"
-                    className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-gray-300 dark:border-[#262f38] rounded-2xl font-bold text-[#161b22] dark:text-white focus:outline-none focus:border-[#067A57]"
+                    className="w-full p-2.5 bg-[#F7F7F5] dark:bg-[#0E0E12] border border-gray-300 dark:border-[#272730] rounded-2xl font-bold text-[#0A0A0A] dark:text-white focus:outline-none focus:border-[#0A0A0A]"
                     required
                   />
                 </div>
@@ -789,7 +813,7 @@ export default function ProductsBento() {
                       value={newProduct.stock}
                       onChange={e => setNewProduct({ ...newProduct, stock: e.target.value })}
                       placeholder="50"
-                      className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-gray-300 dark:border-[#262f38] rounded-2xl font-bold text-[#161b22] dark:text-white focus:outline-none focus:border-[#067A57]"
+                      className="w-full p-2.5 bg-[#F7F7F5] dark:bg-[#0E0E12] border border-gray-300 dark:border-[#272730] rounded-2xl font-bold text-[#0A0A0A] dark:text-white focus:outline-none focus:border-[#0A0A0A]"
                     />
                   </div>
                 )}
@@ -805,14 +829,14 @@ export default function ProductsBento() {
               <button
                 type="button"
                 onClick={() => setShowAddModal(false)}
-                className="w-1/2 py-3 bg-gray-100 dark:bg-[#262f38] hover:bg-gray-200 dark:hover:bg-[#38434f] text-gray-700 dark:text-gray-300 rounded-2xl text-xs font-bold cursor-pointer"
+                className="w-1/2 py-3 bg-gray-100 dark:bg-[#272730] hover:bg-gray-200 dark:hover:bg-[#2C2C36] text-gray-700 dark:text-gray-300 rounded-2xl text-xs font-bold cursor-pointer"
               >
                 Cancelar
               </button>
               <button
                 type="submit"
                 disabled={categories.length === 0}
-                className="w-1/2 py-3 bg-[#067A57] hover:bg-[#055C43] disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-2xl text-xs font-extrabold shadow-md shadow-[#067A57]/20 cursor-pointer"
+                className="w-1/2 py-3 bg-[#0A0A0A] hover:bg-[#202020] disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-2xl text-xs font-extrabold shadow-md shadow-[#0A0A0A]/10 cursor-pointer"
               >
                 {newProduct.id ? 'Guardar Cambios' : 'Guardar Producto'}
               </button>

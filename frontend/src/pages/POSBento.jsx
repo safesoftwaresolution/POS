@@ -272,7 +272,7 @@ export default function POSBento() {
           <div
             key={toast.id}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl shadow-xl text-xs font-bold text-white animate-in fade-in slide-in-from-top-2 duration-150 ${
-              toast.type === 'success' ? 'bg-[#067A57]' : 'bg-red-600'
+              toast.type === 'success' ? 'bg-[#0A0A0A]' : 'bg-red-600'
             }`}
           >
             {toast.type === 'success' ? <CheckCircle className="w-4 h-4 shrink-0" /> : <XCircle className="w-4 h-4 shrink-0" />}
@@ -284,8 +284,8 @@ export default function POSBento() {
       {/* Top Banner */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-5">
         <div className="shrink-0">
-          <h1 className="text-xl sm:text-2xl font-black tracking-tight text-[#161b22] dark:text-white flex items-center gap-2 whitespace-nowrap">
-            Punto de Venta <span className="text-xs font-bold px-2.5 py-1 bg-[#067A57]/10 dark:bg-[#067A57]/20 text-[#067A57] dark:text-[#00D47E] rounded-full border border-[#067A57]/25">Caja Principal</span>
+          <h1 className="text-xl sm:text-2xl font-black tracking-tight text-[#0A0A0A] dark:text-white flex items-center gap-2 whitespace-nowrap">
+            Punto de Venta <span className="text-xs font-bold px-2.5 py-1 bg-[#FF5520]/10 dark:bg-[#FF5520]/20 text-[#FF5520] dark:text-[#FF5520] rounded-full border border-[#FF5520]/25">Caja Principal</span>
           </h1>
           <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Registra tus ventas de forma rápida y en equilibrio</p>
         </div>
@@ -300,8 +300,8 @@ export default function POSBento() {
                 onClick={() => setSelectedCategory(cat)}
                 className={`px-3 py-1.5 rounded-2xl text-xs font-bold transition-all cursor-pointer ${
                   selectedCategory === cat
-                    ? 'bg-[#067A57] text-white shadow-md shadow-[#067A57]/20'
-                    : 'bg-white dark:bg-[#161b22] text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#262f38] border border-gray-200 dark:border-[#262f38]'
+                    ? 'bg-[#0A0A0A] text-white shadow-md shadow-[#0A0A0A]/10'
+                    : 'bg-white dark:bg-[#17171B] text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#272730] border border-gray-200 dark:border-[#272730]'
                 }`}
               >
                 {cat}
@@ -325,7 +325,7 @@ export default function POSBento() {
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={handleBarcodeInputKeyDown}
               placeholder="Escanea, o busca por nombre, código de barras [770...] o código interno..."
-              className="w-full bg-transparent text-xs font-semibold focus:outline-none text-[#161b22] dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
+              className="w-full bg-transparent text-xs font-semibold focus:outline-none text-[#0A0A0A] dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
             />
             {searchQuery && (
               <button onClick={() => setSearchQuery('')} className="text-xs font-bold text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 shrink-0 cursor-pointer">
@@ -356,7 +356,7 @@ export default function POSBento() {
                   <div
                     key={product.id}
                     onClick={() => !isOut && addToCart(product)}
-                    className={`bento-card p-4 flex flex-col justify-between cursor-pointer group hover:border-[#067A57] ${
+                    className={`bento-card p-4 flex flex-col justify-between cursor-pointer group hover:border-[#D0D0CE] ${
                       isOut ? 'opacity-50 cursor-not-allowed bg-gray-50 dark:bg-white/5' : ''
                     }`}
                   >
@@ -374,7 +374,7 @@ export default function POSBento() {
                         </span>
                       </div>
 
-                      <h3 className="font-bold text-xs text-[#161b22] dark:text-white group-hover:text-[#067A57] dark:group-hover:text-[#00D47E] line-clamp-2 transition-colors">
+                      <h3 className="font-bold text-xs text-[#0A0A0A] dark:text-white group-hover:text-[#FF5520] dark:group-hover:text-[#FF5520] line-clamp-2 transition-colors">
                         {product.name}
                       </h3>
                     </div>
@@ -382,13 +382,13 @@ export default function POSBento() {
                     <div className="mt-3 pt-2 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between">
                       <div>
                         <span className="text-[10px] text-gray-400 dark:text-gray-500 block font-semibold">Precio unitario</span>
-                        <span className="text-sm font-black text-[#161b22] dark:text-white tabular-nums">
+                        <span className="text-sm font-black text-[#0A0A0A] dark:text-white tabular-nums">
                           ${priceVal.toLocaleString('es-CO')}
                         </span>
                       </div>
                       <button
                         disabled={isOut}
-                        className="w-7 h-7 rounded-xl bg-[#067A57]/10 dark:bg-[#067A57]/20 text-[#067A57] dark:text-[#00D47E] group-hover:bg-[#067A57] group-hover:text-white flex items-center justify-center transition-all shadow-xs cursor-pointer"
+                        className="w-7 h-7 rounded-xl bg-[#FF5520]/10 dark:bg-[#FF5520]/20 text-[#FF5520] dark:text-[#FF5520] group-hover:bg-[#0A0A0A] group-hover:text-white flex items-center justify-center transition-all shadow-xs cursor-pointer"
                       >
                         <Plus className="w-4 h-4" />
                       </button>
@@ -404,15 +404,15 @@ export default function POSBento() {
         <div className={`lg:col-span-5 ${
           showMobileCart ? 'fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex flex-col justify-end lg:static lg:bg-transparent lg:z-auto' : 'hidden lg:block'
         }`}>
-          <div className="bento-card p-5 sm:p-6 sticky top-20 space-y-4 bg-white dark:bg-[#161b22] shadow-xl max-h-[85vh] lg:max-h-none overflow-y-auto rounded-t-3xl lg:rounded-3xl w-full">
+          <div className="bento-card p-5 sm:p-6 sticky top-20 space-y-4 bg-white dark:bg-[#17171B] shadow-xl max-h-[85vh] lg:max-h-none overflow-y-auto rounded-t-3xl lg:rounded-3xl w-full">
 
             <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
               <div className="flex items-center gap-2.5">
-                <div className="p-2.5 bg-[#067A57] text-white rounded-2xl shadow-xs">
+                <div className="p-2.5 bg-[#0A0A0A] text-white rounded-2xl shadow-xs">
                   <ShoppingCart className="w-5 h-5" />
                 </div>
                 <div>
-                  <h2 className="font-extrabold text-sm text-[#161b22] dark:text-white">Ticket de Venta</h2>
+                  <h2 className="font-extrabold text-sm text-[#0A0A0A] dark:text-white">Ticket de Venta</h2>
                   <p className="text-[11px] text-gray-400 dark:text-gray-500 font-semibold">{cart.length} productos agregados</p>
                 </div>
               </div>
@@ -438,7 +438,7 @@ export default function POSBento() {
             <div className="bg-gray-50 dark:bg-white/5 p-3.5 rounded-2xl border border-gray-200 dark:border-gray-700 space-y-2">
               <div className="flex items-center justify-between text-xs font-bold text-gray-600 dark:text-gray-300">
                 <span>Cliente Asignado:</span>
-                <span className="text-[10px] text-[#067A57] dark:text-[#00D47E] font-extrabold">SELECCIONAR</span>
+                <span className="text-[10px] text-[#FF5520] dark:text-[#FF5520] font-extrabold">SELECCIONAR</span>
               </div>
               <select
                 value={selectedCustomer?.id || ''}
@@ -446,7 +446,7 @@ export default function POSBento() {
                   const cust = customersList.find(c => c.id === parseInt(e.target.value));
                   setSelectedCustomer(cust);
                 }}
-                className="w-full bg-white dark:bg-[#0d1117] border border-gray-300 dark:border-gray-700 rounded-xl p-2 text-xs font-bold text-[#161b22] dark:text-white focus:outline-none focus:border-[#067A57]"
+                className="w-full bg-white dark:bg-[#0E0E12] border border-gray-300 dark:border-gray-700 rounded-xl p-2 text-xs font-bold text-[#0A0A0A] dark:text-white focus:outline-none focus:border-[#0A0A0A]"
               >
                 {customersList.length === 0 ? (
                   <option value="">Cliente General (Mostrador)</option>
@@ -464,9 +464,9 @@ export default function POSBento() {
                   type="checkbox"
                   checked={issueDian}
                   onChange={(e) => setIssueDian(e.target.checked)}
-                  className="w-4 h-4 rounded text-[#067A57] accent-[#067A57] focus:ring-[#067A57] cursor-pointer"
+                  className="w-4 h-4 rounded text-[#FF5520] accent-[#FF5520] focus:ring-[#FF5520] cursor-pointer"
                 />
-                <span className="text-xs font-bold text-[#067A57] dark:text-[#00D47E]">
+                <span className="text-xs font-bold text-[#FF5520] dark:text-[#FF5520]">
                   Transmitir Factura Electrónica a DIAN (Factus API)
                 </span>
               </label>
@@ -483,32 +483,32 @@ export default function POSBento() {
                 cart.map(item => (
                   <div key={item.id} className="p-3 bg-gray-50 dark:bg-white/5 rounded-2xl flex items-center justify-between border border-gray-200 dark:border-gray-700">
                     <div className="space-y-0.5">
-                      <h4 className="font-bold text-xs text-[#161b22] dark:text-white">{item.name}</h4>
+                      <h4 className="font-bold text-xs text-[#0A0A0A] dark:text-white">{item.name}</h4>
                       <p className="text-[10px] text-gray-500 dark:text-gray-400 font-mono">
                         ${item.price.toLocaleString('es-CO')} c/u
                       </p>
                     </div>
 
                     <div className="flex items-center gap-3">
-                      <div className="flex items-center gap-1.5 bg-white dark:bg-[#0d1117] px-2 py-1 rounded-xl border border-gray-300 dark:border-gray-700">
+                      <div className="flex items-center gap-1.5 bg-white dark:bg-[#0E0E12] px-2 py-1 rounded-xl border border-gray-300 dark:border-gray-700">
                         <button
                           onClick={() => updateQuantity(item.id, -1)}
-                          className="text-gray-500 dark:text-gray-400 hover:text-[#067A57] dark:hover:text-[#00D47E] font-bold text-xs cursor-pointer"
+                          className="text-gray-500 dark:text-gray-400 hover:text-[#FF5520] dark:hover:text-[#FF5520] font-bold text-xs cursor-pointer"
                         >
                           <Minus className="w-3.5 h-3.5" />
                         </button>
-                        <span className="text-xs font-black text-[#161b22] dark:text-white px-1 tabular-nums">
+                        <span className="text-xs font-black text-[#0A0A0A] dark:text-white px-1 tabular-nums">
                           {item.quantity}
                         </span>
                         <button
                           onClick={() => updateQuantity(item.id, 1)}
-                          className="text-gray-500 dark:text-gray-400 hover:text-[#067A57] dark:hover:text-[#00D47E] font-bold text-xs cursor-pointer"
+                          className="text-gray-500 dark:text-gray-400 hover:text-[#FF5520] dark:hover:text-[#FF5520] font-bold text-xs cursor-pointer"
                         >
                           <Plus className="w-3.5 h-3.5" />
                         </button>
                       </div>
 
-                      <span className="text-xs font-black text-[#161b22] dark:text-white tabular-nums min-w-[70px] text-right">
+                      <span className="text-xs font-black text-[#0A0A0A] dark:text-white tabular-nums min-w-[70px] text-right">
                         ${(item.price * item.quantity).toLocaleString('es-CO')}
                       </span>
                     </div>
@@ -520,17 +520,17 @@ export default function POSBento() {
             <div className="border-t border-gray-200 dark:border-gray-700 pt-3 space-y-2 text-xs font-semibold text-gray-600 dark:text-gray-300">
               <div className="flex justify-between">
                 <span>Subtotal Neto:</span>
-                <span className="font-bold text-[#161b22] dark:text-white tabular-nums">${subtotal.toLocaleString('es-CO')} COP</span>
+                <span className="font-bold text-[#0A0A0A] dark:text-white tabular-nums">${subtotal.toLocaleString('es-CO')} COP</span>
               </div>
               {issueDian && (
-                <div className="flex justify-between text-[#067A57] dark:text-[#00D47E] font-bold">
+                <div className="flex justify-between text-[#FF5520] dark:text-[#FF5520] font-bold">
                   <span>IVA Estimado (19%):</span>
                   <span className="tabular-nums">${tax.toLocaleString('es-CO')} COP</span>
                 </div>
               )}
-              <div className="flex justify-between text-base font-black text-[#161b22] dark:text-white pt-2 border-t border-gray-200 dark:border-gray-700">
+              <div className="flex justify-between text-base font-black text-[#0A0A0A] dark:text-white pt-2 border-t border-gray-200 dark:border-gray-700">
                 <span>Total a Cobrar:</span>
-                <span className="text-xl text-[#067A57] dark:text-[#00D47E] tabular-nums">${total.toLocaleString('es-CO')} COP</span>
+                <span className="text-xl text-[#FF5520] dark:text-[#FF5520] tabular-nums">${total.toLocaleString('es-CO')} COP</span>
               </div>
             </div>
 
@@ -540,7 +540,7 @@ export default function POSBento() {
               className={`w-full py-3.5 rounded-2xl font-black text-sm flex items-center justify-center gap-2 shadow-lg transition-all ${
                 cart.length === 0
                   ? 'bg-gray-200 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed'
-                  : 'bg-[#067A57] hover:bg-[#055C43] text-white shadow-[#067A57]/30 active:scale-98 cursor-pointer'
+                  : 'bg-[#0A0A0A] hover:bg-[#202020] text-white shadow-[#0A0A0A]/10 active:scale-98 cursor-pointer'
               }`}
             >
               <Banknote className="w-5 h-5" />
@@ -556,7 +556,7 @@ export default function POSBento() {
       <div className="fixed bottom-4 left-4 right-4 z-30 lg:hidden">
         <button
           onClick={() => setShowMobileCart(true)}
-          className="w-full py-3.5 px-5 bg-[#067A57] text-white rounded-2xl font-black text-xs flex items-center justify-between shadow-2xl shadow-[#067A57]/50 active:scale-95 transition-all cursor-pointer"
+          className="w-full py-3.5 px-5 bg-[#0A0A0A] text-white rounded-2xl font-black text-xs flex items-center justify-between shadow-2xl shadow-[#0A0A0A]/10 active:scale-95 transition-all cursor-pointer"
         >
           <div className="flex items-center gap-2">
             <ShoppingCart className="w-4.5 h-4.5" />
@@ -569,22 +569,22 @@ export default function POSBento() {
       {/* Checkout Bento Modal */}
       {showCheckoutModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bento-card max-w-md w-full bg-white dark:bg-[#161b22] p-5 sm:p-6 rounded-3xl shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in duration-150 border border-gray-200 dark:border-[#262f38]">
+          <div className="bento-card max-w-md w-full bg-white dark:bg-[#17171B] p-5 sm:p-6 rounded-3xl shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in duration-150 border border-gray-200 dark:border-[#272730]">
             <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
               <div className="flex items-center gap-2">
-                <div className="p-2 bg-[#067A57] text-white rounded-2xl shadow-xs">
+                <div className="p-2 bg-[#0A0A0A] text-white rounded-2xl shadow-xs">
                   <Banknote className="w-5 h-5" />
                 </div>
-                <h3 className="font-extrabold text-base text-[#161b22] dark:text-white">Cobrar Venta</h3>
+                <h3 className="font-extrabold text-base text-[#0A0A0A] dark:text-white">Cobrar Venta</h3>
               </div>
               <button onClick={() => setShowCheckoutModal(false)} className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="p-4 bg-[#067A57]/5 dark:bg-[#067A57]/10 rounded-2xl border border-[#067A57]/20 text-center">
+            <div className="p-4 bg-[#FF5520]/5 dark:bg-[#FF5520]/10 rounded-2xl border border-[#FF5520]/20 text-center">
               <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Monto Total de la Venta</span>
-              <h2 className="text-2xl sm:text-3xl font-black text-[#067A57] dark:text-[#00D47E] tabular-nums mt-0.5">
+              <h2 className="text-2xl sm:text-3xl font-black text-[#FF5520] dark:text-[#FF5520] tabular-nums mt-0.5">
                 ${total.toLocaleString('es-CO')} <span className="text-sm font-bold text-gray-500 dark:text-gray-400">COP</span>
               </h2>
             </div>
@@ -605,8 +605,8 @@ export default function POSBento() {
                       }}
                       className={`py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
                         selectedPaymentMethod === m.code
-                          ? 'bg-[#067A57] border-[#067A57] text-white shadow-sm'
-                          : 'bg-gray-100 dark:bg-[#0d1117] border-transparent text-[#161b22] dark:text-white hover:border-[#067A57]'
+                          ? 'bg-[#0A0A0A] border-[#D0D0CE] text-white shadow-sm'
+                          : 'bg-gray-100 dark:bg-[#0E0E12] border-transparent text-[#0A0A0A] dark:text-white hover:border-[#D0D0CE]'
                       }`}
                     >
                       {m.label}
@@ -628,7 +628,7 @@ export default function POSBento() {
                     value={cashTendered}
                     onChange={(e) => setCashTendered(e.target.value)}
                     placeholder="Ingrese monto pagado..."
-                    className="w-full pl-8 pr-4 py-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-gray-300 dark:border-gray-700 rounded-2xl text-base font-black text-[#161b22] dark:text-white focus:outline-none focus:border-[#067A57]"
+                    className="w-full pl-8 pr-4 py-2.5 bg-[#F7F7F5] dark:bg-[#0E0E12] border border-gray-300 dark:border-gray-700 rounded-2xl text-base font-black text-[#0A0A0A] dark:text-white focus:outline-none focus:border-[#0A0A0A]"
                     autoFocus
                   />
                 </div>
@@ -638,7 +638,7 @@ export default function POSBento() {
                     <button
                       key={val}
                       onClick={() => setCashTendered(val.toString())}
-                      className="py-1.5 bg-gray-100 dark:bg-[#262f38] hover:bg-gray-200 dark:hover:bg-[#38434f] text-[#161b22] dark:text-white rounded-xl text-xs font-bold cursor-pointer"
+                      className="py-1.5 bg-gray-100 dark:bg-[#272730] hover:bg-gray-200 dark:hover:bg-[#2C2C36] text-[#0A0A0A] dark:text-white rounded-xl text-xs font-bold cursor-pointer"
                     >
                       ${(val / 1000).toFixed(0)}k
                     </button>
@@ -676,7 +676,7 @@ export default function POSBento() {
             <div className="flex items-center gap-3 pt-2">
               <button
                 onClick={() => setShowCheckoutModal(false)}
-                className="w-1/2 py-3 bg-gray-100 dark:bg-[#262f38] hover:bg-gray-200 dark:hover:bg-[#38434f] text-gray-700 dark:text-gray-300 rounded-2xl text-xs font-bold cursor-pointer"
+                className="w-1/2 py-3 bg-gray-100 dark:bg-[#272730] hover:bg-gray-200 dark:hover:bg-[#2C2C36] text-gray-700 dark:text-gray-300 rounded-2xl text-xs font-bold cursor-pointer"
               >
                 Cancelar
               </button>
@@ -686,7 +686,7 @@ export default function POSBento() {
                 className={`w-1/2 py-3 rounded-2xl font-extrabold text-xs flex items-center justify-center gap-2 text-white shadow-md cursor-pointer ${
                   change < 0 || cashNumber <= 0 || isSubmittingSale
                     ? 'bg-gray-300 dark:bg-gray-700 cursor-not-allowed'
-                    : 'bg-[#067A57] hover:bg-[#055C43] shadow-[#067A57]/30'
+                    : 'bg-[#0A0A0A] hover:bg-[#202020] shadow-[#0A0A0A]/10'
                 }`}
               >
                 <CheckCircle2 className="w-4 h-4" />
@@ -701,11 +701,11 @@ export default function POSBento() {
       {/* Sale Completed Success Receipt Modal */}
       {saleCompleted && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bento-card max-w-md w-full bg-white dark:bg-[#161b22] p-6 rounded-3xl shadow-2xl space-y-4 text-center border border-gray-200 dark:border-[#262f38]">
-            <div className="w-12 h-12 bg-[#067A57]/15 text-[#067A57] rounded-full flex items-center justify-center mx-auto">
-              <CheckCircle2 className="w-7 h-7 text-[#067A57]" />
+          <div className="bento-card max-w-md w-full bg-white dark:bg-[#17171B] p-6 rounded-3xl shadow-2xl space-y-4 text-center border border-gray-200 dark:border-[#272730]">
+            <div className="w-12 h-12 bg-[#FF5520]/15 text-[#FF5520] rounded-full flex items-center justify-center mx-auto">
+              <CheckCircle2 className="w-7 h-7 text-[#FF5520]" />
             </div>
-            <h3 className="text-xl font-extrabold text-[#161b22] dark:text-white">¡Venta Registrada Exitosamente!</h3>
+            <h3 className="text-xl font-extrabold text-[#0A0A0A] dark:text-white">¡Venta Registrada Exitosamente!</h3>
             <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Comprobante #{saleCompleted.id}</p>
 
             <div className="p-4 bg-gray-50 dark:bg-white/5 rounded-2xl border border-gray-200 dark:border-gray-700 text-left text-xs space-y-1.5">
@@ -723,7 +723,7 @@ export default function POSBento() {
               </div>
               {saleCompleted.cufe && (
                 <div className="pt-2 border-t border-gray-200 dark:border-gray-700 text-[10px] text-gray-500 dark:text-gray-400 font-mono">
-                  <span className="font-bold text-[#067A57] dark:text-[#00D47E] block">Factura DIAN Transmitida:</span>
+                  <span className="font-bold text-[#FF5520] dark:text-[#FF5520] block">Factura DIAN Transmitida:</span>
                   <span>{saleCompleted.cufe}</span>
                 </div>
               )}
@@ -732,13 +732,13 @@ export default function POSBento() {
             <div className="flex gap-2 pt-2">
               <button
                 onClick={() => notify(`Imprimiendo tiquete térmico para venta ${saleCompleted.id}...`, { title: 'Imprimir tiquete', danger: false })}
-                className="w-1/2 py-2.5 bg-gray-100 dark:bg-[#262f38] hover:bg-gray-200 dark:hover:bg-[#38434f] text-[#161b22] dark:text-white rounded-2xl font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                className="w-1/2 py-2.5 bg-gray-100 dark:bg-[#272730] hover:bg-gray-200 dark:hover:bg-[#2C2C36] text-[#0A0A0A] dark:text-white rounded-2xl font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <Printer className="w-4 h-4" /> Imprimir Tiquete
               </button>
               <button
                 onClick={() => { setSaleCompleted(null); focusBarcodeInput(); }}
-                className="w-1/2 py-2.5 bg-[#067A57] hover:bg-[#055C43] text-white rounded-2xl font-bold text-xs cursor-pointer shadow-md shadow-[#067A57]/20"
+                className="w-1/2 py-2.5 bg-[#0A0A0A] hover:bg-[#202020] text-white rounded-2xl font-bold text-xs cursor-pointer shadow-md shadow-[#0A0A0A]/10"
               >
                 Siguiente Venta
               </button>

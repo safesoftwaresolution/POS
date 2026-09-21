@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 import { verifyEmailApi } from '../services/authApi';
 import { useAuth } from '../context/AuthContext';
+import BentoIcon from '../components/BentoIcon';
 
 export default function VerifyEmailBento() {
   const [searchParams] = useSearchParams();
@@ -37,20 +38,13 @@ export default function VerifyEmailBento() {
   }, [searchParams, navigate, setSessionFromResponse]);
 
   return (
-    <div className="min-h-screen bg-[#0d1117] text-white flex items-center justify-center p-4 relative overflow-hidden select-none">
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#067A57]/15 rounded-full blur-3xl pointer-events-none"></div>
-      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#00D47E]/10 rounded-full blur-3xl pointer-events-none"></div>
-
-      <div className="max-w-md w-full bento-card bg-[#161b22] border-[#262f38] p-8 rounded-3xl shadow-2xl space-y-6 relative z-10 text-center">
-        <img
-          src="/logo-icon.png"
-          alt="BentoPOS"
-          className="w-16 h-16 rounded-2xl mx-auto object-cover shadow-lg border border-white/10"
-        />
+    <div className="min-h-screen bg-[#0E0E12] text-white flex items-center justify-center p-4 relative overflow-hidden select-none">
+      <div className="max-w-md w-full bento-card bg-[#17171B] border-[#272730] p-8 rounded-3xl shadow-2xl space-y-6 relative z-10 text-center">
+        <BentoIcon size="w-16 h-16 mx-auto" rounded="rounded-3xl" />
 
         {status === 'verifying' && (
           <div className="space-y-3">
-            <Loader2 className="w-8 h-8 text-[#067A57] mx-auto animate-spin" />
+            <Loader2 className="w-8 h-8 text-[#FF5520] mx-auto animate-spin" />
             <p className="text-sm font-bold text-white">Verificando tu correo...</p>
           </div>
         )}
@@ -71,7 +65,7 @@ export default function VerifyEmailBento() {
             <button
               type="button"
               onClick={() => navigate('/login')}
-              className="text-xs font-extrabold text-[#067A57] hover:text-[#00D47E] hover:underline cursor-pointer transition-colors"
+              className="text-xs font-extrabold text-[#FF5520] hover:text-[#FF5520] hover:underline cursor-pointer transition-colors"
             >
               Volver a iniciar sesión
             </button>

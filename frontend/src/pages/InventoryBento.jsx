@@ -8,7 +8,8 @@ import {
   Truck,
   RotateCcw,
   RefreshCw,
-  Barcode
+  Barcode,
+  PackageX
 } from 'lucide-react';
 import { getProductsApi } from '../services/productsApi';
 import { createPurchaseApi } from '../services/inventoryApi';
@@ -67,6 +68,7 @@ export default function InventoryBento() {
   }, []);
 
   const lowStockCount = productsList.filter(p => (p.quantityAvailable ?? p.stock ?? 0) <= (p.minStock || 5)).length;
+  const outOfStockCount = productsList.filter(p => (p.quantityAvailable ?? p.stock ?? 0) <= 0).length;
 
   const openPurchaseModal = (product) => {
     setSelectedProduct(product);
@@ -109,7 +111,7 @@ export default function InventoryBento() {
       {/* Header banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-[#161b22] dark:text-white">Inventario</h1>
+          <h1 className="text-2xl font-black text-[#0A0A0A] dark:text-white">Inventario</h1>
           <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Stock, devoluciones y proveedores en un solo módulo de BentoPOS</p>
         </div>
 
@@ -122,7 +124,7 @@ export default function InventoryBento() {
                 notify('Debes crear primero un producto en el catálogo.', { danger: false });
               }
             }}
-            className="px-4 py-2.5 bg-[#067A57] hover:bg-[#055C43] text-white rounded-2xl text-xs font-bold flex items-center gap-2 shadow-md shadow-[#067A57]/20 cursor-pointer transition-all"
+            className="px-4 py-2.5 bg-[#0A0A0A] hover:bg-[#202020] text-white rounded-2xl text-xs font-bold flex items-center gap-2 shadow-md shadow-[#0A0A0A]/10 cursor-pointer transition-all"
           >
             <Truck className="w-4 h-4" /> Registrar Compra (+Stock)
           </button>
@@ -130,7 +132,7 @@ export default function InventoryBento() {
       </div>
 
       {/* Tab Switcher */}
-      <div className="flex bg-gray-100 dark:bg-[#262f38] rounded-full p-1 border border-gray-200 dark:border-gray-700 w-fit">
+      <div className="flex bg-gray-100 dark:bg-[#272730] rounded-full p-1 border border-gray-200 dark:border-gray-700 w-fit">
         {TABS.map(tab => {
           const Icon = tab.icon;
           return (
@@ -139,8 +141,8 @@ export default function InventoryBento() {
               onClick={() => setActiveTab(tab.id)}
               className={`px-4 py-2 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
                 activeTab === tab.id
-                  ? 'bg-[#067A57] text-white shadow-xs'
-                  : 'text-gray-500 dark:text-gray-400 hover:text-[#067A57] dark:hover:text-[#00D47E]'
+                  ? 'bg-[#0A0A0A] text-white shadow-xs'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-[#FF5520] dark:hover:text-[#FF5520]'
               }`}
             >
               <Icon className="w-4 h-4" /> {tab.label}
@@ -155,15 +157,15 @@ export default function InventoryBento() {
       {activeTab === 'stock' && (
       <>
       {/* Bento Stats Row */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        <div className="bento-card p-6 flex items-center justify-between bg-white dark:bg-[#161b22] border-[#e2e8f0] dark:border-[#262f38]">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <div className="bento-card p-6 flex items-center justify-between bg-white dark:bg-[#17171B] border-[#EAEAEA] dark:border-[#272730]">
           <div>
             <span className="text-xs font-extrabold uppercase text-gray-400 dark:text-gray-500">Total Referencias</span>
-            <h3 className="text-2xl font-black text-[#161b22] dark:text-white mt-1 tabular-nums">{productsList.length} ítems</h3>
-            <span className="text-[11px] text-[#067A57] dark:text-[#00D47E] font-bold">Monitoreo Activo</span>
+            <h3 className="text-2xl font-black text-[#0A0A0A] dark:text-white mt-1 tabular-nums">{productsList.length} ítems</h3>
+            <span className="text-[11px] text-[#FF5520] dark:text-[#FF5520] font-bold">Monitoreo Activo</span>
           </div>
-          <div className="p-3 bg-[#067A57]/10 dark:bg-[#067A57]/20 text-[#067A57] dark:text-[#00D47E] rounded-2xl border border-[#067A57]/25">
-            <Package className="w-6 h-6 text-[#067A57] dark:text-[#00D47E]" />
+          <div className="p-3 bg-[#FF5520]/10 dark:bg-[#FF5520]/20 text-[#FF5520] dark:text-[#FF5520] rounded-2xl border border-[#FF5520]/25">
+            <Package className="w-6 h-6 text-[#FF5520] dark:text-[#FF5520]" />
           </div>
         </div>
 
@@ -178,22 +180,33 @@ export default function InventoryBento() {
           </div>
         </div>
 
-        <div className="bento-card p-6 flex items-center justify-between bg-white dark:bg-[#161b22] border-[#e2e8f0] dark:border-[#262f38]">
+        <div className="bento-card p-6 flex items-center justify-between bg-red-50/50 dark:bg-red-500/10 border-red-200 dark:border-red-500/30">
+          <div>
+            <span className="text-xs font-extrabold uppercase text-red-700 dark:text-red-400">Agotados</span>
+            <h3 className="text-2xl font-black text-red-800 dark:text-red-300 mt-1 tabular-nums">{outOfStockCount} ítems</h3>
+            <span className="text-[11px] text-red-600 dark:text-red-400 font-bold">Sin existencias</span>
+          </div>
+          <div className="p-3 bg-red-500 text-white rounded-2xl shadow-xs">
+            <PackageX className="w-6 h-6" />
+          </div>
+        </div>
+
+        <div className="bento-card p-6 flex items-center justify-between bg-white dark:bg-[#17171B] border-[#EAEAEA] dark:border-[#272730]">
           <div>
             <span className="text-xs font-extrabold uppercase text-gray-400 dark:text-gray-500">Valorizado Inventario</span>
-            <h3 className="text-2xl font-black text-[#161b22] dark:text-white mt-1 tabular-nums">
+            <h3 className="text-2xl font-black text-[#0A0A0A] dark:text-white mt-1 tabular-nums">
               ${productsList.reduce((acc, p) => acc + ((p.salePrice || p.price || 0) * (p.quantityAvailable ?? p.stock ?? 0)), 0).toLocaleString('es-CO')}
             </h3>
             <span className="text-[11px] text-gray-500 dark:text-gray-400 font-bold">Moneda Local (COP)</span>
           </div>
-          <div className="p-3 bg-[#067A57]/10 dark:bg-[#067A57]/20 text-[#067A57] dark:text-[#00D47E] rounded-2xl border border-[#067A57]/25">
-            <ArrowUpRight className="w-6 h-6 text-[#067A57] dark:text-[#00D47E]" />
+          <div className="p-3 bg-[#FF5520]/10 dark:bg-[#FF5520]/20 text-[#FF5520] dark:text-[#FF5520] rounded-2xl border border-[#FF5520]/25">
+            <ArrowUpRight className="w-6 h-6 text-[#FF5520] dark:text-[#FF5520]" />
           </div>
         </div>
       </div>
 
       {/* Main Table Card */}
-      <div className="bento-card p-6 space-y-4 bg-white dark:bg-[#161b22] border-[#e2e8f0] dark:border-[#262f38]">
+      <div className="bento-card p-6 space-y-4 bg-white dark:bg-[#17171B] border-[#EAEAEA] dark:border-[#272730]">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="relative w-full sm:w-72">
             <Search className="w-4 h-4 text-gray-400 dark:text-gray-500 absolute left-3.5 top-2.5" />
@@ -202,10 +215,10 @@ export default function InventoryBento() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Buscar producto o código..."
-              className="w-full pl-10 pr-3 py-1.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl text-xs font-semibold text-[#161b22] dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-[#067A57]"
+              className="w-full pl-10 pr-3 py-1.5 bg-[#F7F7F5] dark:bg-[#0E0E12] border border-[#EAEAEA] dark:border-[#272730] rounded-2xl text-xs font-semibold text-[#0A0A0A] dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-[#0A0A0A]"
             />
           </div>
-          <button onClick={loadInventory} className="text-xs font-bold text-[#067A57] dark:text-[#00D47E] flex items-center gap-1 hover:underline cursor-pointer">
+          <button onClick={loadInventory} className="text-xs font-bold text-[#FF5520] dark:text-[#FF5520] flex items-center gap-1 hover:underline cursor-pointer">
             <RefreshCw className="w-3.5 h-3.5" /> Actualizar Kardex
           </button>
         </div>
@@ -240,11 +253,11 @@ export default function InventoryBento() {
                   return (
                     <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
                       <td className="py-3 px-3 font-mono font-bold text-gray-500 dark:text-gray-400">{item.internalCode}</td>
-                      <td className="py-3 px-3 font-bold text-[#161b22] dark:text-white">{item.name}</td>
-                      <td className="py-3 px-3 text-right font-extrabold text-[#161b22] dark:text-white tabular-nums">
+                      <td className="py-3 px-3 font-bold text-[#0A0A0A] dark:text-white">{item.name}</td>
+                      <td className="py-3 px-3 text-right font-extrabold text-[#0A0A0A] dark:text-white tabular-nums">
                         ${(item.salePrice || item.price || 0).toLocaleString('es-CO')}
                       </td>
-                      <td className="py-3 px-3 text-center font-black text-sm tabular-nums text-[#161b22] dark:text-white">
+                      <td className="py-3 px-3 text-center font-black text-sm tabular-nums text-[#0A0A0A] dark:text-white">
                         {stockVal}
                       </td>
                       <td className="py-3 px-3 text-center font-semibold text-gray-400 dark:text-gray-500 tabular-nums">
@@ -262,13 +275,13 @@ export default function InventoryBento() {
                           <button
                             onClick={() => setBarcodeProduct(item)}
                             title="Ver código de barras"
-                            className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-[#067A57] dark:hover:text-[#00D47E] rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer"
+                            className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-[#FF5520] dark:hover:text-[#FF5520] rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer"
                           >
                             <Barcode className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => openPurchaseModal(item)}
-                            className="px-2.5 py-1 bg-[#067A57]/10 dark:bg-[#067A57]/20 hover:bg-[#067A57] hover:text-white text-[#067A57] dark:text-[#00D47E] rounded-xl text-[11px] font-bold transition-all cursor-pointer"
+                            className="px-2.5 py-1 bg-[#FF5520]/10 dark:bg-[#FF5520]/20 hover:bg-[#0A0A0A] hover:text-white text-[#FF5520] dark:text-[#FF5520] rounded-xl text-[11px] font-bold transition-all cursor-pointer"
                           >
                             + Cargar Stock
                           </button>
@@ -286,9 +299,9 @@ export default function InventoryBento() {
       {/* Stock Increase Modal */}
       {showPurchaseModal && selectedProduct && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <form onSubmit={handleStockIncrease} className="bento-card max-w-sm w-full bg-white dark:bg-[#161b22] p-6 rounded-3xl shadow-2xl space-y-4 border border-gray-200 dark:border-[#262f38]">
-            <h3 className="font-extrabold text-base text-[#161b22] dark:text-white">Registrar Compra / Carga de Stock</h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Producto: <span className="font-bold text-[#067A57] dark:text-[#00D47E]">{selectedProduct.name}</span></p>
+          <form onSubmit={handleStockIncrease} className="bento-card max-w-sm w-full bg-white dark:bg-[#17171B] p-6 rounded-3xl shadow-2xl space-y-4 border border-gray-200 dark:border-[#272730]">
+            <h3 className="font-extrabold text-base text-[#0A0A0A] dark:text-white">Registrar Compra / Carga de Stock</h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Producto: <span className="font-bold text-[#FF5520] dark:text-[#FF5520]">{selectedProduct.name}</span></p>
 
             {suppliers.length === 0 && (
               <div className="p-3 bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30 rounded-xl text-xs font-bold flex items-center gap-2">
@@ -311,7 +324,7 @@ export default function InventoryBento() {
               <select
                 value={selectedSupplierId}
                 onChange={(e) => setSelectedSupplierId(e.target.value)}
-                className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-gray-300 dark:border-[#262f38] rounded-2xl text-sm font-bold text-[#161b22] dark:text-white focus:outline-none focus:border-[#067A57]"
+                className="w-full p-2.5 bg-[#F7F7F5] dark:bg-[#0E0E12] border border-gray-300 dark:border-[#272730] rounded-2xl text-sm font-bold text-[#0A0A0A] dark:text-white focus:outline-none focus:border-[#0A0A0A]"
                 required
                 disabled={suppliers.length === 0}
               >
@@ -329,7 +342,7 @@ export default function InventoryBento() {
                 value={increaseAmount}
                 onChange={(e) => setIncreaseAmount(e.target.value)}
                 placeholder="Ej. 10, 25, 50..."
-                className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-gray-300 dark:border-[#262f38] rounded-2xl text-sm font-bold text-[#161b22] dark:text-white focus:outline-none focus:border-[#067A57]"
+                className="w-full p-2.5 bg-[#F7F7F5] dark:bg-[#0E0E12] border border-gray-300 dark:border-[#272730] rounded-2xl text-sm font-bold text-[#0A0A0A] dark:text-white focus:outline-none focus:border-[#0A0A0A]"
                 required
                 min="1"
               />
@@ -339,14 +352,14 @@ export default function InventoryBento() {
               <button
                 type="button"
                 onClick={() => setShowPurchaseModal(false)}
-                className="w-1/2 py-2.5 bg-gray-100 dark:bg-[#262f38] hover:bg-gray-200 dark:hover:bg-[#38434f] text-gray-700 dark:text-gray-300 rounded-2xl text-xs font-bold cursor-pointer"
+                className="w-1/2 py-2.5 bg-gray-100 dark:bg-[#272730] hover:bg-gray-200 dark:hover:bg-[#2C2C36] text-gray-700 dark:text-gray-300 rounded-2xl text-xs font-bold cursor-pointer"
               >
                 Cancelar
               </button>
               <button
                 type="submit"
                 disabled={suppliers.length === 0}
-                className="w-1/2 py-2.5 bg-[#067A57] hover:bg-[#055C43] disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-2xl text-xs font-extrabold shadow-md shadow-[#067A57]/20 cursor-pointer"
+                className="w-1/2 py-2.5 bg-[#0A0A0A] hover:bg-[#202020] disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-2xl text-xs font-extrabold shadow-md shadow-[#0A0A0A]/10 cursor-pointer"
               >
                 Registrar Compra
               </button>

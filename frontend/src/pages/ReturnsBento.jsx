@@ -117,19 +117,19 @@ export default function ReturnsBento() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-[#161b22] dark:text-[#f0f6fc]">Devoluciones</h1>
+          <h1 className="text-2xl font-black text-[#0A0A0A] dark:text-[#F4F4F6]">Devoluciones</h1>
           <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
             Busca la venta original y devuelve los ítems necesarios — el stock se repone automáticamente
           </p>
         </div>
-        <button onClick={loadSales} className="text-xs font-bold text-[#067A57] dark:text-[#00D47E] flex items-center gap-1 hover:underline cursor-pointer">
+        <button onClick={loadSales} className="text-xs font-bold text-[#FF5520] dark:text-[#FF5520] flex items-center gap-1 hover:underline cursor-pointer">
           <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Actualizar ventas
         </button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
         {/* Lista de ventas */}
-        <div className="lg:col-span-2 bento-card p-5 bg-white dark:bg-[#161b22] rounded-3xl border border-[#e2e8f0] dark:border-[#262f38] shadow-xs space-y-3">
+        <div className="lg:col-span-2 bento-card p-5 bg-white dark:bg-[#17171B] rounded-3xl border border-[#EAEAEA] dark:border-[#272730] shadow-xs space-y-3">
           <div className="relative">
             <Search className="w-4 h-4 text-gray-400 dark:text-gray-500 absolute left-3.5 top-2.5" />
             <input
@@ -137,11 +137,11 @@ export default function ReturnsBento() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Buscar por factura o cliente..."
-              className="w-full pl-10 pr-3 py-1.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl text-xs font-semibold text-[#161b22] dark:text-[#f0f6fc] placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-[#067A57] dark:focus:border-[#00D47E]"
+              className="w-full pl-10 pr-3 py-1.5 bg-[#F7F7F5] dark:bg-[#0E0E12] border border-[#EAEAEA] dark:border-[#272730] rounded-2xl text-xs font-semibold text-[#0A0A0A] dark:text-[#F4F4F6] placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#FF5520]"
             />
           </div>
 
-          <div className="max-h-[560px] overflow-y-auto divide-y divide-[#e2e8f0] dark:divide-[#262f38]">
+          <div className="max-h-[560px] overflow-y-auto divide-y divide-[#EAEAEA] dark:divide-[#272730]">
             {loading ? (
               <p className="text-xs text-gray-400 font-semibold py-6 text-center">Cargando ventas...</p>
             ) : filtered.length === 0 ? (
@@ -152,12 +152,12 @@ export default function ReturnsBento() {
                   key={sale.id}
                   onClick={() => openSale(sale)}
                   className={`w-full text-left py-3 px-2 rounded-xl transition-colors cursor-pointer ${
-                    selectedSale?.id === sale.id ? 'bg-[#067A57]/10 border-l-4 border-[#067A57]' : 'hover:bg-gray-50 dark:hover:bg-white/5'
+                    selectedSale?.id === sale.id ? 'bg-[#FF5520]/10 border-l-4 border-[#D0D0CE]' : 'hover:bg-gray-50 dark:hover:bg-white/5'
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-extrabold text-[#161b22] dark:text-[#f0f6fc]">{sale.invoiceNumber}</span>
-                    <span className="text-xs font-black text-[#067A57] dark:text-[#00D47E] tabular-nums">{money(sale.totalAmount)}</span>
+                    <span className="text-xs font-extrabold text-[#0A0A0A] dark:text-[#F4F4F6]">{sale.invoiceNumber}</span>
+                    <span className="text-xs font-black text-[#FF5520] dark:text-[#FF5520] tabular-nums">{money(sale.totalAmount)}</span>
                   </div>
                   <div className="flex items-center justify-between mt-0.5">
                     <span className="text-[11px] text-gray-500 dark:text-gray-400 font-medium truncate">{sale.customerName}</span>
@@ -170,7 +170,7 @@ export default function ReturnsBento() {
         </div>
 
         {/* Detalle + formulario de devolución */}
-        <div className="lg:col-span-3 bento-card p-6 bg-white dark:bg-[#161b22] rounded-3xl border border-[#e2e8f0] dark:border-[#262f38] shadow-xs">
+        <div className="lg:col-span-3 bento-card p-6 bg-white dark:bg-[#17171B] rounded-3xl border border-[#EAEAEA] dark:border-[#272730] shadow-xs">
           {!selectedSale ? (
             <div className="py-16 text-center space-y-2">
               <RotateCcw className="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto stroke-1" />
@@ -180,7 +180,7 @@ export default function ReturnsBento() {
             <div className="space-y-5">
               <div className="flex items-start justify-between">
                 <div>
-                  <h3 className="text-sm font-extrabold text-[#161b22] dark:text-[#f0f6fc]">{selectedSale.invoiceNumber}</h3>
+                  <h3 className="text-sm font-extrabold text-[#0A0A0A] dark:text-[#F4F4F6]">{selectedSale.invoiceNumber}</h3>
                   <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium">
                     {selectedSale.customerName} · {dateFmt(selectedSale.createdAt)} · {selectedSale.paymentMethod}
                   </p>
@@ -204,19 +204,19 @@ export default function ReturnsBento() {
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <thead>
-                    <tr className="border-b border-[#e2e8f0] dark:border-[#262f38] text-gray-400 dark:text-gray-500 uppercase tracking-wider font-extrabold text-[10px]">
+                    <tr className="border-b border-[#EAEAEA] dark:border-[#272730] text-gray-400 dark:text-gray-500 uppercase tracking-wider font-extrabold text-[10px]">
                       <th className="py-2 px-2">Producto</th>
                       <th className="py-2 px-2 text-center">Vendido</th>
                       <th className="py-2 px-2 text-center">Disponible</th>
                       <th className="py-2 px-2 text-center">A devolver</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#e2e8f0] dark:divide-[#262f38] font-medium">
+                  <tbody className="divide-y divide-[#EAEAEA] dark:divide-[#272730] font-medium">
                     {(selectedSale.items || []).map((item) => {
                       const returnable = returnableFor(item);
                       return (
                         <tr key={item.id}>
-                          <td className="py-2.5 px-2 font-bold text-[#161b22] dark:text-[#f0f6fc]">{item.productName}</td>
+                          <td className="py-2.5 px-2 font-bold text-[#0A0A0A] dark:text-[#F4F4F6]">{item.productName}</td>
                           <td className="py-2.5 px-2 text-center tabular-nums">{item.quantity}</td>
                           <td className="py-2.5 px-2 text-center tabular-nums text-gray-500 dark:text-gray-400">{returnable}</td>
                           <td className="py-2.5 px-2 text-center">
@@ -228,7 +228,7 @@ export default function ReturnsBento() {
                               value={returnQty[item.id] || ''}
                               onChange={(e) => setQty(item.id, e.target.value, returnable)}
                               placeholder="0"
-                              className="w-16 p-1.5 text-center bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-xl text-xs font-bold text-[#161b22] dark:text-[#f0f6fc] disabled:opacity-40 focus:outline-none focus:border-[#067A57] dark:focus:border-[#00D47E]"
+                              className="w-16 p-1.5 text-center bg-[#F7F7F5] dark:bg-[#0E0E12] border border-[#EAEAEA] dark:border-[#272730] rounded-xl text-xs font-bold text-[#0A0A0A] dark:text-[#F4F4F6] disabled:opacity-40 focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#FF5520]"
                             />
                           </td>
                         </tr>
@@ -245,19 +245,19 @@ export default function ReturnsBento() {
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
                   placeholder="Ej. Producto defectuoso, talla incorrecta..."
-                  className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl text-xs font-semibold text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#067A57] dark:focus:border-[#00D47E]"
+                  className="w-full p-2.5 bg-[#F7F7F5] dark:bg-[#0E0E12] border border-[#EAEAEA] dark:border-[#272730] rounded-2xl text-xs font-semibold text-[#0A0A0A] dark:text-[#F4F4F6] focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#FF5520]"
                 />
               </div>
 
-              <div className="flex items-center justify-between pt-2 border-t border-[#e2e8f0] dark:border-[#262f38]">
+              <div className="flex items-center justify-between pt-2 border-t border-[#EAEAEA] dark:border-[#272730]">
                 <div>
                   <span className="text-[11px] font-extrabold uppercase text-gray-400 dark:text-gray-500">Total a reembolsar</span>
-                  <div className="text-xl font-black text-[#161b22] dark:text-[#f0f6fc] tabular-nums">{money(refundPreview)}</div>
+                  <div className="text-xl font-black text-[#0A0A0A] dark:text-[#F4F4F6] tabular-nums">{money(refundPreview)}</div>
                 </div>
                 <button
                   onClick={submitReturn}
                   disabled={submitting || itemsToReturn.length === 0}
-                  className="px-5 py-2.5 bg-[#067A57] hover:bg-[#055C43] disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-2xl text-xs font-extrabold flex items-center gap-2 shadow-md shadow-[#067A57]/20 cursor-pointer"
+                  className="px-5 py-2.5 bg-[#0A0A0A] hover:bg-[#202020] disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-2xl text-xs font-extrabold flex items-center gap-2 shadow-md shadow-[#0A0A0A]/10 cursor-pointer"
                 >
                   <RotateCcw className="w-4 h-4" /> {submitting ? 'Procesando...' : 'Registrar Devolución'}
                 </button>
@@ -273,7 +273,7 @@ export default function ReturnsBento() {
                       <span className="text-gray-600 dark:text-gray-300 font-medium">
                         {dateFmt(ret.createdAt)} · {ret.reason || 'Sin motivo'} · {ret.processedByUsername}
                       </span>
-                      <span className="font-extrabold text-[#191c1e] dark:text-white tabular-nums">{money(ret.totalRefund)}</span>
+                      <span className="font-extrabold text-[#17171B] dark:text-white tabular-nums">{money(ret.totalRefund)}</span>
                     </div>
                   ))}
                 </div>

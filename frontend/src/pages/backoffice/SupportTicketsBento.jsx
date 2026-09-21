@@ -66,7 +66,7 @@ function MetricCard({ label, value, icon: Icon, accent }) {
         <Icon className="w-5 h-5" />
       </div>
       <div className="min-w-0">
-        <p className="text-lg font-black text-[#161b22] dark:text-[#f0f6fc] leading-tight tabular-nums">{value}</p>
+        <p className="text-lg font-black text-[#0A0A0A] dark:text-[#F4F4F6] leading-tight tabular-nums">{value}</p>
         <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 truncate">{label}</p>
       </div>
     </div>
@@ -161,7 +161,7 @@ export default function SupportTicketsBento() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-[#161b22] dark:text-[#f0f6fc]">Soporte y PQRs</h1>
+          <h1 className="text-2xl font-black text-[#0A0A0A] dark:text-[#F4F4F6]">Soporte y PQRs</h1>
           <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Gestión de peticiones, quejas, reclamos y reportes de bugs</p>
         </div>
       </div>
@@ -185,7 +185,7 @@ export default function SupportTicketsBento() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Buscar por título o radicado..."
-              className="w-full pl-10 pr-3 py-1.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl text-xs font-semibold text-[#161b22] dark:text-[#f0f6fc] placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-[#067A57] dark:focus:border-[#00D47E]"
+              className="w-full pl-10 pr-3 py-1.5 bg-[#F7F7F5] dark:bg-[#0E0E12] border border-[#EAEAEA] dark:border-[#272730] rounded-2xl text-xs font-semibold text-[#0A0A0A] dark:text-[#F4F4F6] placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#FF5520]"
             />
           </div>
 
@@ -251,7 +251,7 @@ export default function SupportTicketsBento() {
                       className="border-t border-gray-100 dark:border-gray-800 hover:bg-gray-50/60 dark:hover:bg-white/5 cursor-pointer"
                     >
                       <td className="px-2 py-3">
-                        <p className="font-extrabold text-[#191c1e] dark:text-white font-mono">{t.ticketNumber}</p>
+                        <p className="font-extrabold text-[#17171B] dark:text-white font-mono">{t.ticketNumber}</p>
                         <p className="text-[10px] text-gray-400 dark:text-gray-500 truncate max-w-[220px]">{t.title}</p>
                       </td>
                       <td className="px-2 py-3">
@@ -285,10 +285,10 @@ export default function SupportTicketsBento() {
       {/* Ticket Detail Modal */}
       {detailTicket && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bento-card max-w-lg w-full bg-white dark:bg-[#161b22] p-6 rounded-3xl shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+          <div className="bento-card max-w-lg w-full bg-white dark:bg-[#17171B] p-6 rounded-3xl shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="font-extrabold text-base text-[#161b22] dark:text-[#f0f6fc] font-mono">{detailTicket.ticketNumber}</h3>
+                <h3 className="font-extrabold text-base text-[#0A0A0A] dark:text-[#F4F4F6] font-mono">{detailTicket.ticketNumber}</h3>
                 <p className="text-[11px] text-gray-400 dark:text-gray-500 font-semibold">{TYPE_LABELS[detailTicket.type] || detailTicket.type}</p>
               </div>
               <button
@@ -313,11 +313,11 @@ export default function SupportTicketsBento() {
                 <div className="space-y-3 text-xs">
                   <div>
                     <p className="font-bold text-gray-700 dark:text-gray-300 mb-1">Título:</p>
-                    <p className="text-[#161b22] dark:text-[#f0f6fc] font-semibold">{detailTicket.title}</p>
+                    <p className="text-[#0A0A0A] dark:text-[#F4F4F6] font-semibold">{detailTicket.title}</p>
                   </div>
                   <div>
                     <p className="font-bold text-gray-700 dark:text-gray-300 mb-1">Descripción:</p>
-                    <p className="text-gray-600 dark:text-gray-300 whitespace-pre-wrap p-3 bg-gray-50/60 dark:bg-white/5 rounded-2xl border border-[#e2e8f0] dark:border-[#262f38]">{detailTicket.description}</p>
+                    <p className="text-gray-600 dark:text-gray-300 whitespace-pre-wrap p-3 bg-gray-50/60 dark:bg-white/5 rounded-2xl border border-[#EAEAEA] dark:border-[#272730]">{detailTicket.description}</p>
                   </div>
 
                   <div className="grid grid-cols-2 gap-2">
@@ -341,7 +341,7 @@ export default function SupportTicketsBento() {
                       <select
                         value={statusDraft}
                         onChange={e => setStatusDraft(e.target.value)}
-                        className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl font-semibold text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#067A57] dark:focus:border-[#00D47E]"
+                        className="w-full p-2.5 bg-[#F7F7F5] dark:bg-[#0E0E12] border border-[#EAEAEA] dark:border-[#272730] rounded-2xl font-semibold text-[#0A0A0A] dark:text-[#F4F4F6] focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#FF5520]"
                       >
                         {STATUSES.map(s => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
                       </select>
@@ -351,7 +351,7 @@ export default function SupportTicketsBento() {
                       <select
                         value={priorityDraft}
                         onChange={e => setPriorityDraft(e.target.value)}
-                        className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl font-semibold text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#067A57] dark:focus:border-[#00D47E]"
+                        className="w-full p-2.5 bg-[#F7F7F5] dark:bg-[#0E0E12] border border-[#EAEAEA] dark:border-[#272730] rounded-2xl font-semibold text-[#0A0A0A] dark:text-[#F4F4F6] focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#FF5520]"
                       >
                         {PRIORITIES.map(p => <option key={p} value={p}>{PRIORITY_LABELS[p]}</option>)}
                       </select>
@@ -365,7 +365,7 @@ export default function SupportTicketsBento() {
                       onChange={e => setNotesDraft(e.target.value)}
                       placeholder="Notas internas sobre la resolución del ticket..."
                       rows={3}
-                      className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl text-xs text-[#161b22] dark:text-[#f0f6fc] resize-y focus:outline-none focus:border-[#067A57] dark:focus:border-[#00D47E]"
+                      className="w-full p-2.5 bg-[#F7F7F5] dark:bg-[#0E0E12] border border-[#EAEAEA] dark:border-[#272730] rounded-2xl text-xs text-[#0A0A0A] dark:text-[#F4F4F6] resize-y focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#FF5520]"
                     />
                   </div>
                 </div>
@@ -374,7 +374,7 @@ export default function SupportTicketsBento() {
                   <button
                     type="button"
                     onClick={closeDetail}
-                    className="w-1/2 py-3 bg-gray-100 dark:bg-[#262f38] hover:bg-gray-200 dark:hover:bg-[#303b47] text-gray-700 dark:text-gray-300 rounded-2xl text-xs font-bold cursor-pointer"
+                    className="w-1/2 py-3 bg-gray-100 dark:bg-[#272730] hover:bg-gray-200 dark:hover:bg-[#2C2C36] text-gray-700 dark:text-gray-300 rounded-2xl text-xs font-bold cursor-pointer"
                   >
                     Cerrar
                   </button>
@@ -382,7 +382,7 @@ export default function SupportTicketsBento() {
                     type="button"
                     onClick={handleSaveDetail}
                     disabled={savingDetail}
-                    className="w-1/2 py-3 bg-[#067A57] hover:bg-[#055C43] disabled:opacity-50 text-white rounded-2xl text-xs font-extrabold cursor-pointer shadow-md shadow-[#067A57]/20"
+                    className="w-1/2 py-3 bg-[#0A0A0A] hover:bg-[#202020] disabled:opacity-50 text-white rounded-2xl text-xs font-extrabold cursor-pointer shadow-md shadow-[#0A0A0A]/10"
                   >
                     {savingDetail ? 'Guardando...' : 'Guardar Cambios'}
                   </button>

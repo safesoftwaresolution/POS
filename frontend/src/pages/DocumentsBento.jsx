@@ -24,7 +24,7 @@ function DocumentCard({ type, latestDoc, uploading, onUpload }) {
     <div className="bento-card p-5 space-y-3">
       <div className="flex items-start justify-between gap-2">
         <div>
-          <h3 className="font-extrabold text-sm text-[#191c1e] dark:text-white">{DOC_TYPE_LABELS[type]}</h3>
+          <h3 className="font-extrabold text-sm text-[#17171B] dark:text-white">{DOC_TYPE_LABELS[type]}</h3>
           {latestDoc ? (
             <p className="text-[10px] text-gray-400 dark:text-gray-500 font-semibold">
               Subido {new Date(latestDoc.uploadedAt).toLocaleDateString('es-CO')}
@@ -62,7 +62,7 @@ function DocumentCard({ type, latestDoc, uploading, onUpload }) {
           type="button"
           disabled={uploading}
           onClick={() => inputRef.current?.click()}
-          className="flex-1 py-2 bg-[#067A57] hover:bg-[#055C43] disabled:opacity-50 text-white rounded-2xl text-[11px] font-extrabold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm shadow-[#067A57]/20"
+          className="flex-1 py-2 bg-[#0A0A0A] hover:bg-[#202020] disabled:opacity-50 text-white rounded-2xl text-[11px] font-extrabold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm shadow-[#0A0A0A]/10"
         >
           <Upload className="w-3.5 h-3.5" /> {uploading ? 'Subiendo...' : latestDoc ? 'Reemplazar' : 'Subir'}
         </button>
@@ -121,8 +121,8 @@ export default function DocumentsBento() {
   return (
     <div className="space-y-6 max-w-4xl">
       <div>
-        <h1 className="text-2xl font-black text-[#161b22] dark:text-[#f0f6fc] flex items-center gap-2">
-          <FileCheck2 className="w-6 h-6 text-[#067A57] dark:text-[#00D47E]" /> Documentos Legales
+        <h1 className="text-2xl font-black text-[#0A0A0A] dark:text-[#F4F4F6] flex items-center gap-2">
+          <FileCheck2 className="w-6 h-6 text-[#FF5520] dark:text-[#FF5520]" /> Documentos Legales
         </h1>
         <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
           Sube los documentos de verificación de tu local. Nuestro equipo los revisará y los verás aprobados o rechazados aquí.

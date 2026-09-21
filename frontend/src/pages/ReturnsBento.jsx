@@ -122,7 +122,7 @@ export default function ReturnsBento() {
             Busca la venta original y devuelve los ítems necesarios — el stock se repone automáticamente
           </p>
         </div>
-        <button onClick={loadSales} className="text-xs font-bold text-[#B3654A] dark:text-[#D0906D] flex items-center gap-1 hover:underline cursor-pointer">
+        <button onClick={loadSales} className="text-xs font-bold text-[#067A57] dark:text-[#00D47E] flex items-center gap-1 hover:underline cursor-pointer">
           <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Actualizar ventas
         </button>
       </div>
@@ -137,7 +137,7 @@ export default function ReturnsBento() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Buscar por factura o cliente..."
-              className="w-full pl-10 pr-3 py-1.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl text-xs font-semibold text-[#161b22] dark:text-[#f0f6fc] placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-[#B3654A] dark:focus:border-[#D0906D]"
+              className="w-full pl-10 pr-3 py-1.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl text-xs font-semibold text-[#161b22] dark:text-[#f0f6fc] placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-[#067A57] dark:focus:border-[#00D47E]"
             />
           </div>
 
@@ -152,12 +152,12 @@ export default function ReturnsBento() {
                   key={sale.id}
                   onClick={() => openSale(sale)}
                   className={`w-full text-left py-3 px-2 rounded-xl transition-colors cursor-pointer ${
-                    selectedSale?.id === sale.id ? 'bg-[#B3654A]/10 border-l-4 border-[#B3654A]' : 'hover:bg-gray-50 dark:hover:bg-white/5'
+                    selectedSale?.id === sale.id ? 'bg-[#067A57]/10 border-l-4 border-[#067A57]' : 'hover:bg-gray-50 dark:hover:bg-white/5'
                   }`}
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-extrabold text-[#161b22] dark:text-[#f0f6fc]">{sale.invoiceNumber}</span>
-                    <span className="text-xs font-black text-[#B3654A] dark:text-[#D0906D] tabular-nums">{money(sale.totalAmount)}</span>
+                    <span className="text-xs font-black text-[#067A57] dark:text-[#00D47E] tabular-nums">{money(sale.totalAmount)}</span>
                   </div>
                   <div className="flex items-center justify-between mt-0.5">
                     <span className="text-[11px] text-gray-500 dark:text-gray-400 font-medium truncate">{sale.customerName}</span>
@@ -228,7 +228,7 @@ export default function ReturnsBento() {
                               value={returnQty[item.id] || ''}
                               onChange={(e) => setQty(item.id, e.target.value, returnable)}
                               placeholder="0"
-                              className="w-16 p-1.5 text-center bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-xl text-xs font-bold text-[#161b22] dark:text-[#f0f6fc] disabled:opacity-40 focus:outline-none focus:border-[#B3654A] dark:focus:border-[#D0906D]"
+                              className="w-16 p-1.5 text-center bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-xl text-xs font-bold text-[#161b22] dark:text-[#f0f6fc] disabled:opacity-40 focus:outline-none focus:border-[#067A57] dark:focus:border-[#00D47E]"
                             />
                           </td>
                         </tr>
@@ -245,7 +245,7 @@ export default function ReturnsBento() {
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
                   placeholder="Ej. Producto defectuoso, talla incorrecta..."
-                  className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl text-xs font-semibold text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#B3654A] dark:focus:border-[#D0906D]"
+                  className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl text-xs font-semibold text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#067A57] dark:focus:border-[#00D47E]"
                 />
               </div>
 
@@ -257,7 +257,7 @@ export default function ReturnsBento() {
                 <button
                   onClick={submitReturn}
                   disabled={submitting || itemsToReturn.length === 0}
-                  className="px-5 py-2.5 bg-[#B3654A] hover:bg-[#96503A] disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-2xl text-xs font-extrabold flex items-center gap-2 shadow-md shadow-[#B3654A]/20 cursor-pointer"
+                  className="px-5 py-2.5 bg-[#067A57] hover:bg-[#055C43] disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-2xl text-xs font-extrabold flex items-center gap-2 shadow-md shadow-[#067A57]/20 cursor-pointer"
                 >
                   <RotateCcw className="w-4 h-4" /> {submitting ? 'Procesando...' : 'Registrar Devolución'}
                 </button>

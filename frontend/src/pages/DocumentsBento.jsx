@@ -62,7 +62,7 @@ function DocumentCard({ type, latestDoc, uploading, onUpload }) {
           type="button"
           disabled={uploading}
           onClick={() => inputRef.current?.click()}
-          className="flex-1 py-2 bg-[#B3654A] hover:bg-[#96503A] disabled:opacity-50 text-white rounded-2xl text-[11px] font-extrabold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm shadow-[#B3654A]/20"
+          className="flex-1 py-2 bg-[#067A57] hover:bg-[#055C43] disabled:opacity-50 text-white rounded-2xl text-[11px] font-extrabold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm shadow-[#067A57]/20"
         >
           <Upload className="w-3.5 h-3.5" /> {uploading ? 'Subiendo...' : latestDoc ? 'Reemplazar' : 'Subir'}
         </button>
@@ -122,7 +122,7 @@ export default function DocumentsBento() {
     <div className="space-y-6 max-w-4xl">
       <div>
         <h1 className="text-2xl font-black text-[#161b22] dark:text-[#f0f6fc] flex items-center gap-2">
-          <FileCheck2 className="w-6 h-6 text-[#B3654A] dark:text-[#D0906D]" /> Documentos Legales
+          <FileCheck2 className="w-6 h-6 text-[#067A57] dark:text-[#00D47E]" /> Documentos Legales
         </h1>
         <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
           Sube los documentos de verificación de tu local. Nuestro equipo los revisará y los verás aprobados o rechazados aquí.

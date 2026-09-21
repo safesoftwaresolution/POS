@@ -98,7 +98,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
             {(!isCollapsed || isOpen) && (
               <div className="truncate">
                 <h1 className="font-black text-lg leading-tight tracking-tight text-[#161b22] dark:text-white truncate flex items-center gap-1">
-                  <span>Bento</span><span className="text-[#B3654A]">POS</span>
+                  <span>Bento</span><span className="text-[#067A57]">POS</span>
                 </h1>
                 <p className="text-[10px] text-gray-400 font-semibold tracking-wide">Tu negocio, en equilibrio</p>
               </div>
@@ -128,8 +128,8 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
                     className={({ isActive }) =>
                       `rounded-2xl flex items-center transition-all duration-200 cursor-pointer ${
                         isActive
-                          ? 'bg-[#B3654A] text-white shadow-md shadow-[#B3654A]/25 font-bold'
-                          : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#262f38] hover:text-[#B3654A] dark:hover:text-[#D0906D]'
+                          ? 'bg-[#067A57] text-white shadow-md shadow-[#067A57]/25 font-bold'
+                          : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#262f38] hover:text-[#067A57] dark:hover:text-[#00D47E]'
                       } ${
                         isCollapsed && !isOpen
                           ? 'w-11 h-11 justify-center mx-auto'
@@ -157,10 +157,10 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
             title={isCollapsed ? 'Expandir Menú' : 'Contraer Menú'}
           >
             {isCollapsed ? (
-              <ChevronRight className="w-5 h-5 text-[#B3654A] dark:text-[#D0906D]" />
+              <ChevronRight className="w-5 h-5 text-[#067A57] dark:text-[#00D47E]" />
             ) : (
               <>
-                <ChevronLeft className="w-5 h-5 text-[#B3654A] dark:text-[#D0906D]" />
+                <ChevronLeft className="w-5 h-5 text-[#067A57] dark:text-[#00D47E]" />
                 <span>Contraer Menú</span>
               </>
             )}
@@ -169,7 +169,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
           {/* Help Button */}
           <button 
             title="Soporte"
-            className={`flex items-center gap-3 p-2.5 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#262f38] hover:text-[#B3654A] dark:hover:text-[#D0906D] rounded-2xl transition-all cursor-pointer text-xs font-semibold ${
+            className={`flex items-center gap-3 p-2.5 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#262f38] hover:text-[#067A57] dark:hover:text-[#00D47E] rounded-2xl transition-all cursor-pointer text-xs font-semibold ${
               isCollapsed && !isOpen ? 'justify-center' : 'px-3'
             }`}
           >

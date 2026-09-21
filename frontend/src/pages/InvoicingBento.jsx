@@ -22,7 +22,7 @@ export default function InvoicingBento() {
       <div className="bento-card p-6 space-y-4">
         <div className="flex items-center justify-between border-b border-[#e2e8f0] dark:border-[#262f38] pb-3">
           <h3 className="font-extrabold text-sm text-[#161b22] dark:text-[#f0f6fc]">Monitoreo de Emisión DIAN</h3>
-          <button className="text-xs font-bold text-[#B3654A] dark:text-[#D0906D] flex items-center gap-1 hover:underline cursor-pointer">
+          <button className="text-xs font-bold text-[#067A57] dark:text-[#00D47E] flex items-center gap-1 hover:underline cursor-pointer">
             <RefreshCw className="w-3.5 h-3.5" /> Sincronizar Estado
           </button>
         </div>

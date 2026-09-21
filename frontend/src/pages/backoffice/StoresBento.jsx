@@ -232,7 +232,7 @@ export default function StoresBento() {
 
         <button
           onClick={openCreateStore}
-          className="px-4 py-2.5 bg-[#B3654A] hover:bg-[#96503A] text-white rounded-2xl text-xs font-bold flex items-center gap-2 shadow-md shadow-[#B3654A]/20 cursor-pointer"
+          className="px-4 py-2.5 bg-[#067A57] hover:bg-[#055C43] text-white rounded-2xl text-xs font-bold flex items-center gap-2 shadow-md shadow-[#067A57]/20 cursor-pointer"
         >
           <Plus className="w-4 h-4" /> Nuevo Local
         </button>
@@ -265,14 +265,14 @@ export default function StoresBento() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Buscar por nombre o correo..."
-              className="w-full pl-10 pr-3 py-1.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl text-xs font-semibold text-[#161b22] dark:text-[#f0f6fc] placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-[#B3654A] dark:focus:border-[#D0906D]"
+              className="w-full pl-10 pr-3 py-1.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl text-xs font-semibold text-[#161b22] dark:text-[#f0f6fc] placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-[#067A57] dark:focus:border-[#00D47E]"
             />
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
             <button
               onClick={() => setStatusFilter('ALL')}
-              className={`px-3 py-1.5 rounded-full text-[11px] font-bold cursor-pointer ${statusFilter === 'ALL' ? 'bg-[#B3654A] text-white' : 'bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300'}`}
+              className={`px-3 py-1.5 rounded-full text-[11px] font-bold cursor-pointer ${statusFilter === 'ALL' ? 'bg-[#067A57] text-white' : 'bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300'}`}
             >
               Todos
             </button>
@@ -280,7 +280,7 @@ export default function StoresBento() {
               <button
                 key={s}
                 onClick={() => setStatusFilter(s)}
-                className={`px-3 py-1.5 rounded-full text-[11px] font-bold cursor-pointer ${statusFilter === s ? 'bg-[#B3654A] text-white' : 'bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300'}`}
+                className={`px-3 py-1.5 rounded-full text-[11px] font-bold cursor-pointer ${statusFilter === s ? 'bg-[#067A57] text-white' : 'bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300'}`}
               >
                 {STATUS_LABELS[s]}
               </button>
@@ -345,7 +345,7 @@ export default function StoresBento() {
                           <button
                             onClick={() => handleVerifyEmail(s)}
                             title="Marcar correo como verificado"
-                            className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-[#B3654A] dark:hover:text-[#D0906D] rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer"
+                            className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-[#067A57] dark:hover:text-[#00D47E] rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer"
                           >
                             <MailCheck className="w-4 h-4" />
                           </button>
@@ -353,14 +353,14 @@ export default function StoresBento() {
                         <button
                           onClick={() => openDocuments(s)}
                           title="Documentos KYC"
-                          className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-[#B3654A] dark:hover:text-[#D0906D] rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer"
+                          className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-[#067A57] dark:hover:text-[#00D47E] rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer"
                         >
                           <FileText className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => openEditStore(s)}
                           title="Editar local"
-                          className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-[#B3654A] dark:hover:text-[#D0906D] rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer"
+                          className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-[#067A57] dark:hover:text-[#00D47E] rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer"
                         >
                           <Edit3 className="w-4 h-4" />
                         </button>
@@ -397,7 +397,7 @@ export default function StoresBento() {
                   value={storeForm.name}
                   onChange={e => setStoreForm({ ...storeForm, name: e.target.value })}
                   placeholder="Ej. Tienda La Esquina"
-                  className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl font-semibold text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#B3654A] dark:focus:border-[#D0906D]"
+                  className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl font-semibold text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#067A57] dark:focus:border-[#00D47E]"
                   required
                 />
               </div>
@@ -408,7 +408,7 @@ export default function StoresBento() {
                   <select
                     value={storeForm.storeCategoryId}
                     onChange={e => setStoreForm({ ...storeForm, storeCategoryId: e.target.value })}
-                    className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl font-semibold text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#B3654A] dark:focus:border-[#D0906D]"
+                    className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl font-semibold text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#067A57] dark:focus:border-[#00D47E]"
                   >
                     <option value="">Sin categoría</option>
                     {categories.map(c => (
@@ -423,7 +423,7 @@ export default function StoresBento() {
                     value={storeForm.taxId}
                     onChange={e => setStoreForm({ ...storeForm, taxId: e.target.value })}
                     placeholder="900123456-1"
-                    className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl font-mono text-xs text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#B3654A] dark:focus:border-[#D0906D]"
+                    className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl font-mono text-xs text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#067A57] dark:focus:border-[#00D47E]"
                   />
                 </div>
               </div>
@@ -436,7 +436,7 @@ export default function StoresBento() {
                     value={storeForm.email}
                     onChange={e => setStoreForm({ ...storeForm, email: e.target.value })}
                     placeholder="contacto@local.com"
-                    className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl text-xs text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#B3654A] dark:focus:border-[#D0906D]"
+                    className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl text-xs text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#067A57] dark:focus:border-[#00D47E]"
                     required
                   />
                 </div>
@@ -447,7 +447,7 @@ export default function StoresBento() {
                     value={storeForm.phone}
                     onChange={e => setStoreForm({ ...storeForm, phone: e.target.value })}
                     placeholder="3001234567"
-                    className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl text-xs text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#B3654A] dark:focus:border-[#D0906D]"
+                    className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl text-xs text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#067A57] dark:focus:border-[#00D47E]"
                   />
                 </div>
               </div>
@@ -459,7 +459,7 @@ export default function StoresBento() {
                   value={storeForm.website}
                   onChange={e => setStoreForm({ ...storeForm, website: e.target.value })}
                   placeholder="https://mitienda.com"
-                  className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl text-xs text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#B3654A] dark:focus:border-[#D0906D]"
+                  className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl text-xs text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#067A57] dark:focus:border-[#00D47E]"
                 />
               </div>
 
@@ -470,7 +470,7 @@ export default function StoresBento() {
                   value={storeForm.address}
                   onChange={e => setStoreForm({ ...storeForm, address: e.target.value })}
                   placeholder="Calle 10 # 5-20"
-                  className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl text-xs text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#B3654A] dark:focus:border-[#D0906D]"
+                  className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl text-xs text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#067A57] dark:focus:border-[#00D47E]"
                 />
               </div>
             </div>
@@ -485,7 +485,7 @@ export default function StoresBento() {
               </button>
               <button
                 type="submit"
-                className="w-1/2 py-3 bg-[#B3654A] hover:bg-[#96503A] text-white rounded-2xl text-xs font-extrabold cursor-pointer shadow-md shadow-[#B3654A]/20"
+                className="w-1/2 py-3 bg-[#067A57] hover:bg-[#055C43] text-white rounded-2xl text-xs font-extrabold cursor-pointer shadow-md shadow-[#067A57]/20"
               >
                 {editingStore ? 'Guardar Cambios' : 'Crear Local'}
               </button>
@@ -529,7 +529,7 @@ export default function StoresBento() {
                       href={doc.documentUrl}
                       target="_blank"
                       rel="noreferrer"
-                      className="text-[11px] text-[#B3654A] dark:text-[#D0906D] font-semibold underline break-all"
+                      className="text-[11px] text-[#067A57] dark:text-[#00D47E] font-semibold underline break-all"
                     >
                       Ver documento
                     </a>
@@ -545,7 +545,7 @@ export default function StoresBento() {
                             value={rejectionReason}
                             onChange={e => setRejectionReason(e.target.value)}
                             placeholder="Motivo del rechazo (obligatorio)"
-                            className="w-full p-2 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-xl text-[11px] text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#B3654A] dark:focus:border-[#D0906D]"
+                            className="w-full p-2 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-xl text-[11px] text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#067A57] dark:focus:border-[#00D47E]"
                           />
                           <div className="flex gap-2">
                             <button
@@ -570,7 +570,7 @@ export default function StoresBento() {
                           <button
                             type="button"
                             onClick={() => handleApproveDoc(doc)}
-                            className="flex-1 py-1.5 bg-[#B3654A] hover:bg-[#96503A] text-white rounded-xl text-[11px] font-extrabold flex items-center justify-center gap-1 cursor-pointer shadow-sm shadow-[#B3654A]/20"
+                            className="flex-1 py-1.5 bg-[#067A57] hover:bg-[#055C43] text-white rounded-xl text-[11px] font-extrabold flex items-center justify-center gap-1 cursor-pointer shadow-sm shadow-[#067A57]/20"
                           >
                             <Check className="w-3.5 h-3.5" /> Aprobar
                           </button>

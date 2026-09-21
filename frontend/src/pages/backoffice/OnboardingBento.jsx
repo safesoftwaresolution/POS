@@ -161,7 +161,7 @@ export default function OnboardingBento() {
                     <td className="px-2 py-3 text-right space-x-2">
                       <button
                         onClick={() => handleApprove(s)}
-                        className="px-3 py-1.5 bg-[#B3654A] hover:bg-[#96503A] text-white rounded-xl text-[11px] font-bold inline-flex items-center gap-1 cursor-pointer shadow-sm shadow-[#B3654A]/20"
+                        className="px-3 py-1.5 bg-[#067A57] hover:bg-[#055C43] text-white rounded-xl text-[11px] font-bold inline-flex items-center gap-1 cursor-pointer shadow-sm shadow-[#067A57]/20"
                       >
                         <Check className="w-3.5 h-3.5" /> Aprobar
                       </button>
@@ -188,7 +188,7 @@ export default function OnboardingBento() {
               value={rejectionReason}
               onChange={(e) => setRejectionReason(e.target.value)}
               placeholder="Motivo del rechazo..."
-              className="w-full p-3 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl text-xs font-semibold text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#B3654A] dark:focus:border-[#D0906D]"
+              className="w-full p-3 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl text-xs font-semibold text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#067A57] dark:focus:border-[#00D47E]"
               rows={3}
             />
             <div className="flex justify-end gap-2">

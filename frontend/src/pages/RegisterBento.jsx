@@ -31,8 +31,8 @@ export default function RegisterBento() {
   return (
     <div className="min-h-screen bg-[#0d1117] text-white flex items-center justify-center p-4 relative overflow-hidden select-none">
       {/* Ambient Vermilion Glows */}
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#B3654A]/15 rounded-full blur-3xl pointer-events-none"></div>
-      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#D0906D]/10 rounded-full blur-3xl pointer-events-none"></div>
+      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#067A57]/15 rounded-full blur-3xl pointer-events-none"></div>
+      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#00D47E]/10 rounded-full blur-3xl pointer-events-none"></div>
 
       <div className="max-w-md w-full bento-card bg-[#161b22] border-[#262f38] p-8 rounded-3xl shadow-2xl space-y-6 relative z-10">
 
@@ -48,17 +48,17 @@ export default function RegisterBento() {
         </div>
 
         {submittedEmail ? (
-          <div className="p-5 bg-[#B3654A]/10 border border-[#B3654A]/30 rounded-2xl text-center space-y-3">
-            <MailCheck className="w-10 h-10 text-[#B3654A] mx-auto" />
+          <div className="p-5 bg-[#067A57]/10 border border-[#067A57]/30 rounded-2xl text-center space-y-3">
+            <MailCheck className="w-10 h-10 text-[#067A57] mx-auto" />
             <p className="text-sm font-bold text-white">Revisa tu correo</p>
             <p className="text-xs text-gray-300 leading-relaxed">
-              Enviamos un enlace de verificación a <span className="font-bold text-[#D0906D]">{submittedEmail}</span>.
+              Enviamos un enlace de verificación a <span className="font-bold text-[#00D47E]">{submittedEmail}</span>.
               Ábrelo para activar tu cuenta y continuar con el registro de tu local.
             </p>
             <button
               type="button"
               onClick={() => navigate('/login')}
-              className="text-xs font-extrabold text-[#B3654A] hover:text-[#D0906D] hover:underline cursor-pointer"
+              className="text-xs font-extrabold text-[#067A57] hover:text-[#00D47E] hover:underline cursor-pointer"
             >
               Volver a iniciar sesión
             </button>
@@ -82,7 +82,7 @@ export default function RegisterBento() {
                     value={form.fullName}
                     onChange={handleChange('fullName')}
                     placeholder="Carlos Martínez"
-                    className="w-full pl-10 pr-4 py-2.5 bg-[#0d1117] border border-[#262f38] rounded-2xl text-xs font-semibold text-white placeholder-gray-500 focus:outline-none focus:border-[#B3654A] focus:ring-1 focus:ring-[#B3654A] transition-all"
+                    className="w-full pl-10 pr-4 py-2.5 bg-[#0d1117] border border-[#262f38] rounded-2xl text-xs font-semibold text-white placeholder-gray-500 focus:outline-none focus:border-[#067A57] focus:ring-1 focus:ring-[#067A57] transition-all"
                     required
                   />
                 </div>
@@ -97,7 +97,7 @@ export default function RegisterBento() {
                     value={form.username}
                     onChange={handleChange('username')}
                     placeholder="carlos.m"
-                    className="w-full pl-10 pr-4 py-2.5 bg-[#0d1117] border border-[#262f38] rounded-2xl text-xs font-semibold text-white placeholder-gray-500 focus:outline-none focus:border-[#B3654A] focus:ring-1 focus:ring-[#B3654A] transition-all"
+                    className="w-full pl-10 pr-4 py-2.5 bg-[#0d1117] border border-[#262f38] rounded-2xl text-xs font-semibold text-white placeholder-gray-500 focus:outline-none focus:border-[#067A57] focus:ring-1 focus:ring-[#067A57] transition-all"
                     required
                   />
                 </div>
@@ -112,7 +112,7 @@ export default function RegisterBento() {
                     value={form.email}
                     onChange={handleChange('email')}
                     placeholder="carlos@empresa.com"
-                    className="w-full pl-10 pr-4 py-2.5 bg-[#0d1117] border border-[#262f38] rounded-2xl text-xs font-semibold text-white placeholder-gray-500 focus:outline-none focus:border-[#B3654A] focus:ring-1 focus:ring-[#B3654A] transition-all"
+                    className="w-full pl-10 pr-4 py-2.5 bg-[#0d1117] border border-[#262f38] rounded-2xl text-xs font-semibold text-white placeholder-gray-500 focus:outline-none focus:border-[#067A57] focus:ring-1 focus:ring-[#067A57] transition-all"
                     required
                   />
                 </div>
@@ -127,7 +127,7 @@ export default function RegisterBento() {
                     value={form.password}
                     onChange={handleChange('password')}
                     placeholder="Mínimo 8 caracteres, letra y número"
-                    className="w-full pl-10 pr-4 py-2.5 bg-[#0d1117] border border-[#262f38] rounded-2xl text-xs font-semibold text-white placeholder-gray-500 focus:outline-none focus:border-[#B3654A] focus:ring-1 focus:ring-[#B3654A] transition-all"
+                    className="w-full pl-10 pr-4 py-2.5 bg-[#0d1117] border border-[#262f38] rounded-2xl text-xs font-semibold text-white placeholder-gray-500 focus:outline-none focus:border-[#067A57] focus:ring-1 focus:ring-[#067A57] transition-all"
                     required
                   />
                 </div>
@@ -136,7 +136,7 @@ export default function RegisterBento() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3.5 bg-[#B3654A] hover:bg-[#96503A] text-white font-black text-xs rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-[#B3654A]/30 active:scale-98 transition-all cursor-pointer disabled:opacity-50"
+                className="w-full py-3.5 bg-[#067A57] hover:bg-[#055C43] text-white font-black text-xs rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-[#067A57]/30 active:scale-98 transition-all cursor-pointer disabled:opacity-50"
               >
                 <span>{loading ? 'Creando cuenta...' : 'Crear mi cuenta'}</span>
                 <ArrowRight className="w-4 h-4" />
@@ -148,7 +148,7 @@ export default function RegisterBento() {
               <button
                 type="button"
                 onClick={() => navigate('/login')}
-                className="text-[#B3654A] hover:text-[#D0906D] font-extrabold hover:underline cursor-pointer transition-colors"
+                className="text-[#067A57] hover:text-[#00D47E] font-extrabold hover:underline cursor-pointer transition-colors"
               >
                 Inicia sesión
               </button>

@@ -61,7 +61,7 @@ export default function CustomersBento() {
 
         <button
           onClick={() => setShowModal(true)}
-          className="px-4 py-2.5 bg-[#B3654A] hover:bg-[#96503A] text-white rounded-2xl text-xs font-bold flex items-center gap-2 shadow-md shadow-[#B3654A]/20 cursor-pointer transition-all"
+          className="px-4 py-2.5 bg-[#067A57] hover:bg-[#055C43] text-white rounded-2xl text-xs font-bold flex items-center gap-2 shadow-md shadow-[#067A57]/20 cursor-pointer transition-all"
         >
           <UserPlus className="w-4 h-4" /> Registrar Nuevo Cliente
         </button>
@@ -76,7 +76,7 @@ export default function CustomersBento() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Buscar por cédula, NIT o nombre..."
-              className="w-full pl-10 pr-3 py-1.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl text-xs font-semibold text-[#161b22] dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-[#B3654A]"
+              className="w-full pl-10 pr-3 py-1.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl text-xs font-semibold text-[#161b22] dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-[#067A57]"
             />
           </div>
           <span className="text-xs font-bold text-gray-400 dark:text-gray-500">{filtered.length} clientes registrados</span>
@@ -95,7 +95,7 @@ export default function CustomersBento() {
             </div>
             <button
               onClick={() => setShowModal(true)}
-              className="px-4 py-2 bg-[#B3654A] text-white rounded-xl text-xs font-extrabold shadow-sm hover:bg-[#96503A] cursor-pointer"
+              className="px-4 py-2 bg-[#067A57] text-white rounded-xl text-xs font-extrabold shadow-sm hover:bg-[#055C43] cursor-pointer"
             >
               + Registrar Primer Cliente
             </button>
@@ -103,7 +103,7 @@ export default function CustomersBento() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filtered.map(c => (
-              <div key={c.id} className="p-5 bg-white dark:bg-[#161b22] rounded-2xl border border-gray-200 dark:border-[#262f38] space-y-3 shadow-xs hover:border-[#B3654A] transition-all">
+              <div key={c.id} className="p-5 bg-white dark:bg-[#161b22] rounded-2xl border border-gray-200 dark:border-[#262f38] space-y-3 shadow-xs hover:border-[#067A57] transition-all">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-mono font-bold text-gray-500 dark:text-gray-400">CC/NIT: {c.identification}</span>
                   <span className="text-[10px] px-2.5 py-0.5 rounded-full font-extrabold bg-emerald-100 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400">
@@ -151,7 +151,7 @@ export default function CustomersBento() {
                   value={newCustomer.name}
                   onChange={e => setNewCustomer({ ...newCustomer, name: e.target.value })}
                   placeholder="Ej. Juan Pérez u Homero S.A.S."
-                  className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-gray-300 dark:border-[#262f38] rounded-2xl font-semibold text-[#161b22] dark:text-white focus:outline-none focus:border-[#B3654A]"
+                  className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-gray-300 dark:border-[#262f38] rounded-2xl font-semibold text-[#161b22] dark:text-white focus:outline-none focus:border-[#067A57]"
                   required
                 />
               </div>
@@ -163,7 +163,7 @@ export default function CustomersBento() {
                   value={newCustomer.identification}
                   onChange={e => setNewCustomer({ ...newCustomer, identification: e.target.value })}
                   placeholder="1020304050 o 900123456-1"
-                  className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-gray-300 dark:border-[#262f38] rounded-2xl font-mono text-xs text-[#161b22] dark:text-white focus:outline-none focus:border-[#B3654A]"
+                  className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-gray-300 dark:border-[#262f38] rounded-2xl font-mono text-xs text-[#161b22] dark:text-white focus:outline-none focus:border-[#067A57]"
                   required
                 />
               </div>
@@ -176,7 +176,7 @@ export default function CustomersBento() {
                     value={newCustomer.email}
                     onChange={e => setNewCustomer({ ...newCustomer, email: e.target.value })}
                     placeholder="cliente@correo.com"
-                    className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-gray-300 dark:border-[#262f38] rounded-2xl text-xs text-[#161b22] dark:text-white focus:outline-none focus:border-[#B3654A]"
+                    className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-gray-300 dark:border-[#262f38] rounded-2xl text-xs text-[#161b22] dark:text-white focus:outline-none focus:border-[#067A57]"
                   />
                 </div>
                 <div>
@@ -186,7 +186,7 @@ export default function CustomersBento() {
                     value={newCustomer.phone}
                     onChange={e => setNewCustomer({ ...newCustomer, phone: e.target.value })}
                     placeholder="3001234567"
-                    className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-gray-300 dark:border-[#262f38] rounded-2xl text-xs text-[#161b22] dark:text-white focus:outline-none focus:border-[#B3654A]"
+                    className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-gray-300 dark:border-[#262f38] rounded-2xl text-xs text-[#161b22] dark:text-white focus:outline-none focus:border-[#067A57]"
                   />
                 </div>
               </div>
@@ -202,7 +202,7 @@ export default function CustomersBento() {
               </button>
               <button
                 type="submit"
-                className="w-1/2 py-3 bg-[#B3654A] hover:bg-[#96503A] text-white rounded-2xl text-xs font-extrabold shadow-md shadow-[#B3654A]/20 cursor-pointer"
+                className="w-1/2 py-3 bg-[#067A57] hover:bg-[#055C43] text-white rounded-2xl text-xs font-extrabold shadow-md shadow-[#067A57]/20 cursor-pointer"
               >
                 Guardar Cliente
               </button>

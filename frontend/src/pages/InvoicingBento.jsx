@@ -8,7 +8,7 @@ export default function InvoicingBento() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-[#191c1e] dark:text-white">Facturación Bento DIAN (Factus Integration)</h1>
+          <h1 className="text-2xl font-black text-[#17171B] dark:text-white">Facturación Bento DIAN (Factus Integration)</h1>
           <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Monitoreo en vivo de facturas electrónicas emitidas mediante la API de Factus</p>
         </div>
 
@@ -20,9 +20,9 @@ export default function InvoicingBento() {
       </div>
 
       <div className="bento-card p-6 space-y-4">
-        <div className="flex items-center justify-between border-b border-[#e2e8f0] dark:border-[#262f38] pb-3">
-          <h3 className="font-extrabold text-sm text-[#161b22] dark:text-[#f0f6fc]">Monitoreo de Emisión DIAN</h3>
-          <button className="text-xs font-bold text-[#c83824] dark:text-[#ea6a58] flex items-center gap-1 hover:underline cursor-pointer">
+        <div className="flex items-center justify-between border-b border-[#EAEAEA] dark:border-[#272730] pb-3">
+          <h3 className="font-extrabold text-sm text-[#0A0A0A] dark:text-[#F4F4F6]">Monitoreo de Emisión DIAN</h3>
+          <button className="text-xs font-bold text-[#FF5520] dark:text-[#FF5520] flex items-center gap-1 hover:underline cursor-pointer">
             <RefreshCw className="w-3.5 h-3.5" /> Sincronizar Estado
           </button>
         </div>

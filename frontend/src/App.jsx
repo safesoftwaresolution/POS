@@ -18,12 +18,10 @@ import StoreOnboardingBento from './pages/onboarding/StoreOnboardingBento';
 import DashboardBento from './pages/DashboardBento';
 import POSBento from './pages/POSBento';
 import InventoryBento from './pages/InventoryBento';
-import SuppliersBento from './pages/SuppliersBento';
 import ProductsBento from './pages/ProductsBento';
 import CustomersBento from './pages/CustomersBento';
 import InvoicingBento from './pages/InvoicingBento';
 import ReportsBento from './pages/ReportsBento';
-import ReturnsBento from './pages/ReturnsBento';
 import SettingsBento from './pages/SettingsBento';
 import DocumentsBento from './pages/DocumentsBento';
 import StoresBento from './pages/backoffice/StoresBento';
@@ -108,7 +106,7 @@ function ProtectedLayout() {
 
 function ProtectedLayoutContent({ mobileSidebarOpen, setMobileSidebarOpen, sidebarCollapsed, toggleSidebarCollapse }) {
   return (
-    <div className="min-h-screen bg-[#f8f9fa] dark:bg-[#0d1117] text-[#161b22] dark:text-[#f0f6fc] flex transition-colors duration-300">
+    <div className="min-h-screen bg-[#F7F7F5] dark:bg-[#0E0E12] text-[#0A0A0A] dark:text-[#F4F4F6] flex transition-colors duration-300">
       {/* Expandable / Collapsible Sidebar */}
       <Sidebar
         isOpen={mobileSidebarOpen}
@@ -125,17 +123,17 @@ function ProtectedLayoutContent({ mobileSidebarOpen, setMobileSidebarOpen, sideb
           onToggleMobileMenu={() => setMobileSidebarOpen(prev => !prev)}
         />
 
-        <main className="p-4 sm:p-6 lg:p-8 flex-1 overflow-x-hidden">
+        <main className="p-4 sm:p-6 lg:p-8 flex-1">
           <Routes>
             <Route path="/" element={<DashboardBento />} />
             <Route path="/pos" element={<POSBento />} />
             <Route path="/inventory" element={<InventoryBento />} />
-            <Route path="/suppliers" element={<SuppliersBento />} />
+            <Route path="/suppliers" element={<Navigate to="/inventory?tab=suppliers" replace />} />
             <Route path="/products" element={<ProductsBento />} />
             <Route path="/customers" element={<CustomersBento />} />
             <Route path="/invoicing" element={<InvoicingBento />} />
             <Route path="/reports" element={<ReportsBento />} />
-            <Route path="/returns" element={<ReturnsBento />} />
+            <Route path="/returns" element={<Navigate to="/inventory?tab=returns" replace />} />
             <Route path="/documents" element={<DocumentsBento />} />
             <Route path="/settings" element={<SettingsBento />} />
             <Route path="*" element={<Navigate to="/" replace />} />
@@ -170,7 +168,7 @@ function BackofficeProtectedLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f8f9fa] dark:bg-[#0d1117] text-[#161b22] dark:text-[#f0f6fc] flex transition-colors duration-300">
+    <div className="min-h-screen bg-[#F7F7F5] dark:bg-[#0E0E12] text-[#0A0A0A] dark:text-[#F4F4F6] flex transition-colors duration-300">
       <BackofficeSidebar
         isOpen={mobileSidebarOpen}
         onClose={() => setMobileSidebarOpen(false)}
@@ -185,7 +183,7 @@ function BackofficeProtectedLayout() {
           onToggleMobileMenu={() => setMobileSidebarOpen(prev => !prev)}
         />
 
-        <main className="p-4 sm:p-6 lg:p-8 flex-1 overflow-x-hidden">
+        <main className="p-4 sm:p-6 lg:p-8 flex-1">
           <Routes>
             <Route path="/" element={<StoresBento />} />
             <Route path="/categories" element={<CategoriesBento />} />

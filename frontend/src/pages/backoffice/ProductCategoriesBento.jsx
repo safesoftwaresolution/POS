@@ -76,7 +76,7 @@ export default function ProductCategoriesBento() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-[#191c1e] dark:text-white">Categorías de Producto</h1>
+          <h1 className="text-2xl font-black text-[#17171B] dark:text-white">Categorías de Producto</h1>
           <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
             Catálogo global de categorías que los locales usan para clasificar sus productos
           </p>
@@ -84,7 +84,7 @@ export default function ProductCategoriesBento() {
 
         <button
           onClick={openCreate}
-          className="px-4 py-2.5 bg-[#c83824] hover:bg-[#a82d1c] text-white rounded-2xl text-xs font-bold flex items-center gap-2 shadow-md shadow-[#c83824]/20 cursor-pointer"
+          className="px-4 py-2.5 bg-[#0A0A0A] hover:bg-[#202020] text-white rounded-2xl text-xs font-bold flex items-center gap-2 shadow-md shadow-[#0A0A0A]/10 cursor-pointer"
         >
           <Plus className="w-4 h-4" /> Nueva Categoría
         </button>
@@ -106,7 +106,7 @@ export default function ProductCategoriesBento() {
             </div>
             <button
               onClick={openCreate}
-              className="px-4 py-2 bg-[#c83824] text-white rounded-xl text-xs font-extrabold shadow-sm hover:bg-[#a82d1c] cursor-pointer"
+              className="px-4 py-2 bg-[#0A0A0A] text-white rounded-xl text-xs font-extrabold shadow-sm hover:bg-[#202020] cursor-pointer"
             >
               + Crear Primera Categoría
             </button>
@@ -114,22 +114,22 @@ export default function ProductCategoriesBento() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {categories.map(cat => (
-              <div key={cat.id} className="p-5 bg-gray-50/60 dark:bg-white/5 rounded-2xl border border-[#e2e8f0] dark:border-[#262f38] space-y-3 flex flex-col justify-between hover:bg-white dark:hover:bg-[#161b22] hover:border-[#c83824] transition-all shadow-xs">
+              <div key={cat.id} className="p-5 bg-gray-50/60 dark:bg-white/5 rounded-2xl border border-[#EAEAEA] dark:border-[#272730] space-y-3 flex flex-col justify-between hover:bg-white dark:hover:bg-[#0A0A0A] hover:border-[#D0D0CE] transition-all shadow-xs">
                 <div>
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-extrabold">
                       {cat.productCount} {cat.productCount === 1 ? 'producto' : 'productos'}
                     </span>
                   </div>
-                  <h3 className="font-extrabold text-sm text-[#161b22] dark:text-[#f0f6fc] mt-2">{cat.name}</h3>
+                  <h3 className="font-extrabold text-sm text-[#0A0A0A] dark:text-[#F4F4F6] mt-2">{cat.name}</h3>
                   <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">{cat.description || 'Sin descripción'}</p>
                 </div>
 
-                <div className="pt-3 border-t border-[#e2e8f0] dark:border-[#262f38] flex items-center justify-end gap-1">
+                <div className="pt-3 border-t border-[#EAEAEA] dark:border-[#272730] flex items-center justify-end gap-1">
                   <button
                     onClick={() => openEdit(cat)}
                     title="Editar categoría"
-                    className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-[#c83824] dark:hover:text-[#ea6a58] rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer"
+                    className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-[#FF5520] dark:hover:text-[#FF5520] rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer"
                   >
                     <Edit3 className="w-4 h-4" />
                   </button>
@@ -149,9 +149,9 @@ export default function ProductCategoriesBento() {
 
       {showForm && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <form onSubmit={handleSubmit} className="bento-card max-w-md w-full bg-white dark:bg-[#161b22] p-6 rounded-3xl shadow-2xl space-y-4">
+          <form onSubmit={handleSubmit} className="bento-card max-w-md w-full bg-white dark:bg-[#17171B] p-6 rounded-3xl shadow-2xl space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="font-extrabold text-base text-[#161b22] dark:text-[#f0f6fc]">
+              <h3 className="font-extrabold text-base text-[#0A0A0A] dark:text-[#F4F4F6]">
                 {form.id ? 'Editar Categoría' : 'Nueva Categoría'}
               </h3>
               <button
@@ -178,7 +178,7 @@ export default function ProductCategoriesBento() {
                   value={form.name}
                   onChange={e => setForm({ ...form, name: e.target.value })}
                   placeholder="Ej. Abarrotes"
-                  className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl font-semibold text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#c83824] dark:focus:border-[#ea6a58]"
+                  className="w-full p-2.5 bg-[#F7F7F5] dark:bg-[#0E0E12] border border-[#EAEAEA] dark:border-[#272730] rounded-2xl font-semibold text-[#0A0A0A] dark:text-[#F4F4F6] focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#FF5520]"
                   required
                 />
               </div>
@@ -189,7 +189,7 @@ export default function ProductCategoriesBento() {
                   value={form.description}
                   onChange={e => setForm({ ...form, description: e.target.value })}
                   placeholder="Productos alimenticios y comestibles"
-                  className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl text-xs text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#c83824] dark:focus:border-[#ea6a58]"
+                  className="w-full p-2.5 bg-[#F7F7F5] dark:bg-[#0E0E12] border border-[#EAEAEA] dark:border-[#272730] rounded-2xl text-xs text-[#0A0A0A] dark:text-[#F4F4F6] focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#FF5520]"
                 />
               </div>
             </div>
@@ -198,13 +198,13 @@ export default function ProductCategoriesBento() {
               <button
                 type="button"
                 onClick={() => setShowForm(false)}
-                className="w-1/2 py-3 bg-gray-100 dark:bg-[#262f38] hover:bg-gray-200 dark:hover:bg-[#303b47] text-gray-700 dark:text-gray-300 rounded-2xl text-xs font-bold cursor-pointer"
+                className="w-1/2 py-3 bg-gray-100 dark:bg-[#272730] hover:bg-gray-200 dark:hover:bg-[#2C2C36] text-gray-700 dark:text-gray-300 rounded-2xl text-xs font-bold cursor-pointer"
               >
                 Cancelar
               </button>
               <button
                 type="submit"
-                className="w-1/2 py-3 bg-[#c83824] hover:bg-[#a82d1c] text-white rounded-2xl text-xs font-extrabold cursor-pointer shadow-md shadow-[#c83824]/20"
+                className="w-1/2 py-3 bg-[#0A0A0A] hover:bg-[#202020] text-white rounded-2xl text-xs font-extrabold cursor-pointer shadow-md shadow-[#0A0A0A]/10"
               >
                 {form.id ? 'Guardar Cambios' : 'Crear Categoría'}
               </button>

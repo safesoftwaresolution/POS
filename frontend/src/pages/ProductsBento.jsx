@@ -3,33 +3,53 @@ import {
   Plus,
   Search,
   Trash2,
+  Edit3,
   Barcode,
   Package,
+  Layers,
   AlertCircle,
   ImagePlus
 } from 'lucide-react';
-import { getProductsApi, createProductApi, deleteProductApi } from '../services/productsApi';
+import { getProductsApi, createProductApi, updateProductApi, deleteProductApi } from '../services/productsApi';
 import { getCategoriesApi } from '../services/categoriesApi';
-import { getSubcategoriesApi, createSubcategoryApi } from '../services/subcategoriesApi';
+import {
+  getSubcategoriesApi,
+  createSubcategoryApi,
+  updateSubcategoryApi,
+  deleteSubcategoryApi
+} from '../services/subcategoriesApi';
 import { createInventoryMovementApi } from '../services/inventoryApi';
 import { useModal } from '../context/ModalContext';
+import { useAuth } from '../context/AuthContext';
 import { uploadFileApi } from '../services/http';
 import BarcodeModal from '../components/BarcodeModal';
 
 const EMPTY_PRODUCT = {
+  id: null,
   name: '',
   barcode: '',
   internalCode: '',
   categoryId: '',
   subcategoryId: '',
+  purchasePrice: null,
   price: '',
   stock: '',
   minStock: 5,
   imageUrl: ''
 };
 
+const EMPTY_SUBCATEGORY = { id: null, categoryId: '', name: '', description: '' };
+
+const TABS = [
+  { id: 'catalog', label: 'Catálogo', icon: Package },
+  { id: 'subcategories', label: 'Subcategorías', icon: Layers },
+];
+
 export default function ProductsBento() {
   const { confirm, notify } = useModal();
+  const { user } = useAuth();
+  const canManageSubcategories = user?.role === 'ADMINISTRATOR' || user?.role === 'SUPERVISOR';
+  const [activeTab, setActiveTab] = useState('catalog');
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [subcategories, setSubcategories] = useState([]);
@@ -42,6 +62,10 @@ export default function ProductsBento() {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [showNewSubcategory, setShowNewSubcategory] = useState(false);
   const [newSubcategoryName, setNewSubcategoryName] = useState('');
+  const [subSearch, setSubSearch] = useState('');
+  const [showSubModal, setShowSubModal] = useState(false);
+  const [subForm, setSubForm] = useState(EMPTY_SUBCATEGORY);
+  const [subErrorMsg, setSubErrorMsg] = useState('');
   const imageInputRef = useRef(null);
 
   const loadProducts = async () => {
@@ -98,26 +122,106 @@ export default function ProductsBento() {
     }
   };
 
-  const handleAddProduct = async (e) => {
+  const openCreateSubModal = () => {
+    setSubForm(EMPTY_SUBCATEGORY);
+    setSubErrorMsg('');
+    setShowSubModal(true);
+  };
+
+  const openEditSubModal = (sub) => {
+    setSubForm({ id: sub.id, categoryId: String(sub.categoryId), name: sub.name, description: sub.description || '' });
+    setSubErrorMsg('');
+    setShowSubModal(true);
+  };
+
+  const handleSubmitSubcategory = async (e) => {
+    e.preventDefault();
+    setSubErrorMsg('');
+    if (!subForm.name || !subForm.categoryId) return;
+    try {
+      if (subForm.id) {
+        await updateSubcategoryApi(subForm.id, subForm.name, subForm.description);
+      } else {
+        await createSubcategoryApi(Number(subForm.categoryId), subForm.name, subForm.description);
+      }
+      setShowSubModal(false);
+      setSubForm(EMPTY_SUBCATEGORY);
+      await loadSubcategories();
+    } catch (err) {
+      setSubErrorMsg(err.message || 'Error al guardar la subcategoría. Intenta nuevamente.');
+    }
+  };
+
+  const handleDeleteSubcategory = async (sub) => {
+    const ok = await confirm(`¿Eliminar la subcategoría "${sub.name}"?`, { title: 'Eliminar subcategoría' });
+    if (!ok) return;
+    try {
+      await deleteSubcategoryApi(sub.id);
+      await loadSubcategories();
+    } catch (err) {
+      notify('Error eliminando subcategoría: ' + err.message);
+    }
+  };
+
+  const openCreateModal = () => {
+    setNewProduct(EMPTY_PRODUCT);
+    setErrorMsg('');
+    setShowAddModal(true);
+  };
+
+  const openEditModal = (p) => {
+    const category = categories.find(c => c.name === p.categoryName);
+    setNewProduct({
+      id: p.id,
+      name: p.name || '',
+      barcode: p.barcode || '',
+      internalCode: p.internalCode || '',
+      categoryId: category ? String(category.id) : '',
+      subcategoryId: p.subcategoryId ? String(p.subcategoryId) : '',
+      purchasePrice: p.purchasePrice ?? null,
+      price: p.salePrice ?? p.price ?? '',
+      stock: '',
+      minStock: p.minStock ?? 5,
+      imageUrl: p.imageUrl || ''
+    });
+    setErrorMsg('');
+    setShowAddModal(true);
+  };
+
+  const handleSubmitProduct = async (e) => {
     e.preventDefault();
     setErrorMsg('');
     if (!newProduct.name || !newProduct.price || !newProduct.categoryId) return;
 
     try {
-      const created = await createProductApi({
-        name: newProduct.name,
-        barcode: newProduct.barcode || `${Math.floor(1000000000000 + Math.random() * 9000000000000)}`,
-        internalCode: newProduct.internalCode || `PROD-00${products.length + 1}`,
-        categoryId: Number(newProduct.categoryId),
-        subcategoryId: newProduct.subcategoryId ? Number(newProduct.subcategoryId) : null,
-        price: parseFloat(newProduct.price),
-        minStock: parseInt(newProduct.minStock) || 5,
-        imageUrl: newProduct.imageUrl || null
-      });
+      if (newProduct.id) {
+        await updateProductApi(newProduct.id, {
+          name: newProduct.name,
+          description: newProduct.name,
+          categoryId: Number(newProduct.categoryId),
+          subcategoryId: newProduct.subcategoryId ? Number(newProduct.subcategoryId) : null,
+          purchasePrice: parseFloat(newProduct.purchasePrice ?? newProduct.price * 0.7),
+          salePrice: parseFloat(newProduct.price),
+          barcode: newProduct.barcode,
+          minStock: parseInt(newProduct.minStock) || 5,
+          imageUrl: newProduct.imageUrl || null
+        });
+      } else {
+        const created = await createProductApi({
+          name: newProduct.name,
+          barcode: newProduct.barcode || `${Math.floor(1000000000000 + Math.random() * 9000000000000)}`,
+          internalCode: newProduct.internalCode || `PROD-00${products.length + 1}`,
+          categoryId: Number(newProduct.categoryId),
+          subcategoryId: newProduct.subcategoryId ? Number(newProduct.subcategoryId) : null,
+          price: parseFloat(newProduct.price),
+          minStock: parseInt(newProduct.minStock) || 5,
+          imageUrl: newProduct.imageUrl || null
+        });
 
-      const initialStock = parseInt(newProduct.stock) || 0;
-      if (initialStock > 0) {
-        await createInventoryMovementApi(created.id, 'ENTRY', initialStock, 'Stock inicial al crear el producto');
+        const initialStock = parseInt(newProduct.stock) || 0;
+        if (initialStock > 0) {
+          await createInventoryMovementApi(created.id, 'ENTRY', initialStock, 'Stock inicial al crear el producto');
+        }
       }
 
       setShowAddModal(false);
@@ -164,22 +268,58 @@ export default function ProductsBento() {
     (p.internalCode && p.internalCode.toLowerCase().includes(search.toLowerCase()))
   );
 
+  const filteredSubcategories = subcategories.filter(s =>
+    s.name.toLowerCase().includes(subSearch.toLowerCase()) ||
+    (s.categoryName && s.categoryName.toLowerCase().includes(subSearch.toLowerCase()))
+  );
+
   return (
     <div className="space-y-6 select-none">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-[#161b22] dark:text-white">Catálogo de Productos</h1>
-          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Gestión completa de productos, precios y códigos de barras en BentoPOS</p>
+          <h1 className="text-2xl font-black text-[#0A0A0A] dark:text-white">Productos</h1>
+          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Catálogo y subcategorías de tu tienda en BentoPOS</p>
         </div>
 
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="px-4 py-2.5 bg-[#c83824] hover:bg-[#a82917] text-white rounded-2xl text-xs font-bold flex items-center gap-2 shadow-md shadow-[#c83824]/20 cursor-pointer transition-all"
-        >
-          <Plus className="w-4 h-4" /> Crear Nuevo Producto
-        </button>
+        {activeTab === 'catalog' && (
+          <button
+            onClick={openCreateModal}
+            className="px-4 py-2.5 bg-[#0A0A0A] hover:bg-[#202020] text-white rounded-2xl text-xs font-bold flex items-center gap-2 shadow-md shadow-[#0A0A0A]/10 cursor-pointer transition-all"
+          >
+            <Plus className="w-4 h-4" /> Crear Nuevo Producto
+          </button>
+        )}
+        {activeTab === 'subcategories' && canManageSubcategories && (
+          <button
+            onClick={openCreateSubModal}
+            className="px-4 py-2.5 bg-[#0A0A0A] hover:bg-[#202020] text-white rounded-2xl text-xs font-bold flex items-center gap-2 shadow-md shadow-[#0A0A0A]/10 cursor-pointer transition-all"
+          >
+            <Plus className="w-4 h-4" /> Nueva Subcategoría
+          </button>
+        )}
       </div>
 
+      {/* Tab Switcher */}
+      <div className="flex bg-gray-100 dark:bg-[#272730] rounded-full p-1 border border-gray-200 dark:border-gray-700 w-fit">
+        {TABS.map(tab => {
+          const Icon = tab.icon;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`px-4 py-2 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                activeTab === tab.id
+                  ? 'bg-[#0A0A0A] text-white shadow-xs'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-[#FF5520] dark:hover:text-[#FF5520]'
+              }`}
+            >
+              <Icon className="w-4 h-4" /> {tab.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {activeTab === 'catalog' && (
       <div className="bento-card p-6 space-y-4">
         <div className="flex items-center justify-between">
           <div className="relative w-72">
@@ -189,7 +329,7 @@ export default function ProductsBento() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Filtrar por nombre o código de barras..."
-              className="w-full pl-10 pr-3 py-1.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl text-xs font-semibold text-[#161b22] dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-[#c83824]"
+              className="w-full pl-10 pr-3 py-1.5 bg-[#F7F7F5] dark:bg-[#0E0E12] border border-[#EAEAEA] dark:border-[#272730] rounded-2xl text-xs font-semibold text-[#0A0A0A] dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-[#0A0A0A]"
             />
           </div>
           <span className="text-xs font-bold text-gray-400 dark:text-gray-500">{filtered.length} productos registrados</span>
@@ -207,83 +347,304 @@ export default function ProductsBento() {
               <p className="text-[11px] text-gray-400 dark:text-gray-500">Crea tu primer producto para empezar a registrar ventas</p>
             </div>
             <button
-              onClick={() => setShowAddModal(true)}
-              className="px-4 py-2 bg-[#c83824] text-white rounded-xl text-xs font-extrabold shadow-sm hover:bg-[#a82917] cursor-pointer"
+              onClick={openCreateModal}
+              className="px-4 py-2 bg-[#0A0A0A] text-white rounded-xl text-xs font-extrabold shadow-sm hover:bg-[#202020] cursor-pointer"
             >
               + Registrar Primer Producto
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filtered.map(p => (
-              <div key={p.id} className="p-5 bg-white dark:bg-[#161b22] rounded-2xl border border-gray-200 dark:border-[#262f38] space-y-3 flex flex-col justify-between hover:border-[#c83824] dark:hover:border-[#c83824] transition-all shadow-xs group">
-                <div>
-                  <div className="flex items-start gap-3">
-                    <div className="w-12 h-12 rounded-xl bg-gray-50 dark:bg-[#0d1117] border border-gray-200 dark:border-[#262f38] flex items-center justify-center overflow-hidden shrink-0">
-                      {p.imageUrl ? (
-                        <img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover" />
-                      ) : (
-                        <Package className="w-5 h-5 text-gray-300 dark:text-gray-600" />
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center justify-between gap-2">
+          <div className="overflow-x-auto -mx-6">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="border-b border-gray-100 dark:border-[#272730] bg-gray-50/50 dark:bg-[#0E0E12] text-gray-400 dark:text-gray-500 uppercase text-[10px] tracking-wider font-extrabold">
+                  <th className="py-3 px-6">Producto</th>
+                  <th className="py-3 px-3">Código</th>
+                  <th className="py-3 px-3">Categoría</th>
+                  <th className="py-3 px-3 text-right">Precio</th>
+                  <th className="py-3 px-3">Stock</th>
+                  <th className="py-3 px-6 text-right">Acciones</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-[#272730]">
+                {filtered.map(p => {
+                  const stockVal = p.quantityAvailable ?? p.stock ?? 0;
+                  const isLow = stockVal <= (p.minStock || 5);
+                  return (
+                    <tr
+                      key={p.id}
+                      className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer group"
+                      onClick={() => openEditModal(p)}
+                    >
+                      <td className="py-3 px-6">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-gray-50 dark:bg-[#0E0E12] border border-gray-200 dark:border-[#272730] flex items-center justify-center overflow-hidden shrink-0">
+                            {p.imageUrl ? (
+                              <img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover" />
+                            ) : (
+                              <Package className="w-4 h-4 text-gray-300 dark:text-gray-600" />
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <span className="font-bold text-sm text-[#0A0A0A] dark:text-white block truncate group-hover:text-[#FF5520] dark:group-hover:text-[#FF5520] transition-colors">
+                              {p.name}
+                            </span>
+                            <span className="text-[11px] text-gray-500 dark:text-gray-400 font-mono flex items-center gap-1">
+                              <Barcode className="w-3 h-3 shrink-0" /> {p.barcode || 'Sin código'}
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-3 px-3 font-mono font-semibold text-gray-500 dark:text-gray-400">{p.internalCode}</td>
+                      <td className="py-3 px-3">
                         <div className="flex items-center gap-1 flex-wrap">
-                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#c83824]/10 dark:bg-[#c83824]/20 text-[#c83824] dark:text-[#ea6a58] font-extrabold">
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#FF5520]/10 dark:bg-[#FF5520]/20 text-[#FF5520] font-extrabold">
                             {p.categoryName || 'General'}
                           </span>
                           {p.subcategoryName && (
-                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 dark:bg-[#262f38] text-gray-600 dark:text-gray-300 font-extrabold">
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 dark:bg-[#272730] text-gray-600 dark:text-gray-300 font-extrabold">
                               {p.subcategoryName}
                             </span>
                           )}
                         </div>
-                        <span className="text-[10px] font-mono text-gray-400 dark:text-gray-500 font-bold shrink-0">{p.internalCode}</span>
-                      </div>
-                      <h3 className="font-extrabold text-sm text-[#161b22] dark:text-white mt-2 truncate group-hover:text-[#c83824] dark:group-hover:text-[#ea6a58] transition-colors">{p.name}</h3>
-                      <p className="text-[11px] text-gray-500 dark:text-gray-400 font-mono mt-0.5 flex items-center gap-1">
-                        <Barcode className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500 shrink-0" /> {p.barcode || 'Sin código'}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="pt-3 border-t border-gray-200 dark:border-[#262f38] flex items-center justify-between">
-                  <div>
-                    <span className="text-[10px] text-gray-400 dark:text-gray-500 block font-semibold">Precio de venta</span>
-                    <span className="text-base font-black text-[#161b22] dark:text-white tabular-nums">
-                      ${(p.salePrice || p.price || 0).toLocaleString('es-CO')} COP
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => setBarcodeProduct(p)}
-                      title="Ver código de barras"
-                      className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-[#c83824] dark:hover:text-[#ea6a58] rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer"
-                    >
-                      <Barcode className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(p.id)}
-                      title="Eliminar producto"
-                      className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
+                      </td>
+                      <td className="py-3 px-3 text-right font-black text-sm text-[#0A0A0A] dark:text-white tabular-nums">
+                        ${(p.salePrice || p.price || 0).toLocaleString('es-CO')}
+                      </td>
+                      <td className="py-3 px-3">
+                        <span className={`font-bold tabular-nums ${isLow ? 'text-amber-600 dark:text-amber-400' : 'text-[#0A0A0A] dark:text-white'}`}>
+                          {stockVal} {isLow && '(Bajo)'}
+                        </span>
+                      </td>
+                      <td className="py-3 px-6 text-right" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            onClick={() => setBarcodeProduct(p)}
+                            title="Ver código de barras"
+                            className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-[#FF5520] dark:hover:text-[#FF5520] rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer"
+                          >
+                            <Barcode className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => openEditModal(p)}
+                            title="Editar producto"
+                            className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-[#FF5520] dark:hover:text-[#FF5520] rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer"
+                          >
+                            <Edit3 className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(p.id)}
+                            title="Eliminar producto"
+                            className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         )}
       </div>
+      )}
+
+      {activeTab === 'subcategories' && (
+        <div className="space-y-6">
+          {/* Global categories overview */}
+          <div className="bento-card p-6 space-y-3">
+            <div>
+              <h2 className="text-sm font-extrabold text-[#0A0A0A] dark:text-white">Categorías Globales</h2>
+              <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium">
+                Catálogo compartido por todas las tiendas — cada subcategoría tuya vive dentro de una de estas
+              </p>
+            </div>
+            {categories.length === 0 ? (
+              <p className="text-xs font-bold text-gray-400 dark:text-gray-500 py-2">
+                Aún no hay categorías globales. Pide a un administrador que cree una desde el backoffice.
+              </p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {categories.map(cat => (
+                  <span
+                    key={cat.id}
+                    className="text-xs font-bold px-3 py-1.5 rounded-full bg-[#FF5520]/10 dark:bg-[#FF5520]/20 text-[#FF5520] dark:text-[#FF5520] border border-[#FF5520]/25"
+                  >
+                    {cat.name}
+                    <span className="ml-1.5 opacity-70 font-semibold">
+                      · {subcategories.filter(s => s.categoryId === cat.id).length} subcat.
+                    </span>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Store subcategories */}
+          <div className="bento-card p-6 space-y-4">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div className="relative w-full sm:w-72">
+                <Search className="w-4 h-4 text-gray-400 dark:text-gray-500 absolute left-3.5 top-2.5" />
+                <input
+                  type="text"
+                  value={subSearch}
+                  onChange={(e) => setSubSearch(e.target.value)}
+                  placeholder="Buscar subcategoría o categoría..."
+                  className="w-full pl-10 pr-3 py-1.5 bg-[#F7F7F5] dark:bg-[#0E0E12] border border-[#EAEAEA] dark:border-[#272730] rounded-2xl text-xs font-semibold text-[#0A0A0A] dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-[#0A0A0A]"
+                />
+              </div>
+              <span className="text-xs font-bold text-gray-400 dark:text-gray-500">{filteredSubcategories.length} subcategorías</span>
+            </div>
+
+            {filteredSubcategories.length === 0 ? (
+              <div className="py-12 text-center space-y-3 bg-gray-50/50 dark:bg-white/5 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700">
+                <Layers className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto stroke-1" />
+                <div>
+                  <p className="text-xs font-bold text-gray-700 dark:text-gray-300">No hay subcategorías registradas</p>
+                  <p className="text-[11px] text-gray-400 dark:text-gray-500">
+                    {canManageSubcategories
+                      ? 'Crea la primera para organizar mejor tu catálogo de productos'
+                      : 'Pide a un administrador o supervisor que cree la primera'}
+                  </p>
+                </div>
+                {canManageSubcategories && categories.length > 0 && (
+                  <button
+                    onClick={openCreateSubModal}
+                    className="px-4 py-2 bg-[#0A0A0A] text-white rounded-xl text-xs font-extrabold shadow-sm hover:bg-[#202020] cursor-pointer"
+                  >
+                    + Crear Primera Subcategoría
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredSubcategories.map(sub => (
+                  <div key={sub.id} className="p-5 bg-white dark:bg-[#17171B] rounded-2xl border border-gray-200 dark:border-[#272730] space-y-3 flex flex-col justify-between hover:border-[#D0D0CE] dark:hover:border-[#D0D0CE] transition-all shadow-xs group">
+                    <div>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 dark:bg-[#272730] text-gray-600 dark:text-gray-300 font-extrabold truncate">
+                          {sub.categoryName}
+                        </span>
+                        <span className="text-[10px] font-mono text-gray-400 dark:text-gray-500 font-bold shrink-0">
+                          {sub.productCount} {sub.productCount === 1 ? 'producto' : 'productos'}
+                        </span>
+                      </div>
+                      <h3 className="font-extrabold text-sm text-[#0A0A0A] dark:text-white mt-2 group-hover:text-[#FF5520] dark:group-hover:text-[#FF5520] transition-colors">
+                        {sub.name}
+                      </h3>
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">{sub.description || 'Sin descripción'}</p>
+                    </div>
+
+                    {canManageSubcategories && (
+                      <div className="pt-3 border-t border-gray-200 dark:border-[#272730] flex items-center justify-end gap-1">
+                        <button
+                          onClick={() => openEditSubModal(sub)}
+                          title="Editar subcategoría"
+                          className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-[#FF5520] dark:hover:text-[#FF5520] rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer"
+                        >
+                          <Edit3 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteSubcategory(sub)}
+                          title="Eliminar subcategoría"
+                          className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Create/Edit Subcategory Modal */}
+      {showSubModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <form onSubmit={handleSubmitSubcategory} className="bento-card max-w-md w-full bg-white dark:bg-[#17171B] p-6 rounded-3xl shadow-2xl space-y-4 border border-gray-200 dark:border-[#272730]">
+            <h3 className="font-extrabold text-base text-[#0A0A0A] dark:text-white">
+              {subForm.id ? 'Editar Subcategoría' : 'Nueva Subcategoría'}
+            </h3>
+
+            {subErrorMsg && (
+              <div className="p-3 bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800/40 rounded-xl text-xs font-bold flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{subErrorMsg}</span>
+              </div>
+            )}
+
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="font-bold text-gray-700 dark:text-gray-300 block mb-1">Categoría:</label>
+                <select
+                  value={subForm.categoryId}
+                  onChange={e => setSubForm({ ...subForm, categoryId: e.target.value })}
+                  disabled={!!subForm.id}
+                  className="w-full p-2.5 bg-[#F7F7F5] dark:bg-[#0E0E12] border border-gray-300 dark:border-[#272730] rounded-2xl font-semibold text-[#0A0A0A] dark:text-white disabled:opacity-60 focus:outline-none focus:border-[#0A0A0A]"
+                  required
+                >
+                  <option value="" disabled>Selecciona una categoría...</option>
+                  {categories.map(cat => (
+                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="font-bold text-gray-700 dark:text-gray-300 block mb-1">Nombre de la subcategoría:</label>
+                <input
+                  type="text"
+                  value={subForm.name}
+                  onChange={e => setSubForm({ ...subForm, name: e.target.value })}
+                  placeholder="Ej. Gaseosas"
+                  className="w-full p-2.5 bg-[#F7F7F5] dark:bg-[#0E0E12] border border-gray-300 dark:border-[#272730] rounded-2xl font-semibold text-[#0A0A0A] dark:text-white focus:outline-none focus:border-[#0A0A0A]"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="font-bold text-gray-700 dark:text-gray-300 block mb-1">Descripción (opcional):</label>
+                <input
+                  type="text"
+                  value={subForm.description}
+                  onChange={e => setSubForm({ ...subForm, description: e.target.value })}
+                  placeholder="Bebidas carbonatadas"
+                  className="w-full p-2.5 bg-[#F7F7F5] dark:bg-[#0E0E12] border border-gray-300 dark:border-[#272730] rounded-2xl text-xs text-[#0A0A0A] dark:text-white focus:outline-none focus:border-[#0A0A0A]"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowSubModal(false)}
+                className="w-1/2 py-3 bg-gray-100 dark:bg-[#272730] hover:bg-gray-200 dark:hover:bg-[#2C2C36] text-gray-700 dark:text-gray-300 rounded-2xl text-xs font-bold cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                className="w-1/2 py-3 bg-[#0A0A0A] hover:bg-[#202020] text-white rounded-2xl text-xs font-extrabold shadow-md shadow-[#0A0A0A]/10 cursor-pointer"
+              >
+                {subForm.id ? 'Guardar Cambios' : 'Crear Subcategoría'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       {/* Add Product Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <form onSubmit={handleAddProduct} className="bento-card max-w-md w-full bg-white dark:bg-[#161b22] p-6 rounded-3xl shadow-2xl space-y-4 border border-gray-200 dark:border-[#262f38]">
-            <h3 className="font-extrabold text-base text-[#161b22] dark:text-white">Crear Nuevo Producto</h3>
+          <form onSubmit={handleSubmitProduct} className="bento-card max-w-md w-full bg-white dark:bg-[#17171B] p-6 rounded-3xl shadow-2xl space-y-4 border border-gray-200 dark:border-[#272730]">
+            <h3 className="font-extrabold text-base text-[#0A0A0A] dark:text-white">
+              {newProduct.id ? 'Editar Producto' : 'Crear Nuevo Producto'}
+            </h3>
 
             {errorMsg && (
               <div className="p-3 bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800/40 rounded-xl text-xs font-bold flex items-center gap-2">
@@ -301,7 +662,7 @@ export default function ProductsBento() {
 
             <div className="space-y-3 text-xs">
               <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-2xl bg-gray-50 dark:bg-[#0d1117] border border-gray-200 dark:border-[#262f38] flex items-center justify-center overflow-hidden shrink-0">
+                <div className="w-16 h-16 rounded-2xl bg-gray-50 dark:bg-[#0E0E12] border border-gray-200 dark:border-[#272730] flex items-center justify-center overflow-hidden shrink-0">
                   {newProduct.imageUrl ? (
                     <img src={newProduct.imageUrl} alt="Imagen del producto" className="w-full h-full object-cover" />
                   ) : (
@@ -329,7 +690,7 @@ export default function ProductsBento() {
                     setNewProduct({ ...newProduct, categoryId: e.target.value, subcategoryId: '' });
                     setShowNewSubcategory(false);
                   }}
-                  className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-gray-300 dark:border-[#262f38] rounded-2xl font-semibold text-[#161b22] dark:text-white focus:outline-none focus:border-[#c83824]"
+                  className="w-full p-2.5 bg-[#F7F7F5] dark:bg-[#0E0E12] border border-gray-300 dark:border-[#272730] rounded-2xl font-semibold text-[#0A0A0A] dark:text-white focus:outline-none focus:border-[#0A0A0A]"
                   required
                   disabled={categories.length === 0}
                 >
@@ -348,7 +709,7 @@ export default function ProductsBento() {
                       <select
                         value={newProduct.subcategoryId}
                         onChange={e => setNewProduct({ ...newProduct, subcategoryId: e.target.value })}
-                        className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-gray-300 dark:border-[#262f38] rounded-2xl font-semibold text-[#161b22] dark:text-white focus:outline-none focus:border-[#c83824]"
+                        className="w-full p-2.5 bg-[#F7F7F5] dark:bg-[#0E0E12] border border-gray-300 dark:border-[#272730] rounded-2xl font-semibold text-[#0A0A0A] dark:text-white focus:outline-none focus:border-[#0A0A0A]"
                       >
                         <option value="">Sin subcategoría</option>
                         {subcategoriesForSelectedCategory.map(sub => (
@@ -359,7 +720,7 @@ export default function ProductsBento() {
                         type="button"
                         onClick={() => setShowNewSubcategory(true)}
                         title="Crear nueva subcategoría"
-                        className="shrink-0 w-9 h-9 rounded-2xl bg-[#c83824]/10 dark:bg-[#c83824]/20 text-[#c83824] dark:text-[#ea6a58] hover:bg-[#c83824] hover:text-white flex items-center justify-center cursor-pointer transition-colors"
+                        className="shrink-0 w-9 h-9 rounded-2xl bg-[#FF5520]/10 dark:bg-[#FF5520]/20 text-[#FF5520] dark:text-[#FF5520] hover:bg-[#0A0A0A] hover:text-white flex items-center justify-center cursor-pointer transition-colors"
                       >
                         <Plus className="w-4 h-4" />
                       </button>
@@ -372,12 +733,12 @@ export default function ProductsBento() {
                         value={newSubcategoryName}
                         onChange={e => setNewSubcategoryName(e.target.value)}
                         placeholder="Ej. Gaseosas"
-                        className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-gray-300 dark:border-[#262f38] rounded-2xl font-semibold text-[#161b22] dark:text-white focus:outline-none focus:border-[#c83824]"
+                        className="w-full p-2.5 bg-[#F7F7F5] dark:bg-[#0E0E12] border border-gray-300 dark:border-[#272730] rounded-2xl font-semibold text-[#0A0A0A] dark:text-white focus:outline-none focus:border-[#0A0A0A]"
                       />
                       <button
                         type="button"
                         onClick={handleCreateSubcategory}
-                        className="shrink-0 px-3 py-2 bg-[#c83824] hover:bg-[#a82917] text-white rounded-2xl text-xs font-bold cursor-pointer"
+                        className="shrink-0 px-3 py-2 bg-[#0A0A0A] hover:bg-[#202020] text-white rounded-2xl text-xs font-bold cursor-pointer"
                       >
                         Crear
                       </button>
@@ -403,7 +764,7 @@ export default function ProductsBento() {
                   value={newProduct.name}
                   onChange={e => setNewProduct({ ...newProduct, name: e.target.value })}
                   placeholder="Ej. Arroz 1kg"
-                  className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-gray-300 dark:border-[#262f38] rounded-2xl font-semibold text-[#161b22] dark:text-white focus:outline-none focus:border-[#c83824]"
+                  className="w-full p-2.5 bg-[#F7F7F5] dark:bg-[#0E0E12] border border-gray-300 dark:border-[#272730] rounded-2xl font-semibold text-[#0A0A0A] dark:text-white focus:outline-none focus:border-[#0A0A0A]"
                   required
                 />
               </div>
@@ -416,7 +777,7 @@ export default function ProductsBento() {
                     value={newProduct.barcode}
                     onChange={e => setNewProduct({ ...newProduct, barcode: e.target.value })}
                     placeholder="770..."
-                    className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-gray-300 dark:border-[#262f38] rounded-2xl font-mono text-xs text-[#161b22] dark:text-white focus:outline-none focus:border-[#c83824]"
+                    className="w-full p-2.5 bg-[#F7F7F5] dark:bg-[#0E0E12] border border-gray-300 dark:border-[#272730] rounded-2xl font-mono text-xs text-[#0A0A0A] dark:text-white focus:outline-none focus:border-[#0A0A0A]"
                   />
                 </div>
                 <div>
@@ -426,12 +787,13 @@ export default function ProductsBento() {
                     value={newProduct.internalCode}
                     onChange={e => setNewProduct({ ...newProduct, internalCode: e.target.value })}
                     placeholder="PROD-101"
-                    className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-gray-300 dark:border-[#262f38] rounded-2xl font-mono text-xs text-[#161b22] dark:text-white focus:outline-none focus:border-[#c83824]"
+                    disabled={!!newProduct.id}
+                    className="w-full p-2.5 bg-[#F7F7F5] dark:bg-[#0E0E12] border border-gray-300 dark:border-[#272730] rounded-2xl font-mono text-xs text-[#0A0A0A] dark:text-white disabled:opacity-60 focus:outline-none focus:border-[#0A0A0A]"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
+              <div className={newProduct.id ? '' : 'grid grid-cols-2 gap-2'}>
                 <div>
                   <label className="font-bold text-gray-700 dark:text-gray-300 block mb-1">Precio Venta ($ COP):</label>
                   <input
@@ -439,37 +801,44 @@ export default function ProductsBento() {
                     value={newProduct.price}
                     onChange={e => setNewProduct({ ...newProduct, price: e.target.value })}
                     placeholder="12000"
-                    className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-gray-300 dark:border-[#262f38] rounded-2xl font-bold text-[#161b22] dark:text-white focus:outline-none focus:border-[#c83824]"
+                    className="w-full p-2.5 bg-[#F7F7F5] dark:bg-[#0E0E12] border border-gray-300 dark:border-[#272730] rounded-2xl font-bold text-[#0A0A0A] dark:text-white focus:outline-none focus:border-[#0A0A0A]"
                     required
                   />
                 </div>
-                <div>
-                  <label className="font-bold text-gray-700 dark:text-gray-300 block mb-1">Stock Inicial:</label>
-                  <input
-                    type="number"
-                    value={newProduct.stock}
-                    onChange={e => setNewProduct({ ...newProduct, stock: e.target.value })}
-                    placeholder="50"
-                    className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-gray-300 dark:border-[#262f38] rounded-2xl font-bold text-[#161b22] dark:text-white focus:outline-none focus:border-[#c83824]"
-                  />
-                </div>
+                {!newProduct.id && (
+                  <div>
+                    <label className="font-bold text-gray-700 dark:text-gray-300 block mb-1">Stock Inicial:</label>
+                    <input
+                      type="number"
+                      value={newProduct.stock}
+                      onChange={e => setNewProduct({ ...newProduct, stock: e.target.value })}
+                      placeholder="50"
+                      className="w-full p-2.5 bg-[#F7F7F5] dark:bg-[#0E0E12] border border-gray-300 dark:border-[#272730] rounded-2xl font-bold text-[#0A0A0A] dark:text-white focus:outline-none focus:border-[#0A0A0A]"
+                    />
+                  </div>
+                )}
               </div>
+              {newProduct.id && (
+                <p className="text-[10px] text-gray-400 dark:text-gray-500">
+                  Para ajustar el stock ve al módulo de Inventario.
+                </p>
+              )}
             </div>
 
             <div className="flex gap-2 pt-2">
               <button
                 type="button"
                 onClick={() => setShowAddModal(false)}
-                className="w-1/2 py-3 bg-gray-100 dark:bg-[#262f38] hover:bg-gray-200 dark:hover:bg-[#38434f] text-gray-700 dark:text-gray-300 rounded-2xl text-xs font-bold cursor-pointer"
+                className="w-1/2 py-3 bg-gray-100 dark:bg-[#272730] hover:bg-gray-200 dark:hover:bg-[#2C2C36] text-gray-700 dark:text-gray-300 rounded-2xl text-xs font-bold cursor-pointer"
               >
                 Cancelar
               </button>
               <button
                 type="submit"
                 disabled={categories.length === 0}
-                className="w-1/2 py-3 bg-[#c83824] hover:bg-[#a82917] disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-2xl text-xs font-extrabold shadow-md shadow-[#c83824]/20 cursor-pointer"
+                className="w-1/2 py-3 bg-[#0A0A0A] hover:bg-[#202020] disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-2xl text-xs font-extrabold shadow-md shadow-[#0A0A0A]/10 cursor-pointer"
               >
-                Guardar Producto
+                {newProduct.id ? 'Guardar Cambios' : 'Guardar Producto'}
               </button>
             </div>
           </form>

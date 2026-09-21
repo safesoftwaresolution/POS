@@ -37,12 +37,12 @@ function RankedBarRow({ label, value, max, formatValue = money }) {
   return (
     <div className="space-y-1" title={`${label}: ${formatValue(value)}`}>
       <div className="flex items-center justify-between text-xs">
-        <span className="font-bold text-[#161b22] dark:text-[#f0f6fc] truncate pr-2">{label}</span>
-        <span className="font-extrabold text-[#c83824] dark:text-[#ea6a58] tabular-nums shrink-0">{formatValue(value)}</span>
+        <span className="font-bold text-[#0A0A0A] dark:text-[#F4F4F6] truncate pr-2">{label}</span>
+        <span className="font-extrabold text-[#FF5520] dark:text-[#FF5520] tabular-nums shrink-0">{formatValue(value)}</span>
       </div>
-      <div className="h-2.5 w-full bg-[#f1f3f5] dark:bg-[#262f38] rounded-full overflow-hidden">
+      <div className="h-2.5 w-full bg-[#F5F5F3] dark:bg-[#272730] rounded-full overflow-hidden">
         <div
-          className="h-full bg-[#c83824] dark:bg-[#ea6a58] rounded-full transition-all duration-500"
+          className="h-full bg-[#0A0A0A] dark:bg-[#FF5520] rounded-full transition-all duration-500"
           style={{ width: `${pct}%` }}
         />
       </div>
@@ -66,14 +66,14 @@ function RankedList({ entries, formatValue = money, emptyLabel = 'Sin datos en e
 
 function SectionCard({ icon: Icon, title, subtitle, children, action }) {
   return (
-    <div className="bento-card p-6 bg-white dark:bg-[#161b22] rounded-3xl border border-[#e2e8f0] dark:border-[#262f38] shadow-xs">
+    <div className="bento-card p-6 bg-white dark:bg-[#17171B] rounded-3xl border border-[#EAEAEA] dark:border-[#272730] shadow-xs">
       <div className="flex items-start justify-between gap-3 mb-5">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="w-10 h-10 rounded-full bg-[#c83824]/10 flex items-center justify-center text-[#c83824] dark:text-[#ea6a58] shrink-0">
+          <div className="w-10 h-10 rounded-full bg-[#FF5520]/10 flex items-center justify-center text-[#FF5520] dark:text-[#FF5520] shrink-0">
             <Icon className="w-5 h-5" />
           </div>
           <div className="min-w-0">
-            <h3 className="text-sm font-extrabold text-[#161b22] dark:text-[#f0f6fc] truncate">{title}</h3>
+            <h3 className="text-sm font-extrabold text-[#0A0A0A] dark:text-[#F4F4F6] truncate">{title}</h3>
             {subtitle && <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium truncate">{subtitle}</p>}
           </div>
         </div>
@@ -166,7 +166,7 @@ export default function ReportsBento() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-[#161b22] dark:text-[#f0f6fc]">Reportes</h1>
+          <h1 className="text-2xl font-black text-[#0A0A0A] dark:text-[#F4F4F6]">Reportes</h1>
           <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
             {isAdmin ? 'Ventas, productos, rentabilidad y compras de tu local' : 'Estado de inventario de tu local'}
           </p>
@@ -180,7 +180,7 @@ export default function ReportsBento() {
                 value={dateFrom}
                 max={dateTo}
                 onChange={(e) => setDateFrom(e.target.value)}
-                className="px-3 py-2 bg-white dark:bg-[#161b22] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl text-xs font-semibold text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#c83824] dark:focus:border-[#ea6a58]"
+                className="px-3 py-2 bg-white dark:bg-[#17171B] border border-[#EAEAEA] dark:border-[#272730] rounded-2xl text-xs font-semibold text-[#0A0A0A] dark:text-[#F4F4F6] focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#FF5520]"
               />
               <span className="text-xs text-gray-400 font-bold">–</span>
               <input
@@ -189,13 +189,13 @@ export default function ReportsBento() {
                 min={dateFrom}
                 max={isoDaysAgo(0)}
                 onChange={(e) => setDateTo(e.target.value)}
-                className="px-3 py-2 bg-white dark:bg-[#161b22] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl text-xs font-semibold text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#c83824] dark:focus:border-[#ea6a58]"
+                className="px-3 py-2 bg-white dark:bg-[#17171B] border border-[#EAEAEA] dark:border-[#272730] rounded-2xl text-xs font-semibold text-[#0A0A0A] dark:text-[#F4F4F6] focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#FF5520]"
               />
             </>
           )}
           <button
             onClick={load}
-            className="px-3.5 py-2 bg-[#c83824] hover:bg-[#a82d1c] text-white rounded-2xl text-xs font-bold flex items-center gap-1.5 shadow-md shadow-[#c83824]/20 cursor-pointer"
+            className="px-3.5 py-2 bg-[#0A0A0A] hover:bg-[#202020] text-white rounded-2xl text-xs font-bold flex items-center gap-1.5 shadow-md shadow-[#0A0A0A]/10 cursor-pointer"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Actualizar
           </button>
@@ -211,21 +211,21 @@ export default function ReportsBento() {
 
       {isAdmin && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          <div className="bento-card p-6 bg-gradient-to-br from-[#c83824] via-[#b3301e] to-[#161b22] rounded-3xl text-white shadow-lg shadow-[#c83824]/15 border-none flex items-center justify-between">
+          <div className="bento-card p-6 flex items-center justify-between">
             <div>
-              <span className="text-xs font-semibold text-red-100 uppercase tracking-wider">Total Vendido</span>
-              <div className="text-3xl font-black mt-1 tabular-nums">{money(sales?.totalSold)}</div>
-              <span className="text-[11px] text-red-100 font-bold">{sales?.transactionCount ?? 0} transacciones</span>
+              <span className="text-xs font-extrabold uppercase text-gray-400 dark:text-gray-500">Total Vendido</span>
+              <div className="text-3xl font-black mt-1 text-[#0A0A0A] dark:text-white tabular-nums">{money(sales?.totalSold)}</div>
+              <span className="text-[11px] text-gray-500 dark:text-gray-400 font-bold">{sales?.transactionCount ?? 0} transacciones</span>
             </div>
-            <div className="p-3 bg-white/15 rounded-2xl"><DollarSign className="w-6 h-6" /></div>
+            <div className="p-3 bg-[#FF5520]/10 text-[#FF5520] rounded-2xl border border-[#FF5520]/20"><DollarSign className="w-6 h-6" /></div>
           </div>
-          <div className="bento-card p-6 bg-white dark:bg-[#161b22] rounded-3xl border border-[#e2e8f0] dark:border-[#262f38] shadow-xs flex items-center justify-between">
+          <div className="bento-card p-6 bg-white dark:bg-[#17171B] rounded-3xl border border-[#EAEAEA] dark:border-[#272730] shadow-xs flex items-center justify-between">
             <div>
               <span className="text-xs font-extrabold uppercase text-gray-400 dark:text-gray-500">Total Invertido en Compras</span>
-              <div className="text-3xl font-black mt-1 text-[#161b22] dark:text-[#f0f6fc] tabular-nums">{money(purchases?.totalInverted)}</div>
+              <div className="text-3xl font-black mt-1 text-[#0A0A0A] dark:text-[#F4F4F6] tabular-nums">{money(purchases?.totalInverted)}</div>
               <span className="text-[11px] text-gray-500 dark:text-gray-400 font-bold">{supplierEntries.length} proveedores en el período</span>
             </div>
-            <div className="p-3 bg-[#c83824]/10 text-[#c83824] dark:text-[#ea6a58] rounded-2xl border border-[#c83824]/20">
+            <div className="p-3 bg-[#FF5520]/10 text-[#FF5520] dark:text-[#FF5520] rounded-2xl border border-[#FF5520]/20">
               <ShoppingBag className="w-6 h-6" />
             </div>
           </div>
@@ -233,13 +233,13 @@ export default function ReportsBento() {
       )}
 
       {isAdmin && (
-        <div className="bento-card p-6 bg-white dark:bg-[#161b22] rounded-3xl border border-[#e2e8f0] dark:border-[#262f38] shadow-xs">
+        <div className="bento-card p-6 bg-white dark:bg-[#17171B] rounded-3xl border border-[#EAEAEA] dark:border-[#272730] shadow-xs">
           <div className="flex items-center gap-3 mb-5">
-            <div className="w-10 h-10 rounded-full bg-[#c83824]/10 flex items-center justify-center text-[#c83824] dark:text-[#ea6a58] shrink-0">
+            <div className="w-10 h-10 rounded-full bg-[#FF5520]/10 flex items-center justify-center text-[#FF5520] dark:text-[#FF5520] shrink-0">
               <Wallet className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-sm font-extrabold text-[#161b22] dark:text-[#f0f6fc]">Cierre de Caja</h3>
+              <h3 className="text-sm font-extrabold text-[#0A0A0A] dark:text-[#F4F4F6]">Cierre de Caja</h3>
               <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium">
                 Efectivo esperado según las ventas en efectivo del período — cuenta el cajón y compáralo aquí
               </p>
@@ -250,7 +250,7 @@ export default function ReportsBento() {
             <div className="space-y-4">
               <div>
                 <span className="text-[11px] font-extrabold uppercase text-gray-400 dark:text-gray-500">Efectivo Esperado</span>
-                <div className="text-2xl font-black text-[#161b22] dark:text-[#f0f6fc] tabular-nums mt-0.5">{money(expectedCash)}</div>
+                <div className="text-2xl font-black text-[#0A0A0A] dark:text-[#F4F4F6] tabular-nums mt-0.5">{money(expectedCash)}</div>
               </div>
 
               <div className="space-y-1">
@@ -262,7 +262,7 @@ export default function ReportsBento() {
                   value={countedCash}
                   onChange={(e) => setCountedCash(e.target.value)}
                   placeholder="Ingresa el total contado en caja..."
-                  className="w-full p-2.5 bg-[#f8f9fa] dark:bg-[#0d1117] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl text-sm font-bold text-[#161b22] dark:text-[#f0f6fc] focus:outline-none focus:border-[#c83824] dark:focus:border-[#ea6a58]"
+                  className="w-full p-2.5 bg-[#F7F7F5] dark:bg-[#0E0E12] border border-[#EAEAEA] dark:border-[#272730] rounded-2xl text-sm font-bold text-[#0A0A0A] dark:text-[#F4F4F6] focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#FF5520]"
                 />
               </div>
 
@@ -334,7 +334,7 @@ export default function ReportsBento() {
                 type="checkbox"
                 checked={belowMinStock}
                 onChange={(e) => setBelowMinStock(e.target.checked)}
-                className="accent-[#c83824]"
+                className="accent-[#FF5520]"
               />
               Solo bajo mínimo
             </label>
@@ -350,18 +350,18 @@ export default function ReportsBento() {
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead>
-                  <tr className="border-b border-[#e2e8f0] dark:border-[#262f38] text-gray-400 dark:text-gray-500 uppercase tracking-wider font-extrabold text-[10px]">
+                  <tr className="border-b border-[#EAEAEA] dark:border-[#272730] text-gray-400 dark:text-gray-500 uppercase tracking-wider font-extrabold text-[10px]">
                     <th className="py-2 px-2">Producto</th>
                     <th className="py-2 px-2 text-center">Stock</th>
                     <th className="py-2 px-2 text-center">Mínimo</th>
                     <th className="py-2 px-2 text-center">Estado</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#e2e8f0] dark:divide-[#262f38] font-medium">
+                <tbody className="divide-y divide-[#EAEAEA] dark:divide-[#272730] font-medium">
                   {stock.map((p) => (
                     <tr key={p.productId}>
-                      <td className="py-2.5 px-2 font-bold text-[#161b22] dark:text-[#f0f6fc]">{p.productName}</td>
-                      <td className="py-2.5 px-2 text-center font-black tabular-nums text-[#161b22] dark:text-[#f0f6fc]">{p.quantityAvailable}</td>
+                      <td className="py-2.5 px-2 font-bold text-[#0A0A0A] dark:text-[#F4F4F6]">{p.productName}</td>
+                      <td className="py-2.5 px-2 text-center font-black tabular-nums text-[#0A0A0A] dark:text-[#F4F4F6]">{p.quantityAvailable}</td>
                       <td className="py-2.5 px-2 text-center font-semibold text-gray-400 dark:text-gray-500 tabular-nums">{p.minStock}</td>
                       <td className="py-2.5 px-2 text-center">
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${

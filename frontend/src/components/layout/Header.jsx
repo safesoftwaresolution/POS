@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
-  Plus,
   Search,
   Bell,
   Menu,
@@ -9,9 +8,10 @@ import {
   CheckCheck,
   Package,
   FileCheck2,
-  FileX2
+  FileX2,
+  ShoppingBag
 } from 'lucide-react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import {
@@ -25,6 +25,18 @@ const NOTIFICATION_ICONS = {
   LOW_STOCK: Package,
   DOCUMENT_APPROVED: FileCheck2,
   DOCUMENT_REJECTED: FileX2,
+};
+
+const PAGE_TITLES = {
+  '/': { title: 'Dashboard', subtitle: 'Resumen en tiempo real de tu negocio' },
+  '/pos': { title: 'Punto de Venta', subtitle: 'Registra ventas, escanea productos y cobra' },
+  '/products': { title: 'Productos', subtitle: 'Catálogo, precios y subcategorías' },
+  '/inventory': { title: 'Inventario', subtitle: 'Stock, devoluciones y proveedores' },
+  '/customers': { title: 'Clientes', subtitle: 'Base de datos de clientes frecuentes' },
+  '/invoicing': { title: 'Facturación DIAN', subtitle: 'Facturas electrónicas y su estado ante la DIAN' },
+  '/documents': { title: 'Documentos', subtitle: 'Documentos legales de tu tienda' },
+  '/reports': { title: 'Reportes', subtitle: 'Rendimiento de ventas y compras' },
+  '/settings': { title: 'Configuración', subtitle: 'Preferencias y datos de tu negocio' },
 };
 
 function formatRelativeTime(isoDate) {
@@ -42,8 +54,11 @@ function formatRelativeTime(isoDate) {
 
 export default function Header({ onToggleMobileMenu }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const { darkMode, toggleTheme } = useTheme();
+  const pageInfo = PAGE_TITLES[location.pathname] || { title: 'BentoPOS', subtitle: 'Tu negocio, en equilibrio' };
+  const isOnPos = location.pathname === '/pos';
 
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
@@ -120,65 +135,37 @@ export default function Header({ onToggleMobileMenu }) {
   return (
     <header className="bg-transparent flex justify-between items-center px-4 sm:px-8 py-4 h-20 w-full z-40 select-none">
 
-      {/* Left Navigation Tabs */}
-      <div className="flex items-center gap-6">
+      {/* Page Title & Subtitle */}
+      <div className="flex items-center gap-4 min-w-0">
         <button
           onClick={onToggleMobileMenu}
-          className="lg:hidden p-2 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-[#262f38] rounded-xl transition-colors cursor-pointer"
+          className="lg:hidden p-2 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-[#272730] rounded-xl transition-colors cursor-pointer shrink-0"
         >
-          <Menu className="w-5 h-5 text-[#c83824] dark:text-[#ea6a58]" />
+          <Menu className="w-5 h-5 text-[#FF5520]" />
         </button>
 
-        <div className="hidden md:flex gap-6 font-semibold text-sm text-[#161b22] dark:text-gray-200">
-          <NavLink
-            to="/"
-            className={({ isActive }) =>
-              isActive ? "text-[#161b22] dark:text-white font-extrabold border-b-2 border-[#c83824] dark:border-[#ea6a58] pb-1" : "text-gray-500 dark:text-gray-400 hover:text-[#161b22] dark:hover:text-white transition-colors"
-            }
-          >
-            Dashboard
-          </NavLink>
-          <NavLink
-            to="/pos"
-            className={({ isActive }) =>
-              isActive ? "text-[#161b22] dark:text-white font-extrabold border-b-2 border-[#c83824] dark:border-[#ea6a58] pb-1" : "text-gray-500 dark:text-gray-400 hover:text-[#161b22] dark:hover:text-white transition-colors"
-            }
-          >
-            Punto de Venta
-          </NavLink>
-          <NavLink
-            to="/invoicing"
-            className={({ isActive }) =>
-              isActive ? "text-[#161b22] dark:text-white font-extrabold border-b-2 border-[#c83824] dark:border-[#ea6a58] pb-1" : "text-gray-500 dark:text-gray-400 hover:text-[#161b22] dark:hover:text-white transition-colors"
-            }
-          >
-            Facturas DIAN
-          </NavLink>
-          <NavLink
-            to="/inventory"
-            className={({ isActive }) =>
-              isActive ? "text-[#161b22] dark:text-white font-extrabold border-b-2 border-[#c83824] dark:border-[#ea6a58] pb-1" : "text-gray-500 dark:text-gray-400 hover:text-[#161b22] dark:hover:text-white transition-colors"
-            }
-          >
-            Inventario
-          </NavLink>
-          <NavLink
-            to="/customers"
-            className={({ isActive }) =>
-              isActive ? "text-[#161b22] dark:text-white font-extrabold border-b-2 border-[#c83824] dark:border-[#ea6a58] pb-1" : "text-gray-500 dark:text-gray-400 hover:text-[#161b22] dark:hover:text-white transition-colors"
-            }
-          >
-            Clientes
-          </NavLink>
+        <div className="min-w-0">
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-xl font-bold text-[#0A0A0A] dark:text-white tracking-tight truncate">
+              {pageInfo.title}
+            </h1>
+            {isOnPos && (
+              <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#FFF0EB] text-[#FF5520] border border-[#FFD5C8] shrink-0">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#FF5520]"></span>
+                Modo Rápido
+              </span>
+            )}
+          </div>
+          <p className="text-xs text-gray-500 dark:text-gray-400 truncate hidden sm:block">{pageInfo.subtitle}</p>
         </div>
       </div>
 
       {/* Right Action Tools: Dark/Light Mode, Search, Bell, Profile, + Nueva Venta */}
-      <div className="flex items-center gap-3 sm:gap-4">
+      <div className="flex items-center gap-2 sm:gap-3 shrink-0">
         {/* Dark / Light Mode Toggle Button */}
         <button
           onClick={toggleTheme}
-          className="p-2.5 text-gray-600 dark:text-amber-400 bg-white dark:bg-[#161b22] border border-[#e2e8f0] dark:border-[#262f38] hover:bg-[#f2f4f7] dark:hover:bg-[#262f38] rounded-full transition-all flex items-center justify-center cursor-pointer shadow-xs"
+          className="w-10 h-10 text-gray-600 dark:text-amber-400 bg-white dark:bg-[#17171B] border border-[#EAEAEA] dark:border-[#272730] hover:bg-[#F5F5F3] dark:hover:bg-[#272730] rounded-xl transition-all flex items-center justify-center cursor-pointer"
           title={darkMode ? 'Cambiar a Modo Claro' : 'Cambiar a Modo Oscuro'}
         >
           {darkMode ? (
@@ -188,7 +175,7 @@ export default function Header({ onToggleMobileMenu }) {
           )}
         </button>
 
-        <button className="p-2.5 text-gray-600 dark:text-gray-300 hover:bg-[#f2f4f7] dark:hover:bg-[#262f38] rounded-full transition-all flex items-center justify-center cursor-pointer">
+        <button className="hidden md:flex w-10 h-10 text-gray-600 dark:text-gray-300 bg-white dark:bg-[#17171B] border border-[#EAEAEA] dark:border-[#272730] hover:bg-[#F5F5F3] dark:hover:bg-[#272730] rounded-xl transition-all items-center justify-center cursor-pointer">
           <Search className="w-4.5 h-4.5" />
         </button>
 
@@ -196,24 +183,24 @@ export default function Header({ onToggleMobileMenu }) {
         <div className="relative" ref={notifRef}>
           <button
             onClick={handleToggleNotifications}
-            className="p-2.5 text-gray-600 dark:text-gray-300 hover:bg-[#f2f4f7] dark:hover:bg-[#262f38] rounded-full transition-all flex items-center justify-center relative cursor-pointer"
+            className="w-10 h-10 text-gray-600 dark:text-gray-300 bg-white dark:bg-[#17171B] border border-[#EAEAEA] dark:border-[#272730] hover:bg-[#F5F5F3] dark:hover:bg-[#272730] rounded-xl transition-all flex items-center justify-center relative cursor-pointer"
           >
             <Bell className="w-4.5 h-4.5" />
             {unreadCount > 0 && (
-              <span className="absolute top-1.5 right-1.5 min-w-[16px] h-4 px-1 bg-[#c83824] rounded-full border border-white dark:border-[#0d1117] text-[9px] font-extrabold text-white flex items-center justify-center">
+              <span className="absolute top-1.5 right-1.5 min-w-[16px] h-4 px-1 bg-[#0A0A0A] rounded-full border border-white dark:border-[#0E0E12] text-[9px] font-extrabold text-white flex items-center justify-center">
                 {unreadCount > 9 ? '9+' : unreadCount}
               </span>
             )}
           </button>
 
           {notifOpen && (
-            <div className="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto bg-white dark:bg-[#161b22] border border-[#e2e8f0] dark:border-[#262f38] rounded-2xl shadow-xl z-50">
-              <div className="flex items-center justify-between px-4 py-3 border-b border-[#e2e8f0] dark:border-[#262f38]">
-                <span className="font-extrabold text-xs text-[#161b22] dark:text-white">Notificaciones</span>
+            <div className="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto bg-white dark:bg-[#17171B] border border-[#EAEAEA] dark:border-[#272730] rounded-2xl shadow-xl z-50">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-[#EAEAEA] dark:border-[#272730]">
+                <span className="font-extrabold text-xs text-[#0A0A0A] dark:text-white">Notificaciones</span>
                 {notifications.some(n => !n.read) && (
                   <button
                     onClick={handleMarkAllRead}
-                    className="flex items-center gap-1 text-[10px] font-bold text-[#c83824] dark:text-[#ea6a58] hover:underline cursor-pointer"
+                    className="flex items-center gap-1 text-[10px] font-bold text-[#FF5520] dark:text-[#FF5520] hover:underline cursor-pointer"
                   >
                     <CheckCheck className="w-3.5 h-3.5" /> Marcar todas
                   </button>
@@ -232,17 +219,17 @@ export default function Header({ onToggleMobileMenu }) {
                       <button
                         key={notif.id}
                         onClick={() => handleNotificationClick(notif)}
-                        className={`w-full text-left px-4 py-3 border-b border-[#e2e8f0] dark:border-[#262f38] last:border-b-0 flex gap-3 hover:bg-gray-50 dark:hover:bg-white/5 cursor-pointer ${!notif.read ? 'bg-[#c83824]/5 dark:bg-[#c83824]/10' : ''}`}
+                        className={`w-full text-left px-4 py-3 border-b border-[#EAEAEA] dark:border-[#272730] last:border-b-0 flex gap-3 hover:bg-gray-50 dark:hover:bg-white/5 cursor-pointer ${!notif.read ? 'bg-[#FF5520]/5 dark:bg-[#FF5520]/10' : ''}`}
                       >
                         <div className="w-8 h-8 rounded-xl bg-gray-100 dark:bg-white/10 flex items-center justify-center shrink-0">
                           <Icon className="w-4 h-4 text-gray-500 dark:text-gray-300" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="text-xs font-bold text-[#161b22] dark:text-white truncate">{notif.title}</p>
+                          <p className="text-xs font-bold text-[#0A0A0A] dark:text-white truncate">{notif.title}</p>
                           <p className="text-[11px] text-gray-500 dark:text-gray-400 line-clamp-2">{notif.message}</p>
                           <p className="text-[10px] text-gray-400 dark:text-gray-500 font-semibold mt-0.5">{formatRelativeTime(notif.createdAt)}</p>
                         </div>
-                        {!notif.read && <span className="w-2 h-2 rounded-full bg-[#c83824] dark:bg-[#ea6a58] shrink-0 mt-1.5" />}
+                        {!notif.read && <span className="w-2 h-2 rounded-full bg-[#0A0A0A] dark:bg-[#FF5520] shrink-0 mt-1.5" />}
                       </button>
                     );
                   })}
@@ -253,18 +240,25 @@ export default function Header({ onToggleMobileMenu }) {
         </div>
 
         {/* User Profile Avatar */}
-        <div className="w-10 h-10 rounded-full bg-[#161b22] dark:bg-[#262f38] text-white flex items-center justify-center font-bold text-xs shadow-sm border-2 border-white dark:border-[#38434f] cursor-pointer" title={user?.fullName || user?.username}>
+        <div className="w-10 h-10 rounded-full bg-[#0A0A0A] dark:bg-[#272730] text-white flex items-center justify-center font-bold text-xs shadow-sm border-2 border-white dark:border-[#2C2C36] cursor-pointer" title={user?.fullName || user?.username}>
           {getInitials(user?.fullName || user?.username)}
         </div>
 
-        {/* Action Button "+ Nueva Venta" */}
-        <button
-          onClick={() => navigate('/pos')}
-          className="flex items-center gap-1.5 bg-[#c83824] hover:bg-[#a82917] text-white font-bold text-xs rounded-full px-4 py-2 transition-all shadow-md shadow-[#c83824]/20 cursor-pointer"
-        >
-          <Plus className="w-4 h-4 text-white" />
-          <span className="hidden sm:inline">Nueva Venta</span>
-        </button>
+        {/* Quick POS Action (hidden while already on POS) */}
+        {!isOnPos ? (
+          <button
+            onClick={() => navigate('/pos')}
+            className="flex items-center gap-1.5 bg-[#0A0A0A] hover:bg-[#202020] text-white font-bold text-xs rounded-xl px-4 py-2.5 transition-all shadow-md shadow-[#0A0A0A]/10 cursor-pointer"
+          >
+            <ShoppingBag className="w-4 h-4 text-[#FF5520]" />
+            <span className="hidden sm:inline">Nueva Venta</span>
+          </button>
+        ) : (
+          <div className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-xl bg-[#F7F7F5] dark:bg-[#17171B] border border-[#EAEAEA] dark:border-[#272730] text-xs font-medium text-[#0A0A0A] dark:text-white">
+            <span className="w-2 h-2 rounded-full bg-[#FF5520]"></span>
+            <span>Terminal Activa</span>
+          </div>
+        )}
       </div>
 
     </header>

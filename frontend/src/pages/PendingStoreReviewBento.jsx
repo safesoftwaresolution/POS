@@ -30,7 +30,7 @@ export default function PendingStoreReviewBento({ store }) {
   };
 
   return (
-    <div className="min-h-screen bg-[#f8f9fa] dark:bg-[#0d1117] text-[#161b22] dark:text-[#f0f6fc] flex items-center justify-center p-4 select-none">
+    <div className="min-h-screen bg-[#F7F7F5] dark:bg-[#0E0E12] text-[#0A0A0A] dark:text-[#F4F4F6] flex items-center justify-center p-4 select-none">
       <div className="max-w-md w-full bento-card p-8 rounded-3xl shadow-xl space-y-5 text-center">
         <div className={`w-16 h-16 rounded-2xl bg-gray-100 dark:bg-white/10 flex items-center justify-center mx-auto ${copy.iconClass}`}>
           <Icon className="w-9 h-9" />
@@ -47,7 +47,7 @@ export default function PendingStoreReviewBento({ store }) {
         <button
           type="button"
           onClick={handleLogout}
-          className="w-full py-3 bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 text-[#191c1e] dark:text-white font-black text-xs rounded-2xl flex items-center justify-center gap-2 transition-all cursor-pointer"
+          className="w-full py-3 bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 text-[#17171B] dark:text-white font-black text-xs rounded-2xl flex items-center justify-center gap-2 transition-all cursor-pointer"
         >
           <LogOut className="w-4 h-4" />
           <span>Cerrar sesión</span>

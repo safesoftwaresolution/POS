@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { User, KeyRound, ArrowRight, AlertCircle } from 'lucide-react';
-import logoFull from '../assets/logo-full.png';
+import BentoIcon from '../components/BentoIcon';
 
 export default function LoginBento() {
   const { login, loading } = useAuth();
@@ -23,20 +23,16 @@ export default function LoginBento() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0d1117] text-white flex items-center justify-center p-4 relative overflow-hidden select-none">
-      {/* Ambient Vermilion Glows */}
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#c83824]/15 rounded-full blur-3xl pointer-events-none"></div>
-      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#e25845]/10 rounded-full blur-3xl pointer-events-none"></div>
+    <div className="min-h-screen bg-[#0E0E12] text-white flex items-center justify-center p-4 relative overflow-hidden select-none">
+      <div className="max-w-md w-full bento-card bg-[#17171B] border-[#272730] p-8 rounded-3xl shadow-2xl space-y-6 relative z-10">
 
-      <div className="max-w-md w-full bento-card bg-[#161b22] border-[#262f38] p-8 rounded-3xl shadow-2xl space-y-6 relative z-10">
-        
         {/* Brand Header */}
         <div className="text-center space-y-3">
-          <img 
-            src={logoFull} 
-            alt="BentoPOS" 
-            className="h-28 mx-auto object-contain drop-shadow-md hover:scale-102 transition-transform duration-300"
-          />
+          <BentoIcon size="w-16 h-16 mx-auto" rounded="rounded-3xl" />
+          <div className="flex items-baseline justify-center gap-1">
+            <span className="font-black text-2xl tracking-tight text-white">Bento</span>
+            <span className="font-black text-2xl tracking-tight text-[#FF5520]">POS</span>
+          </div>
           <p className="text-xs text-gray-400 font-semibold tracking-wide">
             Sistema de Punto de Venta • Iniciar Sesión
           </p>
@@ -64,7 +60,7 @@ export default function LoginBento() {
                 autoCorrect="off"
                 autoCapitalize="off"
                 spellCheck="false"
-                className="w-full pl-10 pr-4 py-2.5 bg-[#0d1117] border border-[#262f38] rounded-2xl text-xs font-semibold text-white placeholder-gray-500 focus:outline-none focus:border-[#c83824] focus:ring-1 focus:ring-[#c83824] transition-all"
+                className="w-full pl-10 pr-4 py-2.5 bg-[#0E0E12] border border-[#272730] rounded-2xl text-xs font-semibold text-white placeholder-gray-500 focus:outline-none focus:border-[#FF5520] focus:ring-1 focus:ring-[#FF5520] transition-all"
                 required
               />
             </div>
@@ -80,7 +76,7 @@ export default function LoginBento() {
                 onChange={e => setPassword(e.target.value)}
                 placeholder="••••••••"
                 autoComplete="off"
-                className="w-full pl-10 pr-4 py-2.5 bg-[#0d1117] border border-[#262f38] rounded-2xl text-xs font-semibold text-white placeholder-gray-500 focus:outline-none focus:border-[#c83824] focus:ring-1 focus:ring-[#c83824] transition-all"
+                className="w-full pl-10 pr-4 py-2.5 bg-[#0E0E12] border border-[#272730] rounded-2xl text-xs font-semibold text-white placeholder-gray-500 focus:outline-none focus:border-[#FF5520] focus:ring-1 focus:ring-[#FF5520] transition-all"
                 required
               />
             </div>
@@ -89,7 +85,7 @@ export default function LoginBento() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3.5 bg-[#c83824] hover:bg-[#a82917] text-white font-black text-xs rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-[#c83824]/30 active:scale-98 transition-all cursor-pointer disabled:opacity-50"
+            className="w-full py-3.5 bg-[#0A0A0A] hover:bg-[#202020] text-white font-black text-xs rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-[#0A0A0A]/10 active:scale-98 transition-all cursor-pointer disabled:opacity-50"
           >
             <span>{loading ? 'Autenticando...' : 'Ingresar al Sistema'}</span>
             <ArrowRight className="w-4 h-4" />
@@ -101,7 +97,7 @@ export default function LoginBento() {
           <button
             type="button"
             onClick={() => navigate('/register')}
-            className="text-[#c83824] hover:text-[#e25845] font-extrabold hover:underline cursor-pointer transition-colors"
+            className="text-[#FF5520] hover:text-[#FF5520] font-extrabold hover:underline cursor-pointer transition-colors"
           >
             Regístrate
           </button>

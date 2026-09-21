@@ -4,25 +4,25 @@
 
 @layer base {
   :root {
-    --bg-page: #f8f9fa;
-    --bg-card: #ffffff;
-    --border-card: #e2e8f0;
-    --text-primary: #161b22;
-    --text-secondary: #57606a;
-    --text-muted: #8c959f;
-    --color-primary: #c83824;
-    --color-primary-hover: #a82917;
+    --bg-page: #F7F7F5;
+    --bg-card: #FFFFFF;
+    --border-card: #EAEAEA;
+    --text-primary: #0A0A0A;
+    --text-secondary: #7A7A7A;
+    --text-muted: #A0A0A0;
+    --color-primary: #FF5520;
+    --color-primary-hover: #E64712;
   }
 
   html.dark {
-    --bg-page: #0d1117;
-    --bg-card: #161b22;
-    --border-card: #262f38;
-    --text-primary: #f0f6fc;
-    --text-secondary: #8b949e;
-    --text-muted: #6e7681;
-    --color-primary: #e25845;
-    --color-primary-hover: #c83824;
+    --bg-page: #0E0E12;
+    --bg-card: #17171B;
+    --border-card: #272730;
+    --text-primary: #F4F4F6;
+    --text-secondary: #A0A0AB;
+    --text-muted: #787885;
+    --color-primary: #FF5520;
+    --color-primary-hover: #E64712;
   }
 
   body {
@@ -35,6 +35,14 @@
   .tabular-nums {
     font-variant-numeric: tabular-nums;
   }
+
+  .no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 @layer components {
@@ -44,23 +52,23 @@
     height: 6px;
   }
   ::-webkit-scrollbar-track {
-    background: #f1f3f5;
+    background: #F5F5F3;
   }
   html.dark ::-webkit-scrollbar-track {
-    background: #161b22;
+    background: #17171B;
   }
   ::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
+    background: #E2E2DF;
     border-radius: 9999px;
   }
   html.dark ::-webkit-scrollbar-thumb {
-    background: #30363d;
+    background: #2D2D36;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: #c83824;
+    background: #FF5520;
   }
   html.dark ::-webkit-scrollbar-thumb:hover {
-    background: #e25845;
+    background: #FF5520;
   }
 
   /* Bento card styling */
@@ -68,23 +76,32 @@
     background-color: var(--bg-card);
     border: 1px solid var(--border-card);
     border-radius: 1.5rem;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+    box-shadow: 0 2px 12px rgba(0,0,0,0.02);
     transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s ease, background-color 0.25s ease, border-color 0.25s ease;
   }
 
   html.dark .bento-card {
-    background-color: #161b22;
-    border-color: #262f38;
     box-shadow: 0 4px 24px rgba(0,0,0,0.4);
   }
 
   .bento-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 30px rgba(200, 56, 36, 0.08);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.05);
   }
   html.dark .bento-card:hover {
-    border-color: #38434f;
+    border-color: #2C2C36;
     box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+  }
+
+  /* Near-black solid surfaces (buttons, active nav/tabs) read as too-flat against
+     the dark background, so dark mode lifts them to an elevated charcoal instead
+     of inverting to white — mirrors how a pure-black button would vanish on a
+     near-black page. */
+  html.dark .bg-\[\#0A0A0A\] {
+    background-color: #262630 !important;
+  }
+  html.dark .hover\:bg-\[\#202020\]:hover {
+    background-color: #31313E !important;
   }
 }
 

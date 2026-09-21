@@ -123,7 +123,7 @@ function ProtectedLayoutContent({ mobileSidebarOpen, setMobileSidebarOpen, sideb
           onToggleMobileMenu={() => setMobileSidebarOpen(prev => !prev)}
         />
 
-        <main className="p-4 sm:p-6 lg:p-8 flex-1 overflow-x-hidden">
+        <main className="p-4 sm:p-6 lg:p-8 flex-1">
           <Routes>
             <Route path="/" element={<DashboardBento />} />
             <Route path="/pos" element={<POSBento />} />
@@ -183,7 +183,7 @@ function BackofficeProtectedLayout() {
           onToggleMobileMenu={() => setMobileSidebarOpen(prev => !prev)}
         />
 
-        <main className="p-4 sm:p-6 lg:p-8 flex-1 overflow-x-hidden">
+        <main className="p-4 sm:p-6 lg:p-8 flex-1">
           <Routes>
             <Route path="/" element={<StoresBento />} />
             <Route path="/categories" element={<CategoriesBento />} />

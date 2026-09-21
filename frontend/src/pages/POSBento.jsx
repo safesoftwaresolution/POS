@@ -265,7 +265,7 @@ export default function POSBento() {
   };
 
   return (
-    <div className="space-y-6 relative pb-20 lg:pb-0">
+    <div className="relative">
       {/* Toasts de escaneo: no bloqueantes, se autodescartan, se apilan si llegan varios escaneos seguidos */}
       <div className="fixed top-4 right-4 z-[60] flex flex-col gap-2 items-end pointer-events-none">
         {scanToasts.map(toast => (
@@ -281,59 +281,51 @@ export default function POSBento() {
         ))}
       </div>
 
-      {/* Top Banner */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-5">
-        <div className="shrink-0">
-          <h1 className="text-xl sm:text-2xl font-black tracking-tight text-[#0A0A0A] dark:text-white flex items-center gap-2 whitespace-nowrap">
-            Punto de Venta <span className="text-xs font-bold px-2.5 py-1 bg-[#FF5520]/10 dark:bg-[#FF5520]/20 text-[#FF5520] dark:text-[#FF5520] rounded-full border border-[#FF5520]/25">Caja Principal</span>
-          </h1>
-          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Registra tus ventas de forma rápida y en equilibrio</p>
-        </div>
-
-        {/* Scrollable Categories List */}
-        <div className="flex items-center gap-2 overflow-x-auto text-nowrap pb-1 min-w-0 md:flex-1">
-          <span className="text-xs font-bold text-gray-500 dark:text-gray-400 shrink-0">Categorías:</span>
-          <div className="flex gap-1.5 shrink-0">
-            {categoriesList.map(cat => (
-              <button
-                key={cat}
-                onClick={() => setSelectedCategory(cat)}
-                className={`px-3 py-1.5 rounded-2xl text-xs font-bold transition-all cursor-pointer ${
-                  selectedCategory === cat
-                    ? 'bg-[#0A0A0A] text-white shadow-md shadow-[#0A0A0A]/10'
-                    : 'bg-white dark:bg-[#17171B] text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#272730] border border-gray-200 dark:border-[#272730]'
-                }`}
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Main Responsive Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      {/* En desktop, este bloque cancela el padding de <main> (lg:-m-8) y se ancla a la
+          altura exacta bajo el header (lg:h-[calc(100vh-5rem)]) para que la columna
+          izquierda scrollee sola y el panel del ticket, a la derecha, quede fijo a pantalla
+          completa en vez de ser una tarjeta que se corta. En mobile se mantiene el flujo
+          normal de la página con el drawer inferior de siempre. */}
+      <div className="pb-20 lg:pb-0 lg:-m-8 lg:h-[calc(100vh-5rem)] lg:overflow-hidden flex flex-col lg:flex-row">
 
         {/* Products Grid (Left Column) */}
-        <div className="lg:col-span-7 space-y-4">
-          <div className="bento-card p-3 flex items-center gap-3">
-            <Search className="w-4 h-4 text-gray-400 dark:text-gray-500 shrink-0" />
+        <div className="flex flex-col gap-4 lg:h-full lg:overflow-hidden lg:pt-8 lg:pl-8 lg:pr-4">
+          <div className="relative shrink-0">
+            <Search className="w-4 h-4 text-gray-400 dark:text-gray-500 absolute left-4 top-1/2 -translate-y-1/2" />
             <input
               ref={barcodeInputRef}
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={handleBarcodeInputKeyDown}
-              placeholder="Escanea, o busca por nombre, código de barras [770...] o código interno..."
-              className="w-full bg-transparent text-xs font-semibold focus:outline-none text-[#0A0A0A] dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
+              placeholder="Buscar productos por nombre, SKU o código de barra..."
+              className="w-full h-12 pl-11 pr-16 bg-white dark:bg-[#17171B] rounded-2xl border border-[#EAEAEA] dark:border-[#272730] text-xs font-semibold focus:outline-none focus:border-[#0A0A0A] dark:focus:border-white text-[#0A0A0A] dark:text-white placeholder-gray-400 dark:placeholder-gray-500 shadow-[0_2px_8px_rgba(0,0,0,0.02)] transition-all"
             />
             {searchQuery && (
-              <button onClick={() => setSearchQuery('')} className="text-xs font-bold text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 shrink-0 cursor-pointer">
+              <button onClick={() => setSearchQuery('')} className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-bold text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 px-2 py-0.5 rounded-full bg-gray-100 dark:bg-[#272730] cursor-pointer">
                 Limpiar
               </button>
             )}
           </div>
 
+          {/* Categories */}
+          <div className="shrink-0 flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+            {categoriesList.map(cat => (
+              <button
+                key={cat}
+                onClick={() => setSelectedCategory(cat)}
+                className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all duration-150 border cursor-pointer ${
+                  selectedCategory === cat
+                    ? 'bg-[#0A0A0A] text-white border-[#0A0A0A] shadow-sm'
+                    : 'bg-white dark:bg-[#17171B] text-gray-600 dark:text-gray-300 border-[#EAEAEA] dark:border-[#272730] hover:border-[#D0D0CE] hover:text-[#0A0A0A] dark:hover:text-white'
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex-1 lg:overflow-y-auto lg:pr-1 lg:pb-8">
           {loading ? (
             <div className="py-12 text-center text-xs font-bold text-gray-400 dark:text-gray-500">
               Cargando catálogo real de productos...
@@ -345,7 +337,7 @@ export default function POSBento() {
               <p className="text-[11px] text-gray-400 dark:text-gray-500">Ve al módulo de productos para registrar artículos</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-5">
               {filteredProducts.map(product => {
                 const stockVal = product.quantityAvailable ?? product.stock ?? 0;
                 const isLowStock = stockVal <= (product.minStock || 5);
@@ -353,60 +345,90 @@ export default function POSBento() {
                 const priceVal = product.salePrice || product.price || 0;
 
                 return (
-                  <div
+                  <button
                     key={product.id}
                     onClick={() => !isOut && addToCart(product)}
-                    className={`bento-card p-4 flex flex-col justify-between cursor-pointer group hover:border-[#D0D0CE] ${
-                      isOut ? 'opacity-50 cursor-not-allowed bg-gray-50 dark:bg-white/5' : ''
+                    disabled={isOut}
+                    className={`group relative flex flex-col justify-between text-left p-4 rounded-2xl bg-white dark:bg-[#17171B] border border-[#EAEAEA] dark:border-[#272730] hover:border-[#0A0A0A] dark:hover:border-white transition-all duration-150 shadow-[0_2px_12px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.05)] active:scale-[0.98] ${
+                      isOut ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'
                     }`}
                   >
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 font-mono">{product.internalCode}</span>
-                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
-                          isOut
-                            ? 'bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-400'
-                            : isLowStock
-                            ? 'bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-400'
-                            : 'bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300'
-                        }`}>
-                          {isOut ? 'Agotado' : `Stock: ${stockVal}`}
-                        </span>
+                    {/* Product Image */}
+                    <div className="w-full aspect-square rounded-xl overflow-hidden bg-[#F7F7F5] dark:bg-[#0E0E12] mb-3 relative">
+                      {product.imageUrl ? (
+                        <img
+                          src={product.imageUrl}
+                          alt={product.name}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <Package className="w-12 h-12 text-gray-300 dark:text-gray-600" />
+                        </div>
+                      )}
+
+                      {/* Stock Badge */}
+                      <div className="absolute top-2.5 right-2.5">
+                        {isOut ? (
+                          <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-rose-500 text-white shadow-sm">
+                            Agotado
+                          </span>
+                        ) : isLowStock ? (
+                          <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-amber-500 text-white shadow-sm">
+                            Stock: {stockVal}
+                          </span>
+                        ) : (
+                          <span className="text-xs font-medium px-2.5 py-1 rounded-lg bg-white/90 dark:bg-black/60 backdrop-blur-sm text-[#0A0A0A] dark:text-white shadow-xs">
+                            Stock: {stockVal}
+                          </span>
+                        )}
                       </div>
 
-                      <h3 className="font-bold text-xs text-[#0A0A0A] dark:text-white group-hover:text-[#FF5520] dark:group-hover:text-[#FF5520] line-clamp-2 transition-colors">
-                        {product.name}
-                      </h3>
+                      {/* Category tag */}
+                      {product.categoryName && (
+                        <div className="absolute bottom-2.5 left-2.5">
+                          <span className="text-xs font-medium px-2.5 py-1 rounded-lg bg-[#0A0A0A]/80 text-white backdrop-blur-sm">
+                            {product.categoryName}
+                          </span>
+                        </div>
+                      )}
                     </div>
 
-                    <div className="mt-3 pt-2 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between">
+                    {/* Info */}
+                    <div className="flex-1 flex flex-col justify-between">
                       <div>
-                        <span className="text-[10px] text-gray-400 dark:text-gray-500 block font-semibold">Precio unitario</span>
-                        <span className="text-sm font-black text-[#0A0A0A] dark:text-white tabular-nums">
+                        <h4 className="text-lg font-bold text-[#0A0A0A] dark:text-white line-clamp-2 leading-snug">
+                          {product.name}
+                        </h4>
+                        <span className="text-sm font-mono text-gray-400 dark:text-gray-500">{product.internalCode}</span>
+                      </div>
+
+                      <div className="mt-3 pt-3 border-t border-[#F5F5F3] dark:border-[#272730] flex items-center justify-between">
+                        <span className="text-2xl font-extrabold text-[#0A0A0A] dark:text-white font-mono tracking-tight">
                           ${priceVal.toLocaleString('es-CO')}
                         </span>
+                        <div className="w-10 h-10 rounded-xl bg-[#F7F7F5] dark:bg-[#0E0E12] group-hover:bg-[#0A0A0A] group-hover:text-white flex items-center justify-center transition-colors shrink-0">
+                          <Plus className="w-5 h-5" />
+                        </div>
                       </div>
-                      <button
-                        disabled={isOut}
-                        className="w-7 h-7 rounded-xl bg-[#FF5520]/10 dark:bg-[#FF5520]/20 text-[#FF5520] dark:text-[#FF5520] group-hover:bg-[#0A0A0A] group-hover:text-white flex items-center justify-center transition-all shadow-xs cursor-pointer"
-                      >
-                        <Plus className="w-4 h-4" />
-                      </button>
                     </div>
-                  </div>
+                  </button>
                 );
               })}
             </div>
           )}
+          </div>
         </div>
 
         {/* Shopping Cart (Right Column Desktop / Mobile Drawer Container) */}
-        <div className={`lg:col-span-5 ${
-          showMobileCart ? 'fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex flex-col justify-end lg:static lg:bg-transparent lg:z-auto' : 'hidden lg:block'
-        }`}>
-          <div className="bento-card p-5 sm:p-6 sticky top-20 space-y-4 bg-white dark:bg-[#17171B] shadow-xl max-h-[85vh] lg:max-h-none overflow-y-auto rounded-t-3xl lg:rounded-3xl w-full">
+        <div className={
+          showMobileCart
+            ? 'fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex flex-col justify-end lg:static lg:bg-transparent lg:z-auto'
+            : 'hidden lg:flex lg:h-full'
+        }>
+          <div className="w-full lg:w-[380px] xl:w-[440px] shrink-0 bg-white dark:bg-[#17171B] lg:border-l border-[#EAEAEA] dark:border-[#272730] flex flex-col lg:h-full max-h-[85vh] lg:max-h-none rounded-t-3xl lg:rounded-none shadow-xl lg:shadow-none overflow-hidden">
 
-            <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
+            <div className="shrink-0 flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-800">
               <div className="flex items-center gap-2.5">
                 <div className="p-2.5 bg-[#0A0A0A] text-white rounded-2xl shadow-xs">
                   <ShoppingCart className="w-5 h-5" />
@@ -435,7 +457,7 @@ export default function POSBento() {
               </div>
             </div>
 
-            <div className="bg-gray-50 dark:bg-white/5 p-3.5 rounded-2xl border border-gray-200 dark:border-gray-700 space-y-2">
+            <div className="shrink-0 bg-gray-50 dark:bg-white/5 p-4 border-b border-gray-200 dark:border-gray-700 space-y-2">
               <div className="flex items-center justify-between text-xs font-bold text-gray-600 dark:text-gray-300">
                 <span>Cliente Asignado:</span>
                 <span className="text-[10px] text-[#FF5520] dark:text-[#FF5520] font-extrabold">SELECCIONAR</span>
@@ -472,12 +494,16 @@ export default function POSBento() {
               </label>
             </div>
 
-            <div className="max-h-[250px] overflow-y-auto space-y-2 pr-1">
+            <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-2">
               {cart.length === 0 ? (
-                <div className="py-10 text-center text-gray-400 dark:text-gray-500 space-y-2">
-                  <ShoppingCart className="w-10 h-10 mx-auto stroke-1 text-gray-300 dark:text-gray-600" />
-                  <p className="text-xs font-bold">El carrito está vacío</p>
-                  <p className="text-[11px]">Haz clic en los productos para agregar al ticket</p>
+                <div className="h-full flex flex-col items-center justify-center text-center space-y-3">
+                  <div className="w-14 h-14 rounded-3xl bg-[#F7F7F5] dark:bg-[#0E0E12] border border-[#EAEAEA] dark:border-[#272730] flex items-center justify-center text-gray-300 dark:text-gray-600">
+                    <ShoppingCart className="w-7 h-7" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-[#0A0A0A] dark:text-white">El carrito está vacío</p>
+                    <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1 max-w-[200px] mx-auto">Haz clic en los productos para agregar al ticket</p>
+                  </div>
                 </div>
               ) : (
                 cart.map(item => (
@@ -517,7 +543,8 @@ export default function POSBento() {
               )}
             </div>
 
-            <div className="border-t border-gray-200 dark:border-gray-700 pt-3 space-y-2 text-xs font-semibold text-gray-600 dark:text-gray-300">
+            <div className="shrink-0 p-5 border-t border-gray-200 dark:border-gray-700 space-y-4">
+            <div className="space-y-2 text-xs font-semibold text-gray-600 dark:text-gray-300">
               <div className="flex justify-between">
                 <span>Subtotal Neto:</span>
                 <span className="font-bold text-[#0A0A0A] dark:text-white tabular-nums">${subtotal.toLocaleString('es-CO')} COP</span>
@@ -546,6 +573,7 @@ export default function POSBento() {
               <Banknote className="w-5 h-5" />
               <span>COBRAR EN EFECTIVO [F4]</span>
             </button>
+            </div>
 
           </div>
         </div>

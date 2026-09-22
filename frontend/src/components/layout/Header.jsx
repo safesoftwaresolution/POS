@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
-  Search,
+  Calendar,
   Bell,
   Menu,
   Sun,
@@ -26,6 +26,12 @@ const NOTIFICATION_ICONS = {
   DOCUMENT_APPROVED: FileCheck2,
   DOCUMENT_REJECTED: FileX2,
 };
+
+const MONTHS_ES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+
+function formatHeaderDate(date) {
+  return `${date.getDate()} ${MONTHS_ES[date.getMonth()]}, ${date.getFullYear()}`;
+}
 
 const PAGE_TITLES = {
   '/': { title: 'Dashboard', subtitle: 'Resumen en tiempo real de tu negocio' },
@@ -133,7 +139,7 @@ export default function Header({ onToggleMobileMenu }) {
   };
 
   return (
-    <header className="bg-transparent flex justify-between items-center px-4 sm:px-8 py-4 h-20 w-full z-40 select-none">
+    <header className="bg-white dark:bg-[#0E0E12] flex justify-between items-center px-4 sm:px-8 py-4 h-20 w-full z-40 select-none border-b border-[#EAEAEA] dark:border-[#272730]">
 
       {/* Page Title & Subtitle */}
       <div className="flex items-center gap-4 min-w-0">
@@ -160,34 +166,36 @@ export default function Header({ onToggleMobileMenu }) {
         </div>
       </div>
 
-      {/* Right Action Tools: Dark/Light Mode, Search, Bell, Profile, + Nueva Venta */}
+      {/* Right Action Tools: Date, Dark/Light Mode, Bell, Terminal, Profile, + Nueva Venta */}
       <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+        {/* Current Date */}
+        <div className="hidden md:flex items-center gap-2 h-10 px-3.5 text-gray-600 dark:text-gray-300 bg-white dark:bg-[#17171B] border border-[#EAEAEA] dark:border-[#272730] rounded-xl text-xs font-semibold">
+          <Calendar className="w-4 h-4" />
+          <span>{formatHeaderDate(new Date())}</span>
+        </div>
+
         {/* Dark / Light Mode Toggle Button */}
         <button
           onClick={toggleTheme}
-          className="w-10 h-10 text-gray-600 dark:text-amber-400 bg-white dark:bg-[#17171B] border border-[#EAEAEA] dark:border-[#272730] hover:bg-[#F5F5F3] dark:hover:bg-[#272730] rounded-xl transition-all flex items-center justify-center cursor-pointer"
+          className="group w-10 h-10 text-gray-600 dark:text-amber-400 bg-white dark:bg-[#17171B] border border-[#EAEAEA] dark:border-[#272730] hover:bg-[#F5F5F3] dark:hover:bg-[#272730] rounded-xl transition-all flex items-center justify-center cursor-pointer"
           title={darkMode ? 'Cambiar a Modo Claro' : 'Cambiar a Modo Oscuro'}
         >
           {darkMode ? (
-            <Sun className="w-4.5 h-4.5 text-amber-400 fill-amber-400/20" />
+            <Sun className="w-4.5 h-4.5 text-amber-400 fill-amber-400/20 group-hover:text-[#FF5520] group-hover:fill-[#FF5520]/20 transition-colors" />
           ) : (
-            <Moon className="w-4.5 h-4.5 text-slate-700" />
+            <Moon className="w-4.5 h-4.5 text-slate-700 group-hover:text-[#FF5520] transition-colors" />
           )}
-        </button>
-
-        <button className="hidden md:flex w-10 h-10 text-gray-600 dark:text-gray-300 bg-white dark:bg-[#17171B] border border-[#EAEAEA] dark:border-[#272730] hover:bg-[#F5F5F3] dark:hover:bg-[#272730] rounded-xl transition-all items-center justify-center cursor-pointer">
-          <Search className="w-4.5 h-4.5" />
         </button>
 
         {/* Notificaciones */}
         <div className="relative" ref={notifRef}>
           <button
             onClick={handleToggleNotifications}
-            className="w-10 h-10 text-gray-600 dark:text-gray-300 bg-white dark:bg-[#17171B] border border-[#EAEAEA] dark:border-[#272730] hover:bg-[#F5F5F3] dark:hover:bg-[#272730] rounded-xl transition-all flex items-center justify-center relative cursor-pointer"
+            className="group w-10 h-10 text-gray-600 dark:text-gray-300 bg-white dark:bg-[#17171B] border border-[#EAEAEA] dark:border-[#272730] hover:bg-[#F5F5F3] dark:hover:bg-[#272730] rounded-xl transition-all flex items-center justify-center relative cursor-pointer"
           >
-            <Bell className="w-4.5 h-4.5" />
+            <Bell className="w-4.5 h-4.5 group-hover:text-[#FF5520] transition-colors" />
             {unreadCount > 0 && (
-              <span className="absolute top-1.5 right-1.5 min-w-[16px] h-4 px-1 bg-[#0A0A0A] rounded-full border border-white dark:border-[#0E0E12] text-[9px] font-extrabold text-white flex items-center justify-center">
+              <span className="absolute top-1.5 right-1.5 min-w-[16px] h-4 px-1 bg-[#FF5520] rounded-full border border-white dark:border-[#0E0E12] text-[9px] font-extrabold text-white flex items-center justify-center">
                 {unreadCount > 9 ? '9+' : unreadCount}
               </span>
             )}
@@ -239,13 +247,8 @@ export default function Header({ onToggleMobileMenu }) {
           )}
         </div>
 
-        {/* User Profile Avatar */}
-        <div className="w-10 h-10 rounded-full bg-[#0A0A0A] dark:bg-[#272730] text-white flex items-center justify-center font-bold text-xs shadow-sm border-2 border-white dark:border-[#2C2C36] cursor-pointer" title={user?.fullName || user?.username}>
-          {getInitials(user?.fullName || user?.username)}
-        </div>
-
         {/* Quick POS Action (hidden while already on POS) */}
-        {!isOnPos ? (
+        {!isOnPos && (
           <button
             onClick={() => navigate('/pos')}
             className="flex items-center gap-1.5 bg-[#0A0A0A] hover:bg-[#202020] text-white font-bold text-xs rounded-xl px-4 py-2.5 transition-all shadow-md shadow-[#0A0A0A]/10 cursor-pointer"
@@ -253,12 +256,12 @@ export default function Header({ onToggleMobileMenu }) {
             <ShoppingBag className="w-4 h-4 text-[#FF5520]" />
             <span className="hidden sm:inline">Nueva Venta</span>
           </button>
-        ) : (
-          <div className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-xl bg-[#F7F7F5] dark:bg-[#17171B] border border-[#EAEAEA] dark:border-[#272730] text-xs font-medium text-[#0A0A0A] dark:text-white">
-            <span className="w-2 h-2 rounded-full bg-[#FF5520]"></span>
-            <span>Terminal Activa</span>
-          </div>
         )}
+
+        {/* User Profile Avatar */}
+        <div className="w-10 h-10 rounded-full bg-[#0A0A0A] dark:bg-[#272730] text-white flex items-center justify-center font-bold text-xs shadow-sm border-2 border-white dark:border-[#2C2C36] cursor-pointer" title={user?.fullName || user?.username}>
+          {getInitials(user?.fullName || user?.username)}
+        </div>
       </div>
 
     </header>

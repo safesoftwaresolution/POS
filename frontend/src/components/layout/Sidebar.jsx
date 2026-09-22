@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -13,10 +13,15 @@ import {
   HelpCircle,
   LogOut,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  X,
+  Moon,
+  Bell
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import { getProductsApi } from '../../services/productsApi';
+import { getUnreadNotificationCountApi } from '../../services/notificationsApi';
 import BentoIcon from '../BentoIcon';
 
 const ROLE_LABELS = {
@@ -27,8 +32,11 @@ const ROLE_LABELS = {
 
 export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }) {
   const { logout, user } = useAuth();
+  const { darkMode, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [lowStockCount, setLowStockCount] = useState(0);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     getProductsApi()
@@ -38,6 +46,20 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
       })
       .catch(() => setLowStockCount(0));
   }, []);
+
+  const refreshUnreadCount = useCallback(async () => {
+    try {
+      setUnreadCount(await getUnreadNotificationCountApi());
+    } catch {
+      setUnreadCount(0);
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshUnreadCount();
+    const interval = setInterval(refreshUnreadCount, 45000);
+    return () => clearInterval(interval);
+  }, [refreshUnreadCount]);
 
   const getInitials = (name) => {
     if (!name) return 'US';
@@ -186,18 +208,27 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
 
         {/* Bottom Tools & Collapse Toggle */}
         <div className="shrink-0 flex flex-col gap-2 w-full px-3 pt-3 border-t border-[#EAEAEA] dark:border-[#272730]">
-          {/* User Card */}
-          <div className={`flex items-center gap-2.5 p-2.5 rounded-xl ${isCollapsed && !isOpen ? 'justify-center' : ''}`}>
-            <div className="w-9 h-9 rounded-full bg-[#0A0A0A] text-white flex items-center justify-center font-bold text-xs shrink-0 ring-1 ring-[#EAEAEA] dark:ring-[#272730]">
-              {getInitials(user?.fullName || user?.username)}
+          {/* User Card (opens account menu) */}
+          <button
+            onClick={() => setProfileOpen(true)}
+            className={`flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-[#272730] transition-colors cursor-pointer text-left ${isCollapsed && !isOpen ? 'justify-center' : ''}`}
+          >
+            <div className="relative shrink-0">
+              <div className="w-9 h-9 rounded-full bg-[#0A0A0A] text-white flex items-center justify-center font-bold text-xs ring-1 ring-[#EAEAEA] dark:ring-[#272730]">
+                {getInitials(user?.fullName || user?.username)}
+              </div>
+              <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-[#FF5520] ring-2 ring-white dark:ring-[#17171B]" />
             </div>
             {(!isCollapsed || isOpen) && (
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-bold text-[#0A0A0A] dark:text-white truncate">{user?.fullName || user?.username}</p>
-                <p className="text-[11px] text-gray-400 dark:text-gray-500 truncate">{ROLE_LABELS[user?.role] || user?.role}</p>
-              </div>
+              <>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-bold text-[#0A0A0A] dark:text-white truncate">{user?.fullName || user?.username}</p>
+                  <p className="text-[11px] text-gray-400 dark:text-gray-500 truncate">{ROLE_LABELS[user?.role] || user?.role}</p>
+                </div>
+                <ChevronRight className="w-4 h-4 text-gray-300 dark:text-gray-600 shrink-0" />
+              </>
             )}
-          </div>
+          </button>
 
           {/* Collapse/Expand Desktop Button */}
           <button
@@ -216,31 +247,118 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
               </>
             )}
           </button>
-
-          {/* Help Button */}
-          <button 
-            title="Soporte"
-            className={`flex items-center gap-3 p-2.5 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#272730] hover:text-[#FF5520] dark:hover:text-[#FF5520] rounded-2xl transition-all cursor-pointer text-xs font-semibold ${
-              isCollapsed && !isOpen ? 'justify-center' : 'px-3'
-            }`}
-          >
-            <HelpCircle className="w-5 h-5 shrink-0" />
-            {(!isCollapsed || isOpen) && <span>Soporte</span>}
-          </button>
-
-          {/* Logout Button */}
-          <button
-            onClick={handleLogout}
-            title="Cerrar Sesión"
-            className={`flex items-center gap-3 p-2.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-2xl transition-all cursor-pointer text-xs font-extrabold ${
-              isCollapsed && !isOpen ? 'justify-center' : 'px-3'
-            }`}
-          >
-            <LogOut className="w-5 h-5 shrink-0" />
-            {(!isCollapsed || isOpen) && <span>Cerrar Sesión</span>}
-          </button>
         </div>
       </aside>
+
+      {/* Account Menu Modal */}
+      {profileOpen && (
+        <div
+          onClick={() => setProfileOpen(false)}
+          className="fixed inset-0 bg-black/50 backdrop-blur-xs z-[60] flex items-center justify-center p-4"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-sm bg-white dark:bg-[#17171B] rounded-3xl shadow-2xl border border-[#EAEAEA] dark:border-[#272730] overflow-hidden animate-in fade-in zoom-in duration-150"
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-[#EAEAEA] dark:border-[#272730]">
+              <div className="flex items-center gap-4 min-w-0">
+                <div className="relative shrink-0">
+                  <div className="w-14 h-14 rounded-2xl bg-[#0A0A0A] text-white flex items-center justify-center font-bold text-lg ring-2 ring-[#EAEAEA] dark:ring-[#272730]">
+                    {getInitials(user?.fullName || user?.username)}
+                  </div>
+                  <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full bg-[#FF5520] ring-2 ring-white dark:ring-[#17171B]" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-base font-extrabold text-[#0A0A0A] dark:text-white truncate leading-tight">
+                    {user?.fullName || user?.username}
+                  </p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                      {ROLE_LABELS[user?.role] || user?.role}
+                    </span>
+                    <span className="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#FFF0EB] text-[#FF5520] border border-[#FFD5C8]">
+                      BentoPOS Pro
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => setProfileOpen(false)}
+                className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 cursor-pointer shrink-0"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Menu Items */}
+            <div className="px-3 py-3 flex flex-col gap-1">
+              {/* Dark Mode Toggle */}
+              <div className="flex items-center justify-between pl-[30px] pr-4 py-3.5 rounded-xl">
+                <div className="flex items-center gap-3 text-sm font-medium text-gray-600 dark:text-gray-300">
+                  <Moon className="w-4 h-4 text-gray-400" />
+                  Modo oscuro
+                </div>
+                <button
+                  onClick={toggleTheme}
+                  className={`w-10 h-[22px] rounded-full transition-colors relative cursor-pointer ${darkMode ? 'bg-[#FF5520]' : 'bg-gray-300 dark:bg-gray-600'}`}
+                >
+                  <span className={`absolute top-[3px] w-4 h-4 rounded-full bg-white shadow-sm transition-all duration-200 ${darkMode ? 'left-[22px]' : 'left-[3px]'}`} />
+                </button>
+              </div>
+
+              {/* Notifications */}
+              <div className="flex items-center justify-between pl-[30px] pr-4 py-3.5 rounded-xl">
+                <div className="flex items-center gap-3 text-sm font-medium text-gray-600 dark:text-gray-300">
+                  <Bell className="w-4 h-4 text-gray-400" />
+                  Notificaciones
+                </div>
+                {unreadCount > 0 && (
+                  <span className="min-w-[22px] h-[22px] px-1.5 bg-[#FF5520] rounded-full text-[11px] font-extrabold text-white flex items-center justify-center">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
+              </div>
+
+              {/* Settings */}
+              <button
+                onClick={() => { setProfileOpen(false); navigate('/settings'); }}
+                className="w-full flex items-center gap-3 pl-[30px] pr-4 py-3.5 rounded-xl text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#272730] cursor-pointer text-left transition-colors"
+              >
+                <Settings className="w-4 h-4 text-gray-400 shrink-0" />
+                Configuración
+              </button>
+            </div>
+
+            <div className="ml-[60px] mr-4 border-t border-[#EAEAEA] dark:border-[#272730]" />
+
+            {/* Manage Account */}
+            <div className="px-3 py-3">
+              <button className="w-full flex items-center justify-between pl-[30px] pr-4 py-3.5 rounded-xl text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#272730] cursor-pointer transition-colors">
+                <span className="flex items-center gap-3">
+                  <HelpCircle className="w-4 h-4 text-gray-400" />
+                  Administrar cuenta
+                </span>
+                <ChevronRight className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+              </button>
+            </div>
+
+            <div className="ml-[60px] mr-4 border-t border-[#EAEAEA] dark:border-[#272730]" />
+
+            {/* Logout */}
+            <div className="px-3 py-3">
+              <button
+                onClick={handleLogout}
+                className="w-full flex items-center gap-3 pl-[30px] pr-4 py-3.5 rounded-xl text-sm font-semibold text-[#E91E8C] hover:bg-pink-50 dark:hover:bg-pink-950/20 cursor-pointer transition-colors"
+              >
+                <LogOut className="w-4 h-4 shrink-0" />
+                Cerrar sesión
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
+

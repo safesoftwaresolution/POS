@@ -337,7 +337,7 @@ export default function POSBento() {
               <p className="text-[11px] text-gray-400 dark:text-gray-500">Ve al módulo de productos para registrar artículos</p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-5">
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
               {filteredProducts.map(product => {
                 const stockVal = product.quantityAvailable ?? product.stock ?? 0;
                 const isLowStock = stockVal <= (product.minStock || 5);
@@ -349,12 +349,12 @@ export default function POSBento() {
                     key={product.id}
                     onClick={() => !isOut && addToCart(product)}
                     disabled={isOut}
-                    className={`group relative flex flex-col justify-between text-left p-4 rounded-2xl bg-white dark:bg-[#17171B] border border-[#EAEAEA] dark:border-[#272730] hover:border-[#0A0A0A] dark:hover:border-white transition-all duration-150 shadow-[0_2px_12px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.05)] active:scale-[0.98] ${
+                    className={`group relative flex flex-col justify-between text-left p-3 rounded-2xl bg-white dark:bg-[#17171B] border border-[#EAEAEA] dark:border-[#272730] hover:border-[#0A0A0A] dark:hover:border-white transition-all duration-150 shadow-[0_2px_12px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.05)] active:scale-[0.98] ${
                       isOut ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'
                     }`}
                   >
                     {/* Product Image */}
-                    <div className="w-full aspect-square rounded-xl overflow-hidden bg-[#F7F7F5] dark:bg-[#0E0E12] mb-3 relative">
+                    <div className="w-full aspect-square rounded-xl overflow-hidden bg-[#F7F7F5] dark:bg-[#0E0E12] mb-2 relative">
                       {product.imageUrl ? (
                         <img
                           src={product.imageUrl}
@@ -363,22 +363,22 @@ export default function POSBento() {
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
-                          <Package className="w-12 h-12 text-gray-300 dark:text-gray-600" />
+                          <Package className="w-8 h-8 text-gray-300 dark:text-gray-600" />
                         </div>
                       )}
 
                       {/* Stock Badge */}
-                      <div className="absolute top-2.5 right-2.5">
+                      <div className="absolute top-1.5 right-1.5">
                         {isOut ? (
-                          <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-rose-500 text-white shadow-sm">
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-lg bg-rose-500 text-white shadow-sm">
                             Agotado
                           </span>
                         ) : isLowStock ? (
-                          <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-amber-500 text-white shadow-sm">
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-lg bg-amber-500 text-white shadow-sm">
                             Stock: {stockVal}
                           </span>
                         ) : (
-                          <span className="text-xs font-medium px-2.5 py-1 rounded-lg bg-white/90 dark:bg-black/60 backdrop-blur-sm text-[#0A0A0A] dark:text-white shadow-xs">
+                          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-lg bg-white/90 dark:bg-black/60 backdrop-blur-sm text-[#0A0A0A] dark:text-white shadow-xs">
                             Stock: {stockVal}
                           </span>
                         )}
@@ -386,8 +386,8 @@ export default function POSBento() {
 
                       {/* Category tag */}
                       {product.categoryName && (
-                        <div className="absolute bottom-2.5 left-2.5">
-                          <span className="text-xs font-medium px-2.5 py-1 rounded-lg bg-[#0A0A0A]/80 text-white backdrop-blur-sm">
+                        <div className="absolute bottom-1.5 left-1.5">
+                          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-lg bg-[#0A0A0A]/80 text-white backdrop-blur-sm">
                             {product.categoryName}
                           </span>
                         </div>
@@ -397,18 +397,18 @@ export default function POSBento() {
                     {/* Info */}
                     <div className="flex-1 flex flex-col justify-between">
                       <div>
-                        <h4 className="text-lg font-bold text-[#0A0A0A] dark:text-white line-clamp-2 leading-snug">
+                        <h4 className="text-sm font-bold text-[#0A0A0A] dark:text-white line-clamp-2 leading-snug">
                           {product.name}
                         </h4>
-                        <span className="text-sm font-mono text-gray-400 dark:text-gray-500">{product.internalCode}</span>
+                        <span className="text-[11px] font-mono text-gray-400 dark:text-gray-500">{product.internalCode}</span>
                       </div>
 
-                      <div className="mt-3 pt-3 border-t border-[#F5F5F3] dark:border-[#272730] flex items-center justify-between">
-                        <span className="text-2xl font-extrabold text-[#0A0A0A] dark:text-white font-mono tracking-tight">
+                      <div className="mt-2 pt-2 border-t border-[#F5F5F3] dark:border-[#272730] flex items-center justify-between">
+                        <span className="text-lg font-extrabold text-[#0A0A0A] dark:text-white font-mono tracking-tight">
                           ${priceVal.toLocaleString('es-CO')}
                         </span>
-                        <div className="w-10 h-10 rounded-xl bg-[#F7F7F5] dark:bg-[#0E0E12] group-hover:bg-[#0A0A0A] group-hover:text-white flex items-center justify-center transition-colors shrink-0">
-                          <Plus className="w-5 h-5" />
+                        <div className="w-8 h-8 rounded-xl bg-[#F7F7F5] dark:bg-[#0E0E12] group-hover:bg-[#0A0A0A] group-hover:text-white flex items-center justify-center transition-colors shrink-0">
+                          <Plus className="w-3.5 h-3.5" />
                         </div>
                       </div>
                     </div>
@@ -430,7 +430,7 @@ export default function POSBento() {
 
             <div className="shrink-0 flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-800">
               <div className="flex items-center gap-2.5">
-                <div className="p-2.5 bg-[#0A0A0A] text-white rounded-2xl shadow-xs">
+                <div className="p-2.5 bg-[#0A0A0A] text-[#FF5520] rounded-2xl shadow-xs">
                   <ShoppingCart className="w-5 h-5" />
                 </div>
                 <div>

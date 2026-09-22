@@ -15,7 +15,9 @@ public interface BillingFacade {
     List<NumberingRangeDto> listNumberingRanges();
     NumberingRangeDto getNumberingRange(Long numberingRangeId);
     NumberingRangeDto createNumberingRange(CreateNumberingRangeRequest request);
-    boolean deleteNumberingRange(Long numberingRangeId);
-    boolean toggleNumberingRangeStatus(Long numberingRangeId);
+    void deleteNumberingRange(Long numberingRangeId);
+    NumberingRangeDto toggleNumberingRangeStatus(Long numberingRangeId);
+
+    NumberingRangeDto updateNumberingRangeCurrent(Long numberingRangeId, Long current);
 }
 

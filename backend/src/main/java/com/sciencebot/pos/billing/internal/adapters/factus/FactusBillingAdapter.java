@@ -85,12 +85,17 @@ public class FactusBillingAdapter implements ElectronicInvoicingProvider {
     }
 
     @Override
-    public boolean deleteNumberingRange(Long numberingRangeId) {
-        return rangeClient.deleteNumberingRange(numberingRangeId);
+    public void deleteNumberingRange(Long numberingRangeId) {
+        rangeClient.deleteNumberingRange(numberingRangeId);
     }
 
     @Override
-    public boolean toggleNumberingRangeStatus(Long numberingRangeId) {
+    public NumberingRangeDto toggleNumberingRangeStatus(Long numberingRangeId) {
         return rangeClient.toggleNumberingRangeStatus(numberingRangeId);
+    }
+
+    @Override
+    public NumberingRangeDto updateNumberingRangeCurrent(Long numberingRangeId, Long current) {
+        return rangeClient.updateNumberingRangeCurrent(numberingRangeId, current);
     }
 }

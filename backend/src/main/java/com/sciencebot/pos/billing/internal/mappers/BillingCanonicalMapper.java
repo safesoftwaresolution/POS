@@ -9,7 +9,6 @@ import com.sciencebot.pos.products.ProductDto;
 import com.sciencebot.pos.products.ProductFacade;
 import com.sciencebot.pos.sales.SaleDto;
 import com.sciencebot.pos.sales.SaleItemDto;
-import com.sciencebot.pos.settings.SettingsFacade;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
@@ -24,16 +23,13 @@ public class BillingCanonicalMapper {
 
     private final CustomerFacade customerFacade;
     private final ProductFacade productFacade;
-    private final SettingsFacade settingsFacade;
 
     public BillingCanonicalMapper(
             @Lazy CustomerFacade customerFacade,
-            @Lazy ProductFacade productFacade,
-            @Lazy SettingsFacade settingsFacade
+            @Lazy ProductFacade productFacade
     ) {
         this.customerFacade = customerFacade;
         this.productFacade = productFacade;
-        this.settingsFacade = settingsFacade;
     }
 
     public InvoiceRequest toInvoiceRequest(SaleDto sale) {
@@ -45,17 +41,11 @@ public class BillingCanonicalMapper {
         List<InvoiceItemData> items = mapItems(sale.items());
         String paymentMethodCode = resolveDianPaymentMethod(sale.paymentMethod());
 
-        Integer numberingRangeId = null;
-        if (sale.storeId() != null && settingsFacade != null) {
-            numberingRangeId = settingsFacade.getBillingConfig(sale.storeId())
-                    .map(cfg -> cfg.factusNumberingRangeId())
-                    .orElse(null);
-        }
-
+        // El rango de numeración lo decide el adaptador del proveedor con la configuración del local.
         return new InvoiceRequest(
                 sale.id(),
                 sale.storeId(),
-                numberingRangeId,
+                null,
                 sale.invoiceNumber(),
                 "1", // 1 = Contado (Estándar DIAN)
                 paymentMethodCode,

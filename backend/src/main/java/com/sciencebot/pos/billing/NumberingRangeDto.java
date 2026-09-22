@@ -23,7 +23,7 @@ public record NumberingRangeDto(
         @Schema(description = "Consecutivo hasta", example = "5000")
         Long to,
 
-        @Schema(description = "Consecutivo actual", example = "1")
+        @Schema(description = "Consecutivo actual (el próximo número a usar)", example = "1")
         Long current,
 
         @Schema(description = "Fecha de inicio de vigencia", example = "2026-01-01")
@@ -36,6 +36,17 @@ public record NumberingRangeDto(
         String technicalKey,
 
         @Schema(description = "Indica si el rango está activo en Factus", example = "true")
-        Boolean isActive
-) {}
+        Boolean isActive,
 
+        @Schema(description = "Nombre del tipo de documento", example = "Factura de Venta")
+        String documentName,
+
+        @Schema(description = "Indica si la resolución ya venció", example = "false")
+        Boolean isExpired
+) {
+    public NumberingRangeDto(Long id, String document, String prefix, String resolutionNumber, Long from, Long to,
+                             Long current, String startDate, String endDate, String technicalKey, Boolean isActive) {
+        this(id, document, prefix, resolutionNumber, from, to, current, startDate, endDate, technicalKey,
+                isActive, null, null);
+    }
+}

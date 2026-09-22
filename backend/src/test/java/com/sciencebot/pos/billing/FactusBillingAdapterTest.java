@@ -143,7 +143,7 @@ class FactusBillingAdapterTest {
     @Test
     void createNumberingRange_DelegatesToRangeClient() {
         CreateNumberingRangeRequest request = new CreateNumberingRangeRequest(
-                "01", "SETP", "18764000001234", 1L, "2026-01-01", "2027-01-01", 1L, 5000L, "key-xyz"
+                "01", "SETP", "18764000001234", 1L
         );
         NumberingRangeDto expectedDto = new NumberingRangeDto(2L, "01", "SETP", "18764000001234", 1L, 5000L, 1L, "2026-01-01", "2027-01-01", "key-xyz", true);
         when(rangeClient.createNumberingRange(request)).thenReturn(expectedDto);
@@ -156,21 +156,30 @@ class FactusBillingAdapterTest {
 
     @Test
     void deleteNumberingRange_DelegatesToRangeClient() {
-        when(rangeClient.deleteNumberingRange(1L)).thenReturn(true);
+        adapter.deleteNumberingRange(1L);
 
-        boolean result = adapter.deleteNumberingRange(1L);
-
-        assertTrue(result);
         verify(rangeClient).deleteNumberingRange(1L);
     }
 
     @Test
     void toggleNumberingRangeStatus_DelegatesToRangeClient() {
-        when(rangeClient.toggleNumberingRangeStatus(1L)).thenReturn(true);
+        NumberingRangeDto expected = new NumberingRangeDto(1L, "01", "SETP", "18764", 1L, 1000L, 1L, "2026-01-01", "2027-01-01", "key", false);
+        when(rangeClient.toggleNumberingRangeStatus(1L)).thenReturn(expected);
 
-        boolean result = adapter.toggleNumberingRangeStatus(1L);
+        NumberingRangeDto result = adapter.toggleNumberingRangeStatus(1L);
 
-        assertTrue(result);
+        assertSame(expected, result);
         verify(rangeClient).toggleNumberingRangeStatus(1L);
+    }
+
+    @Test
+    void updateNumberingRangeCurrent_DelegatesToRangeClient() {
+        NumberingRangeDto expected = new NumberingRangeDto(1L, "01", "SETP", "18764", 1L, 1000L, 150L, "2026-01-01", "2027-01-01", "key", true);
+        when(rangeClient.updateNumberingRangeCurrent(1L, 150L)).thenReturn(expected);
+
+        NumberingRangeDto result = adapter.updateNumberingRangeCurrent(1L, 150L);
+
+        assertSame(expected, result);
+        verify(rangeClient).updateNumberingRangeCurrent(1L, 150L);
     }
 }

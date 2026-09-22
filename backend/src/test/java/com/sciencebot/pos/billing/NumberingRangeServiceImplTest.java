@@ -50,13 +50,14 @@ class NumberingRangeServiceImplTest {
         assertEquals(1L, singleRange.id());
 
         CreateNumberingRangeRequest createReq = new CreateNumberingRangeRequest(
-                "01", "SETP", "18764000001234", 1L, "2026-01-01", "2027-01-01", 1L, 5000L, "key"
+                "01", "SETP", "18764000001234", 1L
         );
         NumberingRangeDto created = service.createNumberingRange(createReq);
         assertNotNull(created);
         assertEquals(100L, created.id());
 
-        assertTrue(service.deleteNumberingRange(1L));
-        assertTrue(service.toggleNumberingRangeStatus(1L));
+        service.deleteNumberingRange(1L);
+        assertNotNull(service.toggleNumberingRangeStatus(1L));
+        assertEquals(150L, service.updateNumberingRangeCurrent(1L, 150L).current());
     }
 }

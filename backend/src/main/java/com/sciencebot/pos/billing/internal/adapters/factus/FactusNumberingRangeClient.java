@@ -3,10 +3,10 @@ package com.sciencebot.pos.billing.internal.adapters.factus;
 import com.sciencebot.pos.billing.CreateNumberingRangeRequest;
 import com.sciencebot.pos.billing.NumberingRangeDto;
 import com.sciencebot.pos.billing.internal.adapters.NumberingRangeProvider;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.HttpClientErrorException;
 
 import java.util.List;
 import java.util.Map;
@@ -14,16 +14,17 @@ import java.util.Objects;
 
 /**
  * Cliente especializado para la gestión y sincronización de rangos de numeración ante Factus y la DIAN.
+ * Trabaja con las credenciales del local de la solicitud en curso. Si Factus rechaza la llamada o no
+ * responde, lanza {@link com.sciencebot.pos.billing.FactusApiException} con el mensaje del proveedor.
  */
 @Component
 public class FactusNumberingRangeClient implements NumberingRangeProvider {
 
-    private static final Logger log = LoggerFactory.getLogger(FactusNumberingRangeClient.class);
+    private static final String BASE_PATH = "/v2/numbering-ranges";
 
     private final FactusClientHelper httpHelper;
     private final FactusNumberingRangeMapper rangeMapper;
 
-    @org.springframework.beans.factory.annotation.Autowired
     public FactusNumberingRangeClient(FactusClientHelper httpHelper, FactusNumberingRangeMapper rangeMapper) {
         this.httpHelper = httpHelper;
         this.rangeMapper = rangeMapper;
@@ -37,32 +38,18 @@ public class FactusNumberingRangeClient implements NumberingRangeProvider {
     @Override
     public List<NumberingRangeDto> queryDianNumberingRanges() {
         try {
-            @SuppressWarnings("unchecked")
-            Map<String, Object> response = httpHelper.authorizedGet("/v2/numbering-ranges/dian")
-                    .accept(MediaType.APPLICATION_JSON)
-                    .retrieve()
-                    .body(Map.class);
-
-            return rangeMapper.extractRangesList(response);
+            return rangeMapper.extractRangesList(getJson(BASE_PATH + "/dian"));
         } catch (Exception ex) {
-            log.error("Error al consultar rangos DIAN en Factus", ex);
-            return List.of();
+            throw httpHelper.translate("No se pudieron consultar los rangos asociados en la DIAN", ex);
         }
     }
 
     @Override
     public List<NumberingRangeDto> listNumberingRanges() {
         try {
-            @SuppressWarnings("unchecked")
-            Map<String, Object> response = httpHelper.authorizedGet("/v2/numbering-ranges")
-                    .accept(MediaType.APPLICATION_JSON)
-                    .retrieve()
-                    .body(Map.class);
-
-            return rangeMapper.extractRangesList(response);
+            return rangeMapper.extractRangesList(getJson(BASE_PATH));
         } catch (Exception ex) {
-            log.error("Error al listar rangos de numeración en Factus", ex);
-            return List.of();
+            throw httpHelper.translate("No se pudieron listar los rangos de numeración", ex);
         }
     }
 
@@ -70,19 +57,14 @@ public class FactusNumberingRangeClient implements NumberingRangeProvider {
     public NumberingRangeDto getNumberingRange(Long numberingRangeId) {
         Objects.requireNonNull(numberingRangeId, "El ID del rango de numeración es obligatorio");
         try {
-            @SuppressWarnings("unchecked")
-            Map<String, Object> response = httpHelper.authorizedGet("/v2/numbering-ranges/" + numberingRangeId)
-                    .accept(MediaType.APPLICATION_JSON)
-                    .retrieve()
-                    .body(Map.class);
-
-            if (response != null && response.get("data") instanceof Map<?, ?> dataMap) {
-                return rangeMapper.mapToDto(dataMap);
+            return rangeMapper.extractSingle(getJson(BASE_PATH + "/" + numberingRangeId));
+        } catch (HttpClientErrorException ex) {
+            if (ex.getStatusCode() == HttpStatus.NOT_FOUND) {
+                return null;
             }
-            return null;
+            throw httpHelper.translate("No se pudo consultar el rango de numeración " + numberingRangeId, ex);
         } catch (Exception ex) {
-            log.error("Error al obtener rango de numeración ID {}: {}", numberingRangeId, ex.getMessage(), ex);
-            return null;
+            throw httpHelper.translate("No se pudo consultar el rango de numeración " + numberingRangeId, ex);
         }
     }
 
@@ -90,51 +72,68 @@ public class FactusNumberingRangeClient implements NumberingRangeProvider {
     public NumberingRangeDto createNumberingRange(CreateNumberingRangeRequest request) {
         Objects.requireNonNull(request, "La solicitud de rango de numeración no puede ser nula");
         try {
-            Map<String, Object> payload = rangeMapper.toCreatePayload(request);
+            Map<String, Object> response = sendJson(httpHelper.authorizedPost(BASE_PATH), rangeMapper.toCreatePayload(request));
+            return rangeMapper.extractSingle(response);
+        } catch (Exception ex) {
+            throw httpHelper.translate("Factus no pudo registrar el rango de numeración", ex);
+        }
+    }
 
-            @SuppressWarnings("unchecked")
-            Map<String, Object> response = httpHelper.authorizedPost("/v2/numbering-ranges")
-                    .contentType(MediaType.APPLICATION_JSON)
+    @Override
+    public void deleteNumberingRange(Long numberingRangeId) {
+        Objects.requireNonNull(numberingRangeId, "El ID del rango de numeración es obligatorio");
+        try {
+            httpHelper.authorizedDelete(BASE_PATH + "/" + numberingRangeId)
                     .accept(MediaType.APPLICATION_JSON)
-                    .body(payload)
                     .retrieve()
-                    .body(Map.class);
-
-            if (response != null && response.get("data") instanceof Map<?, ?> dataMap) {
-                return rangeMapper.mapToDto(dataMap);
-            }
-            return null;
+                    .toBodilessEntity();
         } catch (Exception ex) {
-            log.error("Error al crear rango de numeración en Factus: {}", ex.getMessage(), ex);
-            throw new RuntimeException("Error al registrar rango de numeración en Factus: " + ex.getMessage(), ex);
+            throw httpHelper.translate("Factus no pudo eliminar el rango de numeración " + numberingRangeId, ex);
         }
     }
 
     @Override
-    public boolean deleteNumberingRange(Long numberingRangeId) {
+    public NumberingRangeDto toggleNumberingRangeStatus(Long numberingRangeId) {
         Objects.requireNonNull(numberingRangeId, "El ID del rango de numeración es obligatorio");
         try {
-            httpHelper.authorizedDelete("/v2/numbering-ranges/" + numberingRangeId)
-                    .retrieve()
-                    .toBodilessEntity();
-            return true;
+            Map<String, Object> response = sendJson(
+                    httpHelper.authorizedPatch(BASE_PATH + "/" + numberingRangeId + "/toggle-status"), null);
+            return rangeMapper.extractSingle(response);
         } catch (Exception ex) {
-            log.error("Error al eliminar rango de numeración ID {}: {}", numberingRangeId, ex.getMessage(), ex);
-            return false;
+            throw httpHelper.translate("Factus no pudo cambiar el estado del rango de numeración " + numberingRangeId, ex);
         }
     }
 
     @Override
-    public boolean toggleNumberingRangeStatus(Long numberingRangeId) {
+    public NumberingRangeDto updateNumberingRangeCurrent(Long numberingRangeId, Long current) {
         Objects.requireNonNull(numberingRangeId, "El ID del rango de numeración es obligatorio");
+        Objects.requireNonNull(current, "El consecutivo actual es obligatorio");
         try {
-            httpHelper.authorizedPatch("/v2/numbering-ranges/" + numberingRangeId + "/toggle-status")
-                    .retrieve()
-                    .toBodilessEntity();
-            return true;
+            Map<String, Object> response = sendJson(
+                    httpHelper.authorizedPatch(BASE_PATH + "/" + numberingRangeId + "/current"),
+                    Map.of("current", current));
+            return rangeMapper.extractSingle(response);
         } catch (Exception ex) {
-            log.error("Error al cambiar estado del rango de numeración ID {}: {}", numberingRangeId, ex.getMessage(), ex);
-            return false;
+            throw httpHelper.translate("Factus no pudo actualizar el consecutivo del rango " + numberingRangeId, ex);
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> getJson(String path) {
+        return httpHelper.authorizedGet(path)
+                .accept(MediaType.APPLICATION_JSON)
+                .retrieve()
+                .body(Map.class);
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> sendJson(org.springframework.web.client.RestClient.RequestBodySpec spec, Object body) {
+        org.springframework.web.client.RestClient.RequestBodySpec request = spec
+                .contentType(MediaType.APPLICATION_JSON)
+                .accept(MediaType.APPLICATION_JSON);
+        if (body != null) {
+            request = request.body(body);
+        }
+        return request.retrieve().body(Map.class);
     }
 }

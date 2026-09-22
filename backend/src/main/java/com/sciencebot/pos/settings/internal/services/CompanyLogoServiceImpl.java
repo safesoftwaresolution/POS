@@ -1,5 +1,7 @@
 package com.sciencebot.pos.settings.internal.services;
 
+import com.sciencebot.pos.billing.BillingNotEnabledException;
+import com.sciencebot.pos.billing.FactusApiException;
 import com.sciencebot.pos.billing.internal.adapters.factus.FactusTokenManager;
 import com.sciencebot.pos.config.TenantContext;
 import com.sciencebot.pos.settings.CompanyLogoResponseDto;
@@ -11,7 +13,6 @@ import com.sciencebot.pos.storage.StorageUploadResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -52,7 +53,6 @@ public class CompanyLogoServiceImpl implements CompanyLogoService {
     private final StorageFacade storageFacade;
     private final RestClient restClient;
 
-    @Value("${factus.url:https://api-sandbox.factus.com.co}")
     private String factusBaseUrl;
 
     @Autowired
@@ -102,10 +102,11 @@ public class CompanyLogoServiceImpl implements CompanyLogoService {
         // 5. Guardado local en base de datos (entidad Setting)
         String localLogoUrl = saveLocally(file, originalFilename);
 
-        // 6. Petición y sincronización con Factus API
-        syncLogoWithFactus(file, originalFilename);
+        // 6. Sincronización con Factus: solo si el local tiene la facturación electrónica activa.
+        //    Sin ella el logo se guarda igual, solo localmente.
+        boolean synced = syncLogoWithFactus(file, originalFilename);
 
-        log.info("Logo de la empresa actualizado y sincronizado correctamente. URL local: {}", localLogoUrl);
+        log.info("Logo de la empresa actualizado (sincronizado con Factus: {}). URL local: {}", synced, localLogoUrl);
 
         return new CompanyLogoResponseDto(
                 localLogoUrl,
@@ -113,8 +114,10 @@ public class CompanyLogoServiceImpl implements CompanyLogoService {
                 width,
                 height,
                 file.getSize(),
-                true,
-                "Logo actualizado en base de datos local y sincronizado exitosamente con Factus."
+                synced,
+                synced
+                        ? "Logo actualizado en base de datos local y sincronizado exitosamente con Factus."
+                        : "Logo actualizado en base de datos local. No se sincronizó con Factus porque la facturación electrónica del local no está activa."
         );
     }
 
@@ -223,14 +226,25 @@ public class CompanyLogoServiceImpl implements CompanyLogoService {
     /**
      * Sincroniza la imagen con Factus API enviando un POST multipart/form-data a /v2/companies/logo.
      */
-    private void syncLogoWithFactus(MultipartFile file, String originalFilename) {
-        String token = factusTokenManager != null ? factusTokenManager.getAccessToken() : null;
+    private boolean syncLogoWithFactus(MultipartFile file, String originalFilename) {
+        String token;
+        String baseUrl;
+        try {
+            token = factusTokenManager != null ? factusTokenManager.getAccessToken() : null;
+            String storeUrl = factusTokenManager != null ? factusTokenManager.getBaseUrl() : null;
+            baseUrl = (storeUrl != null && !storeUrl.isBlank()) ? storeUrl : factusBaseUrl;
+        } catch (BillingNotEnabledException ex) {
+            log.info("Logo no sincronizado con Factus: {}", ex.getMessage());
+            return false;
+        } catch (FactusApiException ex) {
+            throw new IllegalStateException("No se pudo autenticar con Factus para sincronizar el logo: " + ex.getMessage(), ex);
+        }
         if (token == null || token.isBlank()) {
             throw new IllegalStateException("No se pudo obtener el token de autenticación para Factus API.");
         }
 
-        String targetUrl = (factusBaseUrl != null && !factusBaseUrl.isBlank())
-                ? factusBaseUrl.replaceAll("/+$", "") + "/v2/companies/logo"
+        String targetUrl = (baseUrl != null && !baseUrl.isBlank())
+                ? baseUrl.replaceAll("/+$", "") + "/v2/companies/logo"
                 : "https://api-sandbox.factus.com.co/v2/companies/logo";
 
         try {
@@ -257,6 +271,7 @@ public class CompanyLogoServiceImpl implements CompanyLogoService {
                     .toBodilessEntity();
 
             log.info("Logo sincronizado exitosamente con Factus API en: {}", targetUrl);
+            return true;
 
         } catch (RestClientResponseException ex) {
             log.error("Error devuelto por Factus API (HTTP {}): {}", ex.getStatusCode(), ex.getResponseBodyAsString());

@@ -1,5 +1,6 @@
 package com.sciencebot.pos.exceptions;
 
+import com.sciencebot.pos.billing.FactusApiException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -52,6 +53,22 @@ public class GlobalExceptionHandler {
         response.put("error", "Forbidden");
         response.put("message", "No tiene permisos para realizar esta acción");
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+    }
+
+    /**
+     * Factus rechazó la llamada o no respondió. Se devuelve el motivo real: 422 si Factus objetó
+     * los datos enviados y 502 si rechazó las credenciales del local o no hay conexión.
+     */
+    @ExceptionHandler(FactusApiException.class)
+    public ResponseEntity<Map<String, String>> handleFactusApi(FactusApiException ex) {
+        int upstream = ex.getUpstreamStatus();
+        boolean badData = upstream >= 400 && upstream < 500 && !ex.isAuthenticationError();
+        HttpStatus status = badData ? HttpStatus.UNPROCESSABLE_ENTITY : HttpStatus.BAD_GATEWAY;
+
+        Map<String, String> response = new HashMap<>();
+        response.put("error", status.getReasonPhrase());
+        response.put("message", ex.getMessage());
+        return ResponseEntity.status(status).body(response);
     }
 
     @ExceptionHandler(IllegalStateException.class)

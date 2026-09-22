@@ -17,7 +17,9 @@ import java.util.Map;
 public class FactusNumberingRangeMapper {
 
     /**
-     * Construye el payload esperado por Factus v2 para registrar un nuevo rango de numeración.
+     * Construye el payload que Factus v2 espera para registrar un rango. Solo lleva lo que Factus
+     * acepta: el resto (desde, hasta, fechas y clave técnica) lo obtiene Factus de la DIAN.
+     * El consecutivo va como texto porque así lo define la documentación de "crear rango".
      */
     public Map<String, Object> toCreatePayload(CreateNumberingRangeRequest request) {
         if (request == null) {
@@ -25,41 +27,49 @@ public class FactusNumberingRangeMapper {
         }
         Map<String, Object> payload = new HashMap<>();
         payload.put("document", request.document());
-        if (request.prefix() != null) payload.put("prefix", request.prefix());
+        payload.put("prefix", request.prefix());
         payload.put("resolution_number", request.resolutionNumber());
-        payload.put("current", request.current());
-        if (request.startDate() != null) payload.put("start_date", request.startDate());
-        if (request.endDate() != null) payload.put("end_date", request.endDate());
-        if (request.from() != null) payload.put("from", request.from());
-        if (request.to() != null) payload.put("to", request.to());
-        if (request.technicalKey() != null) payload.put("technical_key", request.technicalKey());
+        payload.put("current", String.valueOf(request.current()));
         return payload;
     }
 
     /**
      * Extrae una lista de NumberingRangeDto desde una respuesta JSON de Factus API v2.
-     * Soporta tanto listas directas en 'data' como listas anidadas en 'data.data'.
+     * Acepta {@code data} como lista, como {@code data.data} (lista anidada) o como un único rango.
      */
     public List<NumberingRangeDto> extractRangesList(Map<String, Object> response) {
         List<NumberingRangeDto> list = new ArrayList<>();
-        if (response == null || !response.containsKey("data") || response.get("data") == null) {
+        if (response == null || response.get("data") == null) {
             return list;
         }
         Object dataObj = response.get("data");
         if (dataObj instanceof List<?> dataList) {
-            for (Object item : dataList) {
-                if (item instanceof Map<?, ?> itemMap) {
-                    list.add(mapToDto(itemMap));
-                }
-            }
-        } else if (dataObj instanceof Map<?, ?> dataMap && dataMap.get("data") instanceof List<?> nestedList) {
-            for (Object item : nestedList) {
-                if (item instanceof Map<?, ?> itemMap) {
-                    list.add(mapToDto(itemMap));
-                }
+            addAll(list, dataList);
+        } else if (dataObj instanceof Map<?, ?> dataMap) {
+            if (dataMap.get("data") instanceof List<?> nestedList) {
+                addAll(list, nestedList);
+            } else if (!dataMap.isEmpty()) {
+                list.add(mapToDto(dataMap));
             }
         }
         return list;
+    }
+
+    /**
+     * Extrae un único rango de una respuesta de Factus: normalmente en {@code data}, y si la
+     * respuesta trae el rango directamente, de la raíz. Devuelve {@code null} si no hay rango.
+     */
+    public NumberingRangeDto extractSingle(Map<String, Object> response) {
+        if (response == null) {
+            return null;
+        }
+        if (response.get("data") instanceof Map<?, ?> dataMap) {
+            return mapToDto(dataMap);
+        }
+        if (response.containsKey("id")) {
+            return mapToDto(response);
+        }
+        return null;
     }
 
     /**
@@ -69,21 +79,44 @@ public class FactusNumberingRangeMapper {
         if (map == null) {
             return null;
         }
-        Long id = parseLongValue(map.get("id"));
-        String document = map.get("document") != null ? map.get("document").toString() : null;
-        String prefix = map.get("prefix") != null ? map.get("prefix").toString() : null;
-        String resolutionNumber = map.get("resolution_number") != null ? map.get("resolution_number").toString() : null;
-        Long from = parseLongValue(map.get("from"));
-        Long to = parseLongValue(map.get("to"));
-        Long current = parseLongValue(map.get("current"));
-        String startDate = map.get("start_date") != null ? map.get("start_date").toString() : null;
-        String endDate = map.get("end_date") != null ? map.get("end_date").toString() : null;
-        String technicalKey = map.get("technical_key") != null ? map.get("technical_key").toString() : null;
-        Boolean isActive = map.get("is_active") instanceof Boolean b
-                ? b
-                : (map.get("is_active") instanceof Number n ? n.intValue() == 1 : null);
+        return new NumberingRangeDto(
+                parseLongValue(map.get("id")),
+                text(map.get("document")),
+                text(map.get("prefix")),
+                text(map.get("resolution_number")),
+                parseLongValue(map.get("from")),
+                parseLongValue(map.get("to")),
+                parseLongValue(map.get("current")),
+                text(map.get("start_date")),
+                text(map.get("end_date")),
+                text(map.get("technical_key")),
+                flag(map.get("is_active")),
+                text(map.get("document_name")),
+                flag(map.get("is_expired"))
+        );
+    }
 
-        return new NumberingRangeDto(id, document, prefix, resolutionNumber, from, to, current, startDate, endDate, technicalKey, isActive);
+    private void addAll(List<NumberingRangeDto> target, List<?> items) {
+        for (Object item : items) {
+            if (item instanceof Map<?, ?> itemMap) {
+                target.add(mapToDto(itemMap));
+            }
+        }
+    }
+
+    private String text(Object value) {
+        return value != null ? value.toString() : null;
+    }
+
+    /** Factus manda 1 o 0; se aceptan también booleanos. */
+    private Boolean flag(Object value) {
+        if (value instanceof Boolean b) {
+            return b;
+        }
+        if (value instanceof Number n) {
+            return n.intValue() == 1;
+        }
+        return null;
     }
 
     private Long parseLongValue(Object value) {

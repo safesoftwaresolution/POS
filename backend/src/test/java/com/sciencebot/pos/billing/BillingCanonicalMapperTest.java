@@ -10,8 +10,6 @@ import com.sciencebot.pos.products.ProductDto;
 import com.sciencebot.pos.products.ProductFacade;
 import com.sciencebot.pos.sales.SaleDto;
 import com.sciencebot.pos.sales.SaleItemDto;
-import com.sciencebot.pos.settings.SettingsFacade;
-import com.sciencebot.pos.settings.StoreBillingConfigDto;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -33,15 +31,13 @@ class BillingCanonicalMapperTest {
     @Mock
     private ProductFacade productFacade;
 
-    @Mock
-    private SettingsFacade settingsFacade;
 
     private BillingCanonicalMapper mapper;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        mapper = new BillingCanonicalMapper(customerFacade, productFacade, settingsFacade);
+        mapper = new BillingCanonicalMapper(customerFacade, productFacade);
     }
 
     @Test
@@ -69,15 +65,11 @@ class BillingCanonicalMapperTest {
                 "carlos.admin", List.of(item), "CARD"
         );
 
-        when(settingsFacade.getBillingConfig(5L)).thenReturn(Optional.of(
-                new StoreBillingConfigDto(5L, true, "client-id", "client-secret", "user", "pass", 88)
-        ));
-
         InvoiceRequest request = mapper.toInvoiceRequest(sale);
 
         assertNotNull(request);
         assertEquals(5L, request.storeId());
-        assertEquals(88, request.numberingRangeId());
+        assertNull(request.numberingRangeId(), "el rango lo decide el adaptador con la configuración del local");
         assertEquals("48", request.paymentMethodCode()); // CARD -> 48
 
         CustomerBillingData custData = request.customer();

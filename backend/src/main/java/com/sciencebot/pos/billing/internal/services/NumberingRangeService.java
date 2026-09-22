@@ -18,7 +18,9 @@ public interface NumberingRangeService {
 
     NumberingRangeDto createNumberingRange(CreateNumberingRangeRequest request);
 
-    boolean deleteNumberingRange(Long numberingRangeId);
+    void deleteNumberingRange(Long numberingRangeId);
 
-    boolean toggleNumberingRangeStatus(Long numberingRangeId);
+    NumberingRangeDto toggleNumberingRangeStatus(Long numberingRangeId);
+
+    NumberingRangeDto updateNumberingRangeCurrent(Long numberingRangeId, Long current);
 }

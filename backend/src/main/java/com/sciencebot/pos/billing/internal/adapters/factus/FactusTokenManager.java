@@ -1,156 +1,148 @@
 package com.sciencebot.pos.billing.internal.adapters.factus;
 
+import com.sciencebot.pos.billing.BillingEnvironment;
+import com.sciencebot.pos.billing.FactusApiException;
 import com.sciencebot.pos.billing.internal.adapters.dto.FactusTokenResponse;
-import com.sciencebot.pos.config.TenantContext;
-import com.sciencebot.pos.settings.SettingsFacade;
-import com.sciencebot.pos.settings.StoreBillingConfigDto;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientResponseException;
 
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.LongSupplier;
 
+/**
+ * Obtiene y guarda en memoria el access_token de Factus de cada local y entorno.
+ * Usa siempre las credenciales que el super admin cargó para ese local; no hay credenciales globales.
+ */
 @Component
 public class FactusTokenManager {
 
-    private static final Logger log = LoggerFactory.getLogger(FactusTokenManager.class);
+    private record CacheKey(Long storeId, BillingEnvironment environment) {}
 
-    private record CachedToken(String token, long expiresAtMillis) {}
+    private record CachedToken(String token, long expiresAtMillis, String fingerprint) {}
 
-    @Value("${factus.url:https://api-sandbox.factus.com.co}")
-    private String factusUrl;
-
-    @Value("${factus.client-id:}")
-    private String clientId;
-
-    @Value("${factus.client-secret:}")
-    private String clientSecret;
-
-    @Value("${factus.username:}")
-    private String username;
-
-    @Value("${factus.password:}")
-    private String password;
+    private static final int DEFAULT_EXPIRES_IN_SECONDS = 3600;
+    private static final int SAFETY_MARGIN_SECONDS = 60;
 
     private final RestClient restClient;
-    private final SettingsFacade settingsFacade;
-    private final Map<Long, CachedToken> storeTokens = new ConcurrentHashMap<>();
+    private final FactusCredentialsResolver resolver;
+    private final LongSupplier clock;
+    private final Map<CacheKey, CachedToken> tokens = new ConcurrentHashMap<>();
+    /** Un candado por local y entorno: un local lento no frena a los demás. */
+    private final Map<CacheKey, Object> locks = new ConcurrentHashMap<>();
 
     @Autowired
-    public FactusTokenManager(@Lazy SettingsFacade settingsFacade) {
-        this.restClient = RestClient.create();
-        this.settingsFacade = settingsFacade;
+    public FactusTokenManager(FactusCredentialsResolver resolver) {
+        this(RestClient.create(), resolver, System::currentTimeMillis);
     }
 
-    public FactusTokenManager() {
-        this.restClient = RestClient.create();
-        this.settingsFacade = null;
-    }
-
-    public FactusTokenManager(
-            Optional<RestClient.Builder> restClientBuilder,
-            @Value("${factus.url:https://api-sandbox.factus.com.co}") String factusUrl,
-            @Value("${factus.client-id:}") String clientId,
-            @Value("${factus.client-secret:}") String clientSecret,
-            @Value("${factus.username:}") String username,
-            @Value("${factus.password:}") String password) {
-
-        this.restClient = restClientBuilder
-                .map(RestClient.Builder::build)
-                .orElse(RestClient.create());
-        this.factusUrl = factusUrl;
-        this.clientId = clientId;
-        this.clientSecret = clientSecret;
-        this.username = username;
-        this.password = password;
-        this.settingsFacade = null;
-    }
-
-    // Constructor para testing
-    public FactusTokenManager(RestClient restClient, String factusUrl, String clientId, String clientSecret, String username, String password) {
+    public FactusTokenManager(RestClient restClient, FactusCredentialsResolver resolver, LongSupplier clock) {
         this.restClient = restClient;
-        this.factusUrl = factusUrl;
-        this.clientId = clientId;
-        this.clientSecret = clientSecret;
-        this.username = username;
-        this.password = password;
-        this.settingsFacade = null;
+        this.resolver = resolver;
+        this.clock = clock;
     }
 
-    /**
-     * Obtiene un access_token para la tienda del contexto actual o global.
-     */
+    /** Token del local de la solicitud en curso. */
     public String getAccessToken() {
-        return getAccessToken(TenantContext.getStoreId());
+        return getAccessToken((Long) null);
     }
 
-    /**
-     * Obtiene un access_token válido para la API de Factus específico de la tienda.
-     */
-    public synchronized String getAccessToken(Long storeId) {
-        Long cacheKey = storeId != null ? storeId : 0L;
+    /** Token de un local (nulo = el de la solicitud en curso). Exige facturación activa. */
+    public String getAccessToken(Long storeId) {
+        return getAccessToken(resolver.resolve(storeId));
+    }
 
-        CachedToken cached = storeTokens.get(cacheKey);
-        if (cached != null && System.currentTimeMillis() < cached.expiresAtMillis()) {
+    public String getAccessToken(FactusAccess access) {
+        CacheKey key = new CacheKey(access.storeId(), access.environment());
+        String fingerprint = access.fingerprint();
+
+        CachedToken cached = tokens.get(key);
+        if (isUsable(cached, fingerprint)) {
             return cached.token();
         }
 
-        String targetClientId = this.clientId;
-        String targetClientSecret = this.clientSecret;
-        String targetUsername = this.username;
-        String targetPassword = this.password;
-
-        if (storeId != null && settingsFacade != null) {
-            Optional<StoreBillingConfigDto> configOpt = settingsFacade.getBillingConfig(storeId);
-            if (configOpt.isPresent()) {
-                StoreBillingConfigDto cfg = configOpt.get();
-                if (cfg.factusClientId() != null && !cfg.factusClientId().isBlank()
-                        && cfg.factusUsername() != null && !cfg.factusUsername().isBlank()) {
-                    targetClientId = cfg.factusClientId();
-                    targetClientSecret = cfg.factusClientSecret() != null ? cfg.factusClientSecret() : "";
-                    targetUsername = cfg.factusUsername();
-                    targetPassword = cfg.factusPassword() != null ? cfg.factusPassword() : "";
-                }
+        synchronized (locks.computeIfAbsent(key, k -> new Object())) {
+            cached = tokens.get(key);
+            if (isUsable(cached, fingerprint)) {
+                return cached.token();
             }
+            CachedToken fresh = requestToken(access, fingerprint);
+            tokens.put(key, fresh);
+            return fresh.token();
+        }
+    }
+
+    /** URL de Factus del entorno del local de la solicitud en curso. */
+    public String getBaseUrl() {
+        return resolver.resolve(null).baseUrl();
+    }
+
+    /** Descarta los tokens guardados de un local (ambos entornos). */
+    public void invalidate(Long storeId) {
+        if (storeId == null) {
+            return;
+        }
+        for (BillingEnvironment environment : BillingEnvironment.values()) {
+            tokens.remove(new CacheKey(storeId, environment));
+        }
+    }
+
+    /**
+     * Pide un token nuevo con las credenciales guardadas del local, aunque todavía no esté activo.
+     * Lanza {@link FactusApiException} si Factus las rechaza.
+     */
+    public void verifyConnection(Long storeId) {
+        FactusAccess access = resolver.resolveIgnoringStatus(storeId);
+        CacheKey key = new CacheKey(access.storeId(), access.environment());
+        synchronized (locks.computeIfAbsent(key, k -> new Object())) {
+            tokens.put(key, requestToken(access, access.fingerprint()));
+        }
+    }
+
+    private boolean isUsable(CachedToken cached, String fingerprint) {
+        return cached != null
+                && cached.fingerprint().equals(fingerprint)
+                && clock.getAsLong() < cached.expiresAtMillis();
+    }
+
+    private CachedToken requestToken(FactusAccess access, String fingerprint) {
+        MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
+        form.add("grant_type", "password");
+        form.add("client_id", access.clientId());
+        form.add("client_secret", access.clientSecret());
+        form.add("username", access.username());
+        form.add("password", access.password());
+
+        FactusTokenResponse response;
+        try {
+            response = restClient.post()
+                    .uri(access.baseUrl() + "/oauth/token")
+                    .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                    .accept(MediaType.APPLICATION_JSON)
+                    .body(form)
+                    .retrieve()
+                    .body(FactusTokenResponse.class);
+        } catch (RestClientResponseException ex) {
+            int status = ex.getStatusCode().value();
+            throw new FactusApiException(status,
+                    "Factus no aceptó las credenciales del local en " + access.environment()
+                            + " (HTTP " + status + ")", ex);
+        } catch (ResourceAccessException ex) {
+            throw new FactusApiException(0, "No se pudo conectar con Factus: " + ex.getMessage(), ex);
         }
 
-        MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();
-        formData.add("grant_type", "password");
-        formData.add("client_id", targetClientId != null ? targetClientId : "");
-        formData.add("client_secret", targetClientSecret != null ? targetClientSecret : "");
-        formData.add("username", targetUsername != null ? targetUsername : "");
-        formData.add("password", targetPassword != null ? targetPassword : "");
-
-        String targetUrl = (factusUrl != null && !factusUrl.isBlank())
-                ? factusUrl
-                : "https://api-sandbox.factus.com.co";
-
-        FactusTokenResponse response = restClient.post()
-                .uri(targetUrl + "/oauth/token")
-                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-                .accept(MediaType.APPLICATION_JSON)
-                .body(formData)
-                .retrieve()
-                .body(FactusTokenResponse.class);
-
-        if (response == null || response.accessToken() == null) {
-            throw new IllegalStateException("No se pudo obtener el token de autenticación desde Factus API. Respuesta nula o inválida.");
+        if (response == null || response.accessToken() == null || response.accessToken().isBlank()) {
+            throw new FactusApiException(0, "Factus respondió sin un token de acceso válido", null);
         }
 
-        String token = response.accessToken();
-        int expiresInSeconds = (response.expiresIn() != null) ? response.expiresIn() : 3600;
-        long expiresAtMillis = System.currentTimeMillis() + ((expiresInSeconds - 60) * 1000L);
-
-        storeTokens.put(cacheKey, new CachedToken(token, expiresAtMillis));
-        return token;
+        int expiresIn = response.expiresIn() != null ? response.expiresIn() : DEFAULT_EXPIRES_IN_SECONDS;
+        long expiresAt = clock.getAsLong() + Math.max(0, expiresIn - SAFETY_MARGIN_SECONDS) * 1000L;
+        return new CachedToken(response.accessToken(), expiresAt, fingerprint);
     }
 }

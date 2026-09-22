@@ -56,13 +56,18 @@ public class NumberingRangeServiceImpl implements NumberingRangeService {
     }
 
     @Override
-    public boolean deleteNumberingRange(Long numberingRangeId) {
-        return resolveProvider().deleteNumberingRange(numberingRangeId);
+    public void deleteNumberingRange(Long numberingRangeId) {
+        resolveProvider().deleteNumberingRange(numberingRangeId);
     }
 
     @Override
-    public boolean toggleNumberingRangeStatus(Long numberingRangeId) {
+    public NumberingRangeDto toggleNumberingRangeStatus(Long numberingRangeId) {
         return resolveProvider().toggleNumberingRangeStatus(numberingRangeId);
+    }
+
+    @Override
+    public NumberingRangeDto updateNumberingRangeCurrent(Long numberingRangeId, Long current) {
+        return resolveProvider().updateNumberingRangeCurrent(numberingRangeId, current);
     }
 
     private NumberingRangeProvider resolveProvider() {

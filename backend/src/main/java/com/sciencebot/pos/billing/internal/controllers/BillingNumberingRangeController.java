@@ -2,6 +2,7 @@ package com.sciencebot.pos.billing.internal.controllers;
 
 import com.sciencebot.pos.billing.CreateNumberingRangeRequest;
 import com.sciencebot.pos.billing.NumberingRangeDto;
+import com.sciencebot.pos.billing.UpdateNumberingRangeCurrentRequest;
 import com.sciencebot.pos.billing.internal.services.NumberingRangeService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -77,31 +78,37 @@ public class BillingNumberingRangeController {
     @PreAuthorize("hasRole('ADMINISTRATOR')")
     @Operation(
             summary = "Eliminar rango de numeración en Factus",
-            description = "Elimina un rango de numeración (solo si no tiene facturas emitidas asociadas)."
+            description = "Elimina un rango de numeración. Si ya tuvo facturas, Factus lo deja marcado como eliminado en lugar de borrarlo."
     )
     public ResponseEntity<Void> deleteNumberingRange(
             @Parameter(description = "ID del rango de numeración a eliminar", example = "14", required = true)
             @PathVariable Long id) {
-        boolean deleted = numberingRangeService.deleteNumberingRange(id);
-        if (deleted) {
-            return ResponseEntity.noContent().build();
-        }
-        return ResponseEntity.badRequest().build();
+        numberingRangeService.deleteNumberingRange(id);
+        return ResponseEntity.noContent().build();
     }
 
     @PatchMapping("/{id}/toggle-status")
     @PreAuthorize("hasRole('ADMINISTRATOR')")
     @Operation(
             summary = "Cambiar estado (activo/inactivo) de un rango de numeración",
-            description = "Alterna el estado de activación de un rango de numeración en Factus."
+            description = "Alterna el estado de activación de un rango de numeración en Factus y devuelve el rango actualizado."
     )
-    public ResponseEntity<Void> toggleNumberingRangeStatus(
+    public ResponseEntity<NumberingRangeDto> toggleNumberingRangeStatus(
             @Parameter(description = "ID del rango de numeración", example = "14", required = true)
             @PathVariable Long id) {
-        boolean toggled = numberingRangeService.toggleNumberingRangeStatus(id);
-        if (toggled) {
-            return ResponseEntity.ok().build();
-        }
-        return ResponseEntity.badRequest().build();
+        return ResponseEntity.ok(numberingRangeService.toggleNumberingRangeStatus(id));
+    }
+
+    @PatchMapping("/{id}/current")
+    @PreAuthorize("hasRole('ADMINISTRATOR')")
+    @Operation(
+            summary = "Actualizar el consecutivo actual de un rango de numeración",
+            description = "Cambia el próximo número a usar. Útil cuando el local ya venía facturando con otro software."
+    )
+    public ResponseEntity<NumberingRangeDto> updateNumberingRangeCurrent(
+            @Parameter(description = "ID del rango de numeración", example = "14", required = true)
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateNumberingRangeCurrentRequest request) {
+        return ResponseEntity.ok(numberingRangeService.updateNumberingRangeCurrent(id, request.current()));
     }
 }

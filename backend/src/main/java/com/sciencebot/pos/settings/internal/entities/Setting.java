@@ -39,24 +39,6 @@ public class Setting {
     @Column(name = "logo_url", length = 255)
     private String logoUrl;
 
-    @Column(name = "factus_client_id", length = 255)
-    private String factusClientId;
-
-    @Column(name = "factus_client_secret", length = 255)
-    private String factusClientSecret;
-
-    @Column(name = "factus_username", length = 255)
-    private String factusUsername;
-
-    @Column(name = "factus_password", length = 255)
-    private String factusPassword;
-
-    @Column(name = "factus_numbering_range_id")
-    private Integer factusNumberingRangeId;
-
-    @Column(name = "factus_enabled", nullable = false)
-    private boolean factusEnabled = false;
-
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 

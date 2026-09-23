@@ -1,9 +1,9 @@
 package com.sciencebot.pos.settings.internal.services;
 
-import com.sciencebot.pos.billing.BillingNotEnabledException;
-import com.sciencebot.pos.billing.FactusApiException;
+import com.sciencebot.pos.billing.exception.BillingNotEnabledException;
+import com.sciencebot.pos.billing.exception.FactusApiException;
 import com.sciencebot.pos.billing.internal.adapters.factus.FactusTokenManager;
-import com.sciencebot.pos.config.TenantContext;
+import com.sciencebot.pos.config.tenant.TenantContext;
 import com.sciencebot.pos.settings.CompanyLogoResponseDto;
 import com.sciencebot.pos.settings.CompanyLogoService;
 import com.sciencebot.pos.settings.internal.entities.Setting;

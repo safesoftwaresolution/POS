@@ -1,7 +1,7 @@
 package com.sciencebot.pos.settings;
 
 import com.sciencebot.pos.billing.internal.adapters.factus.FactusTokenManager;
-import com.sciencebot.pos.config.TenantContext;
+import com.sciencebot.pos.config.tenant.TenantContext;
 import com.sciencebot.pos.settings.internal.entities.Setting;
 import com.sciencebot.pos.settings.internal.repositories.SettingsRepository;
 import com.sciencebot.pos.settings.internal.services.CompanyLogoServiceImpl;
@@ -120,7 +120,7 @@ class CompanyLogoServiceTest {
     @Test
     void updateLogo_savesLocallyWithoutCallingFactus_whenStoreBillingIsNotActive() throws Exception {
         when(factusTokenManager.getAccessToken())
-                .thenThrow(new com.sciencebot.pos.billing.BillingNotEnabledException("no activo"));
+                .thenThrow(new com.sciencebot.pos.billing.exception.BillingNotEnabledException("no activo"));
         MockMultipartFile file = new MockMultipartFile("file", "logo.png", "image/png", createImageBytes(100, 100, "png"));
         when(storageFacade.uploadFile(eq(file), eq("logos"))).thenReturn(
                 new StorageUploadResult("logos/l.png", "https://pub.r2.dev/logos/l.png", "logo.png", file.getSize(), "image/png"));

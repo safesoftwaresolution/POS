@@ -15,19 +15,5 @@ public record SettingsDto(
         @Schema(description = "Correo electrónico del negocio", example = "info@tienda.com")
         String email,
         @Schema(description = "URL del logo del negocio", example = "https://storage.example.com/logo.png")
-        String logoUrl,
-        @Schema(description = "Client ID para Factus API", example = "client_xyz")
-        String factusClientId,
-        @Schema(description = "Si tiene configurado client_secret en Factus", example = "true")
-        Boolean factusHasSecret,
-        @Schema(description = "Username para Factus API", example = "empresa@factus.co")
-        String factusUsername,
-        @Schema(description = "ID del rango de numeración DIAN en Factus", example = "8")
-        Integer factusNumberingRangeId,
-        @Schema(description = "Indica si la facturación electrónica Factus está habilitada", example = "true")
-        boolean factusEnabled
-) {
-    public SettingsDto(String businessName, String address, String phone, String taxId, String email, String logoUrl) {
-        this(businessName, address, phone, taxId, email, logoUrl, null, false, null, null, false);
-    }
-}
+        String logoUrl
+) {}

@@ -1,4 +1,8 @@
-package com.sciencebot.pos.billing;
+package com.sciencebot.pos.billing.api;
+
+import com.sciencebot.pos.billing.dto.CreateNumberingRangeRequest;
+import com.sciencebot.pos.billing.dto.ElectronicInvoiceDto;
+import com.sciencebot.pos.billing.dto.NumberingRangeDto;
 
 import com.sciencebot.pos.sales.SaleDto;
 import java.util.List;

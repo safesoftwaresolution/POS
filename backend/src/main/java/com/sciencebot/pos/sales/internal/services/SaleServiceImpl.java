@@ -1,6 +1,6 @@
 package com.sciencebot.pos.sales.internal.services;
 
-import com.sciencebot.pos.config.TenantContext;
+import com.sciencebot.pos.config.tenant.TenantContext;
 import com.sciencebot.pos.sales.*;
 import com.sciencebot.pos.sales.internal.entities.Sale;
 import com.sciencebot.pos.sales.internal.entities.SaleItem;
@@ -46,7 +46,7 @@ public class SaleServiceImpl implements SaleFacade {
     private final ProductFacade productFacade;
     private final InventoryFacade inventoryFacade;
     private final UserFacade userFacade;
-    private final com.sciencebot.pos.billing.BillingFacade billingFacade;
+    private final com.sciencebot.pos.billing.api.BillingFacade billingFacade;
 
     public SaleServiceImpl(
             SaleRepository saleRepository,
@@ -58,7 +58,7 @@ public class SaleServiceImpl implements SaleFacade {
             @Lazy ProductFacade productFacade,
             @Lazy InventoryFacade inventoryFacade,
             @Lazy UserFacade userFacade,
-            @Lazy com.sciencebot.pos.billing.BillingFacade billingFacade
+            @Lazy com.sciencebot.pos.billing.api.BillingFacade billingFacade
     ) {
         this.saleRepository = saleRepository;
         this.saleItemRepository = saleItemRepository;

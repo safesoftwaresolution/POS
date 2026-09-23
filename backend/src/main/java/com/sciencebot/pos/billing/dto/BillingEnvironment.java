@@ -1,4 +1,4 @@
-package com.sciencebot.pos.billing;
+package com.sciencebot.pos.billing.dto;
 
 /** Entorno del proveedor de facturacion contra el que trabaja un local. */
 public enum BillingEnvironment {

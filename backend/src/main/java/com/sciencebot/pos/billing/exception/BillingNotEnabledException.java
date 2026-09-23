@@ -1,4 +1,4 @@
-package com.sciencebot.pos.billing;
+package com.sciencebot.pos.billing.exception;
 
 /**
  * El local no puede usar la facturación electrónica todavía: no la pidió, no está activa,

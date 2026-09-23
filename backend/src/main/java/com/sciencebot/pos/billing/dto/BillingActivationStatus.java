@@ -1,4 +1,4 @@
-package com.sciencebot.pos.billing;
+package com.sciencebot.pos.billing.dto;
 
 import java.util.Set;
 

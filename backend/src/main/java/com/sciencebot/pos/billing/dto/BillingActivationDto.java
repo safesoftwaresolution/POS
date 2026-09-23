@@ -1,4 +1,4 @@
-package com.sciencebot.pos.billing;
+package com.sciencebot.pos.billing.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
@@ -16,7 +16,9 @@ public record BillingActivationDto(
         BillingEnvironment environment,
         boolean sandboxConfigured,
         boolean productionConfigured,
+        @Schema(description = "Rango de numeración que el local eligió para sandbox (solo lectura para el back office)")
         Integer sandboxNumberingRangeId,
+        @Schema(description = "Rango de numeración que el local eligió para producción (solo lectura para el back office)")
         Integer productionNumberingRangeId,
         LocalDateTime updatedAt
 ) {}

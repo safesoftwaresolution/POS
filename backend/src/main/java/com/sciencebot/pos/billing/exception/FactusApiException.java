@@ -1,4 +1,4 @@
-package com.sciencebot.pos.billing;
+package com.sciencebot.pos.billing.exception;
 
 /**
  * Factus rechazó una llamada o no se pudo llegar a Factus. Lleva el mensaje del proveedor para

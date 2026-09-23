@@ -65,9 +65,13 @@ Requests are scoped to a store. `JwtAuthenticationFilter` extracts `storeId` fro
 ### Billing adapter strategy
 Electronic invoicing is decoupled behind `ElectronicInvoicingProvider` in `billing/internal/adapters/`. Implementation is selected by the `billing.provider` property (`factus` → real DIAN sandbox via `FactusBillingAdapter`, `mock` → `MockBillingAdapter`). Add new providers as adapters selected by this property; don't hardcode a provider in services.
 
+### Billing credentials are per store, never global
+Factus credentials live **encrypted in `store_billing_config`** (one row per store, one credential set per environment), loaded only by `SUPER_ADMIN` through `/api/v1/backoffice/stores/{storeId}/billing/credentials`. There are **no** `FACTUS_CLIENT_ID`/`SECRET`/`USERNAME`/`PASSWORD` env vars anymore and **no fallback** to a platform account: `FactusCredentialsResolver` throws `BillingNotEnabledException` when a store isn't `ACTIVE` or lacks credentials, so a store can never consume another store's DIAN document quota. `BILLING_ENCRYPTION_KEY` (32-byte Base64, AES-256-GCM) is the only billing secret outside the DB. Numbering-range writes are guarded (range in use protected, one active range per document type, consecutive never goes backwards) and audited in `numbering_range_audit`. The active range per environment is chosen by the store's `ADMINISTRATOR` (`POST /api/v1/billing/numbering-ranges/{id}/set-default`), not by `SUPER_ADMIN`. See `backend/docs/modules/billing/spec.md`.
+
 ### Database & migrations
-- Schema changes go through **Flyway** SQL migrations in `backend/src/main/resources/db/migration/` (`V1__Initial_Schema.sql`, `V2__Factus_Integration.sql`, `V3__Multitenancy_And_Backoffice.sql`). Add the next `V#__Description.sql` — never edit an applied migration.
-- Production profile sets `ddl-auto=validate` (JPA never generates tables). The `dev` profile uses H2 with `ddl-auto=update` + Flyway enabled.
+- Schema changes go through **Flyway** SQL migrations in `backend/src/main/resources/db/migration/` (`V1__Initial_Schema.sql` … `V17__Numbering_Range_Audit_Set_Default.sql`). Add the next `V#__Description.sql` — never edit an applied migration.
+- Flyway owns the schema in **both** `dev` and `prod`: `ddl-auto=validate` everywhere, so JPA never generates tables and any drift between entities and the migrated schema fails startup. Only the `test` profile lets Hibernate build the schema (`create-drop`, Flyway disabled); the `V*MigrationSqlTest` classes run Flyway by hand against their own in-memory H2.
+- Migrations that touch data must also be safe on H2 (the `dev` default): H2 2.4.x has a known bug validating `CHECK … IN (…)` constraints from a connection other than the one that created them.
 
 ## Frontend Architecture
 
@@ -78,6 +82,6 @@ Electronic invoicing is decoupled behind `ElectronicInvoicingProvider` in `billi
 
 ## Environment
 
-Backend config is env-var driven (see README "Variables de Entorno"): `SPRING_PROFILES_ACTIVE`, `SPRING_DATASOURCE_*`, `JWT_SECRET`, `JWT_EXPIRATION_MS`, `BILLING_PROVIDER`, `FACTUS_*`. The frontend needs no env vars.
+Backend config is env-var driven (see README "Variables de Entorno"): `SPRING_PROFILES_ACTIVE`, `SPRING_DATASOURCE_*`, `JWT_SECRET`, `JWT_EXPIRATION_MS`, `BILLING_PROVIDER`, `BILLING_ENCRYPTION_KEY`, `FACTUS_URL_SANDBOX`/`FACTUS_URL_PRODUCTION` (public URLs only — credentials are per store, in the DB), `R2_*`. The frontend needs no env vars.
 
 Roles: `SUPER_ADMIN` (platform/back-office level, no `store_id` — SaaS metrics, store lifecycle/KYC, legal docs, support, and the only role allowed to write the global `categories` catalog), `ADMINISTRATOR` (full control of one store), `SUPERVISOR` (purchases, inventory, customers, invoice retries), `SELLER` (cash sales, catalog). All but `SUPER_ADMIN` carry a `store_id` and are scoped to their own tenant.

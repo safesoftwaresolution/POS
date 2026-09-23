@@ -1,4 +1,4 @@
-<!-- doc-version: 1.3 | last-updated: 2026-08-20 -->
+<!-- doc-version: 1.4 | last-updated: 2026-09-22 -->
 # Seguridad del Sistema
 
 ## Autenticación (JWT + Refresh Token)
@@ -33,3 +33,32 @@
 | Usuarios Local | CRUD | CRUD (Local) | - | - | - |
 | Productos Local | R | CRUD | CRU | R | - |
 | Ventas Local | R | CRUD | CRUD | CRU | - |
+| Credenciales de Facturación Electrónica | CRUD | - | - | - | - |
+| Estado de Facturación del propio local | - | R / Solicitar | R | - | - |
+| Rangos de Numeración DIAN | - | CRUD | R | - | - |
+
+## Credenciales de Facturación Electrónica (Factus)
+
+Las credenciales que el proveedor entrega por local son el secreto más sensible del sistema después del
+`JWT_SECRET`: con ellas se emiten documentos legales ante la DIAN consumiendo la bolsa de un local concreto.
+
+- **Custodia**: solo el **SUPER_ADMIN** puede cargarlas
+  (`PUT /api/v1/backoffice/stores/{storeId}/billing/credentials`). El administrador del local nunca las ve ni
+  las envía: ningún endpoint bajo `/api/v1/billing/activation` las acepta ni las devuelve.
+- **Cifrado en reposo**: `client_secret` y `password` se guardan cifrados con **AES-256-GCM**
+  (`SecretCryptoConverter`, un `AttributeConverter` de JPA). Formato: `v1:` + Base64(IV de 12 bytes ‖ cifrado ‖
+  etiqueta GCM). Una fuga de la tabla `store_billing_config` no expone las credenciales.
+- **Clave de cifrado**: `BILLING_ENCRYPTION_KEY` (32 bytes en Base64), única pieza fuera de la base de datos.
+  Perderla o cambiarla inutiliza los secretos ya guardados. Generación en Windows/PowerShell:
+  `$b=New-Object byte[] 32; [Security.Cryptography.RNGCryptoServiceProvider]::new().GetBytes($b); [Convert]::ToBase64String($b)`.
+- **Sin credenciales globales**: desde 2026-09-22 no existen variables de entorno con credenciales de Factus
+  (`FACTUS_CLIENT_ID`, `FACTUS_CLIENT_SECRET`, `FACTUS_USERNAME`, `FACTUS_PASSWORD`,
+  `FACTUS_NUMBERING_RANGE_ID` fueron eliminadas). Un local sin credenciales propias **no factura**: no hay
+  respaldo a una cuenta de plataforma que pudiera consumir la bolsa de otro local.
+- **Aislamiento entre locales**: el token OAuth2 se cachea por (`store_id`, entorno) y se invalida al cambiar
+  las credenciales o ante un `401`. Ninguna llamada a Factus se hace sin resolver antes el local dueño.
+- **Nunca en logs ni en respuestas**: `FactusAccess.toString()` omite los secretos y `BillingActivationDto`
+  solo informa si cada entorno está completo, nunca el valor.
+- **Auditoría**: `store_billing_config.updated_by` guarda quién tocó la configuración por última vez, y
+  `numbering_range_audit` registra cada cambio sobre los rangos de numeración (acción, valor anterior y nuevo,
+  usuario y fecha).

@@ -1,4 +1,4 @@
-<!-- doc-version: 1.2 | last-updated: 2026-09-16 -->
+<!-- doc-version: 1.3 | last-updated: 2026-09-22 -->
 # Roadmap y Estado por Módulo
 
 Este documento complementa los `spec.md` de cada módulo (que describen el comportamiento *actual*). Aquí se registra lo que **falta**, la **deuda técnica** conocida y las **próximas ideas**, para que quede como referencia entre sesiones de trabajo. Ver también la skill `pos-doc-sync` para el procedimiento de mantenerlo al día.
@@ -17,8 +17,8 @@ Este documento complementa los `spec.md` de cada módulo (que describen el compo
 | customers | CRUD por tienda, cliente genérico sembrado por defecto | — | Historial de compras por cliente en su ficha |
 | suppliers | CRUD por tienda | — | — |
 | reports | CQRS con `JdbcClient` (SQL nativo, sin JPA) | — | Reportes de rentabilidad por categoría |
-| settings | Datos del negocio + catálogos dinámicos de parámetros (`PAYMENT_METHODS`, etc.) | — | Parámetro de impuesto configurable (hoy 19% fijo en frontend, ver hallazgo abajo |
-| billing | Adapter Factus/Mock, ciclo de estados PENDING/VALIDATED/REJECTED/ERROR, reintentos | — | Notificación al vendedor cuando una factura pasa a `ERROR` |
+| settings | Datos del negocio por local + catálogos dinámicos de parámetros (`PAYMENT_METHODS`, etc.). Credenciales Factus eliminadas de aquí (`V16`, 2026-09-22) | — | Parámetro de impuesto configurable (hoy 19% fijo en frontend, ver hallazgo abajo |
+| billing | Adapter Factus/Mock, estados PENDING/VALIDATED/REJECTED/ERROR, reintentos. **Credenciales por local cifradas en BD (`V14`), ciclo de habilitación con back office, guardas y auditoría de rangos (`V15`)** (2026-09-22) | Sin frontend; sin validación de vigencia/agotamiento del rango en cada emisión; respuestas de Factus no verificadas contra el sandbox real | Notificación al vendedor cuando una factura pasa a `ERROR`; alertas de rango por agotarse |
 | stores | Backoffice SaaS: métricas, ciclo de vida, KYC. Sin `doc-version` header en su spec | Spec no documenta el flujo de self-registration (V7) ni referencia `doc-version`/`last-updated` | — |
 | legal | Documentos legales de plataforma | — | — |
 | support | Tickets de soporte | — | — |
@@ -27,7 +27,55 @@ Este documento complementa los `spec.md` de cada módulo (que describen el compo
 
 > `notifications` y `storage` llegaron en el merge del 2026-09-16 (rama paralela) junto con el módulo de documentos de tienda, el service de auth/onboarding y la config de Spring Security. Ninguno de los dos tiene spec modular todavía — siguiente candidato para `pos-doc-sync` / `pos-new-module` (parte del checklist es justamente crear ese spec).
 
+## Facturación electrónica por local (2026-09-22)
+
+Trabajo hecho en esta sesión, en orden:
+
+1. **`V14`** — tabla `store_billing_config`: una fila por local, dos juegos de credenciales (sandbox y
+   producción), secretos cifrados con AES-256-GCM (`SecretCryptoConverter`) y máquina de estados de
+   habilitación (`NOT_REQUESTED` → `DOCUMENTS_SUBMITTED` → `AWAITING_PROVIDER` → `ACTIVE`, con `REJECTED` y
+   `SUSPENDED`).
+2. **Adaptador por local** — `FactusCredentialsResolver` + `FactusTokenManager` con cache por
+   (`store_id`, entorno). Se eliminaron las credenciales globales de `application.properties`, `.env.example`
+   y `docker-compose.prod.yml`; ya no existe fallback a una cuenta de plataforma. Los errores de Factus dejan
+   de silenciarse (409 / 422 / 502 con el mensaje del proveedor).
+3. **Endpoints de habilitación** — back office (SUPER_ADMIN: credenciales, `test-connection`, transiciones,
+   cola de revisión) y local (ADMINISTRATOR: consultar estado y solicitar activación).
+4. **Guardas y auditoría de rangos (`V15`)** — rango en uso protegido, un solo rango activo por tipo de
+   documento, consecutivo que nunca retrocede, y bitácora en `numbering_range_audit`.
+5. **`V16`** — eliminación de las columnas `factus_*` de `settings` (verificado en la BD de dev: 0 filas con
+   datos antes de borrar).
+
+Pendientes conocidos de este bloque:
+
+- **Verificación contra el sandbox real de Factus** (detalle en `modules/billing/spec.md`): el sobre exacto de
+  la respuesta de `/v2/numbering-ranges/dian` (la doc de Factus describe los campos —`prefix`, `from`, `to`,
+  `resolution_number`, `start_date`, `end_date`, `technical_key`, sin `id`/`current`/`is_active`— pero no un
+  JSON de ejemplo, así que el mapper sigue aceptando objeto, lista o lista anidada sin confirmarlo), tipo del
+  campo `current` al crear un rango (hoy se envía como texto en el `POST`, pero como número en el
+  `PATCH .../current` — sin confirmar que Factus trate ambos igual) y límites de longitud de
+  `resolution_number` (hoy sin `@Size` ni patrón, solo `@NotBlank`).
+- **Vigencia y agotamiento del rango**: validar `is_expired` y `current <= to` antes de cada emisión, más
+  alertas al local cuando un rango esté por agotarse. Hoy el flujo de emisión (`BillingServiceImpl` /
+  `InvoiceService`) no consulta el rango en ningún punto: si está vencido o agotado, el único freno es el
+  rechazo que devuelva Factus después de gastar la llamada, que llega como factura en `ERROR`. Implementar esto
+  implica decidir entre una llamada extra a Factus por venta (coste de latencia/cuota) o cachear el rango
+  localmente (riesgo de desincronización si se agota o desactiva desde el panel de Factus) — decisión
+  pendiente, igual que dónde vive la alerta de rango por agotarse (umbral, canal, si usa `notifications`).
+- **Frontend**: no existe UI para ninguno de estos flujos (pantalla de habilitación del local, cola del back
+  office, formulario de credenciales, gestión de resolución DIAN).
+- **Migración de secretos**: `V16` traslada client_id, username y rango, pero **no** los secretos (el cifrado
+  ocurre en Java, no en SQL). Cualquier local que hubiera tenido credenciales en `settings` debe recargarlas.
+
 ## Hallazgos detectados en esta revisión (no corregidos, quedan para decidir)
+
+- **`billing` no sigue la estructura de paquetes del resto**: durante esta sesión el módulo quedó reorganizado
+  en subpaquetes `billing/api/`, `billing/dto/` y `billing/exception/`, mientras que `_conventions.md` y
+  `_architecture.md` dicen que la API pública (Facade, DTOs, comandos) va en la **raíz** del paquete del
+  módulo, como hacen los demás. Hay que decidir: o se actualizan las convenciones para todos los módulos, o
+  `billing` vuelve al formato estándar. **No se tocó** para no imponer una de las dos opciones.
+- **`settings/spec.md` corregido en esta revisión**: decía "única configuración global (`id = 1`)" cuando
+  desde `V9` hay una fila por local con PK = `stores.id`.
 
 - **IVA fijo en frontend**: `POSBento.jsx` calcula `tax = subtotal * 0.19` hardcodeado cuando se marca "Transmitir a DIAN", en vez de usar un parámetro configurable de `settings`. Si el negocio no es responsable de IVA (régimen simplificado) esto sobrefactura.
 - **`stores/spec.md`** no sigue el formato estándar (`spec-version`/`last-updated`, secciones RN-/RF-) de los demás specs — pendiente de normalizar cuando se vuelva a tocar el módulo.

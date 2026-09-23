@@ -16,7 +16,7 @@
 | suppliers | modules/suppliers/spec.md | suppliers | /api/v1/suppliers |
 | reports | modules/reports/spec.md | (read-only) | /api/v1/reports |
 | settings | modules/settings/spec.md | settings | /api/v1/settings |
-| billing | modules/billing/spec.md | electronic_invoices | /api/v1/billing |
+| billing | modules/billing/spec.md | electronic_invoices, store_billing_config, numbering_range_audit | /api/v1/billing, /api/v1/backoffice/billing, /api/v1/backoffice/stores/{id}/billing |
 | stores | modules/stores/spec.md | stores, store_categories, store_documents | /api/v1/backoffice/stores |
 | legal | modules/legal/spec.md | legal_documents | /api/v1/legal, /api/v1/backoffice/legal-documents |
 | support | modules/support/spec.md | support_tickets | /api/v1/support, /api/v1/backoffice/support |

@@ -1,7 +1,7 @@
 package com.sciencebot.pos.billing.internal.adapters.factus;
 
-import com.sciencebot.pos.billing.BillingNotEnabledException;
-import com.sciencebot.pos.billing.FactusApiException;
+import com.sciencebot.pos.billing.exception.BillingNotEnabledException;
+import com.sciencebot.pos.billing.exception.FactusApiException;
 import com.sciencebot.pos.billing.internal.adapters.InvoiceProvider;
 import com.sciencebot.pos.billing.internal.adapters.dto.InvoiceRequest;
 import com.sciencebot.pos.billing.internal.adapters.dto.InvoiceResult;

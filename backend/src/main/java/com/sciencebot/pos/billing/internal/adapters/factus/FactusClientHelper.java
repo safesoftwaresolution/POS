@@ -1,6 +1,6 @@
 package com.sciencebot.pos.billing.internal.adapters.factus;
 
-import com.sciencebot.pos.billing.FactusApiException;
+import com.sciencebot.pos.billing.exception.FactusApiException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.ResourceAccessException;
@@ -39,7 +39,7 @@ public class FactusClientHelper {
 
     /** Descarta el token guardado del local; se usa cuando Factus responde 401. */
     public void invalidateToken(Long storeId) {
-        tokenManager.invalidate(storeId != null ? storeId : com.sciencebot.pos.config.TenantContext.getStoreId());
+        tokenManager.invalidate(storeId != null ? storeId : com.sciencebot.pos.config.tenant.TenantContext.getStoreId());
     }
 
     public RestClient.RequestBodySpec authorizedPost(String path) {
@@ -95,7 +95,7 @@ public class FactusClientHelper {
      * proveedor. Si ya es de ese tipo lo deja pasar tal cual.
      */
     public RuntimeException translate(String action, Exception ex) {
-        if (ex instanceof FactusApiException || ex instanceof com.sciencebot.pos.billing.BillingNotEnabledException) {
+        if (ex instanceof FactusApiException || ex instanceof com.sciencebot.pos.billing.exception.BillingNotEnabledException) {
             return (RuntimeException) ex;
         }
         if (ex instanceof RestClientResponseException http) {

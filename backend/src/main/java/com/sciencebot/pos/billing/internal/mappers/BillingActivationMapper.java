@@ -1,8 +1,8 @@
 package com.sciencebot.pos.billing.internal.mappers;
 
-import com.sciencebot.pos.billing.BillingActivationDto;
-import com.sciencebot.pos.billing.BillingActivationStatus;
-import com.sciencebot.pos.billing.BillingEnvironment;
+import com.sciencebot.pos.billing.dto.BillingActivationDto;
+import com.sciencebot.pos.billing.dto.BillingActivationStatus;
+import com.sciencebot.pos.billing.dto.BillingEnvironment;
 import com.sciencebot.pos.billing.internal.entities.StoreBillingConfig;
 import org.springframework.stereotype.Component;
 

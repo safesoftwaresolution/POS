@@ -1,7 +1,7 @@
 package com.sciencebot.pos.billing.internal.entities;
 
-import com.sciencebot.pos.billing.BillingActivationStatus;
-import com.sciencebot.pos.billing.BillingEnvironment;
+import com.sciencebot.pos.billing.dto.BillingActivationStatus;
+import com.sciencebot.pos.billing.dto.BillingEnvironment;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -62,6 +62,12 @@ public class StoreBillingConfig {
     /** Credenciales del entorno indicado. */
     public FactusCredentials credentialsFor(BillingEnvironment env) {
         return env == BillingEnvironment.PRODUCTION ? production : sandbox;
+    }
+
+    @PostLoad
+    protected void onLoad() {
+        if (this.sandbox == null) this.sandbox = new FactusCredentials();
+        if (this.production == null) this.production = new FactusCredentials();
     }
 
     @PrePersist

@@ -1,6 +1,6 @@
 package com.sciencebot.pos.billing.internal.services;
 
-import com.sciencebot.pos.billing.ElectronicInvoiceDto;
+import com.sciencebot.pos.billing.dto.ElectronicInvoiceDto;
 import com.sciencebot.pos.sales.SaleDto;
 
 import java.util.Optional;

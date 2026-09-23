@@ -1,14 +1,16 @@
 package com.sciencebot.pos.billing.internal.adapters.factus;
 
-import com.sciencebot.pos.billing.BillingActivationStatus;
-import com.sciencebot.pos.billing.BillingEnvironment;
-import com.sciencebot.pos.billing.BillingNotEnabledException;
+import com.sciencebot.pos.billing.dto.BillingActivationStatus;
+import com.sciencebot.pos.billing.dto.BillingEnvironment;
+import com.sciencebot.pos.billing.exception.BillingNotEnabledException;
 import com.sciencebot.pos.billing.internal.entities.FactusCredentials;
 import com.sciencebot.pos.billing.internal.entities.StoreBillingConfig;
 import com.sciencebot.pos.billing.internal.repositories.StoreBillingConfigRepository;
-import com.sciencebot.pos.config.TenantContext;
+import com.sciencebot.pos.config.tenant.TenantContext;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+
+import java.util.Objects;
 
 /**
  * Decide con qué credenciales y en qué URL de Factus se atiende a un local. Lee solo lo que el
@@ -41,13 +43,28 @@ public class FactusCredentialsResolver {
 
     /**
      * Igual que {@link #resolve(Long)} pero sin exigir {@code ACTIVE}. Sirve para probar la
-     * conexión con las credenciales recién cargadas, antes de activar el local.
+     * conexión con las credenciales recién cargadas, antes de activar el local. Usa el entorno
+     * activo del local.
      */
     public FactusAccess resolveIgnoringStatus(Long storeId) {
-        return resolve(storeId, false);
+        return resolve(storeId, null, false);
+    }
+
+    /**
+     * Igual que {@link #resolveIgnoringStatus(Long)} pero fija el entorno a probar, aunque no
+     * sea el entorno activo del local (el super admin puede querer probar producción antes de
+     * cambiarse a ella).
+     */
+    public FactusAccess resolveIgnoringStatus(Long storeId, BillingEnvironment environment) {
+        Objects.requireNonNull(environment, "El entorno es obligatorio");
+        return resolve(storeId, environment, false);
     }
 
     private FactusAccess resolve(Long storeId, boolean requireActive) {
+        return resolve(storeId, null, requireActive);
+    }
+
+    private FactusAccess resolve(Long storeId, BillingEnvironment forcedEnvironment, boolean requireActive) {
         Long effectiveStoreId = storeId != null ? storeId : TenantContext.getStoreId();
         if (effectiveStoreId == null) {
             throw new BillingNotEnabledException("No hay un local activo para facturar electrónicamente");
@@ -62,7 +79,7 @@ public class FactusCredentialsResolver {
                     "La facturación electrónica del local no está activa (estado: " + config.getStatus() + ")");
         }
 
-        BillingEnvironment environment = config.getEnvironment();
+        BillingEnvironment environment = forcedEnvironment != null ? forcedEnvironment : config.getEnvironment();
         FactusCredentials credentials = config.credentialsFor(environment);
         if (!credentials.isComplete()) {
             throw new BillingNotEnabledException(

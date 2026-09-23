@@ -1,7 +1,7 @@
 package com.sciencebot.pos.billing.internal.adapters.factus;
 
-import com.sciencebot.pos.billing.BillingEnvironment;
-import com.sciencebot.pos.billing.FactusApiException;
+import com.sciencebot.pos.billing.dto.BillingEnvironment;
+import com.sciencebot.pos.billing.exception.FactusApiException;
 import com.sciencebot.pos.billing.internal.adapters.dto.FactusTokenResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -94,11 +94,22 @@ public class FactusTokenManager {
     }
 
     /**
-     * Pide un token nuevo con las credenciales guardadas del local, aunque todavía no esté activo.
-     * Lanza {@link FactusApiException} si Factus las rechaza.
+     * Pide un token nuevo con las credenciales guardadas del local para su entorno activo,
+     * aunque todavía no esté {@code ACTIVE}. Lanza {@link FactusApiException} si Factus las rechaza.
      */
     public void verifyConnection(Long storeId) {
-        FactusAccess access = resolver.resolveIgnoringStatus(storeId);
+        verifyConnection(resolver.resolveIgnoringStatus(storeId));
+    }
+
+    /**
+     * Igual que {@link #verifyConnection(Long)} pero prueba un entorno explícito, sea o no el
+     * entorno activo del local (para revisar producción antes de cambiarse a ella).
+     */
+    public void verifyConnection(Long storeId, BillingEnvironment environment) {
+        verifyConnection(resolver.resolveIgnoringStatus(storeId, environment));
+    }
+
+    private void verifyConnection(FactusAccess access) {
         CacheKey key = new CacheKey(access.storeId(), access.environment());
         synchronized (locks.computeIfAbsent(key, k -> new Object())) {
             tokens.put(key, requestToken(access, access.fingerprint()));

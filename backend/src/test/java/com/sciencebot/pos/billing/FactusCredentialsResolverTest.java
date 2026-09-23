@@ -1,10 +1,13 @@
 package com.sciencebot.pos.billing;
 
+import com.sciencebot.pos.billing.api.*;
+import com.sciencebot.pos.billing.dto.*;
+import com.sciencebot.pos.billing.exception.*;
 import com.sciencebot.pos.billing.internal.adapters.factus.FactusAccess;
 import com.sciencebot.pos.billing.internal.adapters.factus.FactusCredentialsResolver;
 import com.sciencebot.pos.billing.internal.entities.StoreBillingConfig;
 import com.sciencebot.pos.billing.internal.repositories.StoreBillingConfigRepository;
-import com.sciencebot.pos.config.TenantContext;
+import com.sciencebot.pos.config.tenant.TenantContext;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -142,6 +145,25 @@ class FactusCredentialsResolverTest {
         config(5L, BillingActivationStatus.AWAITING_PROVIDER).getSandbox().setClientSecret("");
 
         assertThrows(BillingNotEnabledException.class, () -> resolver.resolveIgnoringStatus(5L));
+    }
+
+    @Test
+    void resolveIgnoringStatusWithExplicitEnvironmentTestsAnEnvironmentThatIsNotTheActiveOne() {
+        config(5L, BillingActivationStatus.ACTIVE); // el local está activo en SANDBOX
+
+        FactusAccess prodAccess = resolver.resolveIgnoringStatus(5L, BillingEnvironment.PRODUCTION);
+
+        assertEquals(BillingEnvironment.PRODUCTION, prodAccess.environment());
+        assertEquals(PRODUCTION_URL, prodAccess.baseUrl());
+        assertEquals("pr-client", prodAccess.clientId());
+    }
+
+    @Test
+    void resolveIgnoringStatusWithExplicitEnvironmentStillNeedsCompleteCredentials() {
+        config(5L, BillingActivationStatus.ACTIVE).getProduction().setUsername(null);
+
+        assertThrows(BillingNotEnabledException.class,
+                () -> resolver.resolveIgnoringStatus(5L, BillingEnvironment.PRODUCTION));
     }
 
     @Test

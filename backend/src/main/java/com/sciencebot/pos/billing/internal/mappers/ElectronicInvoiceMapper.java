@@ -1,6 +1,6 @@
 package com.sciencebot.pos.billing.internal.mappers;
 
-import com.sciencebot.pos.billing.ElectronicInvoiceDto;
+import com.sciencebot.pos.billing.dto.ElectronicInvoiceDto;
 import com.sciencebot.pos.billing.internal.entities.ElectronicInvoice;
 import org.springframework.stereotype.Component;
 

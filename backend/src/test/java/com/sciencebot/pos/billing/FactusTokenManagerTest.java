@@ -1,5 +1,8 @@
 package com.sciencebot.pos.billing;
 
+import com.sciencebot.pos.billing.api.*;
+import com.sciencebot.pos.billing.dto.*;
+import com.sciencebot.pos.billing.exception.*;
 import com.sciencebot.pos.billing.internal.adapters.factus.FactusAccess;
 import com.sciencebot.pos.billing.internal.adapters.factus.FactusCredentialsResolver;
 import com.sciencebot.pos.billing.internal.adapters.factus.FactusTokenManager;
@@ -211,5 +214,20 @@ class FactusTokenManagerTest {
                 .andRespond(withStatus(org.springframework.http.HttpStatus.BAD_REQUEST));
 
         assertThrows(FactusApiException.class, () -> manager.verifyConnection(5L));
+    }
+
+    @Test
+    void verifyConnectionWithExplicitEnvironmentTestsThatEnvironmentEvenIfItIsNotTheActiveOne() {
+        when(resolver.resolveIgnoringStatus(5L, BillingEnvironment.PRODUCTION))
+                .thenReturn(access(5L, BillingEnvironment.PRODUCTION, "cli-prod", "pass-prod"));
+        server.expect(once(), requestTo(URL + "/oauth/token"))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("client_id=cli-prod")))
+                .andRespond(withSuccess(tokenJson("tok-prod-test", 3600), MediaType.APPLICATION_JSON));
+
+        assertDoesNotThrow(() -> manager.verifyConnection(5L, BillingEnvironment.PRODUCTION));
+
+        assertEquals("tok-prod-test",
+                manager.getAccessToken(access(5L, BillingEnvironment.PRODUCTION, "cli-prod", "pass-prod")));
+        server.verify();
     }
 }

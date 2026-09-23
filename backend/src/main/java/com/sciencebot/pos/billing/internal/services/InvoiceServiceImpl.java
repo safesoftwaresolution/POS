@@ -1,6 +1,6 @@
 package com.sciencebot.pos.billing.internal.services;
 
-import com.sciencebot.pos.billing.ElectronicInvoiceDto;
+import com.sciencebot.pos.billing.dto.ElectronicInvoiceDto;
 import com.sciencebot.pos.billing.internal.adapters.InvoiceProvider;
 import com.sciencebot.pos.billing.internal.adapters.dto.InvoiceRequest;
 import com.sciencebot.pos.billing.internal.adapters.dto.InvoiceResult;
@@ -8,7 +8,7 @@ import com.sciencebot.pos.billing.internal.entities.ElectronicInvoice;
 import com.sciencebot.pos.billing.internal.mappers.BillingCanonicalMapper;
 import com.sciencebot.pos.billing.internal.mappers.ElectronicInvoiceMapper;
 import com.sciencebot.pos.billing.internal.repositories.ElectronicInvoiceRepository;
-import com.sciencebot.pos.config.TenantContext;
+import com.sciencebot.pos.config.tenant.TenantContext;
 import com.sciencebot.pos.sales.SaleDto;
 import com.sciencebot.pos.sales.SaleFacade;
 import org.slf4j.Logger;

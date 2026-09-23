@@ -1,7 +1,7 @@
 package com.sciencebot.pos.billing.internal.services;
 
-import com.sciencebot.pos.billing.CreateNumberingRangeRequest;
-import com.sciencebot.pos.billing.NumberingRangeDto;
+import com.sciencebot.pos.billing.dto.CreateNumberingRangeRequest;
+import com.sciencebot.pos.billing.dto.NumberingRangeDto;
 
 import java.util.List;
 
@@ -23,4 +23,10 @@ public interface NumberingRangeService {
     NumberingRangeDto toggleNumberingRangeStatus(Long numberingRangeId);
 
     NumberingRangeDto updateNumberingRangeCurrent(Long numberingRangeId, Long current);
+
+    /**
+     * Fija el rango con el que el local en contexto factura en su entorno activo
+     * (sandbox o producción). El rango debe existir en el proveedor y estar activo.
+     */
+    NumberingRangeDto setDefaultNumberingRange(Long numberingRangeId);
 }

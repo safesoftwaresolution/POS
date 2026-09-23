@@ -1,7 +1,7 @@
 package com.sciencebot.pos.billing.internal.adapters;
 
-import com.sciencebot.pos.billing.CreateNumberingRangeRequest;
-import com.sciencebot.pos.billing.NumberingRangeDto;
+import com.sciencebot.pos.billing.dto.CreateNumberingRangeRequest;
+import com.sciencebot.pos.billing.dto.NumberingRangeDto;
 
 import java.util.List;
 

@@ -1,7 +1,7 @@
 package com.sciencebot.pos.billing.internal.adapters.factus;
 
-import com.sciencebot.pos.billing.CreateNumberingRangeRequest;
-import com.sciencebot.pos.billing.NumberingRangeDto;
+import com.sciencebot.pos.billing.dto.CreateNumberingRangeRequest;
+import com.sciencebot.pos.billing.dto.NumberingRangeDto;
 import com.sciencebot.pos.billing.internal.adapters.NumberingRangeProvider;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -15,7 +15,7 @@ import java.util.Objects;
 /**
  * Cliente especializado para la gestión y sincronización de rangos de numeración ante Factus y la DIAN.
  * Trabaja con las credenciales del local de la solicitud en curso. Si Factus rechaza la llamada o no
- * responde, lanza {@link com.sciencebot.pos.billing.FactusApiException} con el mensaje del proveedor.
+ * responde, lanza {@link com.sciencebot.pos.billing.exception.FactusApiException} con el mensaje del proveedor.
  */
 @Component
 public class FactusNumberingRangeClient implements NumberingRangeProvider {

@@ -1,6 +1,6 @@
 package com.sciencebot.pos.billing.internal.adapters.factus;
 
-import com.sciencebot.pos.billing.BillingEnvironment;
+import com.sciencebot.pos.billing.dto.BillingEnvironment;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;

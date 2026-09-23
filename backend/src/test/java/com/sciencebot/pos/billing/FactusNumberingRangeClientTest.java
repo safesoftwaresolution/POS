@@ -1,12 +1,15 @@
 package com.sciencebot.pos.billing;
 
+import com.sciencebot.pos.billing.api.*;
+import com.sciencebot.pos.billing.dto.*;
+import com.sciencebot.pos.billing.exception.*;
 import com.sciencebot.pos.billing.internal.adapters.factus.FactusAccess;
 import com.sciencebot.pos.billing.internal.adapters.factus.FactusClientHelper;
 import com.sciencebot.pos.billing.internal.adapters.factus.FactusCredentialsResolver;
 import com.sciencebot.pos.billing.internal.adapters.factus.FactusNumberingRangeClient;
 import com.sciencebot.pos.billing.internal.adapters.factus.FactusNumberingRangeMapper;
 import com.sciencebot.pos.billing.internal.adapters.factus.FactusTokenManager;
-import com.sciencebot.pos.config.TenantContext;
+import com.sciencebot.pos.config.tenant.TenantContext;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

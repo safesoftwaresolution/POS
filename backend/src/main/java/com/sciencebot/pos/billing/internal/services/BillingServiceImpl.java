@@ -1,9 +1,9 @@
 package com.sciencebot.pos.billing.internal.services;
 
-import com.sciencebot.pos.billing.BillingFacade;
-import com.sciencebot.pos.billing.CreateNumberingRangeRequest;
-import com.sciencebot.pos.billing.ElectronicInvoiceDto;
-import com.sciencebot.pos.billing.NumberingRangeDto;
+import com.sciencebot.pos.billing.api.BillingFacade;
+import com.sciencebot.pos.billing.dto.CreateNumberingRangeRequest;
+import com.sciencebot.pos.billing.dto.ElectronicInvoiceDto;
+import com.sciencebot.pos.billing.dto.NumberingRangeDto;
 import com.sciencebot.pos.sales.SaleDto;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
@@ -72,12 +72,17 @@ public class BillingServiceImpl implements BillingFacade {
     }
 
     @Override
-    public boolean deleteNumberingRange(Long numberingRangeId) {
-        return numberingRangeService.deleteNumberingRange(numberingRangeId);
+    public void deleteNumberingRange(Long numberingRangeId) {
+        numberingRangeService.deleteNumberingRange(numberingRangeId);
     }
 
     @Override
-    public boolean toggleNumberingRangeStatus(Long numberingRangeId) {
+    public NumberingRangeDto toggleNumberingRangeStatus(Long numberingRangeId) {
         return numberingRangeService.toggleNumberingRangeStatus(numberingRangeId);
+    }
+
+    @Override
+    public NumberingRangeDto updateNumberingRangeCurrent(Long numberingRangeId, Long current) {
+        return numberingRangeService.updateNumberingRangeCurrent(numberingRangeId, current);
     }
 }

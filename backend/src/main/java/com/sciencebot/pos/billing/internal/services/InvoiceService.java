@@ -1,6 +1,6 @@
 package com.sciencebot.pos.billing.internal.services;
 
-import com.sciencebot.pos.billing.ElectronicInvoiceDto;
+import com.sciencebot.pos.billing.dto.ElectronicInvoiceDto;
 import com.sciencebot.pos.sales.SaleDto;
 
 import java.util.Optional;
@@ -17,4 +17,10 @@ public interface InvoiceService {
     ElectronicInvoiceDto retryInvoice(Long saleId);
 
     void sendInvoiceEmail(Long saleId, String email);
+
+    org.springframework.data.domain.Page<ElectronicInvoiceDto> listInvoices(org.springframework.data.domain.Pageable pageable, String status);
+
+    byte[] downloadInvoicePDF(Long saleId);
+
+    byte[] downloadInvoiceXML(Long saleId);
 }

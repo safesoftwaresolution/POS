@@ -11,7 +11,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 
 import java.util.List;
-import java.util.Map;
+
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.when;
@@ -32,7 +32,7 @@ class AuthControllerTest {
 
     @Test
     void login_ReturnsTokenAndSetsHttpOnlyCookie() {
-        AuthService.LoginResponse mockResponse = new AuthService.LoginResponse(
+        LoginResponse mockResponse = new LoginResponse(
                 "mocked-jwt-token",
                 "mocked-refresh-token",
                 "admin",
@@ -42,8 +42,8 @@ class AuthControllerTest {
         );
         when(authService.login("admin", "admin123")).thenReturn(mockResponse);
 
-        ResponseEntity<AuthService.LoginResponse> response = authController.login(
-                Map.of("username", "admin", "password", "admin123")
+        ResponseEntity<LoginResponse> response = authController.login(
+                new LoginRequest("admin", "admin123")
         );
 
         assertNotNull(response);
@@ -76,7 +76,7 @@ class AuthControllerTest {
 
     @Test
     void login_MissingFields_ThrowsException() {
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> authController.login(Map.of("username", "admin")));
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> new LoginRequest("admin", null));
         assertTrue(ex.getMessage().contains("requeridos"));
     }
 }

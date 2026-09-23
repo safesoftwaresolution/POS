@@ -1,6 +1,6 @@
 package com.sciencebot.pos.sales.internal.services;
 
-import com.sciencebot.pos.config.TenantContext;
+import com.sciencebot.pos.config.tenant.TenantContext;
 import com.sciencebot.pos.sales.*;
 import com.sciencebot.pos.sales.internal.entities.Sale;
 import com.sciencebot.pos.sales.internal.entities.SaleItem;
@@ -46,7 +46,7 @@ public class SaleServiceImpl implements SaleFacade {
     private final ProductFacade productFacade;
     private final InventoryFacade inventoryFacade;
     private final UserFacade userFacade;
-    private final com.sciencebot.pos.billing.BillingFacade billingFacade;
+    private final com.sciencebot.pos.billing.api.BillingFacade billingFacade;
 
     public SaleServiceImpl(
             SaleRepository saleRepository,
@@ -58,7 +58,7 @@ public class SaleServiceImpl implements SaleFacade {
             @Lazy ProductFacade productFacade,
             @Lazy InventoryFacade inventoryFacade,
             @Lazy UserFacade userFacade,
-            @Lazy com.sciencebot.pos.billing.BillingFacade billingFacade
+            @Lazy com.sciencebot.pos.billing.api.BillingFacade billingFacade
     ) {
         this.saleRepository = saleRepository;
         this.saleItemRepository = saleItemRepository;
@@ -173,12 +173,19 @@ public class SaleServiceImpl implements SaleFacade {
             BigDecimal subtotal = product.salePrice().multiply(BigDecimal.valueOf(itemCommand.quantity()));
             total = total.add(subtotal);
 
+            BigDecimal taxRate = product.taxRate() != null ? product.taxRate() : BigDecimal.ZERO;
+            BigDecimal taxFactor = BigDecimal.ONE.add(taxRate.divide(BigDecimal.valueOf(100), 4, java.math.RoundingMode.HALF_UP));
+            BigDecimal netSubtotal = subtotal.divide(taxFactor, 2, java.math.RoundingMode.HALF_UP);
+            BigDecimal taxAmount = subtotal.subtract(netSubtotal);
+
             SaleItem saleItem = new SaleItem();
             saleItem.setSale(sale);
             saleItem.setProductId(itemCommand.productId());
             saleItem.setQuantity(itemCommand.quantity());
             saleItem.setUnitPrice(product.salePrice());
             saleItem.setSubtotal(subtotal);
+            saleItem.setTaxRate(taxRate);
+            saleItem.setTaxAmount(taxAmount);
             items.add(saleItem);
         }
 

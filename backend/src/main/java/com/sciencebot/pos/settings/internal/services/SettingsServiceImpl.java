@@ -1,6 +1,6 @@
 package com.sciencebot.pos.settings.internal.services;
 
-import com.sciencebot.pos.config.TenantContext;
+import com.sciencebot.pos.config.tenant.TenantContext;
 import com.sciencebot.pos.settings.*;
 import com.sciencebot.pos.settings.internal.entities.Setting;
 import com.sciencebot.pos.settings.internal.repositories.SettingsRepository;

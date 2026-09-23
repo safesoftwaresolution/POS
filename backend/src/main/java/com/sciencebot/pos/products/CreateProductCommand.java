@@ -24,5 +24,14 @@ public record CreateProductCommand(
     @Schema(description = "Descripción detallada del producto", example = "Arroz blanco de primera calidad")
     String description,
     @Schema(description = "URL de imagen del producto", example = "https://storage.example.com/products/arroz.jpg")
-    String imageUrl
-) {}
+    String imageUrl,
+    @Schema(description = "Tasa de impuesto / IVA del producto (0.00, 5.00, 19.00)", example = "19.00")
+    BigDecimal taxRate,
+    @Schema(description = "Código estándar UNSPSC para facturación electrónica DIAN", example = "50202301")
+    String unspscCode
+) {
+    public CreateProductCommand(String internalCode, String barcode, String name, Long categoryId, Long subcategoryId,
+                                BigDecimal purchasePrice, BigDecimal salePrice, int minStock, String description, String imageUrl) {
+        this(internalCode, barcode, name, categoryId, subcategoryId, purchasePrice, salePrice, minStock, description, imageUrl, BigDecimal.ZERO, null);
+    }
+}

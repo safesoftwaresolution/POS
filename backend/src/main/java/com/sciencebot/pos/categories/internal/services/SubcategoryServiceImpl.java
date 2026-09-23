@@ -5,7 +5,7 @@ import com.sciencebot.pos.categories.internal.entities.Subcategory;
 import com.sciencebot.pos.categories.internal.mappers.SubcategoryMapper;
 import com.sciencebot.pos.categories.internal.repositories.CategoryRepository;
 import com.sciencebot.pos.categories.internal.repositories.SubcategoryRepository;
-import com.sciencebot.pos.config.TenantContext;
+import com.sciencebot.pos.config.tenant.TenantContext;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

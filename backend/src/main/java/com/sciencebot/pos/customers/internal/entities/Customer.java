@@ -39,6 +39,18 @@ public class Customer {
     @Column(nullable = false)
     private boolean active = true;
 
+    @Column(length = 1)
+    private String dv;
+
+    @Column(name = "legal_organization_id")
+    private Integer legalOrganizationId = 13;
+
+    @Column(name = "tribute_id")
+    private Integer tributeId = 21;
+
+    @Column(name = "municipality_id")
+    private Integer municipalityId;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

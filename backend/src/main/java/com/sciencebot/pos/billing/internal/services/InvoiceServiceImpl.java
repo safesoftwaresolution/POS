@@ -1,6 +1,6 @@
 package com.sciencebot.pos.billing.internal.services;
 
-import com.sciencebot.pos.billing.ElectronicInvoiceDto;
+import com.sciencebot.pos.billing.dto.ElectronicInvoiceDto;
 import com.sciencebot.pos.billing.internal.adapters.InvoiceProvider;
 import com.sciencebot.pos.billing.internal.adapters.dto.InvoiceRequest;
 import com.sciencebot.pos.billing.internal.adapters.dto.InvoiceResult;
@@ -8,6 +8,7 @@ import com.sciencebot.pos.billing.internal.entities.ElectronicInvoice;
 import com.sciencebot.pos.billing.internal.mappers.BillingCanonicalMapper;
 import com.sciencebot.pos.billing.internal.mappers.ElectronicInvoiceMapper;
 import com.sciencebot.pos.billing.internal.repositories.ElectronicInvoiceRepository;
+import com.sciencebot.pos.config.tenant.TenantContext;
 import com.sciencebot.pos.sales.SaleDto;
 import com.sciencebot.pos.sales.SaleFacade;
 import org.slf4j.Logger;
@@ -74,7 +75,11 @@ public class InvoiceServiceImpl implements InvoiceService {
         }
 
         // 1. Obtener (con bloqueo pesimista) o crear el registro de factura de esta venta.
-        ElectronicInvoice einvoice = lockOrCreateInvoice(sale.id());
+        Long effectiveStoreId = sale.storeId() != null ? sale.storeId() : TenantContext.getStoreId();
+        ElectronicInvoice einvoice = lockOrCreateInvoice(sale.id(), effectiveStoreId);
+        if (einvoice.getStoreId() == null && effectiveStoreId != null) {
+            einvoice.setStoreId(effectiveStoreId);
+        }
 
         // 2. Guard de idempotencia bajo bloqueo: si ya está validada, no volver a emitir.
         if ("VALIDATED".equalsIgnoreCase(einvoice.getStatus())) {
@@ -153,11 +158,60 @@ public class InvoiceServiceImpl implements InvoiceService {
         }
     }
 
-    private ElectronicInvoice lockOrCreateInvoice(Long saleId) {
+    @Override
+    @Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<ElectronicInvoiceDto> listInvoices(org.springframework.data.domain.Pageable pageable, String status) {
+        Long storeId = TenantContext.getStoreId();
+        if (storeId == null) {
+            return org.springframework.data.domain.Page.empty();
+        }
+        org.springframework.data.domain.Page<ElectronicInvoice> page;
+        if (status != null && !status.isBlank()) {
+            page = repository.findByStoreIdAndStatus(storeId, status.trim().toUpperCase(), pageable);
+        } else {
+            page = repository.findByStoreId(storeId, pageable);
+        }
+        return page.map(invoiceMapper::toDto);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public byte[] downloadInvoicePDF(Long saleId) {
+        Long storeId = TenantContext.getStoreId();
+        ElectronicInvoice einvoice = repository.findBySaleId(saleId)
+                .filter(inv -> storeId == null || storeId.equals(inv.getStoreId()))
+                .orElseThrow(() -> new IllegalArgumentException("Factura no encontrada para la venta: " + saleId));
+
+        if (einvoice.getFactusNumber() == null || einvoice.getFactusNumber().isBlank()) {
+            throw new IllegalStateException("La factura no tiene número legal asignado");
+        }
+
+        InvoiceProvider provider = resolveProvider();
+        return provider.downloadInvoicePDF(einvoice.getFactusNumber());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public byte[] downloadInvoiceXML(Long saleId) {
+        Long storeId = TenantContext.getStoreId();
+        ElectronicInvoice einvoice = repository.findBySaleId(saleId)
+                .filter(inv -> storeId == null || storeId.equals(inv.getStoreId()))
+                .orElseThrow(() -> new IllegalArgumentException("Factura no encontrada para la venta: " + saleId));
+
+        if (einvoice.getFactusNumber() == null || einvoice.getFactusNumber().isBlank()) {
+            throw new IllegalStateException("La factura no tiene número legal asignado");
+        }
+
+        InvoiceProvider provider = resolveProvider();
+        return provider.downloadInvoiceXML(einvoice.getFactusNumber());
+    }
+
+    private ElectronicInvoice lockOrCreateInvoice(Long saleId, Long storeId) {
         return repository.findBySaleIdForUpdate(saleId)
                 .orElseGet(() -> {
                     ElectronicInvoice newInv = new ElectronicInvoice();
                     newInv.setSaleId(saleId);
+                    newInv.setStoreId(storeId != null ? storeId : 1L);
                     newInv.setStatus("PENDING");
                     return repository.saveAndFlush(newInv);
                 });
@@ -169,6 +223,8 @@ public class InvoiceServiceImpl implements InvoiceService {
                 .orElseGet(() -> {
                     ElectronicInvoice newInv = new ElectronicInvoice();
                     newInv.setSaleId(saleId);
+                    Long storeId = saleFacade.getById(saleId).map(s -> s.storeId()).orElse(TenantContext.getStoreId());
+                    newInv.setStoreId(storeId != null ? storeId : 1L);
                     newInv.setStatus("PENDING");
                     return repository.save(newInv);
                 });

@@ -1,6 +1,6 @@
 package com.sciencebot.pos.customers.internal.services;
 
-import com.sciencebot.pos.config.TenantContext;
+import com.sciencebot.pos.config.tenant.TenantContext;
 import com.sciencebot.pos.customers.*;
 import com.sciencebot.pos.customers.internal.entities.Customer;
 import com.sciencebot.pos.customers.internal.repositories.CustomerRepository;
@@ -62,6 +62,10 @@ public class CustomerServiceImpl implements CustomerFacade {
         customer.setEmail(command.email() != null ? command.email().trim() : null);
         customer.setPhone(command.phone() != null ? command.phone().trim() : null);
         customer.setAddress(command.address() != null ? command.address().trim() : null);
+        customer.setDv(command.dv() != null ? command.dv().trim() : null);
+        customer.setLegalOrganizationId(command.legalOrganizationId() != null ? command.legalOrganizationId() : 13);
+        customer.setTributeId(command.tributeId() != null ? command.tributeId() : 21);
+        customer.setMunicipalityId(command.municipalityId());
         customer.setActive(true);
 
         Customer saved = customerRepository.save(customer);
@@ -85,6 +89,10 @@ public class CustomerServiceImpl implements CustomerFacade {
         customer.setEmail(command.email() != null ? command.email().trim() : null);
         customer.setPhone(command.phone() != null ? command.phone().trim() : null);
         customer.setAddress(command.address() != null ? command.address().trim() : null);
+        if (command.dv() != null) customer.setDv(command.dv().trim());
+        if (command.legalOrganizationId() != null) customer.setLegalOrganizationId(command.legalOrganizationId());
+        if (command.tributeId() != null) customer.setTributeId(command.tributeId());
+        if (command.municipalityId() != null) customer.setMunicipalityId(command.municipalityId());
 
         Customer saved = customerRepository.save(customer);
         return customerMapper.toDto(saved);

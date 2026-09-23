@@ -46,7 +46,9 @@ public class ProductMapper {
                 product.getQuantityAvailable(),
                 product.getMinStock(),
                 product.isActive(),
-                product.getImageUrl()
+                product.getImageUrl(),
+                product.getTaxRate(),
+                product.getUnspscCode()
         );
     }
 }

@@ -1,11 +1,12 @@
 package com.sciencebot.pos.billing.internal.adapters.factus;
 
+import com.sciencebot.pos.billing.exception.BillingNotEnabledException;
+import com.sciencebot.pos.billing.exception.FactusApiException;
 import com.sciencebot.pos.billing.internal.adapters.InvoiceProvider;
 import com.sciencebot.pos.billing.internal.adapters.dto.InvoiceRequest;
 import com.sciencebot.pos.billing.internal.adapters.dto.InvoiceResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -24,22 +25,12 @@ public class FactusInvoiceClient implements InvoiceProvider {
 
     private static final Logger log = LoggerFactory.getLogger(FactusInvoiceClient.class);
 
-    @Value("${factus.numbering-range-id:1}")
-    private int numberingRangeId;
-
     private final FactusClientHelper httpHelper;
     private final FactusSaleMapper saleMapper;
 
-    @org.springframework.beans.factory.annotation.Autowired
     public FactusInvoiceClient(FactusClientHelper httpHelper, FactusSaleMapper saleMapper) {
         this.httpHelper = httpHelper;
         this.saleMapper = saleMapper;
-    }
-
-    public FactusInvoiceClient(FactusClientHelper httpHelper, FactusSaleMapper saleMapper, int numberingRangeId) {
-        this.httpHelper = httpHelper;
-        this.saleMapper = saleMapper;
-        this.numberingRangeId = numberingRangeId;
     }
 
     @Override
@@ -55,10 +46,14 @@ public class FactusInvoiceClient implements InvoiceProvider {
         }
 
         try {
-            Map<String, Object> payload = saleMapper.toFactusRequestPayload(request, numberingRangeId);
+            FactusAccess access = httpHelper.resolveAccess(request.storeId());
+            int targetRangeId = (request.numberingRangeId() != null && request.numberingRangeId() > 0)
+                    ? request.numberingRangeId()
+                    : rangeOf(access);
+            Map<String, Object> payload = saleMapper.toFactusRequestPayload(request, targetRangeId);
 
             @SuppressWarnings("unchecked")
-            Map<String, Object> response = httpHelper.authorizedPost("/v2/bills/validate")
+            Map<String, Object> response = httpHelper.authorizedPost("/v2/bills/validate", access)
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(payload)
                     .retrieve()
@@ -91,8 +86,14 @@ public class FactusInvoiceClient implements InvoiceProvider {
                 return InvoiceResult.error("Respuesta de Factus incompleta o sin datos de factura");
             }
 
+        } catch (BillingNotEnabledException ex) {
+            return InvoiceResult.error(ex.getMessage());
+        } catch (FactusApiException ex) {
+            // No se pudo obtener el token (credenciales rechazadas o Factus caído): reintentable.
+            return InvoiceResult.pending(httpHelper.truncateError(ex.getMessage()));
         } catch (HttpClientErrorException ex) {
             if (ex.getStatusCode() == HttpStatus.UNAUTHORIZED || ex.getStatusCode() == HttpStatus.FORBIDDEN) {
+                httpHelper.invalidateToken(request.storeId());
                 return InvoiceResult.pending("Fallo de autenticación con Factus API (HTTP " + ex.getStatusCode().value() + ")");
             }
             return InvoiceResult.rejected(httpHelper.truncateError("Error Validación DIAN (HTTP " + ex.getStatusCode().value() + "): " + ex.getResponseBodyAsString()));
@@ -167,6 +168,16 @@ public class FactusInvoiceClient implements InvoiceProvider {
             log.error("Error al enviar factura {} por correo a {}: {}", legalNumber, email, ex.getMessage(), ex);
             return false;
         }
+    }
+
+    /** Rango de numeración del local para su entorno activo. Sin rango no se puede facturar. */
+    private static int rangeOf(FactusAccess access) {
+        Integer range = access.numberingRangeId();
+        if (range == null || range <= 0) {
+            throw new BillingNotEnabledException(
+                    "El local no tiene un rango de numeración configurado para el entorno " + access.environment());
+        }
+        return range;
     }
 
     private boolean isBillResponseValid(Map<String, Object> response) {

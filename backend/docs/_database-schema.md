@@ -1,4 +1,4 @@
-<!-- doc-version: 1.1 | last-updated: 2026-08-20 -->
+<!-- doc-version: 1.2 | last-updated: 2026-09-22 -->
 # Esquema de Base de Datos — Vista Global
 
 ## Diagrama Entidad-Relación
@@ -17,6 +17,10 @@ erDiagram
     SUPPLIERS ||--o{ PURCHASES : vende
     PURCHASES ||--o{ PURCHASE_ITEMS : desglosa
     SALES ||--o{ SALE_ITEMS : desglosa
+    STORES ||--|| STORE_BILLING_CONFIG : habilita
+    STORES ||--o{ NUMBERING_RANGE_AUDIT : audita
+    STORES ||--o{ ELECTRONIC_INVOICES : emite
+    SALES ||--|| ELECTRONIC_INVOICES : factura
 ```
 
 ## Tabla `refresh_tokens` (módulo auth)
@@ -32,10 +36,39 @@ Sesiones de refresh token rotativas (introducida en `V4__Refresh_Tokens.sql`).
 | revoked | BOOLEAN | |
 | created_at / updated_at | TIMESTAMP | |
 
+## Tabla `store_billing_config` (módulo billing)
+Habilitación y credenciales de facturación electrónica **por local** (introducida en `V14__Store_Billing_Config.sql`).
+Relación 1 a 1 con `stores`: la PK **es** el `store_id`. Ver DDL completo en `modules/billing/spec.md`.
+
+| Columna | Tipo | Notas |
+|---|---|---|
+| store_id | BIGINT PK | `FK_store_billing_config_store` → `stores(id)` |
+| status | VARCHAR(30) | Etapa de habilitación (CHECK: `NOT_REQUESTED`…`SUSPENDED`) |
+| status_reason | VARCHAR(500) | Motivo obligatorio para `REJECTED` / `SUSPENDED` |
+| environment | VARCHAR(12) | `SANDBOX` o `PRODUCTION` (CHECK) |
+| sandbox_* / production_* | VARCHAR / INT | Dos juegos de credenciales + id de rango por entorno |
+| …_client_secret, …_password | VARCHAR(1024) | **Cifrados AES-256-GCM por la aplicación**, nunca en claro |
+| updated_by | VARCHAR(100) | Último usuario que modificó la configuración |
+| created_at / updated_at | TIMESTAMP | |
+
+## Tabla `numbering_range_audit` (módulo billing)
+Bitácora de cambios sobre rangos de numeración DIAN (introducida en `V15__Numbering_Range_Audit.sql`).
+
+| Columna | Tipo | Notas |
+|---|---|---|
+| id | BIGSERIAL PK | |
+| store_id | BIGINT | `FK_numbering_range_audit_store` → `stores(id)` |
+| range_id | BIGINT | Id del rango en el proveedor (Factus), no es FK local |
+| action | VARCHAR(20) | CHECK: `CREATE`, `DELETE`, `ACTIVATE`, `DEACTIVATE`, `UPDATE_CURRENT`, `SET_DEFAULT` (V17) |
+| previous_value / new_value | VARCHAR(50) | Valor antes y después del cambio |
+| performed_by | VARCHAR(100) | Usuario autenticado que ejecutó la acción |
+| created_at | TIMESTAMP | |
+
 ## Convenciones
 - Motor: PostgreSQL 16 (prod), H2 (dev)
 - Normalización: 3FN
-- PKs: `id BIGINT AUTO_INCREMENT` (excepto `settings` que usa `id INT = 1`)
+- PKs: `id BIGINT AUTO_INCREMENT`. Excepciones: `settings` y `store_billing_config` usan como PK el
+  `id` del local (relación 1 a 1 con `stores`), asignada explícitamente por el servicio, no autogenerada.
 - Timestamps: `created_at`, `updated_at` en todas las tablas maestras
 - Borrado lógico: campo `active BOOLEAN DEFAULT TRUE`
 - Tipos monetarios: `DECIMAL(12,2)`
@@ -54,6 +87,9 @@ Sesiones de refresh token rotativas (introducida en `V4__Refresh_Tokens.sql`).
 | IDX_refresh_tokens_user | refresh_tokens(user_id) | Purga y consulta de sesiones por usuario |
 | IDX_refresh_tokens_family | refresh_tokens(family_id) | Revocación de sesión completa (reuso) |
 | IDX_refresh_tokens_expires | refresh_tokens(expires_at) | Limpieza de tokens caducados |
+| IDX_electronic_invoices_store | electronic_invoices(store_id) | Historial de facturas aislado por local |
+| IDX_store_billing_config_status | store_billing_config(status) | Cola de revisión de habilitación en back office |
+| IDX_numbering_range_audit_store_range | numbering_range_audit(store_id, range_id) | Historial de cambios de un rango |
 
 ## Migraciones de Base de Datos (Flyway)
 

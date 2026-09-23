@@ -1,6 +1,6 @@
 package com.sciencebot.pos.sales;
 
-import com.sciencebot.pos.config.TenantContext;
+import com.sciencebot.pos.config.tenant.TenantContext;
 import com.sciencebot.pos.sales.internal.entities.Sale;
 import com.sciencebot.pos.sales.internal.entities.SaleItem;
 import com.sciencebot.pos.sales.internal.entities.SaleReturn;
@@ -63,7 +63,7 @@ class SaleServiceImplTest {
     private UserFacade userFacade;
 
     @Mock
-    private com.sciencebot.pos.billing.BillingFacade billingFacade;
+    private com.sciencebot.pos.billing.api.BillingFacade billingFacade;
 
     @InjectMocks
     private SaleServiceImpl saleService;

@@ -58,6 +58,12 @@ public class Product {
     @Column(nullable = false)
     private boolean active = true;
 
+    @Column(name = "tax_rate", nullable = false, precision = 5, scale = 2)
+    private BigDecimal taxRate = BigDecimal.ZERO;
+
+    @Column(name = "unspsc_code", length = 50)
+    private String unspscCode;
+
     @Column(name = "image_url", length = 255)
     private String imageUrl;
 

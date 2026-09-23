@@ -22,4 +22,10 @@ public interface ElectronicInvoiceRepository extends JpaRepository<ElectronicInv
     Optional<ElectronicInvoice> findBySaleIdForUpdate(@Param("saleId") Long saleId);
 
     List<ElectronicInvoice> findByStatus(String status);
+
+    org.springframework.data.domain.Page<ElectronicInvoice> findByStoreId(Long storeId, org.springframework.data.domain.Pageable pageable);
+
+    org.springframework.data.domain.Page<ElectronicInvoice> findByStoreIdAndStatus(Long storeId, String status, org.springframework.data.domain.Pageable pageable);
+
+    Optional<ElectronicInvoice> findBySaleIdAndStoreId(Long saleId, Long storeId);
 }

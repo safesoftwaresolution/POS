@@ -63,9 +63,9 @@ public class MockBillingAdapter implements ElectronicInvoicingProvider {
     }
 
     @Override
-    public java.util.List<com.sciencebot.pos.billing.NumberingRangeDto> queryDianNumberingRanges() {
+    public java.util.List<com.sciencebot.pos.billing.dto.NumberingRangeDto> queryDianNumberingRanges() {
         return java.util.List.of(
-                new com.sciencebot.pos.billing.NumberingRangeDto(
+                new com.sciencebot.pos.billing.dto.NumberingRangeDto(
                         1L, "01", "SETP", "18764000001234", 1L, 5000L, 1L,
                         "2026-01-01", "2027-01-01", "fc8eac422eba16e22ffd8c6f94b3f40a6e381edf", true
                 )
@@ -73,9 +73,9 @@ public class MockBillingAdapter implements ElectronicInvoicingProvider {
     }
 
     @Override
-    public java.util.List<com.sciencebot.pos.billing.NumberingRangeDto> listNumberingRanges() {
+    public java.util.List<com.sciencebot.pos.billing.dto.NumberingRangeDto> listNumberingRanges() {
         return java.util.List.of(
-                new com.sciencebot.pos.billing.NumberingRangeDto(
+                new com.sciencebot.pos.billing.dto.NumberingRangeDto(
                         1L, "01", "SETP", "18764000001234", 1L, 5000L, 1L,
                         "2026-01-01", "2027-01-01", "fc8eac422eba16e22ffd8c6f94b3f40a6e381edf", true
                 )
@@ -83,8 +83,8 @@ public class MockBillingAdapter implements ElectronicInvoicingProvider {
     }
 
     @Override
-    public com.sciencebot.pos.billing.NumberingRangeDto getNumberingRange(Long numberingRangeId) {
-        return new com.sciencebot.pos.billing.NumberingRangeDto(
+    public com.sciencebot.pos.billing.dto.NumberingRangeDto getNumberingRange(Long numberingRangeId) {
+        return new com.sciencebot.pos.billing.dto.NumberingRangeDto(
                 numberingRangeId != null ? numberingRangeId : 1L,
                 "01", "SETP", "18764000001234", 1L, 5000L, 1L,
                 "2026-01-01", "2027-01-01", "fc8eac422eba16e22ffd8c6f94b3f40a6e381edf", true
@@ -92,29 +92,38 @@ public class MockBillingAdapter implements ElectronicInvoicingProvider {
     }
 
     @Override
-    public com.sciencebot.pos.billing.NumberingRangeDto createNumberingRange(com.sciencebot.pos.billing.CreateNumberingRangeRequest request) {
-        return new com.sciencebot.pos.billing.NumberingRangeDto(
+    public com.sciencebot.pos.billing.dto.NumberingRangeDto createNumberingRange(com.sciencebot.pos.billing.dto.CreateNumberingRangeRequest request) {
+        return new com.sciencebot.pos.billing.dto.NumberingRangeDto(
                 100L,
                 request.document(),
                 request.prefix(),
                 request.resolutionNumber(),
-                request.from() != null ? request.from() : 1L,
-                request.to() != null ? request.to() : 5000L,
+                1L,
+                5000L,
                 request.current(),
-                request.startDate(),
-                request.endDate(),
-                request.technicalKey(),
+                "2026-01-01",
+                "2027-01-01",
+                "fc8eac422eba16e22ffd8c6f94b3f40a6e381edf",
                 true
         );
     }
 
     @Override
-    public boolean deleteNumberingRange(Long numberingRangeId) {
-        return true;
+    public void deleteNumberingRange(Long numberingRangeId) {
+        // Nada que borrar: el mock no guarda rangos.
     }
 
     @Override
-    public boolean toggleNumberingRangeStatus(Long numberingRangeId) {
-        return true;
+    public com.sciencebot.pos.billing.dto.NumberingRangeDto toggleNumberingRangeStatus(Long numberingRangeId) {
+        return getNumberingRange(numberingRangeId);
+    }
+
+    @Override
+    public com.sciencebot.pos.billing.dto.NumberingRangeDto updateNumberingRangeCurrent(Long numberingRangeId, Long current) {
+        return new com.sciencebot.pos.billing.dto.NumberingRangeDto(
+                numberingRangeId != null ? numberingRangeId : 1L,
+                "01", "SETP", "18764000001234", 1L, 5000L, current,
+                "2026-01-01", "2027-01-01", "fc8eac422eba16e22ffd8c6f94b3f40a6e381edf", true
+        );
     }
 }

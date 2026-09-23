@@ -1,5 +1,8 @@
 package com.sciencebot.pos.billing;
 
+import com.sciencebot.pos.billing.api.*;
+import com.sciencebot.pos.billing.dto.*;
+import com.sciencebot.pos.billing.exception.*;
 import com.sciencebot.pos.billing.internal.adapters.factus.FactusNumberingRangeMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -20,23 +23,44 @@ class FactusNumberingRangeMapperTest {
     }
 
     @Test
-    void toCreatePayload_MapsAllFieldsCorrectly() {
-        CreateNumberingRangeRequest request = new CreateNumberingRangeRequest(
-                "01", "SETP", "18764000001234", 1L, "2026-01-01", "2027-01-01", 1L, 5000L, "clave-tecnica-xyz"
-        );
+    void toCreatePayload_SendsOnlyWhatFactusAccepts() {
+        CreateNumberingRangeRequest request = new CreateNumberingRangeRequest("01", "SETP", "18764000001234", 7L);
 
         Map<String, Object> payload = mapper.toCreatePayload(request);
 
-        assertNotNull(payload);
-        assertEquals("01", payload.get("document"));
-        assertEquals("SETP", payload.get("prefix"));
-        assertEquals("18764000001234", payload.get("resolution_number"));
-        assertEquals(1L, payload.get("current"));
-        assertEquals("2026-01-01", payload.get("start_date"));
-        assertEquals("2027-01-01", payload.get("end_date"));
-        assertEquals(1L, payload.get("from"));
-        assertEquals(5000L, payload.get("to"));
-        assertEquals("clave-tecnica-xyz", payload.get("technical_key"));
+        assertEquals(Map.of(
+                "document", "01",
+                "prefix", "SETP",
+                "resolution_number", "18764000001234",
+                "current", "7"
+        ), payload, "from/to/fechas/clave técnica los completa Factus desde la DIAN");
+    }
+
+    @Test
+    void extractSingle_ReadsDataObjectOrRootObject() {
+        Map<String, Object> range = Map.of("id", 9, "prefix", "SETP", "is_active", 0, "is_expired", 1, "document_name", "Factura");
+
+        NumberingRangeDto fromData = mapper.extractSingle(Map.of("status", "OK", "data", range));
+        NumberingRangeDto fromRoot = mapper.extractSingle(range);
+
+        assertEquals(9L, fromData.id());
+        assertFalse(fromData.isActive());
+        assertTrue(fromData.isExpired());
+        assertEquals("Factura", fromData.documentName());
+        assertEquals(fromData, fromRoot);
+        assertNull(mapper.extractSingle(Map.of("message", "sin rango")));
+        assertNull(mapper.extractSingle(null));
+    }
+
+    @Test
+    void extractRangesList_SingleObjectInData_ReturnsOneRange() {
+        Map<String, Object> dianRange = Map.of("prefix", "SETP", "from", 1, "to", 5000, "resolution_number", "1876");
+
+        List<NumberingRangeDto> list = mapper.extractRangesList(Map.of("data", dianRange));
+
+        assertEquals(1, list.size());
+        assertEquals("SETP", list.get(0).prefix());
+        assertEquals(5000L, list.get(0).to());
     }
 
     @Test

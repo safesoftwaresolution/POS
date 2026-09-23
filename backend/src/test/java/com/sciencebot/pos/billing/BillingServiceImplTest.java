@@ -1,5 +1,8 @@
 package com.sciencebot.pos.billing;
 
+import com.sciencebot.pos.billing.api.*;
+import com.sciencebot.pos.billing.dto.*;
+import com.sciencebot.pos.billing.exception.*;
 import com.sciencebot.pos.billing.internal.services.BillingServiceImpl;
 import com.sciencebot.pos.billing.internal.services.InvoiceService;
 import com.sciencebot.pos.billing.internal.services.NumberingRangeService;
@@ -86,18 +89,21 @@ class BillingServiceImplTest {
         when(numberingRangeService.queryDianNumberingRanges()).thenReturn(List.of(rangeDto));
         when(numberingRangeService.listNumberingRanges()).thenReturn(List.of(rangeDto));
         when(numberingRangeService.getNumberingRange(1L)).thenReturn(rangeDto);
-        when(numberingRangeService.deleteNumberingRange(1L)).thenReturn(true);
-        when(numberingRangeService.toggleNumberingRangeStatus(1L)).thenReturn(true);
+        NumberingRangeDto toggled = new NumberingRangeDto(1L, "01", "SETP", "18764000001234", 1L, 5000L, 1L, "2026-01-01", "2027-01-01", "key", false);
+        when(numberingRangeService.toggleNumberingRangeStatus(1L)).thenReturn(toggled);
+        NumberingRangeDto adjusted = new NumberingRangeDto(1L, "01", "SETP", "18764000001234", 1L, 5000L, 150L, "2026-01-01", "2027-01-01", "key", true);
+        when(numberingRangeService.updateNumberingRangeCurrent(1L, 150L)).thenReturn(adjusted);
 
-        CreateNumberingRangeRequest createReq = new CreateNumberingRangeRequest("01", "SETP", "18764000001234", 1L, "2026-01-01", "2027-01-01", 1L, 5000L, "key");
+        CreateNumberingRangeRequest createReq = new CreateNumberingRangeRequest("01", "SETP", "18764000001234", 1L);
         when(numberingRangeService.createNumberingRange(createReq)).thenReturn(rangeDto);
 
         assertEquals(1, billingService.queryDianNumberingRanges().size());
         assertEquals(1, billingService.listNumberingRanges().size());
         assertEquals(rangeDto, billingService.getNumberingRange(1L));
         assertEquals(rangeDto, billingService.createNumberingRange(createReq));
-        assertTrue(billingService.deleteNumberingRange(1L));
-        assertTrue(billingService.toggleNumberingRangeStatus(1L));
+        billingService.deleteNumberingRange(1L);
+        assertEquals(toggled, billingService.toggleNumberingRangeStatus(1L));
+        assertEquals(adjusted, billingService.updateNumberingRangeCurrent(1L, 150L));
 
         verify(numberingRangeService).queryDianNumberingRanges();
         verify(numberingRangeService).listNumberingRanges();
@@ -105,5 +111,6 @@ class BillingServiceImplTest {
         verify(numberingRangeService).createNumberingRange(createReq);
         verify(numberingRangeService).deleteNumberingRange(1L);
         verify(numberingRangeService).toggleNumberingRangeStatus(1L);
+        verify(numberingRangeService).updateNumberingRangeCurrent(1L, 150L);
     }
 }

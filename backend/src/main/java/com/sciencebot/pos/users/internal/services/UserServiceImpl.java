@@ -1,7 +1,7 @@
 package com.sciencebot.pos.users.internal.services;
 
-import com.sciencebot.pos.config.PosUserDetails;
-import com.sciencebot.pos.config.TenantContext;
+import com.sciencebot.pos.config.security.PosUserDetails;
+import com.sciencebot.pos.config.tenant.TenantContext;
 import com.sciencebot.pos.users.*;
 import com.sciencebot.pos.users.internal.entities.User;
 import com.sciencebot.pos.users.internal.repositories.UserRepository;

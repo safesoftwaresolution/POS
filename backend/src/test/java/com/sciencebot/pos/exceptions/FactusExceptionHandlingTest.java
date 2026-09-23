@@ -1,7 +1,7 @@
 package com.sciencebot.pos.exceptions;
 
-import com.sciencebot.pos.billing.BillingNotEnabledException;
-import com.sciencebot.pos.billing.FactusApiException;
+import com.sciencebot.pos.billing.exception.BillingNotEnabledException;
+import com.sciencebot.pos.billing.exception.FactusApiException;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

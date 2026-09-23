@@ -1,4 +1,4 @@
-package com.sciencebot.pos.config;
+package com.sciencebot.pos.config.security;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;

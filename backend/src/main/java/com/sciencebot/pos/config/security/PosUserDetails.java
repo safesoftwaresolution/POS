@@ -1,4 +1,4 @@
-package com.sciencebot.pos.config;
+package com.sciencebot.pos.config.security;
 
 import org.springframework.security.core.GrantedAuthority;
 

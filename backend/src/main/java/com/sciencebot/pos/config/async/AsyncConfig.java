@@ -1,4 +1,4 @@
-package com.sciencebot.pos.config;
+package com.sciencebot.pos.config.async;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

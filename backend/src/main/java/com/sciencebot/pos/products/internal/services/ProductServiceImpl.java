@@ -6,7 +6,7 @@ import com.sciencebot.pos.categories.CategoryProductCountProvider;
 import com.sciencebot.pos.categories.SubcategoryDeleteValidator;
 import com.sciencebot.pos.categories.SubcategoryFacade;
 import com.sciencebot.pos.categories.SubcategoryProductCountProvider;
-import com.sciencebot.pos.config.TenantContext;
+import com.sciencebot.pos.config.tenant.TenantContext;
 import com.sciencebot.pos.products.*;
 import com.sciencebot.pos.products.internal.entities.Product;
 import com.sciencebot.pos.products.internal.repositories.ProductRepository;

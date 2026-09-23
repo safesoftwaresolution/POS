@@ -1,4 +1,4 @@
-package com.sciencebot.pos.config;
+package com.sciencebot.pos.config.security;
 
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;

@@ -1,6 +1,6 @@
 package com.sciencebot.pos.inventory.internal.services;
 
-import com.sciencebot.pos.config.TenantContext;
+import com.sciencebot.pos.config.tenant.TenantContext;
 import com.sciencebot.pos.inventory.*;
 import com.sciencebot.pos.inventory.internal.entities.InventoryMovement;
 import com.sciencebot.pos.inventory.internal.repositories.InventoryMovementRepository;

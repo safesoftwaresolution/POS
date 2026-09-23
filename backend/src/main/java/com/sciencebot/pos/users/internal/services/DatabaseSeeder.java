@@ -1,6 +1,6 @@
 package com.sciencebot.pos.users.internal.services;
 
-import com.sciencebot.pos.config.TenantContext;
+import com.sciencebot.pos.config.tenant.TenantContext;
 import com.sciencebot.pos.users.CreateUserCommand;
 import com.sciencebot.pos.users.UserFacade;
 import com.sciencebot.pos.users.internal.repositories.UserRepository;

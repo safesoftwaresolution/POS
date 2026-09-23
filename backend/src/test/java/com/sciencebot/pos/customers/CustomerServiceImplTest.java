@@ -1,6 +1,6 @@
 package com.sciencebot.pos.customers;
 
-import com.sciencebot.pos.config.TenantContext;
+import com.sciencebot.pos.config.tenant.TenantContext;
 import com.sciencebot.pos.customers.internal.entities.Customer;
 import com.sciencebot.pos.customers.internal.repositories.CustomerRepository;
 import com.sciencebot.pos.customers.internal.services.CustomerServiceImpl;

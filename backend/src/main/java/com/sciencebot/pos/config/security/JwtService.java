@@ -1,4 +1,4 @@
-package com.sciencebot.pos.config;
+package com.sciencebot.pos.config.security;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;

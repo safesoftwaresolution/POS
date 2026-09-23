@@ -1,5 +1,6 @@
-package com.sciencebot.pos.config;
+package com.sciencebot.pos.config.security;
 
+import com.sciencebot.pos.config.tenant.TenantContext;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;

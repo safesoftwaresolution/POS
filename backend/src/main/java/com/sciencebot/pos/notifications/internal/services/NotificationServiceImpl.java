@@ -1,6 +1,6 @@
 package com.sciencebot.pos.notifications.internal.services;
 
-import com.sciencebot.pos.config.TenantContext;
+import com.sciencebot.pos.config.tenant.TenantContext;
 import com.sciencebot.pos.notifications.CreateNotificationCommand;
 import com.sciencebot.pos.notifications.NotificationDto;
 import com.sciencebot.pos.notifications.NotificationFacade;

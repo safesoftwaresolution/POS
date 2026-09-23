@@ -1,6 +1,6 @@
 package com.sciencebot.pos.purchases.internal.services;
 
-import com.sciencebot.pos.config.TenantContext;
+import com.sciencebot.pos.config.tenant.TenantContext;
 import com.sciencebot.pos.purchases.*;
 import com.sciencebot.pos.purchases.internal.entities.Purchase;
 import com.sciencebot.pos.purchases.internal.entities.PurchaseItem;

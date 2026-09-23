@@ -2,7 +2,7 @@ package com.sciencebot.pos.products;
 
 import com.sciencebot.pos.categories.CategoryDto;
 import com.sciencebot.pos.categories.CategoryFacade;
-import com.sciencebot.pos.config.TenantContext;
+import com.sciencebot.pos.config.tenant.TenantContext;
 import com.sciencebot.pos.products.internal.entities.Product;
 import com.sciencebot.pos.products.internal.repositories.ProductRepository;
 import com.sciencebot.pos.products.internal.services.ProductServiceImpl;

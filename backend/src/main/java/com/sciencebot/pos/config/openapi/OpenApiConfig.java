@@ -1,4 +1,4 @@
-package com.sciencebot.pos.config;
+package com.sciencebot.pos.config.openapi;
 
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
@@ -99,5 +99,24 @@ public class OpenApiConfig {
                                 .description("Reportes de ventas, stock, rentabilidad y compras (solo ADMINISTRATOR)"),
                         new Tag().name("⚙️ Configuración")
                                 .description("Parámetros globales del negocio")));
+    }
+
+    @Bean
+    public org.springdoc.core.customizers.OperationCustomizer securityResponsesCustomizer() {
+        return (operation, handlerMethod) -> {
+            boolean hasSecurity = handlerMethod.hasMethodAnnotation(org.springframework.security.access.prepost.PreAuthorize.class)
+                    || handlerMethod.getBeanType().isAnnotationPresent(org.springframework.security.access.prepost.PreAuthorize.class);
+            if (hasSecurity && operation.getResponses() != null) {
+                if (!operation.getResponses().containsKey("401")) {
+                    operation.getResponses().addApiResponse("401",
+                            new io.swagger.v3.oas.models.responses.ApiResponse().description("No autenticado (Token JWT ausente, inválido o expirado)"));
+                }
+                if (!operation.getResponses().containsKey("403")) {
+                    operation.getResponses().addApiResponse("403",
+                            new io.swagger.v3.oas.models.responses.ApiResponse().description("Acceso denegado (Rol o permisos insuficientes)"));
+                }
+            }
+            return operation;
+        };
     }
 }

@@ -1,6 +1,6 @@
 package com.sciencebot.pos.notifications;
 
-import com.sciencebot.pos.config.TenantContext;
+import com.sciencebot.pos.config.tenant.TenantContext;
 import com.sciencebot.pos.notifications.internal.entities.NotificationEntity;
 import com.sciencebot.pos.notifications.internal.mappers.NotificationMapper;
 import com.sciencebot.pos.notifications.internal.repositories.NotificationRepository;

@@ -1,8 +1,8 @@
 package com.sciencebot.pos.auth.internal.services;
 
 import com.sciencebot.pos.auth.LoginResponse;
-import com.sciencebot.pos.config.JwtService;
-import com.sciencebot.pos.config.PosUserDetails;
+import com.sciencebot.pos.config.security.JwtService;
+import com.sciencebot.pos.config.security.PosUserDetails;
 import com.sciencebot.pos.shared.email.EmailSender;
 import com.sciencebot.pos.users.RegisterOwnerCommand;
 import com.sciencebot.pos.users.UserDto;

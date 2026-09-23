@@ -327,3 +327,17 @@
   - `f6f44cb` chore(harness): track .ai assistant harness and progress history
 - **Resultado:** Éxito (rama local develop)
 - **Notas:** Validación `init.ps1` en verde (ENTORNO SANO, 0 errores, 0 fallos) antes de commitear.
+
+## [2026-09-23 16:43] [COMMITTER] — Integración de cambios de Facturación por Tienda, Rangos DIAN y Configuración
+- **Tarea:** Integración modular de credenciales Factus por tienda, auditoría de rangos DIAN, desacoplamiento de configuración y subpaquetes
+- **Acción:** 7 commits atómicos creados tras validación verde del entorno y aprobación humana del plan
+- **Commits:**
+  - `9d3373e` refactor(config): reorganize configuration classes into functional subpackages
+  - `f6047d3` refactor(billing): reorganize billing public contracts into api, dto, and exception packages
+  - `23c5255` refactor(settings): decouple Factus billing configuration and drop legacy columns
+  - `08a798b` feat(billing): add store billing credentials, activation management, and OpenAPI doc contracts
+  - `cf04a8b` feat(billing): implement numbering range audit trail and set-default management
+  - `738caec` docs(api): update Postman collections with complete POS and billing workflows
+  - `8045688` docs: update architectural documentation, security guides, and module specifications
+- **Resultado:** Éxito (rama local refactor/factus-billing-module, sin push)
+- **Notas:** Validación `init.ps1` en verde (ENTORNO SANO, 0 errores, 0 fallos, 95+ tests pasando) antes de commitear.

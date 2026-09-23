@@ -626,6 +626,147 @@
             },
             "description": "Registra una resolución de numeración DIAN en Factus para habilitar la emisión electrónica."
           }
+        },
+        {
+          "name": "11b. ✅ Usar Rango para Facturar (set-default) — Flujo Normal",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code es 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var range = pm.response.json();",
+                  "pm.test(\"Devuelve el rango elegido con su ID\", function () {",
+                  "    pm.expect(range.id).to.be.a('number');",
+                  "});",
+                  "pm.test(\"El rango está activo\", function () {",
+                  "    pm.expect(range.isActive).to.be.true;",
+                  "});",
+                  "console.log('🎯 Rango predeterminado configurado:', range.id, '| Prefijo:', range.prefix, '| Resolución:', range.resolutionNumber);",
+                  "console.log('✅ Las próximas facturas del local usarán este rango.');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/billing/numbering-ranges/{{range_id}}/set-default",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "billing", "numbering-ranges", "{{range_id}}", "set-default"]
+            },
+            "description": "Elige el rango con el que el local facturará en su entorno activo (sandbox o producción). Solo ADMINISTRATOR puede hacerlo. Devuelve el rango elegido. \n\n**Prerrequisito:** El rango `{{range_id}}` debe existir en la cuenta Factus del local y estar activo.\n\n**Respuestas posibles:**\n- `200 OK` — rango configurado exitosamente.\n- `404 Not Found` — el rango no existe en la cuenta del local.\n- `409 Conflict` — el rango está inactivo o la resolución venció.\n- `403 Forbidden` — el rol no es ADMINISTRATOR."
+          }
+        },
+        {
+          "name": "11c. ❌ set-default con Rango Inexistente (debe dar 404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code es 404 Not Found\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "console.log('✅ Correcto: el rango 999999 no existe, el backend lo rechazó con 404.');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/billing/numbering-ranges/999999/set-default",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "billing", "numbering-ranges", "999999", "set-default"]
+            },
+            "description": "Prueba de error: intenta elegir un rango que no existe en Factus. El backend debe responder 404."
+          }
+        },
+        {
+          "name": "11d. ❌ set-default con Rango Inactivo (debe dar 409)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Pasos manuales previos:",
+                  "// 1. Desactiva el rango con: PATCH /api/v1/billing/numbering-ranges/{{range_id}}/toggle-status",
+                  "//    (primero configura otro rango como set-default para poder desactivar este).",
+                  "// 2. Luego ejecuta esta petición."
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code es 409 Conflict (inactivo) o 200 si sigue activo\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 409]);",
+                  "});",
+                  "if (pm.response.code === 409) {",
+                  "    var body = pm.response.json();",
+                  "    console.log('✅ Correcto: el rango inactivo fue rechazado con 409. Mensaje:', body.message);",
+                  "} else {",
+                  "    console.log('ℹ️ El rango sigue activo, no se pudo probar el caso de error. Desactívalo primero con toggle-status.');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/billing/numbering-ranges/{{range_id}}/set-default",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "billing", "numbering-ranges", "{{range_id}}", "set-default"]
+            },
+            "description": "Prueba de error: intenta elegir un rango inactivo. El backend debe responder 409 Conflict con mensaje 'está inactivo'.\n\n**Pasos previos manuales:**\n1. Ejecuta `PATCH /toggle-status` en el rango para desactivarlo (primero asegúrate de que otro rango está como predeterminado).\n2. Ejecuta esta petición."
+          }
+        },
+        {
+          "name": "11e. 👁️ Verificar Rango Activo Guardado (Super Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code es 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var data = pm.response.json();",
+                  "pm.test(\"sandboxNumberingRangeId está configurado\", function () {",
+                  "    pm.expect(data.sandboxNumberingRangeId).to.not.be.null;",
+                  "});",
+                  "console.log('👁️ Estado visible al Super Admin:');",
+                  "console.log('   sandboxNumberingRangeId  :', data.sandboxNumberingRangeId);",
+                  "console.log('   productionNumberingRangeId:', data.productionNumberingRangeId);",
+                  "console.log('   Entorno activo            :', data.environment);",
+                  "console.log('   Estado facturación        :', data.status);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/backoffice/stores/{{store_id}}/billing",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "backoffice", "stores", "{{store_id}}", "billing"]
+            },
+            "description": "Confirma desde el back-office (Super Admin) que el campo `sandboxNumberingRangeId` quedó actualizado con el rango elegido por el administrador del local. \n\n**Nota:** Para usar este endpoint el token debe ser de un SUPER_ADMIN. Si estás usando el token del Administrador, recibirás 403."
+          }
         }
       ]
     },

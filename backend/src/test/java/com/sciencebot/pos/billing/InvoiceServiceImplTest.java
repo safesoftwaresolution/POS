@@ -73,10 +73,8 @@ class InvoiceServiceImplTest {
         ReflectionTestUtils.setField(invoiceService, "activeProviderName", "mock");
 
         SaleDto saleDto = new SaleDto(1L, "FACT-000001", null, "Cliente General", BigDecimal.valueOf(50.0), BigDecimal.valueOf(50.0), BigDecimal.ZERO, "admin", List.of(), "CASH");
-        ElectronicInvoice pendingEntity = new ElectronicInvoice();
+        ElectronicInvoice pendingEntity = ElectronicInvoice.initialize(1L, 1L);
         pendingEntity.setId(10L);
-        pendingEntity.setSaleId(1L);
-        pendingEntity.setStatus("PENDING");
 
         when(repository.findBySaleIdForUpdate(1L)).thenReturn(Optional.of(pendingEntity));
         when(repository.save(any(ElectronicInvoice.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -100,11 +98,9 @@ class InvoiceServiceImplTest {
     @Test
     void processElectronicInvoice_AlreadyValidated_DoesNotCallProvider() {
         SaleDto saleDto = new SaleDto(1L, "FACT-000001", null, "Cliente General", BigDecimal.valueOf(50.0), BigDecimal.valueOf(50.0), BigDecimal.ZERO, "admin", List.of(), "CASH");
-        ElectronicInvoice validatedEntity = new ElectronicInvoice();
+        ElectronicInvoice validatedEntity = ElectronicInvoice.initialize(1L, 1L);
         validatedEntity.setId(10L);
-        validatedEntity.setSaleId(1L);
-        validatedEntity.setStatus("VALIDATED");
-        validatedEntity.setFactusNumber("SETP-001");
+        validatedEntity.markAsValidated("SETP-001", "cufe", "qr", "pdf", LocalDateTime.now());
 
         when(repository.findBySaleIdForUpdate(1L)).thenReturn(Optional.of(validatedEntity));
         ElectronicInvoiceDto validatedDto = new ElectronicInvoiceDto(10L, 1L, "SETP-001", "cufe", "qr", "VALIDATED", null, "pdf", LocalDateTime.now());
@@ -123,10 +119,9 @@ class InvoiceServiceImplTest {
         SaleDto saleDto = new SaleDto(1L, "FACT-000001", null, "Cliente General", BigDecimal.valueOf(50.0), BigDecimal.valueOf(50.0), BigDecimal.ZERO, "admin", List.of(), "CASH");
         when(saleFacade.getById(1L)).thenReturn(Optional.of(saleDto));
 
-        ElectronicInvoice validatedEntity = new ElectronicInvoice();
+        ElectronicInvoice validatedEntity = ElectronicInvoice.initialize(1L, 1L);
         validatedEntity.setId(10L);
-        validatedEntity.setSaleId(1L);
-        validatedEntity.setStatus("VALIDATED");
+        validatedEntity.markAsValidated("SETP-001", "cufe", "qr", "pdf", LocalDateTime.now());
         when(repository.findBySaleId(1L)).thenReturn(Optional.of(validatedEntity));
 
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
@@ -139,11 +134,9 @@ class InvoiceServiceImplTest {
     void sendInvoiceEmail_Success() {
         ReflectionTestUtils.setField(invoiceService, "activeProviderName", "mock");
 
-        ElectronicInvoice validated = new ElectronicInvoice();
+        ElectronicInvoice validated = ElectronicInvoice.initialize(1L, 1L);
         validated.setId(10L);
-        validated.setSaleId(1L);
-        validated.setStatus("VALIDATED");
-        validated.setFactusNumber("SETP-001");
+        validated.markAsValidated("SETP-001", "cufe", "qr", "pdf", LocalDateTime.now());
         when(repository.findBySaleId(1L)).thenReturn(Optional.of(validated));
 
         assertDoesNotThrow(() -> invoiceService.sendInvoiceEmail(1L, "cliente@correo.com"));
@@ -159,10 +152,8 @@ class InvoiceServiceImplTest {
 
     @Test
     void sendInvoiceEmail_InvoiceNotValidated_ThrowsException() {
-        ElectronicInvoice pending = new ElectronicInvoice();
+        ElectronicInvoice pending = ElectronicInvoice.initialize(1L, 1L);
         pending.setId(10L);
-        pending.setSaleId(1L);
-        pending.setStatus("PENDING");
         when(repository.findBySaleId(1L)).thenReturn(Optional.of(pending));
 
         assertThrows(IllegalStateException.class,

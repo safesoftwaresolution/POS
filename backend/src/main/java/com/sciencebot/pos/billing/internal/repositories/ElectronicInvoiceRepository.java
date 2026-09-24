@@ -1,7 +1,10 @@
 package com.sciencebot.pos.billing.internal.repositories;
 
+import com.sciencebot.pos.billing.dto.ElectronicInvoiceStatus;
 import com.sciencebot.pos.billing.internal.entities.ElectronicInvoice;
 import jakarta.persistence.LockModeType;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
@@ -10,6 +13,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface ElectronicInvoiceRepository extends JpaRepository<ElectronicInvoice, Long> {
+
     Optional<ElectronicInvoice> findBySaleId(Long saleId);
 
     /**
@@ -21,11 +25,11 @@ public interface ElectronicInvoiceRepository extends JpaRepository<ElectronicInv
     @Query("SELECT e FROM ElectronicInvoice e WHERE e.saleId = :saleId")
     Optional<ElectronicInvoice> findBySaleIdForUpdate(@Param("saleId") Long saleId);
 
-    List<ElectronicInvoice> findByStatus(String status);
+    List<ElectronicInvoice> findByStatus(ElectronicInvoiceStatus status);
 
-    org.springframework.data.domain.Page<ElectronicInvoice> findByStoreId(Long storeId, org.springframework.data.domain.Pageable pageable);
+    Page<ElectronicInvoice> findByStoreId(Long storeId, Pageable pageable);
 
-    org.springframework.data.domain.Page<ElectronicInvoice> findByStoreIdAndStatus(Long storeId, String status, org.springframework.data.domain.Pageable pageable);
+    Page<ElectronicInvoice> findByStoreIdAndStatus(Long storeId, ElectronicInvoiceStatus status, Pageable pageable);
 
     Optional<ElectronicInvoice> findBySaleIdAndStoreId(Long saleId, Long storeId);
 }

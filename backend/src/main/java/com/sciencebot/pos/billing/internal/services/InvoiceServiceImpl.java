@@ -1,6 +1,7 @@
 package com.sciencebot.pos.billing.internal.services;
 
 import com.sciencebot.pos.billing.dto.ElectronicInvoiceDto;
+import com.sciencebot.pos.billing.dto.ElectronicInvoiceStatus;
 import com.sciencebot.pos.billing.internal.adapters.InvoiceProvider;
 import com.sciencebot.pos.billing.internal.adapters.dto.InvoiceRequest;
 import com.sciencebot.pos.billing.internal.adapters.dto.InvoiceResult;
@@ -19,7 +20,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -28,7 +28,8 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * Implementación del servicio de Facturación Electrónica de Ventas.
+ * Implementación del servicio de Facturación Electrónica de Ventas (Vertical Slice).
+ * Orquesta la integración técnica delegando invariantes y transiciones a la entidad ElectronicInvoice.
  */
 @Service
 public class InvoiceServiceImpl implements InvoiceService {
@@ -74,15 +75,13 @@ public class InvoiceServiceImpl implements InvoiceService {
             throw new IllegalArgumentException("El ID de la venta es obligatorio para facturar");
         }
 
-        // 1. Obtener (con bloqueo pesimista) o crear el registro de factura de esta venta.
+        // 1. Obtener (con bloqueo pesimista) o inicializar el registro de factura para esta venta.
         Long effectiveStoreId = sale.storeId() != null ? sale.storeId() : TenantContext.getStoreId();
         ElectronicInvoice einvoice = lockOrCreateInvoice(sale.id(), effectiveStoreId);
-        if (einvoice.getStoreId() == null && effectiveStoreId != null) {
-            einvoice.setStoreId(effectiveStoreId);
-        }
+        einvoice.assignStoreIdIfMissing(effectiveStoreId);
 
-        // 2. Guard de idempotencia bajo bloqueo: si ya está validada, no volver a emitir.
-        if ("VALIDATED".equalsIgnoreCase(einvoice.getStatus())) {
+        // 2. Guard de idempotencia delegado al dominio: si ya está validada, no volver a emitir.
+        if (einvoice.isValidated()) {
             log.info("La venta ID {} ya posee una factura electrónica VALIDATED ({})", sale.id(), einvoice.getFactusNumber());
             return invoiceMapper.toDto(einvoice);
         }
@@ -102,7 +101,7 @@ public class InvoiceServiceImpl implements InvoiceService {
             result = InvoiceResult.error("Error en proveedor " + provider.getProviderName() + ": " + ex.getMessage());
         }
 
-        // 6. Aplicar resultados normalizados y persistir en la misma transacción.
+        // 6. Aplicar resultados normalizados delegando al dominio y persistir.
         applyResultToEntity(einvoice, result);
         ElectronicInvoice saved = repository.save(einvoice);
         return invoiceMapper.toDto(saved);
@@ -131,8 +130,8 @@ public class InvoiceServiceImpl implements InvoiceService {
                 .orElseThrow(() -> new IllegalArgumentException("Venta no encontrada con ID: " + saleId));
 
         Optional<ElectronicInvoice> existingOpt = repository.findBySaleId(saleId);
-        if (existingOpt.isPresent() && "VALIDATED".equalsIgnoreCase(existingOpt.get().getStatus())) {
-            throw new IllegalArgumentException("La factura ya está validada y no puede reintentarse");
+        if (existingOpt.isPresent()) {
+            existingOpt.get().prepareForRetry(); // La entidad valida invariante y estado
         }
 
         return (self != null ? self : this).processElectronicInvoice(sale);
@@ -147,9 +146,7 @@ public class InvoiceServiceImpl implements InvoiceService {
         ElectronicInvoice einvoice = repository.findBySaleId(saleId)
                 .orElseThrow(() -> new IllegalArgumentException("No existe factura electrónica registrada para la venta ID: " + saleId));
 
-        if (!"VALIDATED".equalsIgnoreCase(einvoice.getStatus()) || einvoice.getFactusNumber() == null || einvoice.getFactusNumber().isBlank()) {
-            throw new IllegalStateException("La factura no ha sido validada por la DIAN (estado actual: " + einvoice.getStatus() + ")");
-        }
+        einvoice.assertCanSendEmail(); // Delegación de invariante a la entidad
 
         InvoiceProvider provider = resolveProvider();
         boolean sent = provider.sendInvoiceEmail(einvoice.getFactusNumber(), email);
@@ -167,7 +164,12 @@ public class InvoiceServiceImpl implements InvoiceService {
         }
         org.springframework.data.domain.Page<ElectronicInvoice> page;
         if (status != null && !status.isBlank()) {
-            page = repository.findByStoreIdAndStatus(storeId, status.trim().toUpperCase(), pageable);
+            try {
+                ElectronicInvoiceStatus statusEnum = ElectronicInvoiceStatus.valueOf(status.trim().toUpperCase());
+                page = repository.findByStoreIdAndStatus(storeId, statusEnum, pageable);
+            } catch (IllegalArgumentException ex) {
+                return org.springframework.data.domain.Page.empty();
+            }
         } else {
             page = repository.findByStoreId(storeId, pageable);
         }
@@ -182,9 +184,7 @@ public class InvoiceServiceImpl implements InvoiceService {
                 .filter(inv -> storeId == null || storeId.equals(inv.getStoreId()))
                 .orElseThrow(() -> new IllegalArgumentException("Factura no encontrada para la venta: " + saleId));
 
-        if (einvoice.getFactusNumber() == null || einvoice.getFactusNumber().isBlank()) {
-            throw new IllegalStateException("La factura no tiene número legal asignado");
-        }
+        einvoice.assertCanDownloadLegalDocument();
 
         InvoiceProvider provider = resolveProvider();
         return provider.downloadInvoicePDF(einvoice.getFactusNumber());
@@ -198,9 +198,7 @@ public class InvoiceServiceImpl implements InvoiceService {
                 .filter(inv -> storeId == null || storeId.equals(inv.getStoreId()))
                 .orElseThrow(() -> new IllegalArgumentException("Factura no encontrada para la venta: " + saleId));
 
-        if (einvoice.getFactusNumber() == null || einvoice.getFactusNumber().isBlank()) {
-            throw new IllegalStateException("La factura no tiene número legal asignado");
-        }
+        einvoice.assertCanDownloadLegalDocument();
 
         InvoiceProvider provider = resolveProvider();
         return provider.downloadInvoiceXML(einvoice.getFactusNumber());
@@ -208,25 +206,15 @@ public class InvoiceServiceImpl implements InvoiceService {
 
     private ElectronicInvoice lockOrCreateInvoice(Long saleId, Long storeId) {
         return repository.findBySaleIdForUpdate(saleId)
-                .orElseGet(() -> {
-                    ElectronicInvoice newInv = new ElectronicInvoice();
-                    newInv.setSaleId(saleId);
-                    newInv.setStoreId(storeId != null ? storeId : 1L);
-                    newInv.setStatus("PENDING");
-                    return repository.saveAndFlush(newInv);
-                });
+                .orElseGet(() -> repository.saveAndFlush(ElectronicInvoice.initialize(saleId, storeId != null ? storeId : 1L)));
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public ElectronicInvoice getOrCreateInitialInvoice(Long saleId) {
         return repository.findBySaleId(saleId)
                 .orElseGet(() -> {
-                    ElectronicInvoice newInv = new ElectronicInvoice();
-                    newInv.setSaleId(saleId);
-                    Long storeId = saleFacade.getById(saleId).map(s -> s.storeId()).orElse(TenantContext.getStoreId());
-                    newInv.setStoreId(storeId != null ? storeId : 1L);
-                    newInv.setStatus("PENDING");
-                    return repository.save(newInv);
+                    Long storeId = saleFacade.getById(saleId).map(SaleDto::storeId).orElse(TenantContext.getStoreId());
+                    return repository.save(ElectronicInvoice.initialize(saleId, storeId != null ? storeId : 1L));
                 });
     }
 
@@ -244,26 +232,23 @@ public class InvoiceServiceImpl implements InvoiceService {
     }
 
     private void applyResultToEntity(ElectronicInvoice einvoice, InvoiceResult result) {
-        if (result != null) {
-            if (result.legalInvoiceNumber() != null) {
-                einvoice.setFactusNumber(result.legalInvoiceNumber());
-            }
-            if (result.cufe() != null) {
-                einvoice.setCufe(result.cufe());
-            }
-            if (result.qrCode() != null) {
-                einvoice.setQrCode(result.qrCode());
-            }
-            if (result.pdfUrl() != null) {
-                einvoice.setPdfUrl(result.pdfUrl());
-            }
-            if (result.status() != null) {
-                einvoice.setStatus(result.status());
-            }
-            einvoice.setErrorMessage(result.errorMessage());
-            if ("VALIDATED".equalsIgnoreCase(result.status())) {
-                einvoice.setValidatedAt(result.validatedAt() != null ? result.validatedAt() : LocalDateTime.now());
-            }
+        if (result == null) {
+            einvoice.markAsError("Respuesta vacía del proveedor de facturación");
+            return;
+        }
+
+        if ("VALIDATED".equalsIgnoreCase(result.status())) {
+            einvoice.markAsValidated(
+                    result.legalInvoiceNumber(),
+                    result.cufe(),
+                    result.qrCode(),
+                    result.pdfUrl(),
+                    result.validatedAt()
+            );
+        } else if ("REJECTED".equalsIgnoreCase(result.status())) {
+            einvoice.markAsRejected(result.errorMessage());
+        } else {
+            einvoice.markAsError(result.errorMessage());
         }
     }
 }

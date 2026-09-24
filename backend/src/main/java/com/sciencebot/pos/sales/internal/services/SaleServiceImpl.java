@@ -46,7 +46,7 @@ public class SaleServiceImpl implements SaleFacade {
     private final ProductFacade productFacade;
     private final InventoryFacade inventoryFacade;
     private final UserFacade userFacade;
-    private final com.sciencebot.pos.billing.api.BillingFacade billingFacade;
+    private final org.springframework.context.ApplicationEventPublisher eventPublisher;
 
     public SaleServiceImpl(
             SaleRepository saleRepository,
@@ -58,7 +58,7 @@ public class SaleServiceImpl implements SaleFacade {
             @Lazy ProductFacade productFacade,
             @Lazy InventoryFacade inventoryFacade,
             @Lazy UserFacade userFacade,
-            @Lazy com.sciencebot.pos.billing.api.BillingFacade billingFacade
+            org.springframework.context.ApplicationEventPublisher eventPublisher
     ) {
         this.saleRepository = saleRepository;
         this.saleItemRepository = saleItemRepository;
@@ -69,7 +69,7 @@ public class SaleServiceImpl implements SaleFacade {
         this.productFacade = productFacade;
         this.inventoryFacade = inventoryFacade;
         this.userFacade = userFacade;
-        this.billingFacade = billingFacade;
+        this.eventPublisher = eventPublisher;
     }
 
 
@@ -204,16 +204,15 @@ public class SaleServiceImpl implements SaleFacade {
         Sale saved = saleRepository.saveAndFlush(sale);
         SaleDto saleDto = saleMapper.toDto(saved);
 
-        // Si sendToFactus es true, enviamos inmediatamente a Factus.
-        // Si es false o no se envía, la venta queda guardada en POS para emisión manual posterior.
-        if (Boolean.TRUE.equals(command.sendToFactus())) {
-            try {
-                billingFacade.processElectronicInvoice(saleDto);
-            } catch (Exception e) {
-                // Si la llamada remota a Factus falla, la venta local NO se revierte.
-                // La factura electrónica queda registrada con estado PENDING para reintento/emisión posterior.
-            }
-        }
+        // Publicación desacoplada del evento de dominio para facturación electrónica asíncrona
+        eventPublisher.publishEvent(new SaleCompletedEvent(
+                saved.getId(),
+                saved.getStoreId(),
+                saved.getInvoiceNumber(),
+                saved.getTotalAmount(),
+                Boolean.TRUE.equals(command.sendToFactus()),
+                LocalDateTime.now()
+        ));
 
         return saleDto;
     }

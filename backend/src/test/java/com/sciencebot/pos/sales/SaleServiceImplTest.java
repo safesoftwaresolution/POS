@@ -63,7 +63,7 @@ class SaleServiceImplTest {
     private UserFacade userFacade;
 
     @Mock
-    private com.sciencebot.pos.billing.api.BillingFacade billingFacade;
+    private org.springframework.context.ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private SaleServiceImpl saleService;
@@ -109,6 +109,7 @@ class SaleServiceImplTest {
         assertEquals(BigDecimal.valueOf(4.00), result.cashChange());
         verify(inventoryFacade, times(1)).registerMovement(eq(1L), eq("VENTA"), eq(2), anyString());
         verify(saleRepository, times(1)).saveAndFlush(any(Sale.class));
+        verify(eventPublisher, times(1)).publishEvent(any(SaleCompletedEvent.class));
     }
 
     @Test
@@ -133,7 +134,7 @@ class SaleServiceImplTest {
         // Reenvío idempotente: no descuenta inventario, no factura ni persiste una venta nueva.
         verify(inventoryFacade, never()).registerMovement(anyLong(), anyString(), anyInt(), anyString());
         verify(saleRepository, never()).saveAndFlush(any(Sale.class));
-        verify(billingFacade, never()).processElectronicInvoice(any());
+        verify(eventPublisher, never()).publishEvent(any(SaleCompletedEvent.class));
     }
 
     @Test

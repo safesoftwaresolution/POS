@@ -25,6 +25,7 @@ import ReportsBento from './pages/ReportsBento';
 import SettingsBento from './pages/SettingsBento';
 import DocumentsBento from './pages/DocumentsBento';
 import StoresBento from './pages/backoffice/StoresBento';
+import BillingBento from './pages/backoffice/BillingBento';
 import CategoriesBento from './pages/backoffice/CategoriesBento';
 import ProductCategoriesBento from './pages/backoffice/ProductCategoriesBento';
 import ParametersBento from './pages/backoffice/ParametersBento';
@@ -186,6 +187,7 @@ function BackofficeProtectedLayout() {
         <main className="p-4 sm:p-6 lg:p-8 flex-1">
           <Routes>
             <Route path="/" element={<StoresBento />} />
+            <Route path="/billing" element={<BillingBento />} />
             <Route path="/categories" element={<CategoriesBento />} />
             <Route path="/product-categories" element={<ProductCategoriesBento />} />
             <Route path="/parameters" element={<ParametersBento />} />

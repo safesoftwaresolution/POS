@@ -349,17 +349,17 @@ export default function SettingsBento() {
               </div>
             </div>
 
-            {/* Factus API Credentials */}
-            <div className="bento-card p-6 space-y-4">
+            {/* Facturación electrónica: las credenciales de Factus las carga el SUPER_ADMIN por local
+                (ver backend/docs/modules/billing/spec.md, RN-BILL-005) — el admin del local nunca las
+                ve ni las envía. El estado de habilitación y los rangos DIAN se gestionan en Facturación DIAN. */}
+            <div className="bento-card p-6 space-y-3">
               <h3 className="font-extrabold text-sm text-[#0A0A0A] dark:text-[#F4F4F6] flex items-center gap-2">
                 <Key className="w-4 h-4 text-[#FF5520] dark:text-[#FF5520]" /> Facturación Electrónica Factus DIAN
               </h3>
-
-              <div className="p-4 bg-[#FF5520]/5 dark:bg-[#FF5520]/10 rounded-2xl border border-[#FF5520]/20 text-xs space-y-1 text-[#0A0A0A] dark:text-[#F4F4F6]">
-                <p className="font-extrabold text-[#FF5520] dark:text-[#FF5520]">Configuración activa del proveedor de facturación electrónica:</p>
-                <p className="text-gray-600 dark:text-gray-300 font-medium">• URL Factus: <code className="font-mono bg-white dark:bg-[#0E0E12] px-1.5 py-0.5 rounded border border-[#EAEAEA] dark:border-[#272730]">https://api-sandbox.factus.com.co</code></p>
-                <p className="text-gray-600 dark:text-gray-300 font-medium">• Rango DIAN ID: <code className="font-mono bg-white dark:bg-[#0E0E12] px-1.5 py-0.5 rounded border border-[#EAEAEA] dark:border-[#272730]">8</code></p>
-              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+                El estado de habilitación y los rangos de numeración DIAN de tu local se gestionan desde{' '}
+                <a href="/invoicing" className="text-[#FF5520] font-bold underline">Facturación DIAN → Habilitación DIAN</a>.
+              </p>
             </div>
 
             <button

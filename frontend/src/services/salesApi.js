@@ -41,6 +41,7 @@ export async function createSaleApi(saleCommand, idempotencyKey) {
         unitPrice: item.unitPrice
       })),
       cashReceived: saleCommand.cashReceived,
+      sendToFactus: Boolean(saleCommand.sendToFactus),
       paymentMethod: saleCommand.paymentMethod || 'CASH'
     }),
   });

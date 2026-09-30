@@ -1,19 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Users, UserPlus, Search, Mail, Phone, CheckCircle2, AlertCircle } from 'lucide-react';
-import { getCustomersApi, createCustomerApi } from '../services/customersApi';
+import { Users, UserPlus, Search, Mail, Phone, CheckCircle2 } from 'lucide-react';
+import { getCustomersApi } from '../services/customersApi';
+import CreateDianCustomerModal from '../components/customers/CreateDianCustomerModal';
 
 export default function CustomersBento() {
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
-  const [errorMsg, setErrorMsg] = useState('');
-  const [newCustomer, setNewCustomer] = useState({
-    name: '',
-    identification: '',
-    email: '',
-    phone: ''
-  });
 
   const loadCustomers = async () => {
     setLoading(true);
@@ -31,19 +25,6 @@ export default function CustomersBento() {
   useEffect(() => {
     loadCustomers();
   }, []);
-
-  const handleCreateCustomer = async (e) => {
-    e.preventDefault();
-    setErrorMsg('');
-    try {
-      await createCustomerApi(newCustomer);
-      setShowModal(false);
-      setNewCustomer({ name: '', identification: '', email: '', phone: '' });
-      await loadCustomers();
-    } catch (err) {
-      setErrorMsg(err.message || 'Error al guardar el cliente. Intenta nuevamente.');
-    }
-  };
 
   const filtered = customers.filter(c =>
     (c.fullName && c.fullName.toLowerCase().includes(search.toLowerCase())) ||
@@ -130,85 +111,11 @@ export default function CustomersBento() {
         )}
       </div>
 
-      {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <form onSubmit={handleCreateCustomer} className="bento-card max-w-md w-full bg-white dark:bg-[#17171B] p-6 rounded-3xl shadow-2xl space-y-4 border border-gray-200 dark:border-[#272730]">
-            <h3 className="font-extrabold text-base text-[#0A0A0A] dark:text-white">Registrar Cliente</h3>
-
-            {errorMsg && (
-              <div className="p-3 bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800/40 rounded-xl text-xs font-bold flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>{errorMsg}</span>
-              </div>
-            )}
-
-            <div className="space-y-3 text-xs">
-              <div>
-                <label className="font-bold text-gray-700 dark:text-gray-300 block mb-1">Nombre Completo / Razón Social:</label>
-                <input
-                  type="text"
-                  value={newCustomer.name}
-                  onChange={e => setNewCustomer({ ...newCustomer, name: e.target.value })}
-                  placeholder="Ej. Juan Pérez u Homero S.A.S."
-                  className="w-full p-2.5 bg-[#F7F7F5] dark:bg-[#0E0E12] border border-gray-300 dark:border-[#272730] rounded-2xl font-semibold text-[#0A0A0A] dark:text-white focus:outline-none focus:border-[#0A0A0A]"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="font-bold text-gray-700 dark:text-gray-300 block mb-1">Cédula o NIT:</label>
-                <input
-                  type="text"
-                  value={newCustomer.identification}
-                  onChange={e => setNewCustomer({ ...newCustomer, identification: e.target.value })}
-                  placeholder="1020304050 o 900123456-1"
-                  className="w-full p-2.5 bg-[#F7F7F5] dark:bg-[#0E0E12] border border-gray-300 dark:border-[#272730] rounded-2xl font-mono text-xs text-[#0A0A0A] dark:text-white focus:outline-none focus:border-[#0A0A0A]"
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="font-bold text-gray-700 dark:text-gray-300 block mb-1">Correo Electrónico:</label>
-                  <input
-                    type="email"
-                    value={newCustomer.email}
-                    onChange={e => setNewCustomer({ ...newCustomer, email: e.target.value })}
-                    placeholder="cliente@correo.com"
-                    className="w-full p-2.5 bg-[#F7F7F5] dark:bg-[#0E0E12] border border-gray-300 dark:border-[#272730] rounded-2xl text-xs text-[#0A0A0A] dark:text-white focus:outline-none focus:border-[#0A0A0A]"
-                  />
-                </div>
-                <div>
-                  <label className="font-bold text-gray-700 dark:text-gray-300 block mb-1">Teléfono:</label>
-                  <input
-                    type="text"
-                    value={newCustomer.phone}
-                    onChange={e => setNewCustomer({ ...newCustomer, phone: e.target.value })}
-                    placeholder="3001234567"
-                    className="w-full p-2.5 bg-[#F7F7F5] dark:bg-[#0E0E12] border border-gray-300 dark:border-[#272730] rounded-2xl text-xs text-[#0A0A0A] dark:text-white focus:outline-none focus:border-[#0A0A0A]"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="flex gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setShowModal(false)}
-                className="w-1/2 py-3 bg-gray-100 dark:bg-[#272730] hover:bg-gray-200 dark:hover:bg-[#2C2C36] text-gray-700 dark:text-gray-300 rounded-2xl text-xs font-bold cursor-pointer"
-              >
-                Cancelar
-              </button>
-              <button
-                type="submit"
-                className="w-1/2 py-3 bg-[#0A0A0A] hover:bg-[#202020] text-white rounded-2xl text-xs font-extrabold shadow-md shadow-[#0A0A0A]/10 cursor-pointer"
-              >
-                Guardar Cliente
-              </button>
-            </div>
-          </form>
-        </div>
+        <CreateDianCustomerModal
+          onClose={() => setShowModal(false)}
+          onCreated={loadCustomers}
+        />
       )}
     </div>
   );

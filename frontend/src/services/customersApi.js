@@ -13,7 +13,12 @@ export async function createCustomerApi(customerData) {
       identification: customerData.identification,
       email: customerData.email,
       phone: customerData.phone,
-      address: customerData.address || 'Ciudad'
+      address: customerData.address || 'Ciudad',
+      // Datos fiscales DIAN: solo se envían si el formulario los captura (el backend aplica sus defaults).
+      ...(customerData.dv != null && { dv: customerData.dv }),
+      ...(customerData.legalOrganizationId != null && { legalOrganizationId: customerData.legalOrganizationId }),
+      ...(customerData.tributeId != null && { tributeId: customerData.tributeId }),
+      ...(customerData.municipalityId != null && { municipalityId: customerData.municipalityId })
     }),
   });
 }

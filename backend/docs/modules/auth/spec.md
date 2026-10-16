@@ -1,4 +1,4 @@
-<!-- spec-version: 1.1 | last-updated: 2026-08-20 -->
+<!-- spec-version: 1.2 | last-updated: 2026-10-02 -->
 # Módulo: Autenticación (Auth)
 
 ## Dependencias
@@ -60,6 +60,15 @@
   { "token": "eyJ...", "refreshToken": "...", "username": "admin", "role": "ADMINISTRATOR", "storeId": 1, "expiresIn": 900 }
   ```
 - **Errores**: 401, 403
+
+### POST /api/v1/auth/register
+- **Permisos**: Público
+- **Request**: `RegisterOwnerCommand` (datos del dueño).
+- **Response**: `201 Created` sin cuerpo. Crea un usuario `ADMINISTRATOR` pendiente de verificar su correo y envía el enlace de verificación (proveedor de correo `EMAIL_PROVIDER`: `log` por defecto, SMTP en producción; vigencia del token `EMAIL_VERIFICATION_EXPIRATION_MS`, 24 h). Tras verificar, el dueño registra su local en `POST /api/v1/stores` (ver módulo `stores`).
+
+### GET /api/v1/auth/verify-email?token=...
+- **Permisos**: Público
+- **Response 200**: consume el token, marca el correo como verificado y autologuea (mismo formato que login, setea ambas cookies).
 
 ### POST /api/v1/auth/refresh
 - **Permisos**: Público (el access token puede estar expirado)

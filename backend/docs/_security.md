@@ -1,4 +1,4 @@
-<!-- doc-version: 1.4 | last-updated: 2026-09-22 -->
+<!-- doc-version: 1.5 | last-updated: 2026-10-02 -->
 # Seguridad del Sistema
 
 ## Autenticación (JWT + Refresh Token)
@@ -10,6 +10,8 @@
 - **Endpoints públicos**:
   - `POST /api/v1/auth/login` — emite access + refresh token (body y cookies `HttpOnly`).
   - `POST /api/v1/auth/refresh` — renueva el access token a partir del refresh token (cookie `HttpOnly` o campo `refreshToken` en el body).
+  - `POST /api/v1/auth/register` — auto-registro del dueño (crea un `ADMINISTRATOR` pendiente de verificar correo).
+  - `GET /api/v1/auth/verify-email?token=...` — verifica el correo y autologuea.
   - `GET /api/v1/legal/{slug}` (lectura pública de políticas y términos)
   - `POST /api/v1/support/tickets` (radicación pública de PQRs y bugs)
   - `GET /api/v1/support/tickets/track/{ticketNumber}` (tracking público)

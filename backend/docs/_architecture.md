@@ -1,4 +1,4 @@
-<!-- doc-version: 1.0 | last-updated: 2026-07-09 -->
+<!-- doc-version: 1.1 | last-updated: 2026-10-02 -->
 # Arquitectura del Backend: Monolito Modular
 
 El sistema está diseñado bajo el estilo arquitectónico de **Monolito Modular (Modular Monolith)** con **División Vertical (Vertical Split)**. Toda la aplicación se ejecuta dentro de un único proceso JVM, pero está dividida internamente en módulos acotados y aislados que representan contextos delimitados (Bounded Contexts) del negocio.
@@ -46,7 +46,7 @@ Un módulo puede invocar a otro de forma síncrona **únicamente** inyectando la
 
 ### 2. Comunicación Asíncrona (Eventos de Dominio)
 Para desacoplar flujos de negocio secundarios, los módulos emiten eventos de dominio in-process mediante `ApplicationEventPublisher`. Los módulos receptores escuchan estos eventos de manera asíncrona.
-- *Ejemplo*: Al confirmarse una venta, `sales` publica un `OrderCreatedEvent`. El módulo de `inventory` reacciona asíncronamente a través de `@ApplicationModuleListener` para descontar el stock de manera independiente.
+- *Ejemplo*: al confirmarse una venta, `sales` publica `SaleCompletedEvent` y `billing` lo atiende en `ElectronicInvoiceEventListener` (`@Async` + `@TransactionalEventListener(AFTER_COMMIT)`) para emitir la factura DIAN sin bloquear la venta. El descuento de stock, en cambio, es síncrono (vía `InventoryFacade`, con bloqueo pesimista).
 
 ---
 
@@ -55,3 +55,17 @@ Para desacoplar flujos de negocio secundarios, los módulos emiten eventos de do
 - **Consistencia Transaccional**: Cada transacción de negocio síncrona debe ocurrir dentro de los límites de un único módulo. Si un flujo involucra múltiples módulos y requiere consistencia eventual, se debe preferir la publicación de eventos asíncronos.
 - **Bloqueos Concurrentes**: Al descontar existencias físicas en el inventario, se utiliza **Pessimistic Locking** (`@Lock(LockModeType.PESSIMISTIC_WRITE)`) en la base de datos para prevenir race conditions concurrentes (múltiples ventas del mismo producto al mismo tiempo).
 - **Aislamiento de Datos**: Aunque se comparte un esquema relacional SQL único, los módulos no deben realizar consultas `JOIN` entre tablas que pertenezcan a distintos bounded contexts. Cada módulo es dueño exclusivo de sus tablas asociadas.
+
+---
+
+## 🏢 Multi-tenencia
+
+Toda petición queda acotada a un local (`store`): `JwtAuthenticationFilter` extrae `storeId` del JWT y lo guarda en `TenantContext` (`config/tenant/`, un `ThreadLocal` que se limpia al terminar la petición). Las consultas por local leen `TenantContext.getStoreId()`; los listeners asíncronos deben fijarlo y restaurarlo explícitamente (ver `ElectronicInvoiceEventListener`). `categories` es el único catálogo deliberadamente global. Ver `_security.md`.
+
+## 📖 Modelo de lectura (CQRS)
+
+`reports` usa `JdbcClient` con SQL nativo (sin entidades JPA) para agregaciones de solo lectura.
+
+## ⚙️ Paquete `config/`
+
+Subpaquetes funcionales: `config/security` (JWT, filtros, CORS), `config/tenant` (`TenantContext`), `config/async` (ejecutores `@Async`) y `config/openapi` (Swagger/OpenAPI).

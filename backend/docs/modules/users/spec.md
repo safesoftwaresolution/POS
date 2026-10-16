@@ -1,4 +1,4 @@
-<!-- spec-version: 1.0 | last-updated: 2026-07-08 -->
+<!-- spec-version: 1.1 | last-updated: 2026-10-02 -->
 # Módulo: Usuarios (Users)
 
 ## Dependencias
@@ -8,7 +8,7 @@
 ## Reglas de Negocio
 
 ### RN-USER-001 — Roles Estáticos y Fijos
-- Solo existen: `ADMINISTRATOR`, `SUPERVISOR`, `SELLER`. No hay CRUD de roles.
+- Solo existen: `SUPER_ADMIN` (plataforma, sin `store_id`, gestionado desde `/api/v1/backoffice/staff`), `ADMINISTRATOR`, `SUPERVISOR`, `SELLER` (estos tres con `store_id`). No hay CRUD de roles.
 
 ### RN-USER-002 — Autoconservación del Administrador
 - No se puede eliminar ni desactivar al último usuario con rol Administrador.
@@ -97,7 +97,7 @@
 | password | VARCHAR(255) | NOT NULL (BCrypt hash) |
 | email | VARCHAR(100) | UNIQUE, NOT NULL |
 | full_name | VARCHAR(100) | NOT NULL |
-| role | VARCHAR(20) | NOT NULL. Valores: ADMINISTRATOR, SUPERVISOR, SELLER |
+| role | VARCHAR(20) | NOT NULL. Valores: SUPER_ADMIN, ADMINISTRATOR, SUPERVISOR, SELLER |
 | active | BOOLEAN | NOT NULL, DEFAULT TRUE |
 | created_at | TIMESTAMP | NOT NULL |
 | updated_at | TIMESTAMP | NOT NULL |

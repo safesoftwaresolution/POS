@@ -1,4 +1,4 @@
-<!-- doc-version: 1.3 | last-updated: 2026-09-22 -->
+<!-- doc-version: 1.4 | last-updated: 2026-10-02 -->
 # Roadmap y Estado por Módulo
 
 Este documento complementa los `spec.md` de cada módulo (que describen el comportamiento *actual*). Aquí se registra lo que **falta**, la **deuda técnica** conocida y las **próximas ideas**, para que quede como referencia entre sesiones de trabajo. Ver también la skill `pos-doc-sync` para el procedimiento de mantenerlo al día.
@@ -7,8 +7,8 @@ Este documento complementa los `spec.md` de cada módulo (que describen el compo
 
 | Módulo | Estado actual | Deuda técnica / faltante | Próximas ideas |
 |---|---|---|---|
-| auth | JWT access+refresh, roles ADMIN/SUPERVISOR/SELLER, self-registration de tiendas (V7) | — | 2FA opcional para ADMIN |
-| users | CRUD + seed de superadmin/admin por defecto (`DatabaseSeeder`) | — | Invitación de usuarios por email en vez de creación directa |
+| auth | JWT access+refresh rotativo, roles SUPER_ADMIN/ADMINISTRATOR/SUPERVISOR/SELLER, auto-registro del dueño + verificación de correo (V7) | — | 2FA opcional para ADMIN |
+| users | CRUD + seed de superadmin/admin por defecto (`DatabaseSeeder`). Personal de plataforma gestionado desde `/api/v1/backoffice/staff` | Credenciales sembradas (`superadmin`/`admin`) conocidas: obligar cambio en entornos expuestos | Invitación de usuarios por email en vez de creación directa |
 | categories | Catálogo global (no por tienda), seed base de 11 categorías genéricas (`CategorySeeder`). Subcategorías por tienda (`product_subcategories`), creadas libremente por Administrator/Supervisor bajo una categoría global, sin pedírselo a la plataforma (2026-09-16) | — | Íconos/colores por categoría para la grilla del POS |
 | products | CRUD por tienda (`store_id`), barcode + código interno únicos por tienda, subcategoría opcional por producto, seed demo solo en `dev` (`ProductDemoSeeder`) | Sin variantes de producto (talla/color) — fuera de alcance actual | Carga masiva por CSV/Excel |
 | inventory | Movimientos con pessimistic locking en descuento de stock | — | Conteo físico / ajuste de inventario con motivo |
@@ -18,14 +18,14 @@ Este documento complementa los `spec.md` de cada módulo (que describen el compo
 | suppliers | CRUD por tienda | — | — |
 | reports | CQRS con `JdbcClient` (SQL nativo, sin JPA) | — | Reportes de rentabilidad por categoría |
 | settings | Datos del negocio por local + catálogos dinámicos de parámetros (`PAYMENT_METHODS`, etc.). Credenciales Factus eliminadas de aquí (`V16`, 2026-09-22) | — | Parámetro de impuesto configurable (hoy 19% fijo en frontend, ver hallazgo abajo |
-| billing | Adapter Factus/Mock, estados PENDING/VALIDATED/REJECTED/ERROR, reintentos. **Credenciales por local cifradas en BD (`V14`), ciclo de habilitación con back office, guardas y auditoría de rangos (`V15`)** (2026-09-22) | Sin frontend; sin validación de vigencia/agotamiento del rango en cada emisión; respuestas de Factus no verificadas contra el sandbox real | Notificación al vendedor cuando una factura pasa a `ERROR`; alertas de rango por agotarse |
-| stores | Backoffice SaaS: métricas, ciclo de vida, KYC. Sin `doc-version` header en su spec | Spec no documenta el flujo de self-registration (V7) ni referencia `doc-version`/`last-updated` | — |
+| billing | Adapter Factus/Mock, estados PENDING/VALIDATED/REJECTED/ERROR, reintentos. **Credenciales por local cifradas en BD (`V14`), ciclo de habilitación con back office, guardas y auditoría de rangos (`V15`)** (2026-09-22) | Emisión ahora asíncrona por evento (`SaleCompletedEvent` → `ElectronicInvoiceEventListener`, 2026-09-24); frontend ya existe (`BillingBento` en back office, `InvoicingBento` para el local). Pendiente: validación de vigencia/agotamiento del rango en cada emisión; respuestas de Factus no verificadas contra el sandbox real | Notificación al vendedor cuando una factura pasa a `ERROR`; alertas de rango por agotarse |
+| stores | Backoffice SaaS: métricas, ciclo de vida, KYC, rechazo, autoservicio del dueño (`/api/v1/stores/me`). Spec actualizado 2026-10-02 con header y flujo de onboarding | Spec aún sin secciones RF-* formales | — |
 | legal | Documentos legales de plataforma | — | — |
 | support | Tickets de soporte | — | — |
-| notifications | Módulo nuevo (fusionado 2026-09-16): persistencia + alertas en tiempo real para el dashboard | **Sin `spec.md`**, sin entrada en `.ai/init.ps1`/`init.sh` | — |
-| storage | Cloudflare R2 (S3-compatible), subida/eliminación de archivos vía `StorageFacade` | **Sin `spec.md`**, sin entrada en `.ai/init.ps1`/`init.sh` | — |
+| notifications | Persistencia + alertas por local para el dashboard (stock bajo, billing, onboarding). Spec creado 2026-10-02 | Sin entrada en `.ai/init.ps1`/`init.sh` | — |
+| storage | Cloudflare R2 (S3-compatible), subida/eliminación vía `StorageFacade`. Spec creado 2026-10-02 | Sin entrada en `.ai/init.ps1`/`init.sh`; `POST /upload` y `DELETE /files` los puede usar cualquier usuario autenticado de cualquier rol, sin validar tipo MIME ni que la clave pertenezca a su local (revisar) | — |
 
-> `notifications` y `storage` llegaron en el merge del 2026-09-16 (rama paralela) junto con el módulo de documentos de tienda, el service de auth/onboarding y la config de Spring Security. Ninguno de los dos tiene spec modular todavía — siguiente candidato para `pos-doc-sync` / `pos-new-module` (parte del checklist es justamente crear ese spec).
+> `notifications` y `storage` llegaron en el merge del 2026-09-16 (rama paralela). Sus specs se crearon el 2026-10-02; falta registrarlos en el harness `.ai/`.
 
 ## Facturación electrónica por local (2026-09-22)
 
@@ -62,14 +62,13 @@ Pendientes conocidos de este bloque:
   implica decidir entre una llamada extra a Factus por venta (coste de latencia/cuota) o cachear el rango
   localmente (riesgo de desincronización si se agota o desactiva desde el panel de Factus) — decisión
   pendiente, igual que dónde vive la alerta de rango por agotarse (umbral, canal, si usa `notifications`).
-- **Frontend**: no existe UI para ninguno de estos flujos (pantalla de habilitación del local, cola del back
-  office, formulario de credenciales, gestión de resolución DIAN).
+- **Frontend**: ~~no existe UI~~ — ya hay UI (`pages/backoffice/BillingBento.jsx`, `services/billingApi.js` con activación y rangos, `InvoicingBento.jsx`), agregada tras el 2026-09-23. Falta verificar que cubra todos los flujos (cola de revisión, credenciales, rangos).
 - **Migración de secretos**: `V16` traslada client_id, username y rango, pero **no** los secretos (el cifrado
   ocurre en Java, no en SQL). Cualquier local que hubiera tenido credenciales en `settings` debe recargarlas.
 
 ## Hallazgos detectados en esta revisión (no corregidos, quedan para decidir)
 
-- **`billing` no sigue la estructura de paquetes del resto**: durante esta sesión el módulo quedó reorganizado
+- **`billing` no sigue la estructura de paquetes del resto** (sigue abierto; documentado como excepción en `_conventions.md`): durante esta sesión el módulo quedó reorganizado
   en subpaquetes `billing/api/`, `billing/dto/` y `billing/exception/`, mientras que `_conventions.md` y
   `_architecture.md` dicen que la API pública (Facade, DTOs, comandos) va en la **raíz** del paquete del
   módulo, como hacen los demás. Hay que decidir: o se actualizan las convenciones para todos los módulos, o
@@ -78,11 +77,15 @@ Pendientes conocidos de este bloque:
   desde `V9` hay una fila por local con PK = `stores.id`.
 
 - **IVA fijo en frontend**: `POSBento.jsx` calcula `tax = subtotal * 0.19` hardcodeado cuando se marca "Transmitir a DIAN", en vez de usar un parámetro configurable de `settings`. Si el negocio no es responsable de IVA (régimen simplificado) esto sobrefactura.
-- **`stores/spec.md`** no sigue el formato estándar (`spec-version`/`last-updated`, secciones RN-/RF-) de los demás specs — pendiente de normalizar cuando se vuelva a tocar el módulo.
-- **`notifications` y `storage` sin documentación modular** (ver fila en la tabla de arriba) — el harness `.ai/init.ps1`/`init.sh` tampoco los valida, así que "ENTORNO SANO" no detecta el hueco.
+- **~~`stores/spec.md`~~ (parcialmente resuelto 2026-10-02: header y onboarding agregados)** no seguía el formato estándar (`spec-version`/`last-updated`, secciones RN-/RF-) de los demás specs — pendiente de normalizar cuando se vuelva a tocar el módulo.
+- **~~`notifications` y `storage` sin documentación modular~~ (specs creados 2026-10-02; falta el harness)** (ver fila en la tabla de arriba) — el harness `.ai/init.ps1`/`init.sh` tampoco los valida, así que "ENTORNO SANO" no detecta el hueco.
 - **`.ai/features.json` desactualizado**: sigue en la versión 1.2.0 con FEAT-001 a FEAT-006 (última completada 2026-08-19). No registra como features el trabajo fusionado el 2026-09-03 (notifications, storage/R2 inicial duplicado, auth/onboarding, store documents) ni la config de Spring Security del 2026-09-16 — ese trabajo tampoco tiene entradas correspondientes en `.ai/progress/history.md` (el log salta de 2026-08-27 a 2026-09-16 directo al commit del propio harness). Es una rama paralela que no pasó por el protocolo Leader→Implementer→Reviewer→Committer del arnés.
 - **~~`categories/spec.md` permisos~~ — corregido en esta revisión**: el spec decía "Crear/Editar: Admin, Supervisor" pero `CategoryController` ya exige `SUPER_ADMIN` exclusivamente desde FEAT-006 (2026-08-19). Se corrigió el spec para reflejar el código real.
 - **`CLAUDE.md` (raíz) desactualizado — corregido en esta revisión**: no mencionaba el rol `SUPER_ADMIN` ni los módulos `notifications`/`storage`. Ya se actualizó.
+
+- **`docker-compose.prod.yml` no reenvía variables nuevas** (`BILLING_PROVIDER`, `EMAIL_*`/`SMTP_*`, `APP_FRONTEND_URL`, `JWT_COOKIE_SECURE`): en producción por compose el correo de verificación quedaría en modo `log` y las cookies sin `Secure`. Decidir y agregarlas. (2026-10-02)
+- **README raíz y `frontend/README.md` desactualizados — corregidos 2026-10-02** (roles, módulos, páginas, `.env`, seeds).
+- **`.ai/features.json`** sigue en 1.2.0 (última entrada 2026-08-19) y `history.md` no refleja la rama paralela; el módulo `backoffice` tampoco figura como módulo en el harness. No se tocó (el harness tiene su propio protocolo).
 
 ## Valores agregados propuestos (para retail colombiano)
 

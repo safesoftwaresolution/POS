@@ -1,4 +1,4 @@
-<!-- doc-version: 1.1 | last-updated: 2026-08-20 -->
+<!-- doc-version: 1.2 | last-updated: 2026-10-02 -->
 # Despliegue y Configuración
 
 ## Requisitos del Servidor
@@ -11,18 +11,26 @@
 | BD | PostgreSQL 16 | PostgreSQL 16, 5 GB inicial |
 
 ## Variables de Entorno
-| Variable | Descripción | Ejemplo |
+Fuente de verdad: `backend/src/main/resources/application.properties` y `backend/.env.example`. En ejecución local, `backend/.env` se carga automáticamente (`spring.config.import`).
+
+| Variable | Descripción | Por defecto / ejemplo |
 |---|---|---|
-| PORT | Puerto HTTP del backend | 8080 |
-| DB_HOST | Host PostgreSQL | localhost |
-| DB_PORT | Puerto PostgreSQL | 5432 |
-| DB_NAME | Nombre de la base de datos | app_pos_db |
-| DB_USERNAME | Usuario de BD | pos_db_user |
-| DB_PASSWORD | Contraseña de BD | (secreto) |
-| JWT_SECRET | Clave simétrica JWT (≥256 bits) | (secreto) |
-| JWT_EXPIRATION_MS | TTL del access token en ms (15 min) | 900000 |
-| JWT_REFRESH_EXPIRATION_MS | TTL del refresh token en ms (7 días) | 604800000 |
-| UPLOAD_DIR | Directorio de imágenes | /var/lib/app-pos/uploads |
+| SPRING_PROFILES_ACTIVE | Perfil activo (`dev` = H2 en archivo `./data/app_db`; otro perfil = PostgreSQL) | `dev` |
+| SPRING_DATASOURCE_URL / _USERNAME / _PASSWORD | Conexión a la base de datos | PostgreSQL `localhost:5432/app_db` |
+| DB_NAME / DB_USER / DB_PASSWORD | Solo para Docker Compose | (secreto) |
+| JWT_SECRET | Clave simétrica JWT (≥256 bits). Obligatoria fuera de `dev` | (secreto) |
+| JWT_EXPIRATION_MS / JWT_REFRESH_EXPIRATION_MS | TTL access (15 min) / refresh (7 días) | 900000 / 604800000 |
+| JWT_REFRESH_REUSE_GRACE_MS | Ventana de gracia ante reuso de refresh por carreras de red | 15000 |
+| JWT_COOKIE_NAME / JWT_REFRESH_COOKIE_NAME / JWT_COOKIE_SECURE / JWT_COOKIE_SAME_SITE | Cookies de sesión (`Secure=true` en producción con HTTPS) | `jwt_token` / `refresh_token` / false / Strict |
+| EMAIL_VERIFICATION_EXPIRATION_MS | Vigencia del enlace de verificación de correo | 86400000 |
+| EMAIL_PROVIDER / EMAIL_FROM / SMTP_HOST / SMTP_PORT / SMTP_USERNAME / SMTP_PASSWORD | Envío de correo (`log` solo escribe en el log) | `log` |
+| APP_FRONTEND_URL | URL del frontend para armar enlaces de correo | `http://localhost:3000` |
+| BILLING_PROVIDER | `factus` o `mock` | `factus` |
+| BILLING_ENCRYPTION_KEY | Clave AES-256 (32 bytes Base64) que cifra las credenciales Factus por local. No perderla ni cambiarla | (secreto) |
+| FACTUS_URL_SANDBOX / FACTUS_URL_PRODUCTION | URLs públicas de Factus (las credenciales NO van en variables: viven cifradas en BD por local) | URLs oficiales |
+| R2_ACCOUNT_ID / R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY / R2_BUCKET_NAME / R2_PUBLIC_URL | Cloudflare R2 (módulo `storage`) | vacío / `pos-storage` |
+
+> **Atención — `docker-compose.prod.yml`**: hoy solo reenvía al contenedor `DB_*`, `JWT_SECRET`, `BILLING_ENCRYPTION_KEY`, `FACTUS_URL_*` y `R2_*`. **No reenvía** `BILLING_PROVIDER`, `EMAIL_PROVIDER`/`EMAIL_FROM`/`SMTP_*`, `APP_FRONTEND_URL` ni `JWT_COOKIE_SECURE`/`JWT_COOKIE_SAME_SITE`, así que en ese compose se usan los valores por defecto (correo en modo `log`, cookies sin `Secure`). Ver `_roadmap.md`.
 
 ## Compilación Tradicional (Nativa)
 ```bash
@@ -36,8 +44,8 @@ java -jar target/app.pos-0.0.1-SNAPSHOT.jar
 ```
 
 ## Inicialización de BD
-- Esquema: auto-generado con `spring.jpa.hibernate.ddl-auto=update` (o `validate` en producción)
-- Datos semilla obligatorios: Usuario Admin por defecto + "Cliente General" (RN-CUST-001)
+- Esquema: gestionado exclusivamente por **Flyway** (`db/migration/V1…V17`); `ddl-auto=validate` en `dev` y `prod`. Solo el perfil `test` deja que Hibernate cree el esquema.
+- Datos semilla (`DatabaseSeeder` y otros seeders): `superadmin` / `SuperAdmin123!` (SUPER_ADMIN), `admin` / `Password123` (ADMINISTRATOR del local 1), "Cliente General" (RN-CUST-001), categorías base. **Cambiar estas credenciales en cualquier entorno expuesto.** `ProductDemoSeeder` solo corre en `dev`.
 
 ---
 
@@ -70,6 +78,6 @@ Utiliza la etapa `prod` del Dockerfile. Construye el JAR internamente y genera u
 
 El paso de desarrollo a producción se realiza de manera limpia:
 1. **Sin dependencias del host**: Todo el proceso de empaquetado final ocurre dentro del contenedor de construcción de Docker (etapa `builder`), garantizando que no se arrastren archivos locales innecesarios ni configuraciones corruptas del host.
-2. **Configuración de Variables de Entorno**: En producción, asegúrate de proporcionar los valores correctos para las variables de entorno de base de datos (`DB_NAME`, `DB_USER`, `DB_PASSWORD`) y seguridad (`JWT_SECRET`, `JWT_EXPIRATION_MS`), las cuales sobrescriben los valores por defecto configurados en `application.properties`.
-3. **Hibernate DDL Auto**: En desarrollo se usa `update` para iterar rápidamente sobre el esquema. En producción se establece en `validate` para evitar alteraciones accidentales del esquema de la base de datos de producción.
+2. **Configuración de Variables de Entorno**: En producción, asegúrate de proporcionar los valores correctos para las variables de entorno de base de datos (`DB_NAME`, `DB_USER`, `DB_PASSWORD`), seguridad (`JWT_SECRET`, `JWT_COOKIE_SECURE=true`), facturación (`BILLING_ENCRYPTION_KEY`) y `R2_*`, las cuales sobrescriben los valores por defecto configurados en `application.properties`.
+3. **Esquema**: nunca lo modifica Hibernate (`ddl-auto=validate` siempre); todo cambio entra como una nueva migración Flyway.
 

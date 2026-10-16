@@ -1,4 +1,4 @@
-<!-- doc-version: 1.3 | last-updated: 2026-09-15 -->
+<!-- doc-version: 1.4 | last-updated: 2026-10-02 -->
 # Índice del Proyecto POS
 
 ## Resolución Rápida por Módulo
@@ -17,9 +17,11 @@
 | reports | modules/reports/spec.md | (read-only) | /api/v1/reports |
 | settings | modules/settings/spec.md | settings | /api/v1/settings |
 | billing | modules/billing/spec.md | electronic_invoices, store_billing_config, numbering_range_audit | /api/v1/billing, /api/v1/backoffice/billing, /api/v1/backoffice/stores/{id}/billing |
-| stores | modules/stores/spec.md | stores, store_categories, store_documents | /api/v1/backoffice/stores |
+| stores | modules/stores/spec.md | stores, store_categories, store_documents | /api/v1/backoffice/stores, /api/v1/stores/me, /api/v1/backoffice/onboarding, /api/v1/backoffice/staff |
 | legal | modules/legal/spec.md | legal_documents | /api/v1/legal, /api/v1/backoffice/legal-documents |
 | support | modules/support/spec.md | support_tickets | /api/v1/support, /api/v1/backoffice/support |
+| notifications | modules/notifications/spec.md | notifications | /api/v1/notifications |
+| storage | modules/storage/spec.md | (ninguna; objetos en Cloudflare R2) | /api/v1/storage |
 
 ## Documentos Globales
 

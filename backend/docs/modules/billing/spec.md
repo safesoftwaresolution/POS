@@ -1,4 +1,4 @@
-<!-- spec-version: 2.0 | last-updated: 2026-09-22 -->
+<!-- spec-version: 2.1 | last-updated: 2026-10-02 -->
 # Módulo: Facturación Electrónica (Billing)
 
 ## Dependencias
@@ -47,6 +47,12 @@ sus locales. Por eso las credenciales llegan al SUPER_ADMIN, no al local:
 ### RN-BILL-002 — Desacoplamiento y No Bloqueo Local
 - El fallo de conexión, timeout o indisponibilidad de la API externa de Factus nunca revierte la transacción
   de venta registrada localmente en el POS. La factura queda en `PENDING` o `ERROR` para su posterior reintento.
+
+### RN-BILL-002b — Emisión por Evento de Dominio (2026-09-24)
+- `sales` publica `SaleCompletedEvent` al confirmar la venta. `ElectronicInvoiceEventListener` (`billing/internal/listeners/`) lo atiende con `@Async` + `@TransactionalEventListener(AFTER_COMMIT)`: la emisión a la DIAN solo ocurre una vez confirmada la venta en BD y nunca bloquea el hilo del cajero. Si `sendToFactus = false` el evento se ignora.
+- El listener restablece el `TenantContext` del local del evento (`storeId`) durante el procesamiento y lo restaura al terminar.
+- `ElectronicInvoice` es una entidad con transiciones de estado e invariantes propios (modelo rico); los estados se tipan con `ElectronicInvoiceStatus` (`billing/dto/`).
+- Estructura de paquetes: la API pública de `billing` vive en `api/` (`BillingFacade`), `dto/` y `exception/`, no en la raíz del módulo (ver hallazgo en `_roadmap.md`).
 
 ### RN-BILL-003 — Ciclo de Estados de la Factura
 | Estado | Significado |

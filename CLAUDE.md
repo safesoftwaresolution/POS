@@ -41,7 +41,7 @@ Default login: `admin` / `Password123`. Swagger UI at `http://localhost:8080/swa
 ## Backend Architecture
 
 ### Modular monolith with strict encapsulation
-Each business module (`auth`, `users`, `categories`, `products`, `inventory`, `customers`, `suppliers`, `purchases`, `sales`, `billing`, `reports`, `settings`, `stores`, `legal`, `support`, `notifications`, `storage`) is a vertical slice under `com.sciencebot.pos`. The last two (`notifications`, `storage`) don't have a `backend/docs/modules/*/spec.md` yet nor an entry in `.ai/init.ps1`/`init.sh`'s module list — known documentation gap, see `backend/docs/_roadmap.md`.
+Each business module (`auth`, `users`, `categories`, `products`, `inventory`, `customers`, `suppliers`, `purchases`, `sales`, `billing`, `reports`, `settings`, `stores`, `legal`, `support`, `notifications`, `storage`) is a vertical slice under `com.sciencebot.pos`. The last two (`notifications`, `storage`) have a spec but still no entry in `.ai/init.ps1`/`init.sh`'s module list (nor does `backoffice`) — known harness gap, see `backend/docs/_roadmap.md`.
 
 - **Module root** — the public API: `[Module]Facade` interface, output DTOs (`[Module]Dto`), input commands (`Create[Module]Command`), and domain events. These are the *only* types other modules may reference.
 - **`internal/`** — private implementation, split into `controllers/`, `services/`, `repositories/`, `entities/`, `mappers/`. Classes here should be package-private wherever possible and are invisible to other modules.
@@ -75,9 +75,9 @@ Factus credentials live **encrypted in `store_billing_config`** (one row per sto
 
 ## Frontend Architecture
 
-- `src/pages/` — one component per route (`/login`, `/`, `/pos`, `/products`, `/inventory`, `/customers`, `/invoicing`, `/settings`).
-- `src/services/api.js` — single HTTP client. Holds the JWT in `localStorage` (`jwt_token`), attaches `Authorization: Bearer` on every call, and clears the token on any 401. Route all backend calls through this module.
-- `src/context/` — `AuthContext` (session) and `ThemeContext` (light/dark, persisted in `localStorage`; Tailwind class-based dark mode).
+- `src/pages/` — one component per route: local pages (`/`, `/pos`, `/products`, `/inventory`, `/customers`, `/invoicing`, `/reports`, `/documents`, `/settings`), `pages/backoffice/` (`SUPER_ADMIN`, under `/backoffice`) and `pages/onboarding/`; public `/login`, `/register`, `/verify-email`.
+- `src/services/http.js` — shared HTTP client (JWT + refresh token in `localStorage`, transparent refresh on 401); one `*Api.js` per module on top of it (`services/backoffice/` for back-office calls). Route all backend calls through these.
+- `src/context/` — `AuthContext` (session), `ThemeContext` (light/dark, persisted in `localStorage`; Tailwind class-based dark mode) and `ModalContext`.
 - Barcodes are rendered client-side with JsBarcode (Code 128).
 
 ## Environment

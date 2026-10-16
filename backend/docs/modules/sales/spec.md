@@ -1,4 +1,4 @@
-<!-- spec-version: 1.1 | last-updated: 2026-09-15 -->
+<!-- spec-version: 1.2 | last-updated: 2026-10-02 -->
 # Módulo: Ventas (Sales)
 
 ## Dependencias
@@ -40,7 +40,7 @@
     - Stock reducido atómicamente para cada ítem.
     - Movimiento de inventario tipo VENTA registrado.
     - Número de factura correlativo generado (ej. FACT-000001).
-    - Si `sendToFactus: true`, invoca a `BillingFacade` para emitir la factura electrónica DIAN (asíncrono/no bloqueante).
+    - Si `sendToFactus: true`, la venta publica `SaleCompletedEvent`; `billing` lo escucha tras el commit (`AFTER_COMMIT`, `@Async`) y emite la factura electrónica DIAN sin bloquear al cajero (ver RN-BILL-002b).
 
 ### RF-SALE-003 — Generar Factura y Ticket POS
 - **Prioridad**: Alta

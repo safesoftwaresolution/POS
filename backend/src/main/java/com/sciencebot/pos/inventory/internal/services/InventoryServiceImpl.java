@@ -57,7 +57,6 @@ public class InventoryServiceImpl implements InventoryFacade {
         ProductDto product = productFacade.getById(productId)
                 .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado con ID: " + productId));
 
-        int previousStock = product.quantityAvailable();
         int delta;
         String typeUpper = movementType.toUpperCase().trim();
 
@@ -81,13 +80,16 @@ public class InventoryServiceImpl implements InventoryFacade {
                 throw new IllegalArgumentException("Tipo de movimiento inválido: " + movementType);
         }
 
-        int newStock = previousStock + delta;
-        if (newStock < 0) {
+        // Validacion temprana con la lectura de arriba (da el mensaje claro); la garantia real contra la
+        // sobreventa es el UPDATE atomico condicionado de adjustStock, que no depende de esta lectura.
+        if (product.quantityAvailable() + delta < 0) {
             throw new IllegalArgumentException("Inventario insuficiente. El stock resultante no puede ser negativo (RN-INV-001)");
         }
 
-        // Apply stock update in products module
-        productFacade.updateStock(productId, delta);
+        // Apply stock update in products module (atomico). El stock resultante sale de la BD, no de la lectura
+        // inicial: con ventas concurrentes esa lectura puede estar desfasada y falsearia el kardex.
+        int newStock = productFacade.adjustStock(productId, delta);
+        int previousStock = newStock - delta;
 
         // El stock acaba de cruzar el minimo hacia abajo (antes estaba por encima, ahora no):
         // se avisa una sola vez en el momento en que ocurre, no en cada movimiento subsiguiente

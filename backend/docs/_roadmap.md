@@ -87,6 +87,9 @@ Pendientes conocidos de este bloque:
 - **README raíz y `frontend/README.md` desactualizados — corregidos 2026-10-02** (roles, módulos, páginas, `.env`, seeds).
 - **`.ai/features.json`** sigue en 1.2.0 (última entrada 2026-08-19) y `history.md` no refleja la rama paralela; el módulo `backoffice` tampoco figura como módulo en el harness. No se tocó (el harness tiene su propio protocolo).
 
+- **Frontend (2026-10-16)**: tokens de color y componentes base (`components/ui`), pantalla de usuarios del local, editar/eliminar clientes, activar/desactivar productos, logo vía `/settings/logo`, rutas con guarda por rol y carga diferida, páginas públicas de legal y soporte. Pendiente: `GET /purchases/{id}` sin pantalla de detalle; ~24 avisos `set-state-in-effect` de oxlint (cargas iniciales con `setLoading` dentro de efectos); dividir `InvoicingBento` (≈970 líneas), `ProductsBento` y `POSBento` con los componentes base; revisión visual y de contraste (WCAG) en modo claro/oscuro.
+- **Reportes por rol**: el Sidebar muestra "Reportes" a `SUPERVISOR`, pero solo `/reports/stock` admite ese rol (ventas, top, rentabilidad, compras y cierre de caja son solo `ADMINISTRATOR`); la pantalla debería ocultar las pestañas que el rol no puede consultar.
+
 ## Valores agregados propuestos (para retail colombiano)
 
 Priorizados por impacto/esfuerzo estimado, no implementados aún salvo que se indique lo contrario:

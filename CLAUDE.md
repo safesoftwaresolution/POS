@@ -78,6 +78,8 @@ Factus credentials live **encrypted in `store_billing_config`** (one row per sto
 - `src/pages/` — one component per route: local pages (`/`, `/pos`, `/products`, `/inventory`, `/customers`, `/invoicing`, `/reports`, `/documents`, `/settings`), `pages/backoffice/` (`SUPER_ADMIN`, under `/backoffice`) and `pages/onboarding/`; public `/login`, `/register`, `/verify-email`.
 - `src/services/http.js` — shared HTTP client (JWT + refresh token in `localStorage`, transparent refresh on 401); one `*Api.js` per module on top of it (`services/backoffice/` for back-office calls). Route all backend calls through these.
 - `src/context/` — `AuthContext` (session), `ThemeContext` (light/dark, persisted in `localStorage`; Tailwind class-based dark mode) and `ModalContext`.
+- **Styling**: use the semantic Tailwind tokens defined in `src/index.css` (`bg-card`, `bg-page`, `border-line`, `text-ink`, `text-ink-soft`, `text-ink-muted`, `bg-brand`, `bg-solid`) instead of hardcoded hex + `dark:` pairs — they follow the theme automatically. Build new screens with the shared components in `src/components/ui/` (`Button`, `Badge`, `Card`, `Modal`, `Input`/`Select`, `EmptyState`, `PageHeader`). Visual spec: `DESIGN.md`.
+- **Routing**: pages are lazy-loaded in `App.jsx`; role-restricted routes use `<RequireRole roles={[...]}>` and must mirror the backend `@PreAuthorize` rules (also hide the sidebar link). Public pages (`/legal/:slug`, `/support`) live in `src/pages/public/`.
 - Barcodes are rendered client-side with JsBarcode (Code 128).
 
 ## Environment

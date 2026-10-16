@@ -25,6 +25,8 @@ const InvoicingBento = lazy(() => import('./pages/InvoicingBento'));
 const ReportsBento = lazy(() => import('./pages/ReportsBento'));
 const SettingsBento = lazy(() => import('./pages/SettingsBento'));
 const UsersBento = lazy(() => import('./pages/UsersBento'));
+const LegalPage = lazy(() => import('./pages/public/LegalPage'));
+const SupportPage = lazy(() => import('./pages/public/SupportPage'));
 const DocumentsBento = lazy(() => import('./pages/DocumentsBento'));
 const StoresBento = lazy(() => import('./pages/backoffice/StoresBento'));
 const BillingBento = lazy(() => import('./pages/backoffice/BillingBento'));
@@ -235,6 +237,8 @@ export default function App() {
               <Route path="/login" element={<LoginBento />} />
               <Route path="/register" element={<RegisterBento />} />
               <Route path="/verify-email" element={<VerifyEmailBento />} />
+              <Route path="/legal/:slug" element={<LegalPage />} />
+              <Route path="/support" element={<SupportPage />} />
               <Route path="/onboarding/store" element={<StoreOnboardingBento />} />
               <Route path="/backoffice/*" element={<BackofficeProtectedLayout />} />
               <Route path="/*" element={<ProtectedLayout />} />

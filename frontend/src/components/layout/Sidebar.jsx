@@ -336,10 +336,13 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
 
             {/* Manage Account */}
             <div className="px-3 py-3">
-              <button className="w-full flex items-center justify-between pl-[30px] pr-4 py-3.5 rounded-xl text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#272730] cursor-pointer transition-colors">
+              <button
+                onClick={() => { if (onClose) onClose(); navigate('/support'); }}
+                className="w-full flex items-center justify-between pl-[30px] pr-4 py-3.5 rounded-xl text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#272730] cursor-pointer transition-colors"
+              >
                 <span className="flex items-center gap-3">
                   <HelpCircle className="w-4 h-4 text-gray-400" />
-                  Administrar cuenta
+                  Ayuda y soporte
                 </span>
                 <ChevronRight className="w-4 h-4 text-ink-muted" />
               </button>

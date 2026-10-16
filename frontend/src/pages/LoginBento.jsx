@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { User, KeyRound, ArrowRight, AlertCircle } from 'lucide-react';
 import BentoIcon from '../components/BentoIcon';
 
@@ -101,6 +101,12 @@ export default function LoginBento() {
           >
             Regístrate
           </button>
+        </p>
+
+        <p className="text-center text-[11px] text-gray-500 font-semibold space-x-3">
+          <Link to="/legal/terms-and-conditions" className="hover:text-gray-300">Términos</Link>
+          <Link to="/legal/privacy-policy" className="hover:text-gray-300">Privacidad</Link>
+          <Link to="/support" className="hover:text-gray-300">Soporte</Link>
         </p>
 
       </div>

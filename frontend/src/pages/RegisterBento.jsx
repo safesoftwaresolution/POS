@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { User, Mail, KeyRound, IdCard, ArrowRight, AlertCircle, MailCheck } from 'lucide-react';
 import { registerApi } from '../services/authApi';
 import BentoIcon from '../components/BentoIcon';
@@ -149,6 +149,13 @@ export default function RegisterBento() {
               >
                 Inicia sesión
               </button>
+            </p>
+
+            <p className="text-center text-[11px] text-gray-500 font-semibold">
+              Al crear tu cuenta aceptas los{' '}
+              <Link to="/legal/terms-and-conditions" className="underline hover:text-gray-300">Términos y Condiciones</Link>
+              {' '}y la{' '}
+              <Link to="/legal/privacy-policy" className="underline hover:text-gray-300">Política de Privacidad</Link>.
             </p>
           </>
         )}

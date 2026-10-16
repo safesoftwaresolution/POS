@@ -5,6 +5,10 @@ import com.sciencebot.pos.billing.dto.CreateNumberingRangeRequest;
 import com.sciencebot.pos.billing.dto.ElectronicInvoiceDto;
 import com.sciencebot.pos.billing.dto.NumberingRangeDto;
 import com.sciencebot.pos.sales.SaleDto;
+import com.sciencebot.pos.billing.dto.CreateCreditNoteRequest;
+import com.sciencebot.pos.billing.dto.CreateDebitNoteRequest;
+import com.sciencebot.pos.billing.dto.CreditNoteDTO;
+import com.sciencebot.pos.billing.dto.DebitNoteDTO;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
 
@@ -13,7 +17,8 @@ import java.util.Optional;
 
 /**
  * Fachada orquestadora del módulo de Facturación Electrónica.
- * Implementa {@link BillingFacade} delegando en los servicios especializados {@link InvoiceService} y {@link NumberingRangeService}.
+ * Implementa {@link BillingFacade} delegando en los servicios especializados {@link InvoiceService},
+ * {@link NumberingRangeService}, {@link CreditNoteService} y {@link DebitNoteService}.
  */
 @Service
 @Primary
@@ -21,10 +26,19 @@ public class BillingServiceImpl implements BillingFacade {
 
     private final InvoiceService invoiceService;
     private final NumberingRangeService numberingRangeService;
+    private final CreditNoteService creditNoteService;
+    private final DebitNoteService debitNoteService;
 
-    public BillingServiceImpl(InvoiceService invoiceService, NumberingRangeService numberingRangeService) {
+    public BillingServiceImpl(
+            InvoiceService invoiceService,
+            NumberingRangeService numberingRangeService,
+            CreditNoteService creditNoteService,
+            DebitNoteService debitNoteService
+    ) {
         this.invoiceService = invoiceService;
         this.numberingRangeService = numberingRangeService;
+        this.creditNoteService = creditNoteService;
+        this.debitNoteService = debitNoteService;
     }
 
     // --- Facturación de Ventas ---
@@ -84,5 +98,19 @@ public class BillingServiceImpl implements BillingFacade {
     @Override
     public NumberingRangeDto updateNumberingRangeCurrent(Long numberingRangeId, Long current) {
         return numberingRangeService.updateNumberingRangeCurrent(numberingRangeId, current);
+    }
+
+    // --- Notas Crédito ---
+
+    @Override
+    public CreditNoteDTO createCreditNote(CreateCreditNoteRequest request) {
+        return creditNoteService.createAndValidateCreditNote(request);
+    }
+
+    // --- Notas Débito ---
+
+    @Override
+    public DebitNoteDTO createDebitNote(CreateDebitNoteRequest request) {
+        return debitNoteService.createAndValidateDebitNote(request);
     }
 }

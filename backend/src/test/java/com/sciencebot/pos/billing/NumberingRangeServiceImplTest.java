@@ -1,8 +1,10 @@
 package com.sciencebot.pos.billing;
 
-import com.sciencebot.pos.billing.api.*;
-import com.sciencebot.pos.billing.dto.*;
-import com.sciencebot.pos.billing.exception.*;
+import com.sciencebot.pos.billing.dto.BillingActivationStatus;
+import com.sciencebot.pos.billing.dto.BillingEnvironment;
+import com.sciencebot.pos.billing.dto.CreateNumberingRangeRequest;
+import com.sciencebot.pos.billing.dto.NumberingRangeDto;
+import com.sciencebot.pos.billing.exception.BillingNotEnabledException;
 import com.sciencebot.pos.billing.internal.adapters.NumberingRangeProvider;
 import com.sciencebot.pos.billing.internal.adapters.factus.FactusCredentialsResolver;
 import com.sciencebot.pos.billing.internal.adapters.mock.MockBillingAdapter;

@@ -63,7 +63,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, String>> handleFactusApi(FactusApiException ex) {
         int upstream = ex.getUpstreamStatus();
         boolean badData = upstream >= 400 && upstream < 500 && !ex.isAuthenticationError();
-        HttpStatus status = badData ? HttpStatus.UNPROCESSABLE_ENTITY : HttpStatus.BAD_GATEWAY;
+        HttpStatus status = badData ? HttpStatus.UNPROCESSABLE_CONTENT : HttpStatus.BAD_GATEWAY;
 
         Map<String, String> response = new HashMap<>();
         response.put("error", status.getReasonPhrase());

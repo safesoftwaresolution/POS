@@ -1,11 +1,14 @@
 package com.sciencebot.pos.billing;
 
-import com.sciencebot.pos.billing.api.*;
-import com.sciencebot.pos.billing.dto.*;
-import com.sciencebot.pos.billing.exception.*;
+import com.sciencebot.pos.billing.dto.CreateCreditNoteRequest;
+import com.sciencebot.pos.billing.dto.CreateDebitNoteRequest;
+import com.sciencebot.pos.billing.dto.CreateNumberingRangeRequest;
+import com.sciencebot.pos.billing.dto.NumberingRangeDto;
+import com.sciencebot.pos.billing.internal.adapters.dto.DebitNoteResult;
 import com.sciencebot.pos.billing.internal.adapters.dto.InvoiceRequest;
 import com.sciencebot.pos.billing.internal.adapters.dto.InvoiceResult;
 import com.sciencebot.pos.billing.internal.adapters.factus.FactusBillingAdapter;
+import com.sciencebot.pos.billing.internal.adapters.factus.FactusDebitNoteClient;
 import com.sciencebot.pos.billing.internal.adapters.factus.FactusInvoiceClient;
 import com.sciencebot.pos.billing.internal.adapters.factus.FactusNumberingRangeClient;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,12 +30,18 @@ class FactusBillingAdapterTest {
     @Mock
     private FactusNumberingRangeClient rangeClient;
 
+    @Mock
+    private com.sciencebot.pos.billing.internal.adapters.factus.FactusCreditNoteClient creditNoteClient;
+
+    @Mock
+    private FactusDebitNoteClient debitNoteClient;
+
     private FactusBillingAdapter adapter;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        adapter = new FactusBillingAdapter(invoiceClient, rangeClient);
+        adapter = new FactusBillingAdapter(invoiceClient, rangeClient, creditNoteClient, debitNoteClient);
     }
 
     @Test
@@ -184,5 +193,100 @@ class FactusBillingAdapterTest {
 
         assertSame(expected, result);
         verify(rangeClient).updateNumberingRangeCurrent(1L, 150L);
+    }
+
+    // --- Pruebas de delegación hacia FactusCreditNoteClient ---
+
+    @Test
+    void emitCreditNote_DelegatesToCreditNoteClient() {
+        CreateCreditNoteRequest request = new CreateCreditNoteRequest("NC-001", "2", "20", "SETP-001", 1776, "obs", List.of(), null, List.of());
+        com.sciencebot.pos.billing.internal.adapters.dto.CreditNoteResult expected =
+                com.sciencebot.pos.billing.internal.adapters.dto.CreditNoteResult.success("NC-999", "cude-123", "qr", "pdf");
+
+        when(creditNoteClient.emitCreditNote(request, 1L)).thenReturn(expected);
+
+        com.sciencebot.pos.billing.internal.adapters.dto.CreditNoteResult result = adapter.emitCreditNote(request, 1L);
+
+        assertSame(expected, result);
+        verify(creditNoteClient).emitCreditNote(request, 1L);
+    }
+
+    @Test
+    void downloadCreditNotePDF_DelegatesToCreditNoteClient() {
+        byte[] expected = new byte[]{10, 20};
+        when(creditNoteClient.downloadCreditNotePDF("NC-999", 1L)).thenReturn(expected);
+
+        byte[] result = adapter.downloadCreditNotePDF("NC-999", 1L);
+
+        assertSame(expected, result);
+        verify(creditNoteClient).downloadCreditNotePDF("NC-999", 1L);
+    }
+
+    @Test
+    void downloadCreditNoteXML_DelegatesToCreditNoteClient() {
+        byte[] expected = new byte[]{30, 40};
+        when(creditNoteClient.downloadCreditNoteXML("NC-999", 1L)).thenReturn(expected);
+
+        byte[] result = adapter.downloadCreditNoteXML("NC-999", 1L);
+
+        assertSame(expected, result);
+        verify(creditNoteClient).downloadCreditNoteXML("NC-999", 1L);
+    }
+
+    @Test
+    void deleteUnvalidatedCreditNote_DelegatesToCreditNoteClient() {
+        when(creditNoteClient.deleteUnvalidatedCreditNote("NC-001", 1L)).thenReturn(true);
+
+        boolean result = adapter.deleteUnvalidatedCreditNote("NC-001", 1L);
+
+        assertTrue(result);
+        verify(creditNoteClient).deleteUnvalidatedCreditNote("NC-001", 1L);
+    }
+
+    // --- Pruebas de delegación hacia FactusDebitNoteClient ---
+
+    @Test
+    void emitDebitNote_DelegatesToDebitNoteClient() {
+        CreateDebitNoteRequest request = new CreateDebitNoteRequest("ND-001", "1", "30", "SETP-001", 1776, "obs", List.of(), null, List.of());
+        DebitNoteResult expected = DebitNoteResult.success("ND-999", "cude-123", "qr", "pdf");
+
+        when(debitNoteClient.emitDebitNote(request, 1L)).thenReturn(expected);
+
+        DebitNoteResult result = adapter.emitDebitNote(request, 1L);
+
+        assertSame(expected, result);
+        verify(debitNoteClient).emitDebitNote(request, 1L);
+    }
+
+    @Test
+    void downloadDebitNotePDF_DelegatesToDebitNoteClient() {
+        byte[] expected = new byte[]{50, 60};
+        when(debitNoteClient.downloadDebitNotePDF("ND-999", 1L)).thenReturn(expected);
+
+        byte[] result = adapter.downloadDebitNotePDF("ND-999", 1L);
+
+        assertSame(expected, result);
+        verify(debitNoteClient).downloadDebitNotePDF("ND-999", 1L);
+    }
+
+    @Test
+    void downloadDebitNoteXML_DelegatesToDebitNoteClient() {
+        byte[] expected = new byte[]{70, 80};
+        when(debitNoteClient.downloadDebitNoteXML("ND-999", 1L)).thenReturn(expected);
+
+        byte[] result = adapter.downloadDebitNoteXML("ND-999", 1L);
+
+        assertSame(expected, result);
+        verify(debitNoteClient).downloadDebitNoteXML("ND-999", 1L);
+    }
+
+    @Test
+    void deleteUnvalidatedDebitNote_DelegatesToDebitNoteClient() {
+        when(debitNoteClient.deleteUnvalidatedDebitNote("ND-001", 1L)).thenReturn(true);
+
+        boolean result = adapter.deleteUnvalidatedDebitNote("ND-001", 1L);
+
+        assertTrue(result);
+        verify(debitNoteClient).deleteUnvalidatedDebitNote("ND-001", 1L);
     }
 }

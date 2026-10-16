@@ -1,8 +1,8 @@
 package com.sciencebot.pos.billing;
 
-import com.sciencebot.pos.billing.api.*;
-import com.sciencebot.pos.billing.dto.*;
-import com.sciencebot.pos.billing.exception.*;
+import com.sciencebot.pos.billing.dto.BillingActivationStatus;
+import com.sciencebot.pos.billing.dto.BillingEnvironment;
+import com.sciencebot.pos.billing.exception.BillingNotEnabledException;
 import com.sciencebot.pos.billing.internal.adapters.factus.FactusAccess;
 import com.sciencebot.pos.billing.internal.adapters.factus.FactusCredentialsResolver;
 import com.sciencebot.pos.billing.internal.entities.StoreBillingConfig;

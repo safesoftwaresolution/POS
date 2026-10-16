@@ -1,8 +1,11 @@
 package com.sciencebot.pos.billing;
 
-import com.sciencebot.pos.billing.api.*;
-import com.sciencebot.pos.billing.dto.*;
-import com.sciencebot.pos.billing.exception.*;
+import com.sciencebot.pos.billing.dto.BillingActivationDto;
+import com.sciencebot.pos.billing.dto.BillingActivationStatus;
+import com.sciencebot.pos.billing.dto.BillingConnectionTestResult;
+import com.sciencebot.pos.billing.dto.BillingEnvironment;
+import com.sciencebot.pos.billing.dto.UpdateBillingCredentialsCommand;
+import com.sciencebot.pos.billing.exception.FactusApiException;
 import com.sciencebot.pos.billing.internal.adapters.factus.FactusTokenManager;
 import com.sciencebot.pos.billing.internal.entities.StoreBillingConfig;
 import com.sciencebot.pos.billing.internal.mappers.BillingActivationMapper;
@@ -23,7 +26,6 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 class StoreBillingConfigServiceImplTest {

@@ -22,10 +22,10 @@ class FactusExceptionHandlingTest {
     void factusRejectingTheDataIsUnprocessableEntityWithItsMessage() {
         ResponseEntity<Map<String, String>> response = handle(422);
 
-        assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, response.getStatusCode());
+        assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, response.getStatusCode());
         assertEquals("motivo de Factus", response.getBody().get("message"));
-        assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, handle(404).getStatusCode());
-        assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, handle(400).getStatusCode());
+        assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, handle(404).getStatusCode());
+        assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, handle(400).getStatusCode());
     }
 
     @Test

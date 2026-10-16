@@ -88,7 +88,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
       items: [
         { path: '/customers', label: 'Clientes', icon: Users },
         { path: '/invoicing', label: 'Facturación DIAN', icon: FileText },
-        { path: '/documents', label: 'Documentos', icon: FileCheck2 },
+        ...(user?.role === 'ADMINISTRATOR' ? [{ path: '/documents', label: 'Documentos', icon: FileCheck2 }] : []),
       ],
     },
     ...(user?.role !== 'SELLER' ? [{
@@ -99,7 +99,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
       title: 'Sistema',
       items: [
         ...(user?.role === 'ADMINISTRATOR' ? [{ path: '/users', label: 'Usuarios', icon: UserCog }] : []),
-        { path: '/settings', label: 'Configuración', icon: Settings },
+        ...(user?.role !== 'SELLER' ? [{ path: '/settings', label: 'Configuración', icon: Settings }] : []),
       ],
     },
   ];

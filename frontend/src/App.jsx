@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
@@ -14,26 +14,41 @@ import LoginBento from './pages/LoginBento';
 import RegisterBento from './pages/RegisterBento';
 import VerifyEmailBento from './pages/VerifyEmailBento';
 import PendingStoreReviewBento from './pages/PendingStoreReviewBento';
-import StoreOnboardingBento from './pages/onboarding/StoreOnboardingBento';
-import DashboardBento from './pages/DashboardBento';
-import POSBento from './pages/POSBento';
-import InventoryBento from './pages/InventoryBento';
-import ProductsBento from './pages/ProductsBento';
-import CustomersBento from './pages/CustomersBento';
-import InvoicingBento from './pages/InvoicingBento';
-import ReportsBento from './pages/ReportsBento';
-import SettingsBento from './pages/SettingsBento';
-import UsersBento from './pages/UsersBento';
-import DocumentsBento from './pages/DocumentsBento';
-import StoresBento from './pages/backoffice/StoresBento';
-import BillingBento from './pages/backoffice/BillingBento';
-import CategoriesBento from './pages/backoffice/CategoriesBento';
-import ProductCategoriesBento from './pages/backoffice/ProductCategoriesBento';
-import ParametersBento from './pages/backoffice/ParametersBento';
-import LegalDocumentsBento from './pages/backoffice/LegalDocumentsBento';
-import SupportTicketsBento from './pages/backoffice/SupportTicketsBento';
-import StaffBento from './pages/backoffice/StaffBento';
-import OnboardingBento from './pages/backoffice/OnboardingBento';
+
+const StoreOnboardingBento = lazy(() => import('./pages/onboarding/StoreOnboardingBento'));
+const DashboardBento = lazy(() => import('./pages/DashboardBento'));
+const POSBento = lazy(() => import('./pages/POSBento'));
+const InventoryBento = lazy(() => import('./pages/InventoryBento'));
+const ProductsBento = lazy(() => import('./pages/ProductsBento'));
+const CustomersBento = lazy(() => import('./pages/CustomersBento'));
+const InvoicingBento = lazy(() => import('./pages/InvoicingBento'));
+const ReportsBento = lazy(() => import('./pages/ReportsBento'));
+const SettingsBento = lazy(() => import('./pages/SettingsBento'));
+const UsersBento = lazy(() => import('./pages/UsersBento'));
+const DocumentsBento = lazy(() => import('./pages/DocumentsBento'));
+const StoresBento = lazy(() => import('./pages/backoffice/StoresBento'));
+const BillingBento = lazy(() => import('./pages/backoffice/BillingBento'));
+const CategoriesBento = lazy(() => import('./pages/backoffice/CategoriesBento'));
+const ProductCategoriesBento = lazy(() => import('./pages/backoffice/ProductCategoriesBento'));
+const ParametersBento = lazy(() => import('./pages/backoffice/ParametersBento'));
+const LegalDocumentsBento = lazy(() => import('./pages/backoffice/LegalDocumentsBento'));
+const SupportTicketsBento = lazy(() => import('./pages/backoffice/SupportTicketsBento'));
+const StaffBento = lazy(() => import('./pages/backoffice/StaffBento'));
+const OnboardingBento = lazy(() => import('./pages/backoffice/OnboardingBento'));
+
+// Las páginas se cargan bajo demanda: el bundle inicial solo trae login, registro y los layouts.
+function PageFallback() {
+  return <div className="py-24 text-center text-xs font-bold text-ink-muted">Cargando...</div>;
+}
+
+/**
+ * Restringe una ruta a ciertos roles. El backend ya responde 403, pero sin esto el usuario
+ * llegaba a ver la pantalla vacía escribiendo la URL a mano.
+ */
+function RequireRole({ roles, children }) {
+  const { user } = useAuth();
+  return roles.includes(user?.role) ? children : <Navigate to="/" replace />;
+}
 
 /** Mientras el ADMINISTRATOR no tenga un local ACTIVE, bloquea el POS y muestra el estado. */
 function RequireActiveStore({ children }) {
@@ -126,6 +141,7 @@ function ProtectedLayoutContent({ mobileSidebarOpen, setMobileSidebarOpen, sideb
         />
 
         <main className="p-4 sm:p-6 lg:p-8 flex-1">
+          <Suspense fallback={<PageFallback />}>
           <Routes>
             <Route path="/" element={<DashboardBento />} />
             <Route path="/pos" element={<POSBento />} />
@@ -134,13 +150,14 @@ function ProtectedLayoutContent({ mobileSidebarOpen, setMobileSidebarOpen, sideb
             <Route path="/products" element={<ProductsBento />} />
             <Route path="/customers" element={<CustomersBento />} />
             <Route path="/invoicing" element={<InvoicingBento />} />
-            <Route path="/reports" element={<ReportsBento />} />
+            <Route path="/reports" element={<RequireRole roles={['ADMINISTRATOR', 'SUPERVISOR']}><ReportsBento /></RequireRole>} />
             <Route path="/returns" element={<Navigate to="/inventory?tab=returns" replace />} />
-            <Route path="/documents" element={<DocumentsBento />} />
-            <Route path="/users" element={<UsersBento />} />
-            <Route path="/settings" element={<SettingsBento />} />
+            <Route path="/documents" element={<RequireRole roles={['ADMINISTRATOR']}><DocumentsBento /></RequireRole>} />
+            <Route path="/users" element={<RequireRole roles={['ADMINISTRATOR']}><UsersBento /></RequireRole>} />
+            <Route path="/settings" element={<RequireRole roles={['ADMINISTRATOR', 'SUPERVISOR']}><SettingsBento /></RequireRole>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+          </Suspense>
         </main>
       </div>
     </div>
@@ -187,6 +204,7 @@ function BackofficeProtectedLayout() {
         />
 
         <main className="p-4 sm:p-6 lg:p-8 flex-1">
+          <Suspense fallback={<PageFallback />}>
           <Routes>
             <Route path="/" element={<StoresBento />} />
             <Route path="/billing" element={<BillingBento />} />
@@ -199,6 +217,7 @@ function BackofficeProtectedLayout() {
             <Route path="/onboarding" element={<OnboardingBento />} />
             <Route path="*" element={<Navigate to="/backoffice" replace />} />
           </Routes>
+          </Suspense>
         </main>
       </div>
     </div>
@@ -211,6 +230,7 @@ export default function App() {
       <ThemeProvider>
         <ModalProvider>
           <AuthProvider>
+            <Suspense fallback={<PageFallback />}>
             <Routes>
               <Route path="/login" element={<LoginBento />} />
               <Route path="/register" element={<RegisterBento />} />
@@ -219,6 +239,7 @@ export default function App() {
               <Route path="/backoffice/*" element={<BackofficeProtectedLayout />} />
               <Route path="/*" element={<ProtectedLayout />} />
             </Routes>
+            </Suspense>
           </AuthProvider>
         </ModalProvider>
       </ThemeProvider>

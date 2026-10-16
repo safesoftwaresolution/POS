@@ -49,7 +49,7 @@ public class UserController {
             @ApiResponse(responseCode = "401", description = "No autenticado", content = @Content),
             @ApiResponse(responseCode = "403", description = "Solo ADMINISTRATOR puede crear usuarios", content = @Content)
     })
-    public ResponseEntity<UserDto> createUser(@RequestBody CreateUserCommand command) {
+    public ResponseEntity<UserDto> createUser(@jakarta.validation.Valid @RequestBody CreateUserCommand command) {
         UserDto created = userFacade.createUser(command);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
@@ -110,7 +110,7 @@ public class UserController {
     public ResponseEntity<UserDto> updateUser(
             @Parameter(description = "ID del usuario a actualizar", example = "1", required = true)
             @PathVariable Long id,
-            @RequestBody UpdateUserCommand command) {
+            @jakarta.validation.Valid @RequestBody UpdateUserCommand command) {
         UserDto updated = userFacade.updateUser(id, command);
         return ResponseEntity.ok(updated);
     }

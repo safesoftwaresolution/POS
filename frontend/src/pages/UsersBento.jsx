@@ -65,6 +65,7 @@ function UserFormModal({ user: editing, storeId, onClose, onSaved }) {
       title={isEdit ? 'Editar usuario' : 'Nuevo usuario'}
       subtitle={isEdit ? `@${editing.username}` : 'Personal con acceso a tu local'}
       onClose={onClose}
+      dismissible={false}
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         <Input label="Nombre completo" value={form.fullName} onChange={e => set({ fullName: e.target.value })} required />
@@ -114,7 +115,7 @@ function PasswordModal({ user: target, onClose }) {
   };
 
   return (
-    <Modal title="Cambiar contraseña" subtitle={`${target.fullName} (@${target.username})`} onClose={onClose} size="sm">
+    <Modal title="Cambiar contraseña" subtitle={`${target.fullName} (@${target.username})`} onClose={onClose} size="sm" dismissible={false}>
       <form onSubmit={handleSubmit} className="space-y-4">
         <Input label="Nueva contraseña" type="password" autoComplete="new-password" value={password}
           hint={`Mínimo ${MIN_PASSWORD} caracteres`} onChange={e => { setPassword(e.target.value); setError(''); }} required />

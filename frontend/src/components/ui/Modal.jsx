@@ -5,17 +5,19 @@ import { cx } from './cx';
 const WIDTHS = { sm: 'max-w-sm', md: 'max-w-md', lg: 'max-w-2xl', xl: 'max-w-4xl' };
 
 /** Diálogo modal base: overlay, cierre con Escape / clic fuera y cabecera opcional. */
-export default function Modal({ title, subtitle, onClose, size = 'md', footer, children }) {
+// `dismissible={false}` desactiva el cierre con Escape / clic fuera (útil en formularios, para no perder lo escrito).
+export default function Modal({ title, subtitle, onClose, size = 'md', footer, dismissible = true, children }) {
   useEffect(() => {
+    if (!dismissible) return undefined;
     const onKey = (e) => e.key === 'Escape' && onClose?.();
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  }, [onClose, dismissible]);
 
   return (
     <div
       className="fixed inset-0 bg-black/60 backdrop-blur-xs z-100 flex items-center justify-center p-4"
-      onMouseDown={(e) => e.target === e.currentTarget && onClose?.()}
+      onMouseDown={(e) => dismissible && e.target === e.currentTarget && onClose?.()}
       role="dialog"
       aria-modal="true"
     >

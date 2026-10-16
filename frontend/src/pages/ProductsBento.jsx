@@ -1,17 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import {
-  Plus,
-  Search,
-  Trash2,
-  Edit3,
-  Barcode,
-  Package,
-  Layers,
-  AlertCircle,
-  ImagePlus,
-  Power,
-  PowerOff
-} from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Plus, Search, Package, Layers } from 'lucide-react';
 import { getProductsApi, createProductApi, updateProductApi, deleteProductApi, changeProductStatusApi } from '../services/productsApi';
 import { getCategoriesApi } from '../services/categoriesApi';
 import {
@@ -25,6 +13,11 @@ import { useModal } from '../context/ModalContext';
 import { useAuth } from '../context/AuthContext';
 import { uploadFileApi } from '../services/http';
 import BarcodeModal from '../components/BarcodeModal';
+import ProductTable from '../components/products/ProductTable';
+import ProductFormModal from '../components/products/ProductFormModal';
+import SubcategoriesPanel from '../components/products/SubcategoriesPanel';
+import SubcategoryModal from '../components/products/SubcategoryModal';
+import { Button, Card, PageHeader } from '../components/ui';
 
 const EMPTY_PRODUCT = {
   id: null,
@@ -69,7 +62,6 @@ export default function ProductsBento() {
   const [showSubModal, setShowSubModal] = useState(false);
   const [subForm, setSubForm] = useState(EMPTY_SUBCATEGORY);
   const [subErrorMsg, setSubErrorMsg] = useState('');
-  const imageInputRef = useRef(null);
 
   const loadProducts = async (inactive = showInactive) => {
     setLoading(true);
@@ -300,32 +292,19 @@ export default function ProductsBento() {
 
   return (
     <div className="space-y-6 select-none">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-black text-ink">Productos</h1>
-          <p className="text-xs text-ink-soft font-medium">Catálogo y subcategorías de tu tienda en BentoPOS</p>
-        </div>
+      <PageHeader
+        title="Productos"
+        subtitle="Catálogo y subcategorías de tu tienda en BentoPOS"
+        actions={
+          activeTab === 'catalog' ? (
+            <Button icon={Plus} onClick={openCreateModal}>Crear Nuevo Producto</Button>
+          ) : activeTab === 'subcategories' && canManageSubcategories ? (
+            <Button icon={Plus} onClick={openCreateSubModal}>Nueva Subcategoría</Button>
+          ) : null
+        }
+      />
 
-        {activeTab === 'catalog' && (
-          <button
-            onClick={openCreateModal}
-            className="px-4 py-2.5 bg-solid hover:bg-solid-hover text-white rounded-2xl text-xs font-bold flex items-center gap-2 shadow-md shadow-[#0A0A0A]/10 cursor-pointer transition-all"
-          >
-            <Plus className="w-4 h-4" /> Crear Nuevo Producto
-          </button>
-        )}
-        {activeTab === 'subcategories' && canManageSubcategories && (
-          <button
-            onClick={openCreateSubModal}
-            className="px-4 py-2.5 bg-solid hover:bg-solid-hover text-white rounded-2xl text-xs font-bold flex items-center gap-2 shadow-md shadow-[#0A0A0A]/10 cursor-pointer transition-all"
-          >
-            <Plus className="w-4 h-4" /> Nueva Subcategoría
-          </button>
-        )}
-      </div>
-
-      {/* Tab Switcher */}
-      <div className="flex bg-gray-100 dark:bg-[#272730] rounded-full p-1 border border-gray-200 dark:border-gray-700 w-fit">
+      <div className="flex bg-gray-100 dark:bg-line rounded-full p-1 border border-line w-fit">
         {TABS.map(tab => {
           const Icon = tab.icon;
           return (
@@ -333,9 +312,7 @@ export default function ProductsBento() {
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={`px-4 py-2 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-                activeTab === tab.id
-                  ? 'bg-solid text-white shadow-xs'
-                  : 'text-ink-soft hover:text-brand dark:hover:text-brand'
+                activeTab === tab.id ? 'bg-solid text-white shadow-xs' : 'text-ink-soft hover:text-brand'
               }`}
             >
               <Icon className="w-4 h-4" /> {tab.label}
@@ -345,548 +322,88 @@ export default function ProductsBento() {
       </div>
 
       {activeTab === 'catalog' && (
-      <div className="bento-card p-6 space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="relative w-72">
-            <Search className="w-4 h-4 text-ink-muted absolute left-3.5 top-2.5" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Filtrar por nombre o código de barras..."
-              className="w-full pl-10 pr-3 py-1.5 bg-page border border-line rounded-2xl text-xs font-semibold text-ink placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-ink"
-            />
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={toggleInactive}
-              className={`px-3 py-1.5 rounded-full text-[11px] font-bold cursor-pointer border transition-colors ${
-                showInactive ? 'bg-solid text-white border-transparent' : 'border-line text-ink-soft hover:border-line-strong'
-              }`}
-            >
-              {showInactive ? 'Viendo inactivos' : 'Ver inactivos'}
-            </button>
-            <span className="text-xs font-bold text-ink-muted">{filtered.length} {showInactive ? 'productos inactivos' : 'productos registrados'}</span>
-          </div>
-        </div>
-
-        {loading ? (
-          <div className="py-12 text-center text-xs font-bold text-ink-muted">
-            Consultando catálogo de productos...
-          </div>
-        ) : filtered.length === 0 ? (
-          <div className="py-12 text-center space-y-3 bg-gray-50/50 dark:bg-white/5 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700">
-            <Package className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto stroke-1" />
-            <div>
-              <p className="text-xs font-bold text-gray-700 dark:text-gray-300">No se encontraron productos</p>
-              <p className="text-[11px] text-ink-muted">Crea tu primer producto para empezar a registrar ventas</p>
+        <Card className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="relative w-72">
+              <Search className="w-4 h-4 text-ink-muted absolute left-3.5 top-2.5" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Filtrar por nombre o código de barras..."
+                className="w-full pl-10 pr-3 py-1.5 bg-page border border-line rounded-2xl text-xs font-semibold text-ink placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-ink"
+              />
             </div>
-            <button
-              onClick={openCreateModal}
-              className="px-4 py-2 bg-solid text-white rounded-xl text-xs font-extrabold shadow-sm hover:bg-solid-hover cursor-pointer"
-            >
-              + Registrar Primer Producto
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={toggleInactive}
+                className={`px-3 py-1.5 rounded-full text-[11px] font-bold cursor-pointer border transition-colors ${
+                  showInactive ? 'bg-solid text-white border-transparent' : 'border-line text-ink-soft hover:border-line-strong'
+                }`}
+              >
+                {showInactive ? 'Viendo inactivos' : 'Ver inactivos'}
+              </button>
+              <span className="text-xs font-bold text-ink-muted">
+                {filtered.length} {showInactive ? 'productos inactivos' : 'productos registrados'}
+              </span>
+            </div>
           </div>
-        ) : (
-          <div className="overflow-x-auto -mx-6">
-            <table className="w-full text-left text-xs">
-              <thead>
-                <tr className="border-b border-line bg-gray-50/50 dark:bg-[#0E0E12] text-ink-muted uppercase text-[10px] tracking-wider font-extrabold">
-                  <th className="py-3 px-6">Producto</th>
-                  <th className="py-3 px-3">Código</th>
-                  <th className="py-3 px-3">Categoría</th>
-                  <th className="py-3 px-3 text-right">Precio</th>
-                  <th className="py-3 px-3">Stock</th>
-                  <th className="py-3 px-6 text-right">Acciones</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-line">
-                {filtered.map(p => {
-                  const stockVal = p.quantityAvailable ?? p.stock ?? 0;
-                  const isLow = stockVal <= (p.minStock || 5);
-                  return (
-                    <tr
-                      key={p.id}
-                      className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer group"
-                      onClick={() => openEditModal(p)}
-                    >
-                      <td className="py-3 px-6">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-gray-50 dark:bg-[#0E0E12] border border-line flex items-center justify-center overflow-hidden shrink-0">
-                            {p.imageUrl ? (
-                              <img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover" />
-                            ) : (
-                              <Package className="w-4 h-4 text-gray-300 dark:text-gray-600" />
-                            )}
-                          </div>
-                          <div className="min-w-0">
-                            <span className="font-bold text-sm text-ink block truncate group-hover:text-brand dark:group-hover:text-brand transition-colors">
-                              {p.name}
-                            </span>
-                            <span className="text-[11px] text-ink-soft font-mono flex items-center gap-1">
-                              <Barcode className="w-3 h-3 shrink-0" /> {p.barcode || 'Sin código'}
-                            </span>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="py-3 px-3 font-mono font-semibold text-ink-soft">{p.internalCode}</td>
-                      <td className="py-3 px-3">
-                        <div className="flex items-center gap-1 flex-wrap">
-                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-brand/10 dark:bg-brand/20 text-brand font-extrabold">
-                            {p.categoryName || 'General'}
-                          </span>
-                          {p.subcategoryName && (
-                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 dark:bg-[#272730] text-gray-600 dark:text-gray-300 font-extrabold">
-                              {p.subcategoryName}
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="py-3 px-3 text-right font-black text-sm text-ink tabular-nums">
-                        ${(p.salePrice || p.price || 0).toLocaleString('es-CO')}
-                      </td>
-                      <td className="py-3 px-3">
-                        <span className={`font-bold tabular-nums ${isLow ? 'text-amber-600 dark:text-amber-400' : 'text-ink'}`}>
-                          {stockVal} {isLow && '(Bajo)'}
-                        </span>
-                      </td>
-                      <td className="py-3 px-6 text-right" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-end gap-1">
-                          <button
-                            onClick={() => setBarcodeProduct(p)}
-                            title="Ver código de barras"
-                            className="p-1.5 text-ink-muted hover:text-brand dark:hover:text-brand rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer"
-                          >
-                            <Barcode className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => openEditModal(p)}
-                            title="Editar producto"
-                            className="p-1.5 text-ink-muted hover:text-brand dark:hover:text-brand rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer"
-                          >
-                            <Edit3 className="w-4 h-4" />
-                          </button>
-                          {canManageSubcategories && (
-                          <button
-                            onClick={() => handleToggleStatus(p)}
-                            title={p.active === false ? 'Reactivar producto' : 'Desactivar producto'}
-                            className="p-1.5 text-ink-muted hover:text-amber-600 dark:hover:text-amber-400 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer"
-                          >
-                            {p.active === false ? <Power className="w-4 h-4" /> : <PowerOff className="w-4 h-4" />}
-                          </button>
-                          )}
-                          <button
-                            onClick={() => handleDelete(p.id)}
-                            title="Eliminar producto"
-                            className="p-1.5 text-ink-muted hover:text-red-600 dark:hover:text-red-400 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+
+          <ProductTable
+            products={filtered}
+            loading={loading}
+            canToggleStatus={canManageSubcategories}
+            onCreate={openCreateModal}
+            onEdit={openEditModal}
+            onBarcode={setBarcodeProduct}
+            onToggleStatus={handleToggleStatus}
+            onDelete={handleDelete}
+          />
+        </Card>
       )}
 
       {activeTab === 'subcategories' && (
-        <div className="space-y-6">
-          {/* Global categories overview */}
-          <div className="bento-card p-6 space-y-3">
-            <div>
-              <h2 className="text-sm font-extrabold text-ink">Categorías Globales</h2>
-              <p className="text-[11px] text-ink-soft font-medium">
-                Catálogo compartido por todas las tiendas — cada subcategoría tuya vive dentro de una de estas
-              </p>
-            </div>
-            {categories.length === 0 ? (
-              <p className="text-xs font-bold text-ink-muted py-2">
-                Aún no hay categorías globales. Pide a un administrador que cree una desde el backoffice.
-              </p>
-            ) : (
-              <div className="flex flex-wrap gap-2">
-                {categories.map(cat => (
-                  <span
-                    key={cat.id}
-                    className="text-xs font-bold px-3 py-1.5 rounded-full bg-brand/10 dark:bg-brand/20 text-brand dark:text-brand border border-brand/25"
-                  >
-                    {cat.name}
-                    <span className="ml-1.5 opacity-70 font-semibold">
-                      · {subcategories.filter(s => s.categoryId === cat.id).length} subcat.
-                    </span>
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Store subcategories */}
-          <div className="bento-card p-6 space-y-4">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-              <div className="relative w-full sm:w-72">
-                <Search className="w-4 h-4 text-ink-muted absolute left-3.5 top-2.5" />
-                <input
-                  type="text"
-                  value={subSearch}
-                  onChange={(e) => setSubSearch(e.target.value)}
-                  placeholder="Buscar subcategoría o categoría..."
-                  className="w-full pl-10 pr-3 py-1.5 bg-page border border-line rounded-2xl text-xs font-semibold text-ink placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-ink"
-                />
-              </div>
-              <span className="text-xs font-bold text-ink-muted">{filteredSubcategories.length} subcategorías</span>
-            </div>
-
-            {filteredSubcategories.length === 0 ? (
-              <div className="py-12 text-center space-y-3 bg-gray-50/50 dark:bg-white/5 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700">
-                <Layers className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto stroke-1" />
-                <div>
-                  <p className="text-xs font-bold text-gray-700 dark:text-gray-300">No hay subcategorías registradas</p>
-                  <p className="text-[11px] text-ink-muted">
-                    {canManageSubcategories
-                      ? 'Crea la primera para organizar mejor tu catálogo de productos'
-                      : 'Pide a un administrador o supervisor que cree la primera'}
-                  </p>
-                </div>
-                {canManageSubcategories && categories.length > 0 && (
-                  <button
-                    onClick={openCreateSubModal}
-                    className="px-4 py-2 bg-solid text-white rounded-xl text-xs font-extrabold shadow-sm hover:bg-solid-hover cursor-pointer"
-                  >
-                    + Crear Primera Subcategoría
-                  </button>
-                )}
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredSubcategories.map(sub => (
-                  <div key={sub.id} className="p-5 bg-card rounded-2xl border border-line space-y-3 flex flex-col justify-between hover:border-line-strong dark:hover:border-line-strong transition-all shadow-xs group">
-                    <div>
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 dark:bg-[#272730] text-gray-600 dark:text-gray-300 font-extrabold truncate">
-                          {sub.categoryName}
-                        </span>
-                        <span className="text-[10px] font-mono text-ink-muted font-bold shrink-0">
-                          {sub.productCount} {sub.productCount === 1 ? 'producto' : 'productos'}
-                        </span>
-                      </div>
-                      <h3 className="font-extrabold text-sm text-ink mt-2 group-hover:text-brand dark:group-hover:text-brand transition-colors">
-                        {sub.name}
-                      </h3>
-                      <p className="text-[11px] text-ink-soft mt-0.5">{sub.description || 'Sin descripción'}</p>
-                    </div>
-
-                    {canManageSubcategories && (
-                      <div className="pt-3 border-t border-line flex items-center justify-end gap-1">
-                        <button
-                          onClick={() => openEditSubModal(sub)}
-                          title="Editar subcategoría"
-                          className="p-1.5 text-ink-muted hover:text-brand dark:hover:text-brand rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer"
-                        >
-                          <Edit3 className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteSubcategory(sub)}
-                          title="Eliminar subcategoría"
-                          className="p-1.5 text-ink-muted hover:text-red-600 dark:hover:text-red-400 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
+        <SubcategoriesPanel
+          categories={categories}
+          subcategories={subcategories}
+          filtered={filteredSubcategories}
+          search={subSearch}
+          onSearchChange={setSubSearch}
+          canManage={canManageSubcategories}
+          onCreate={openCreateSubModal}
+          onEdit={openEditSubModal}
+          onDelete={handleDeleteSubcategory}
+        />
       )}
 
-      {/* Create/Edit Subcategory Modal */}
       {showSubModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <form onSubmit={handleSubmitSubcategory} className="bento-card max-w-md w-full bg-card p-6 rounded-3xl shadow-2xl space-y-4 border border-line">
-            <h3 className="font-extrabold text-base text-ink">
-              {subForm.id ? 'Editar Subcategoría' : 'Nueva Subcategoría'}
-            </h3>
-
-            {subErrorMsg && (
-              <div className="p-3 bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800/40 rounded-xl text-xs font-bold flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>{subErrorMsg}</span>
-              </div>
-            )}
-
-            <div className="space-y-3 text-xs">
-              <div>
-                <label className="font-bold text-gray-700 dark:text-gray-300 block mb-1">Categoría:</label>
-                <select
-                  value={subForm.categoryId}
-                  onChange={e => setSubForm({ ...subForm, categoryId: e.target.value })}
-                  disabled={!!subForm.id}
-                  className="w-full p-2.5 bg-page border border-gray-300 dark:border-line rounded-2xl font-semibold text-ink disabled:opacity-60 focus:outline-none focus:border-ink"
-                  required
-                >
-                  <option value="" disabled>Selecciona una categoría...</option>
-                  {categories.map(cat => (
-                    <option key={cat.id} value={cat.id}>{cat.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="font-bold text-gray-700 dark:text-gray-300 block mb-1">Nombre de la subcategoría:</label>
-                <input
-                  type="text"
-                  value={subForm.name}
-                  onChange={e => setSubForm({ ...subForm, name: e.target.value })}
-                  placeholder="Ej. Gaseosas"
-                  className="w-full p-2.5 bg-page border border-gray-300 dark:border-line rounded-2xl font-semibold text-ink focus:outline-none focus:border-ink"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="font-bold text-gray-700 dark:text-gray-300 block mb-1">Descripción (opcional):</label>
-                <input
-                  type="text"
-                  value={subForm.description}
-                  onChange={e => setSubForm({ ...subForm, description: e.target.value })}
-                  placeholder="Bebidas carbonatadas"
-                  className="w-full p-2.5 bg-page border border-gray-300 dark:border-line rounded-2xl text-xs text-ink focus:outline-none focus:border-ink"
-                />
-              </div>
-            </div>
-
-            <div className="flex gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setShowSubModal(false)}
-                className="w-1/2 py-3 bg-gray-100 dark:bg-[#272730] hover:bg-gray-200 dark:hover:bg-line-strong text-gray-700 dark:text-gray-300 rounded-2xl text-xs font-bold cursor-pointer"
-              >
-                Cancelar
-              </button>
-              <button
-                type="submit"
-                className="w-1/2 py-3 bg-solid hover:bg-solid-hover text-white rounded-2xl text-xs font-extrabold shadow-md shadow-[#0A0A0A]/10 cursor-pointer"
-              >
-                {subForm.id ? 'Guardar Cambios' : 'Crear Subcategoría'}
-              </button>
-            </div>
-          </form>
-        </div>
+        <SubcategoryModal
+          form={subForm}
+          setForm={setSubForm}
+          categories={categories}
+          errorMsg={subErrorMsg}
+          onSubmit={handleSubmitSubcategory}
+          onClose={() => setShowSubModal(false)}
+        />
       )}
 
-      {/* Add Product Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <form onSubmit={handleSubmitProduct} className="bento-card max-w-md w-full bg-card p-6 rounded-3xl shadow-2xl space-y-4 border border-line">
-            <h3 className="font-extrabold text-base text-ink">
-              {newProduct.id ? 'Editar Producto' : 'Crear Nuevo Producto'}
-            </h3>
-
-            {errorMsg && (
-              <div className="p-3 bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800/40 rounded-xl text-xs font-bold flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>{errorMsg}</span>
-              </div>
-            )}
-
-            {categories.length === 0 && (
-              <div className="p-3 bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30 rounded-xl text-xs font-bold flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>Aún no hay categorías de producto. Pide a un administrador que cree una desde el backoffice antes de registrar productos.</span>
-              </div>
-            )}
-
-            <div className="space-y-3 text-xs">
-              <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-2xl bg-gray-50 dark:bg-[#0E0E12] border border-line flex items-center justify-center overflow-hidden shrink-0">
-                  {newProduct.imageUrl ? (
-                    <img src={newProduct.imageUrl} alt="Imagen del producto" className="w-full h-full object-cover" />
-                  ) : (
-                    <ImagePlus className="w-6 h-6 text-gray-300 dark:text-gray-600" />
-                  )}
-                </div>
-                <div className="space-y-1.5">
-                  <button
-                    type="button"
-                    disabled={uploadingImage}
-                    onClick={() => imageInputRef.current?.click()}
-                    className="px-3.5 py-2 bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 disabled:opacity-50 text-gray-700 dark:text-gray-200 rounded-2xl text-xs font-bold cursor-pointer"
-                  >
-                    {uploadingImage ? 'Subiendo...' : newProduct.imageUrl ? 'Cambiar imagen' : 'Subir imagen'}
-                  </button>
-                  <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
-                </div>
-              </div>
-
-              <div>
-                <label className="font-bold text-gray-700 dark:text-gray-300 block mb-1">Categoría:</label>
-                <select
-                  value={newProduct.categoryId}
-                  onChange={e => {
-                    setNewProduct({ ...newProduct, categoryId: e.target.value, subcategoryId: '' });
-                    setShowNewSubcategory(false);
-                  }}
-                  className="w-full p-2.5 bg-page border border-gray-300 dark:border-line rounded-2xl font-semibold text-ink focus:outline-none focus:border-ink"
-                  required
-                  disabled={categories.length === 0}
-                >
-                  <option value="" disabled>Selecciona una categoría...</option>
-                  {categories.map(cat => (
-                    <option key={cat.id} value={cat.id}>{cat.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              {newProduct.categoryId && (
-                <div>
-                  <label className="font-bold text-gray-700 dark:text-gray-300 block mb-1">Subcategoría (opcional):</label>
-                  {!showNewSubcategory ? (
-                    <div className="flex items-center gap-2">
-                      <select
-                        value={newProduct.subcategoryId}
-                        onChange={e => setNewProduct({ ...newProduct, subcategoryId: e.target.value })}
-                        className="w-full p-2.5 bg-page border border-gray-300 dark:border-line rounded-2xl font-semibold text-ink focus:outline-none focus:border-ink"
-                      >
-                        <option value="">Sin subcategoría</option>
-                        {subcategoriesForSelectedCategory.map(sub => (
-                          <option key={sub.id} value={sub.id}>{sub.name}</option>
-                        ))}
-                      </select>
-                      <button
-                        type="button"
-                        onClick={() => setShowNewSubcategory(true)}
-                        title="Crear nueva subcategoría"
-                        className="shrink-0 w-9 h-9 rounded-2xl bg-brand/10 dark:bg-brand/20 text-brand dark:text-brand hover:bg-solid hover:text-white flex items-center justify-center cursor-pointer transition-colors"
-                      >
-                        <Plus className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        autoFocus
-                        value={newSubcategoryName}
-                        onChange={e => setNewSubcategoryName(e.target.value)}
-                        placeholder="Ej. Gaseosas"
-                        className="w-full p-2.5 bg-page border border-gray-300 dark:border-line rounded-2xl font-semibold text-ink focus:outline-none focus:border-ink"
-                      />
-                      <button
-                        type="button"
-                        onClick={handleCreateSubcategory}
-                        className="shrink-0 px-3 py-2 bg-solid hover:bg-solid-hover text-white rounded-2xl text-xs font-bold cursor-pointer"
-                      >
-                        Crear
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => { setShowNewSubcategory(false); setNewSubcategoryName(''); }}
-                        className="shrink-0 px-3 py-2 bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300 rounded-2xl text-xs font-bold cursor-pointer"
-                      >
-                        Cancelar
-                      </button>
-                    </div>
-                  )}
-                  <p className="text-[10px] text-ink-muted mt-1">
-                    Las subcategorías son propias de tu tienda — créalas aquí mismo.
-                  </p>
-                </div>
-              )}
-
-              <div>
-                <label className="font-bold text-gray-700 dark:text-gray-300 block mb-1">Nombre Comercial del Producto:</label>
-                <input
-                  type="text"
-                  value={newProduct.name}
-                  onChange={e => setNewProduct({ ...newProduct, name: e.target.value })}
-                  placeholder="Ej. Arroz 1kg"
-                  className="w-full p-2.5 bg-page border border-gray-300 dark:border-line rounded-2xl font-semibold text-ink focus:outline-none focus:border-ink"
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="font-bold text-gray-700 dark:text-gray-300 block mb-1">Código de Barras:</label>
-                  <input
-                    type="text"
-                    value={newProduct.barcode}
-                    onChange={e => setNewProduct({ ...newProduct, barcode: e.target.value })}
-                    placeholder="770..."
-                    className="w-full p-2.5 bg-page border border-gray-300 dark:border-line rounded-2xl font-mono text-xs text-ink focus:outline-none focus:border-ink"
-                  />
-                </div>
-                <div>
-                  <label className="font-bold text-gray-700 dark:text-gray-300 block mb-1">Código Interno:</label>
-                  <input
-                    type="text"
-                    value={newProduct.internalCode}
-                    onChange={e => setNewProduct({ ...newProduct, internalCode: e.target.value })}
-                    placeholder="PROD-101"
-                    disabled={!!newProduct.id}
-                    className="w-full p-2.5 bg-page border border-gray-300 dark:border-line rounded-2xl font-mono text-xs text-ink disabled:opacity-60 focus:outline-none focus:border-ink"
-                  />
-                </div>
-              </div>
-
-              <div className={newProduct.id ? '' : 'grid grid-cols-2 gap-2'}>
-                <div>
-                  <label className="font-bold text-gray-700 dark:text-gray-300 block mb-1">Precio Venta ($ COP):</label>
-                  <input
-                    type="number"
-                    value={newProduct.price}
-                    onChange={e => setNewProduct({ ...newProduct, price: e.target.value })}
-                    placeholder="12000"
-                    className="w-full p-2.5 bg-page border border-gray-300 dark:border-line rounded-2xl font-bold text-ink focus:outline-none focus:border-ink"
-                    required
-                  />
-                </div>
-                {!newProduct.id && (
-                  <div>
-                    <label className="font-bold text-gray-700 dark:text-gray-300 block mb-1">Stock Inicial:</label>
-                    <input
-                      type="number"
-                      value={newProduct.stock}
-                      onChange={e => setNewProduct({ ...newProduct, stock: e.target.value })}
-                      placeholder="50"
-                      className="w-full p-2.5 bg-page border border-gray-300 dark:border-line rounded-2xl font-bold text-ink focus:outline-none focus:border-ink"
-                    />
-                  </div>
-                )}
-              </div>
-              {newProduct.id && (
-                <p className="text-[10px] text-ink-muted">
-                  Para ajustar el stock ve al módulo de Inventario.
-                </p>
-              )}
-            </div>
-
-            <div className="flex gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setShowAddModal(false)}
-                className="w-1/2 py-3 bg-gray-100 dark:bg-[#272730] hover:bg-gray-200 dark:hover:bg-line-strong text-gray-700 dark:text-gray-300 rounded-2xl text-xs font-bold cursor-pointer"
-              >
-                Cancelar
-              </button>
-              <button
-                type="submit"
-                disabled={categories.length === 0}
-                className="w-1/2 py-3 bg-solid hover:bg-solid-hover disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-2xl text-xs font-extrabold shadow-md shadow-[#0A0A0A]/10 cursor-pointer"
-              >
-                {newProduct.id ? 'Guardar Cambios' : 'Guardar Producto'}
-              </button>
-            </div>
-          </form>
-        </div>
+        <ProductFormModal
+          product={newProduct}
+          setProduct={setNewProduct}
+          categories={categories}
+          subcategories={subcategoriesForSelectedCategory}
+          errorMsg={errorMsg}
+          uploadingImage={uploadingImage}
+          onImageChange={handleImageChange}
+          creatingSubcategory={showNewSubcategory}
+          setCreatingSubcategory={setShowNewSubcategory}
+          newSubcategoryName={newSubcategoryName}
+          setNewSubcategoryName={setNewSubcategoryName}
+          onCreateSubcategory={handleCreateSubcategory}
+          onSubmit={handleSubmitProduct}
+          onClose={() => setShowAddModal(false)}
+        />
       )}
 
       <BarcodeModal product={barcodeProduct} onClose={() => setBarcodeProduct(null)} />

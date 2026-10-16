@@ -234,7 +234,7 @@ export default function ActivationTab({ role, activation, ranges, rangesLoading,
               ))}
             </div>
             <div className="flex gap-2">
-              <button type="button" onClick={() => setShowCreateForm(false)} className="flex-1 py-2.5 bg-gray-100 dark:bg-[#272730] text-gray-700 dark:text-gray-300 rounded-xl text-[11px] font-bold cursor-pointer">Cancelar</button>
+              <button type="button" onClick={() => setShowCreateForm(false)} className="flex-1 py-2.5 bg-gray-100 dark:bg-line text-gray-700 dark:text-gray-300 rounded-xl text-[11px] font-bold cursor-pointer">Cancelar</button>
               <button type="submit" disabled={creating} className="flex-1 py-2.5 bg-solid hover:bg-solid-hover disabled:opacity-50 text-white rounded-xl text-[11px] font-extrabold cursor-pointer">
                 {creating ? 'Registrando...' : 'Registrar'}
               </button>
@@ -321,7 +321,7 @@ export default function ActivationTab({ role, activation, ranges, rangesLoading,
                             value={currentValue}
                             onChange={e => setCurrentValue(e.target.value)}
                             aria-label="Consecutivo actual"
-                            className="w-24 p-1 bg-white dark:bg-[#0E0E12] border border-line rounded-lg text-xs font-mono"
+                            className="w-24 p-1 bg-white dark:bg-page border border-line rounded-lg text-xs font-mono"
                           />
                           <button type="button" onClick={() => handleSaveCurrent(r)} aria-label="Guardar consecutivo" className="text-emerald-500 cursor-pointer"><CheckCircle2 className="w-4 h-4" /></button>
                           <button type="button" onClick={() => setEditingCurrent(null)} aria-label="Cancelar" className="text-gray-400 cursor-pointer"><X className="w-4 h-4" /></button>

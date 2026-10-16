@@ -291,7 +291,7 @@ export default function InvoicesTab({ role, refreshKey, onChanged }) {
               />
             </div>
             <div className="flex gap-2">
-              <button type="button" onClick={() => setEmailTarget(null)} className="w-1/2 py-3 bg-gray-100 dark:bg-[#272730] text-gray-700 dark:text-gray-300 rounded-2xl text-xs font-bold cursor-pointer">Cancelar</button>
+              <button type="button" onClick={() => setEmailTarget(null)} className="w-1/2 py-3 bg-gray-100 dark:bg-line text-gray-700 dark:text-gray-300 rounded-2xl text-xs font-bold cursor-pointer">Cancelar</button>
               <button type="submit" disabled={sendingEmail} className="w-1/2 py-3 bg-solid hover:bg-solid-hover disabled:opacity-50 text-white rounded-2xl text-xs font-extrabold cursor-pointer">
                 {sendingEmail ? 'Enviando...' : 'Enviar'}
               </button>
@@ -359,7 +359,7 @@ export default function InvoicesTab({ role, refreshKey, onChanged }) {
               </div>
             )}
 
-            <button type="button" onClick={() => setDetail(null)} className="w-full py-3 bg-gray-100 dark:bg-[#272730] text-gray-700 dark:text-gray-300 rounded-2xl text-xs font-bold cursor-pointer">
+            <button type="button" onClick={() => setDetail(null)} className="w-full py-3 bg-gray-100 dark:bg-line text-gray-700 dark:text-gray-300 rounded-2xl text-xs font-bold cursor-pointer">
               Cerrar
             </button>
           </div>

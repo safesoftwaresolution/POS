@@ -479,7 +479,7 @@ export default function StoresBento() {
               <button
                 type="button"
                 onClick={() => setShowStoreModal(false)}
-                className="w-1/2 py-3 bg-gray-100 dark:bg-[#272730] hover:bg-gray-200 dark:hover:bg-line-strong text-gray-700 dark:text-gray-300 rounded-2xl text-xs font-bold cursor-pointer"
+                className="w-1/2 py-3 bg-gray-100 dark:bg-line hover:bg-gray-200 dark:hover:bg-line-strong text-gray-700 dark:text-gray-300 rounded-2xl text-xs font-bold cursor-pointer"
               >
                 Cancelar
               </button>
@@ -551,7 +551,7 @@ export default function StoresBento() {
                             <button
                               type="button"
                               onClick={() => { setRejectingDoc(null); setRejectionReason(''); }}
-                              className="flex-1 py-1.5 bg-gray-100 dark:bg-[#272730] text-gray-600 dark:text-gray-300 rounded-xl text-[11px] font-bold cursor-pointer"
+                              className="flex-1 py-1.5 bg-gray-100 dark:bg-line text-gray-600 dark:text-gray-300 rounded-xl text-[11px] font-bold cursor-pointer"
                             >
                               Cancelar
                             </button>
@@ -577,7 +577,7 @@ export default function StoresBento() {
                           <button
                             type="button"
                             onClick={() => setRejectingDoc(doc.id)}
-                            className="flex-1 py-1.5 bg-white dark:bg-[#272730] border border-red-200 dark:border-red-800/40 text-red-600 dark:text-red-400 rounded-xl text-[11px] font-extrabold flex items-center justify-center gap-1 cursor-pointer"
+                            className="flex-1 py-1.5 bg-white dark:bg-line border border-red-200 dark:border-red-800/40 text-red-600 dark:text-red-400 rounded-xl text-[11px] font-extrabold flex items-center justify-center gap-1 cursor-pointer"
                           >
                             <Ban className="w-3.5 h-3.5" /> Rechazar
                           </button>

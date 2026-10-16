@@ -103,7 +103,7 @@ export default function BackofficeSidebar({ isOpen, onClose, isCollapsed, onTogg
                   {group.title}
                 </p>
               ) : (
-                groupIdx > 0 && <div className="h-px w-8 bg-[#EAEAEA] dark:bg-[#272730] mx-auto" />
+                groupIdx > 0 && <div className="h-px w-8 bg-[#EAEAEA] dark:bg-line mx-auto" />
               )}
               {group.items.map((item) => {
                 const Icon = item.icon;
@@ -118,7 +118,7 @@ export default function BackofficeSidebar({ isOpen, onClose, isCollapsed, onTogg
                       `rounded-2xl flex items-center transition-all duration-200 cursor-pointer ${
                         isActive
                           ? 'bg-solid text-white shadow-md shadow-[#0A0A0A]/10 font-bold'
-                          : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#272730] hover:text-brand dark:hover:text-brand'
+                          : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-line hover:text-brand dark:hover:text-brand'
                       } ${
                         isCollapsed && !isOpen
                           ? 'w-11 h-11 justify-center mx-auto'
@@ -142,7 +142,7 @@ export default function BackofficeSidebar({ isOpen, onClose, isCollapsed, onTogg
         <div className="shrink-0 flex flex-col gap-2 w-full px-3 pt-3 border-t border-line">
           {/* User Card */}
           <div className={`flex items-center gap-2.5 p-2.5 rounded-xl ${isCollapsed && !isOpen ? 'justify-center' : ''}`}>
-            <div className="w-9 h-9 rounded-full bg-solid text-white flex items-center justify-center font-bold text-xs shrink-0 ring-1 ring-[#EAEAEA] dark:ring-[#272730]">
+            <div className="w-9 h-9 rounded-full bg-solid text-white flex items-center justify-center font-bold text-xs shrink-0 ring-1 ring-[#EAEAEA] dark:ring-line">
               {getInitials(user?.fullName || user?.username)}
             </div>
             {(!isCollapsed || isOpen) && (
@@ -155,7 +155,7 @@ export default function BackofficeSidebar({ isOpen, onClose, isCollapsed, onTogg
 
           <button
             onClick={onToggleCollapse}
-            className={`hidden lg:flex items-center gap-3 p-2.5 rounded-2xl text-xs font-bold text-ink-soft hover:bg-gray-100 dark:hover:bg-[#272730] transition-colors cursor-pointer ${
+            className={`hidden lg:flex items-center gap-3 p-2.5 rounded-2xl text-xs font-bold text-ink-soft hover:bg-gray-100 dark:hover:bg-line transition-colors cursor-pointer ${
               isCollapsed ? 'justify-center' : 'px-3'
             }`}
             title={isCollapsed ? 'Expandir Menú' : 'Contraer Menú'}

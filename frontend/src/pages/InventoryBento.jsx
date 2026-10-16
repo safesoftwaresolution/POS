@@ -132,7 +132,7 @@ export default function InventoryBento() {
       </div>
 
       {/* Tab Switcher */}
-      <div className="flex bg-gray-100 dark:bg-[#272730] rounded-full p-1 border border-gray-200 dark:border-gray-700 w-fit">
+      <div className="flex bg-gray-100 dark:bg-line rounded-full p-1 border border-gray-200 dark:border-gray-700 w-fit">
         {TABS.map(tab => {
           const Icon = tab.icon;
           return (
@@ -352,7 +352,7 @@ export default function InventoryBento() {
               <button
                 type="button"
                 onClick={() => setShowPurchaseModal(false)}
-                className="w-1/2 py-2.5 bg-gray-100 dark:bg-[#272730] hover:bg-gray-200 dark:hover:bg-line-strong text-gray-700 dark:text-gray-300 rounded-2xl text-xs font-bold cursor-pointer"
+                className="w-1/2 py-2.5 bg-gray-100 dark:bg-line hover:bg-gray-200 dark:hover:bg-line-strong text-gray-700 dark:text-gray-300 rounded-2xl text-xs font-bold cursor-pointer"
               >
                 Cancelar
               </button>

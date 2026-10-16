@@ -150,7 +150,7 @@ export default function CheckoutModal({
                     id="checkout-customer"
                     value={selectedCustomer?.id || ''}
                     onChange={(e) => onSelectCustomer(customers.find(c => c.id === parseInt(e.target.value)) || null)}
-                    className="w-full h-11 px-3 bg-white dark:bg-[#0E0E12] border border-line rounded-2xl text-xs font-bold text-ink focus:outline-none focus:border-ink dark:focus:border-brand"
+                    className="w-full h-11 px-3 bg-white dark:bg-page border border-line rounded-2xl text-xs font-bold text-ink focus:outline-none focus:border-ink dark:focus:border-brand"
                   >
                     <option value="">Consumidor final (sin datos fiscales)</option>
                     {customers.map(c => (
@@ -161,7 +161,7 @@ export default function CheckoutModal({
                   </select>
 
                   {selectedCustomer ? (
-                    <div className="p-3 rounded-2xl bg-white dark:bg-[#0E0E12] border border-line text-[11px] space-y-1">
+                    <div className="p-3 rounded-2xl bg-white dark:bg-page border border-line text-[11px] space-y-1">
                       <div className="flex justify-between gap-3">
                         <span className="text-ink-soft">Identificación</span>
                         <span className="font-mono font-bold text-ink">
@@ -201,7 +201,7 @@ export default function CheckoutModal({
                         className={`py-3 px-2 rounded-2xl border flex flex-col items-center justify-center gap-1.5 transition-all cursor-pointer ${
                           active
                             ? 'bg-solid text-white border-line-strong shadow-sm'
-                            : 'bg-white dark:bg-[#0E0E12] text-gray-600 dark:text-gray-300 border-line hover:border-line-strong'
+                            : 'bg-white dark:bg-page text-gray-600 dark:text-gray-300 border-line hover:border-line-strong'
                         }`}
                       >
                         <Icon className={`w-[18px] h-[18px] ${active ? 'text-brand' : 'text-gray-400'}`} />
@@ -240,7 +240,7 @@ export default function CheckoutModal({
                       className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
                         cashNumber === val
                           ? 'bg-solid text-white border-line-strong'
-                          : 'bg-white dark:bg-[#0E0E12] text-gray-600 dark:text-gray-300 border-line hover:border-line-strong'
+                          : 'bg-white dark:bg-page text-gray-600 dark:text-gray-300 border-line hover:border-line-strong'
                       }`}
                     >
                       {i === 0 ? 'Exacto' : `${money(val)}`}
@@ -251,7 +251,7 @@ export default function CheckoutModal({
                 <div className={`p-3.5 rounded-2xl border flex items-center justify-between gap-3 ${
                   change < 0 && cashNumber > 0
                     ? 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800/40'
-                    : 'bg-white dark:bg-[#0E0E12] border-line'
+                    : 'bg-white dark:bg-page border-line'
                 }`}>
                   <span className={SECTION_LABEL}>Cambio / vuelto</span>
                   {change < 0 && cashNumber > 0 ? (
@@ -281,7 +281,7 @@ export default function CheckoutModal({
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="w-1/3 py-3.5 bg-gray-100 dark:bg-[#272730] hover:bg-gray-200 dark:hover:bg-line-strong text-gray-700 dark:text-gray-300 rounded-2xl text-xs font-bold cursor-pointer disabled:opacity-50"
+              className="w-1/3 py-3.5 bg-gray-100 dark:bg-line hover:bg-gray-200 dark:hover:bg-line-strong text-gray-700 dark:text-gray-300 rounded-2xl text-xs font-bold cursor-pointer disabled:opacity-50"
             >
               Cancelar
             </button>
@@ -371,7 +371,7 @@ export function SaleResultModal({ sale, onClose }) {
     }
   };
 
-  const actionBtn = 'p-2.5 rounded-2xl bg-white dark:bg-[#0E0E12] border border-line hover:border-line-strong text-[10px] font-bold text-ink flex flex-col items-center justify-center gap-1 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed';
+  const actionBtn = 'p-2.5 rounded-2xl bg-white dark:bg-page border border-line hover:border-line-strong text-[10px] font-bold text-ink flex flex-col items-center justify-center gap-1 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed';
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
@@ -507,7 +507,7 @@ export function SaleResultModal({ sale, onClose }) {
           <button
             type="button"
             onClick={() => notify(`Imprimiendo tiquete térmico para la venta ${sale.number}...`, { title: 'Imprimir tiquete', danger: false })}
-            className="w-1/2 py-3 bg-gray-100 dark:bg-[#272730] hover:bg-gray-200 dark:hover:bg-line-strong text-ink rounded-2xl font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer"
+            className="w-1/2 py-3 bg-gray-100 dark:bg-line hover:bg-gray-200 dark:hover:bg-line-strong text-ink rounded-2xl font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer"
           >
             <Printer className="w-4 h-4" /> Imprimir tiquete
           </button>

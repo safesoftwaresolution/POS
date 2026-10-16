@@ -69,7 +69,7 @@ export function ModalProvider({ children }) {
                 <button
                   type="button"
                   onClick={() => close(false)}
-                  className="w-1/2 py-2.5 bg-gray-100 dark:bg-[#272730] hover:bg-gray-200 dark:hover:bg-line-strong text-gray-700 dark:text-gray-300 rounded-2xl text-xs font-bold cursor-pointer transition-colors"
+                  className="w-1/2 py-2.5 bg-gray-100 dark:bg-line hover:bg-gray-200 dark:hover:bg-line-strong text-gray-700 dark:text-gray-300 rounded-2xl text-xs font-bold cursor-pointer transition-colors"
                 >
                   {modal.cancelText}
                 </button>

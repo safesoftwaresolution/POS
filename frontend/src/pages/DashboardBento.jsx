@@ -231,7 +231,7 @@ export default function DashboardBento() {
                 <p className="text-[11px] text-ink-soft font-medium">Calculado dinámicamente con tus transacciones</p>
               </div>
             </div>
-            <div className="flex bg-gray-100 dark:bg-[#272730] rounded-full p-1 border border-gray-200 dark:border-gray-700">
+            <div className="flex bg-gray-100 dark:bg-line rounded-full p-1 border border-gray-200 dark:border-gray-700">
               <button className="px-3.5 py-1 text-xs font-semibold bg-solid text-white rounded-full shadow-xs cursor-pointer">
                 Semanal
               </button>
@@ -375,7 +375,7 @@ export default function DashboardBento() {
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-800 font-medium text-gray-700 dark:text-gray-300">
                   {sales.slice(0, 5).map((s, idx) => (
-                    <tr key={s.id || idx} className="hover:bg-gray-50 dark:hover:bg-[#272730]/40 transition-colors">
+                    <tr key={s.id || idx} className="hover:bg-gray-50 dark:hover:bg-line/40 transition-colors">
                       <td className="py-3 px-3 font-bold text-brand dark:text-brand flex items-center gap-2">
                         <div className="w-7 h-7 rounded-lg bg-brand/10 dark:bg-brand/20 text-brand dark:text-brand flex items-center justify-center">
                           <Package className="w-3.5 h-3.5" />

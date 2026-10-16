@@ -221,7 +221,7 @@ export default function SettingsBento() {
 
               <button
                 type="submit"
-                className="w-full py-3 bg-solid hover:bg-black dark:bg-[#272730] dark:hover:bg-line-strong text-white font-extrabold text-xs rounded-2xl flex items-center justify-center gap-2 cursor-pointer transition-colors"
+                className="w-full py-3 bg-solid hover:bg-black dark:bg-line dark:hover:bg-line-strong text-white font-extrabold text-xs rounded-2xl flex items-center justify-center gap-2 cursor-pointer transition-colors"
               >
                 <Save className="w-4 h-4" /> Guardar Registro Legal
               </button>

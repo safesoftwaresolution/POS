@@ -8,7 +8,7 @@ export function TabButton({ active, onClick, icon: Icon, label, count }) {
       className={`pb-3 text-sm font-bold flex items-center gap-2 border-b-2 transition-all cursor-pointer whitespace-nowrap ${
         active
           ? 'border-brand text-brand'
-          : 'border-transparent text-ink-soft hover:text-[#0A0A0A] dark:hover:text-white'
+          : 'border-transparent text-ink-soft hover:text-ink'
       }`}
     >
       <Icon className="w-4 h-4" />

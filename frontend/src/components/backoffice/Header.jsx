@@ -17,7 +17,7 @@ export default function BackofficeHeader({ onToggleMobileMenu }) {
       <div className="flex items-center gap-3">
         <button
           onClick={onToggleMobileMenu}
-          className="lg:hidden p-2 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-[#272730] rounded-xl transition-colors cursor-pointer"
+          className="lg:hidden p-2 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-line rounded-xl transition-colors cursor-pointer"
         >
           <Menu className="w-5 h-5 text-brand dark:text-brand" />
         </button>
@@ -29,7 +29,7 @@ export default function BackofficeHeader({ onToggleMobileMenu }) {
       <div className="flex items-center gap-3 sm:gap-4">
         <button
           onClick={toggleTheme}
-          className="w-10 h-10 text-gray-600 dark:text-amber-400 bg-card border border-line hover:bg-[#F5F5F3] dark:hover:bg-[#272730] rounded-xl transition-all flex items-center justify-center cursor-pointer"
+          className="w-10 h-10 text-gray-600 dark:text-amber-400 bg-card border border-line hover:bg-[#F5F5F3] dark:hover:bg-line rounded-xl transition-all flex items-center justify-center cursor-pointer"
           title={darkMode ? 'Cambiar a Modo Claro' : 'Cambiar a Modo Oscuro'}
         >
           {darkMode ? (
@@ -40,7 +40,7 @@ export default function BackofficeHeader({ onToggleMobileMenu }) {
         </button>
 
         <div
-          className="w-10 h-10 rounded-full bg-solid dark:bg-[#272730] text-white flex items-center justify-center font-bold text-xs shadow-sm border-2 border-white dark:border-[#2C2C36] cursor-pointer"
+          className="w-10 h-10 rounded-full bg-solid dark:bg-line text-white flex items-center justify-center font-bold text-xs shadow-sm border-2 border-white dark:border-line-strong cursor-pointer"
           title={user?.fullName || user?.username}
         >
           {getInitials(user?.fullName || user?.username)}

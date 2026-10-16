@@ -38,6 +38,21 @@ El diseño se basa en la estética **Bento Grid**:
 - **Text Muted (`--text-muted`)**: `#787885` (Gris apagado)
 - **Elevated Surfaces / Solid Buttons**: `#262630` con hover `#31313E` (Carbón elevado que evita empastar contra el fondo).
 
+### 2.3b Tokens de Tailwind (uso en el código)
+
+Los valores de §2.2 y §2.3 viven como variables CSS en `frontend/src/index.css` y se exponen como utilidades de Tailwind que **cambian solas con el tema** (no hace falta repetir `dark:`):
+
+| Utilidad | Variable | Uso |
+|---|---|---|
+| `bg-page` | `--bg-page` | Fondo de página, inputs sobre tarjeta |
+| `bg-card` | `--bg-card` | Superficie de tarjeta / modal |
+| `border-line` / `border-line-strong` | `--border-card` / `--border-strong` | Bordes y separadores / hover de borde |
+| `text-ink` / `text-ink-soft` / `text-ink-muted` | `--text-primary` / `--text-secondary` / `--text-muted` | Texto principal, secundario, apagado |
+| `bg-brand` / `text-brand` / `bg-brand-hover` | `--color-primary` | Acento naranja `#FF5520` |
+| `bg-solid` / `bg-solid-hover` | `--solid` / `--solid-hover` | Botones sólidos y navegación activa (`#0A0A0A` en claro, `#262630` en oscuro) |
+
+No escribir hex ni pares `bg-white dark:bg-[#17171B]` en componentes nuevos. Las pantallas de acceso (`/login`, `/register`, `/verify-email`, onboarding) son siempre oscuras por diseño y conservan sus colores fijos. Componentes base reutilizables: `frontend/src/components/ui/` (`Button`, `Badge`, `Card`, `Modal`, `Input`/`Select`, `EmptyState`, `PageHeader`).
+
 ### 2.4 Estados y Semántica Funcional
 - **Éxito (Validado / En Stock / Activo)**:
   - Claro: `text-emerald-600 bg-emerald-50 border-emerald-200`

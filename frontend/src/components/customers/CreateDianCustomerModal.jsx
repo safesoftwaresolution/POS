@@ -163,7 +163,7 @@ export default function CreateDianCustomerModal({ onClose, onCreated, initialNam
                     className={`p-3 rounded-2xl border flex items-center gap-2.5 font-bold transition-all cursor-pointer ${
                       active
                         ? 'bg-solid text-white border-line-strong shadow-sm'
-                        : 'bg-white dark:bg-[#0E0E12] text-gray-600 dark:text-gray-300 border-line hover:border-line-strong'
+                        : 'bg-white dark:bg-page text-gray-600 dark:text-gray-300 border-line hover:border-line-strong'
                     }`}
                   >
                     <Icon className={`w-4 h-4 ${active ? 'text-brand' : ''}`} />
@@ -298,7 +298,7 @@ export default function CreateDianCustomerModal({ onClose, onCreated, initialNam
           <button
             type="button"
             onClick={onClose}
-            className="w-1/2 py-3 bg-gray-100 dark:bg-[#272730] hover:bg-gray-200 dark:hover:bg-line-strong text-gray-700 dark:text-gray-300 rounded-2xl text-xs font-bold cursor-pointer"
+            className="w-1/2 py-3 bg-gray-100 dark:bg-line hover:bg-gray-200 dark:hover:bg-line-strong text-gray-700 dark:text-gray-300 rounded-2xl text-xs font-bold cursor-pointer"
           >
             Cancelar
           </button>

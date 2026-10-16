@@ -324,13 +324,13 @@ export default function BillingBento() {
                         value={reasonText}
                         onChange={e => setReasonText(e.target.value)}
                         placeholder={`Motivo para "${STATUS_LABELS[reasonTarget]}" (obligatorio)`}
-                        className="w-full p-2.5 bg-white dark:bg-[#0E0E12] border border-line rounded-xl text-[11px] text-ink focus:outline-none focus:border-ink dark:focus:border-brand"
+                        className="w-full p-2.5 bg-white dark:bg-page border border-line rounded-xl text-[11px] text-ink focus:outline-none focus:border-ink dark:focus:border-brand"
                       />
                       <div className="flex gap-2">
                         <button
                           type="button"
                           onClick={() => { setReasonTarget(null); setReasonText(''); }}
-                          className="flex-1 py-1.5 bg-white dark:bg-[#272730] text-gray-600 dark:text-gray-300 rounded-xl text-[11px] font-bold cursor-pointer border border-[#EAEAEA] dark:border-transparent"
+                          className="flex-1 py-1.5 bg-white dark:bg-line text-gray-600 dark:text-gray-300 rounded-xl text-[11px] font-bold cursor-pointer border border-[#EAEAEA] dark:border-transparent"
                         >
                           Cancelar
                         </button>
@@ -356,7 +356,7 @@ export default function BillingBento() {
                           onClick={() => handleTransition(target)}
                           className={`px-3 py-1.5 rounded-xl text-[11px] font-extrabold cursor-pointer disabled:opacity-50 flex items-center gap-1.5 ${
                             target === 'REJECTED' || target === 'SUSPENDED'
-                              ? 'bg-white dark:bg-[#272730] border border-red-200 dark:border-red-800/40 text-red-600 dark:text-red-400'
+                              ? 'bg-white dark:bg-line border border-red-200 dark:border-red-800/40 text-red-600 dark:text-red-400'
                               : 'bg-solid hover:bg-solid-hover text-white shadow-sm shadow-[#0A0A0A]/10'
                           }`}
                         >
@@ -385,7 +385,7 @@ export default function BillingBento() {
                         type="button"
                         disabled={detail.environment === env}
                         onClick={() => handleSwitchEnvironment(env)}
-                        className="flex-1 py-1.5 bg-white dark:bg-[#272730] border border-[#EAEAEA] dark:border-transparent disabled:opacity-40 text-gray-700 dark:text-gray-200 rounded-xl text-[11px] font-bold cursor-pointer"
+                        className="flex-1 py-1.5 bg-white dark:bg-line border border-[#EAEAEA] dark:border-transparent disabled:opacity-40 text-gray-700 dark:text-gray-200 rounded-xl text-[11px] font-bold cursor-pointer"
                       >
                         Usar {env}
                       </button>
@@ -420,7 +420,7 @@ export default function BillingBento() {
                           type="text"
                           value={credentialsForm.clientId}
                           onChange={e => setCredentialsForm({ ...credentialsForm, clientId: e.target.value })}
-                          className="w-full p-2.5 bg-white dark:bg-[#0E0E12] border border-line rounded-xl text-[11px] text-ink focus:outline-none focus:border-ink dark:focus:border-brand"
+                          className="w-full p-2.5 bg-white dark:bg-page border border-line rounded-xl text-[11px] text-ink focus:outline-none focus:border-ink dark:focus:border-brand"
                         />
                       </div>
                       <div>
@@ -430,7 +430,7 @@ export default function BillingBento() {
                           value={credentialsForm.clientSecret}
                           onChange={e => setCredentialsForm({ ...credentialsForm, clientSecret: e.target.value })}
                           placeholder="Vacío = conservar el guardado"
-                          className="w-full p-2.5 bg-white dark:bg-[#0E0E12] border border-line rounded-xl text-[11px] text-ink focus:outline-none focus:border-ink dark:focus:border-brand"
+                          className="w-full p-2.5 bg-white dark:bg-page border border-line rounded-xl text-[11px] text-ink focus:outline-none focus:border-ink dark:focus:border-brand"
                         />
                       </div>
                     </div>
@@ -441,7 +441,7 @@ export default function BillingBento() {
                           type="text"
                           value={credentialsForm.username}
                           onChange={e => setCredentialsForm({ ...credentialsForm, username: e.target.value })}
-                          className="w-full p-2.5 bg-white dark:bg-[#0E0E12] border border-line rounded-xl text-[11px] text-ink focus:outline-none focus:border-ink dark:focus:border-brand"
+                          className="w-full p-2.5 bg-white dark:bg-page border border-line rounded-xl text-[11px] text-ink focus:outline-none focus:border-ink dark:focus:border-brand"
                         />
                       </div>
                       <div>
@@ -451,7 +451,7 @@ export default function BillingBento() {
                           value={credentialsForm.password}
                           onChange={e => setCredentialsForm({ ...credentialsForm, password: e.target.value })}
                           placeholder="Vacío = conservar la guardada"
-                          className="w-full p-2.5 bg-white dark:bg-[#0E0E12] border border-line rounded-xl text-[11px] text-ink focus:outline-none focus:border-ink dark:focus:border-brand"
+                          className="w-full p-2.5 bg-white dark:bg-page border border-line rounded-xl text-[11px] text-ink focus:outline-none focus:border-ink dark:focus:border-brand"
                         />
                       </div>
                     </div>
@@ -472,7 +472,7 @@ export default function BillingBento() {
                         type="button"
                         onClick={handleTestConnection}
                         disabled={testing}
-                        className="flex-1 py-2 bg-white dark:bg-[#272730] border border-[#EAEAEA] dark:border-transparent disabled:opacity-50 text-gray-700 dark:text-gray-200 rounded-xl text-[11px] font-bold cursor-pointer flex items-center justify-center gap-1.5"
+                        className="flex-1 py-2 bg-white dark:bg-line border border-[#EAEAEA] dark:border-transparent disabled:opacity-50 text-gray-700 dark:text-gray-200 rounded-xl text-[11px] font-bold cursor-pointer flex items-center justify-center gap-1.5"
                       >
                         {testing ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Wifi className="w-3.5 h-3.5" />}
                         Probar Conexión

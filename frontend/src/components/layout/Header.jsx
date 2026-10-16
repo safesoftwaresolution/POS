@@ -140,13 +140,13 @@ export default function Header({ onToggleMobileMenu }) {
   };
 
   return (
-    <header className="bg-white dark:bg-[#0E0E12] flex justify-between items-center px-4 sm:px-8 py-4 h-20 w-full z-40 select-none border-b border-line">
+    <header className="bg-white dark:bg-page flex justify-between items-center px-4 sm:px-8 py-4 h-20 w-full z-40 select-none border-b border-line">
 
       {/* Page Title & Subtitle */}
       <div className="flex items-center gap-4 min-w-0">
         <button
           onClick={onToggleMobileMenu}
-          className="lg:hidden p-2 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-[#272730] rounded-xl transition-colors cursor-pointer shrink-0"
+          className="lg:hidden p-2 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-line rounded-xl transition-colors cursor-pointer shrink-0"
         >
           <Menu className="w-5 h-5 text-brand" />
         </button>
@@ -178,7 +178,7 @@ export default function Header({ onToggleMobileMenu }) {
         {/* Dark / Light Mode Toggle Button */}
         <button
           onClick={toggleTheme}
-          className="group w-10 h-10 text-gray-600 dark:text-amber-400 bg-card border border-line hover:bg-[#F5F5F3] dark:hover:bg-[#272730] rounded-xl transition-all flex items-center justify-center cursor-pointer"
+          className="group w-10 h-10 text-gray-600 dark:text-amber-400 bg-card border border-line hover:bg-[#F5F5F3] dark:hover:bg-line rounded-xl transition-all flex items-center justify-center cursor-pointer"
           title={darkMode ? 'Cambiar a Modo Claro' : 'Cambiar a Modo Oscuro'}
         >
           {darkMode ? (
@@ -192,11 +192,11 @@ export default function Header({ onToggleMobileMenu }) {
         <div className="relative" ref={notifRef}>
           <button
             onClick={handleToggleNotifications}
-            className="group w-10 h-10 text-gray-600 dark:text-gray-300 bg-card border border-line hover:bg-[#F5F5F3] dark:hover:bg-[#272730] rounded-xl transition-all flex items-center justify-center relative cursor-pointer"
+            className="group w-10 h-10 text-gray-600 dark:text-gray-300 bg-card border border-line hover:bg-[#F5F5F3] dark:hover:bg-line rounded-xl transition-all flex items-center justify-center relative cursor-pointer"
           >
             <Bell className="w-4.5 h-4.5 group-hover:text-brand transition-colors" />
             {unreadCount > 0 && (
-              <span className="absolute top-1.5 right-1.5 min-w-[16px] h-4 px-1 bg-brand rounded-full border border-white dark:border-[#0E0E12] text-[9px] font-extrabold text-white flex items-center justify-center">
+              <span className="absolute top-1.5 right-1.5 min-w-[16px] h-4 px-1 bg-brand rounded-full border border-white dark:border-page text-[9px] font-extrabold text-white flex items-center justify-center">
                 {unreadCount > 9 ? '9+' : unreadCount}
               </span>
             )}
@@ -260,7 +260,7 @@ export default function Header({ onToggleMobileMenu }) {
         )}
 
         {/* User Profile Avatar */}
-        <div className="w-10 h-10 rounded-full bg-solid dark:bg-[#272730] text-white flex items-center justify-center font-bold text-xs shadow-sm border-2 border-white dark:border-[#2C2C36] cursor-pointer" title={user?.fullName || user?.username}>
+        <div className="w-10 h-10 rounded-full bg-solid dark:bg-line text-white flex items-center justify-center font-bold text-xs shadow-sm border-2 border-white dark:border-line-strong cursor-pointer" title={user?.fullName || user?.username}>
           {getInitials(user?.fullName || user?.username)}
         </div>
       </div>

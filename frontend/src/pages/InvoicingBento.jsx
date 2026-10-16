@@ -79,7 +79,7 @@ export default function InvoicingBento() {
         <button
           type="button"
           onClick={() => setRefreshKey(k => k + 1)}
-          className="h-10 px-4 rounded-2xl border border-line bg-card text-gray-600 dark:text-gray-300 hover:text-[#0A0A0A] dark:hover:text-white text-xs font-bold flex items-center gap-2 cursor-pointer self-start md:self-auto"
+          className="h-10 px-4 rounded-2xl border border-line bg-card text-gray-600 dark:text-gray-300 hover:text-ink text-xs font-bold flex items-center gap-2 cursor-pointer self-start md:self-auto"
         >
           <RefreshCw className="w-3.5 h-3.5" /> Sincronizar con la DIAN
         </button>

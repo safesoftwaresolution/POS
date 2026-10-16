@@ -194,7 +194,7 @@ export default function OnboardingBento() {
             <div className="flex justify-end gap-2">
               <button
                 onClick={() => setRejectingStore(null)}
-                className="px-4 py-2 bg-gray-100 dark:bg-[#272730] text-gray-600 dark:text-gray-300 rounded-xl text-xs font-bold cursor-pointer"
+                className="px-4 py-2 bg-gray-100 dark:bg-line text-gray-600 dark:text-gray-300 rounded-xl text-xs font-bold cursor-pointer"
               >
                 Cancelar
               </button>

@@ -327,7 +327,7 @@ export default function ParametersBento() {
             </div>
 
             <div className="flex gap-2 pt-2">
-              <button type="button" onClick={() => setShowTopicForm(false)} className="w-1/2 py-3 bg-gray-100 dark:bg-[#272730] hover:bg-gray-200 dark:hover:bg-line-strong text-gray-700 dark:text-gray-300 rounded-2xl text-xs font-bold cursor-pointer">
+              <button type="button" onClick={() => setShowTopicForm(false)} className="w-1/2 py-3 bg-gray-100 dark:bg-line hover:bg-gray-200 dark:hover:bg-line-strong text-gray-700 dark:text-gray-300 rounded-2xl text-xs font-bold cursor-pointer">
                 Cancelar
               </button>
               <button type="submit" className="w-1/2 py-3 bg-solid hover:bg-solid-hover text-white rounded-2xl text-xs font-extrabold cursor-pointer shadow-md shadow-[#0A0A0A]/10">
@@ -405,7 +405,7 @@ export default function ParametersBento() {
             </div>
 
             <div className="flex gap-2 pt-2">
-              <button type="button" onClick={() => setShowValueForm(false)} className="w-1/2 py-3 bg-gray-100 dark:bg-[#272730] hover:bg-gray-200 dark:hover:bg-line-strong text-gray-700 dark:text-gray-300 rounded-2xl text-xs font-bold cursor-pointer">
+              <button type="button" onClick={() => setShowValueForm(false)} className="w-1/2 py-3 bg-gray-100 dark:bg-line hover:bg-gray-200 dark:hover:bg-line-strong text-gray-700 dark:text-gray-300 rounded-2xl text-xs font-bold cursor-pointer">
                 Cancelar
               </button>
               <button type="submit" className="w-1/2 py-3 bg-solid hover:bg-solid-hover text-white rounded-2xl text-xs font-extrabold cursor-pointer shadow-md shadow-[#0A0A0A]/10">

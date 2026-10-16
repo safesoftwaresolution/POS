@@ -158,7 +158,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
                   {group.title}
                 </p>
               ) : (
-                groupIdx > 0 && <div className="h-px w-8 bg-[#EAEAEA] dark:bg-[#272730] mx-auto" />
+                groupIdx > 0 && <div className="h-px w-8 bg-[#EAEAEA] dark:bg-line mx-auto" />
               )}
               {group.items.map((item) => {
                 const Icon = item.icon;
@@ -172,7 +172,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
                       `relative rounded-2xl flex items-center transition-all duration-200 cursor-pointer ${
                         isActive
                           ? 'bg-solid text-white shadow-md shadow-[#0A0A0A]/10 font-bold'
-                          : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#272730] hover:text-brand dark:hover:text-brand'
+                          : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-line hover:text-brand dark:hover:text-brand'
                       } ${
                         isCollapsed && !isOpen
                           ? 'w-11 h-11 justify-center mx-auto'
@@ -196,7 +196,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
                           </>
                         ) : (
                           item.badge != null && (
-                            <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-brand ring-2 ring-white dark:ring-[#17171B]" />
+                            <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-brand ring-2 ring-white dark:ring-card" />
                           )
                         )}
                       </>
@@ -213,13 +213,13 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
           {/* User Card (opens account menu) */}
           <button
             onClick={() => setProfileOpen(true)}
-            className={`flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-[#272730] transition-colors cursor-pointer text-left ${isCollapsed && !isOpen ? 'justify-center' : ''}`}
+            className={`flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-line transition-colors cursor-pointer text-left ${isCollapsed && !isOpen ? 'justify-center' : ''}`}
           >
             <div className="relative shrink-0">
-              <div className="w-9 h-9 rounded-full bg-solid text-white flex items-center justify-center font-bold text-xs ring-1 ring-[#EAEAEA] dark:ring-[#272730]">
+              <div className="w-9 h-9 rounded-full bg-solid text-white flex items-center justify-center font-bold text-xs ring-1 ring-[#EAEAEA] dark:ring-line">
                 {getInitials(user?.fullName || user?.username)}
               </div>
-              <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-brand ring-2 ring-white dark:ring-[#17171B]" />
+              <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-brand ring-2 ring-white dark:ring-card" />
             </div>
             {(!isCollapsed || isOpen) && (
               <>
@@ -235,7 +235,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
           {/* Collapse/Expand Desktop Button */}
           <button
             onClick={onToggleCollapse}
-            className={`hidden lg:flex items-center gap-3 p-2.5 rounded-2xl text-xs font-bold text-ink-soft hover:bg-gray-100 dark:hover:bg-[#272730] transition-colors cursor-pointer ${
+            className={`hidden lg:flex items-center gap-3 p-2.5 rounded-2xl text-xs font-bold text-ink-soft hover:bg-gray-100 dark:hover:bg-line transition-colors cursor-pointer ${
               isCollapsed ? 'justify-center' : 'px-3'
             }`}
             title={isCollapsed ? 'Expandir Menú' : 'Contraer Menú'}
@@ -266,10 +266,10 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
             <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-line">
               <div className="flex items-center gap-4 min-w-0">
                 <div className="relative shrink-0">
-                  <div className="w-14 h-14 rounded-2xl bg-solid text-white flex items-center justify-center font-bold text-lg ring-2 ring-[#EAEAEA] dark:ring-[#272730]">
+                  <div className="w-14 h-14 rounded-2xl bg-solid text-white flex items-center justify-center font-bold text-lg ring-2 ring-[#EAEAEA] dark:ring-line">
                     {getInitials(user?.fullName || user?.username)}
                   </div>
-                  <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full bg-brand ring-2 ring-white dark:ring-[#17171B]" />
+                  <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full bg-brand ring-2 ring-white dark:ring-card" />
                 </div>
                 <div className="min-w-0">
                   <p className="text-base font-extrabold text-ink truncate leading-tight">
@@ -325,7 +325,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
               {/* Settings */}
               <button
                 onClick={() => { setProfileOpen(false); navigate('/settings'); }}
-                className="w-full flex items-center gap-3 pl-[30px] pr-4 py-3.5 rounded-xl text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#272730] cursor-pointer text-left transition-colors"
+                className="w-full flex items-center gap-3 pl-[30px] pr-4 py-3.5 rounded-xl text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-line cursor-pointer text-left transition-colors"
               >
                 <Settings className="w-4 h-4 text-gray-400 shrink-0" />
                 Configuración
@@ -338,7 +338,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
             <div className="px-3 py-3">
               <button
                 onClick={() => { if (onClose) onClose(); navigate('/support'); }}
-                className="w-full flex items-center justify-between pl-[30px] pr-4 py-3.5 rounded-xl text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#272730] cursor-pointer transition-colors"
+                className="w-full flex items-center justify-between pl-[30px] pr-4 py-3.5 rounded-xl text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-line cursor-pointer transition-colors"
               >
                 <span className="flex items-center gap-3">
                   <HelpCircle className="w-4 h-4 text-gray-400" />

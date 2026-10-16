@@ -40,7 +40,7 @@ function RankedBarRow({ label, value, max, formatValue = money }) {
         <span className="font-bold text-ink truncate pr-2">{label}</span>
         <span className="font-extrabold text-brand dark:text-brand tabular-nums shrink-0">{formatValue(value)}</span>
       </div>
-      <div className="h-2.5 w-full bg-[#F5F5F3] dark:bg-[#272730] rounded-full overflow-hidden">
+      <div className="h-2.5 w-full bg-[#F5F5F3] dark:bg-line rounded-full overflow-hidden">
         <div
           className="h-full bg-solid dark:bg-brand rounded-full transition-all duration-500"
           style={{ width: `${pct}%` }}

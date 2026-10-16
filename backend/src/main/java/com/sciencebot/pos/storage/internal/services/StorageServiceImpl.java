@@ -11,10 +11,19 @@ import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import java.io.IOException;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
 public class StorageServiceImpl implements StorageFacade {
+
+    private static final Map<String, String> ALLOWED_UPLOAD_TYPES = Map.of(
+            ".jpg", "image/jpeg",
+            ".jpeg", "image/jpeg",
+            ".png", "image/png",
+            ".webp", "image/webp",
+            ".gif", "image/gif",
+            ".pdf", "application/pdf");
 
     private final S3Client s3Client;
     private final R2StorageProperties properties;
@@ -33,9 +42,7 @@ public class StorageServiceImpl implements StorageFacade {
         String originalFilename = file.getOriginalFilename();
         String extension = getFileExtension(originalFilename);
         String contentType = file.getContentType();
-        if (contentType == null || contentType.isBlank()) {
-            contentType = "application/octet-stream";
-        }
+        validateUploadType(extension, contentType);
 
         String sanitizedFolder = sanitizeFolder(folder);
         String key = (sanitizedFolder.isEmpty() ? "" : sanitizedFolder + "/") + UUID.randomUUID() + extension;
@@ -128,7 +135,23 @@ public class StorageServiceImpl implements StorageFacade {
         if (folder == null || folder.isBlank()) {
             return "";
         }
-        return folder.trim().replaceAll("^/+|/+$", "");
+        String clean = folder.trim().replaceAll("^/+|/+$", "");
+        if (!clean.matches("[A-Za-z0-9_-]+(/[A-Za-z0-9_-]+)*")) {
+            throw new IllegalArgumentException("Carpeta de destino invalida");
+        }
+        return clean;
+    }
+
+    /**
+     * Solo imagenes rasterizadas y PDF: se sirven desde un dominio publico, asi que .html/.svg
+     * permitirian XSS almacenado. Extension y Content-Type deben ser coherentes entre si.
+     */
+    private void validateUploadType(String extension, String contentType) {
+        String mime = contentType == null ? "" : contentType.toLowerCase().split(";")[0].trim();
+        String expected = ALLOWED_UPLOAD_TYPES.get(extension);
+        if (expected == null || !(expected.equals(mime) || ("image/jpeg".equals(expected) && "image/jpg".equals(mime)))) {
+            throw new IllegalArgumentException("Tipo de archivo no permitido. Formatos validos: jpg, png, webp, gif, pdf");
+        }
     }
 
     private String buildPublicUrl(String key) {

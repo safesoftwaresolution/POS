@@ -8,9 +8,11 @@ import {
   Package,
   Layers,
   AlertCircle,
-  ImagePlus
+  ImagePlus,
+  Power,
+  PowerOff
 } from 'lucide-react';
-import { getProductsApi, createProductApi, updateProductApi, deleteProductApi } from '../services/productsApi';
+import { getProductsApi, createProductApi, updateProductApi, deleteProductApi, changeProductStatusApi } from '../services/productsApi';
 import { getCategoriesApi } from '../services/categoriesApi';
 import {
   getSubcategoriesApi,
@@ -55,6 +57,7 @@ export default function ProductsBento() {
   const [subcategories, setSubcategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [showInactive, setShowInactive] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [barcodeProduct, setBarcodeProduct] = useState(null);
   const [errorMsg, setErrorMsg] = useState('');
@@ -68,10 +71,10 @@ export default function ProductsBento() {
   const [subErrorMsg, setSubErrorMsg] = useState('');
   const imageInputRef = useRef(null);
 
-  const loadProducts = async () => {
+  const loadProducts = async (inactive = showInactive) => {
     setLoading(true);
     try {
-      const data = await getProductsApi();
+      const data = await getProductsApi('', null, 0, 50, !inactive);
       setProducts(Array.isArray(data) ? data : []);
     } catch (e) {
       console.warn('Error cargando productos:', e);
@@ -251,6 +254,28 @@ export default function ProductsBento() {
     }
   };
 
+  const toggleInactive = () => {
+    const next = !showInactive;
+    setShowInactive(next);
+    loadProducts(next);
+  };
+
+  const handleToggleStatus = async (p) => {
+    const activate = p.active === false;
+    if (!activate) {
+      const ok = await confirm(`"${p.name}" dejará de aparecer en el punto de venta. Podrás reactivarlo cuando quieras.`, {
+        title: 'Desactivar producto', confirmText: 'Desactivar', danger: false,
+      });
+      if (!ok) return;
+    }
+    try {
+      await changeProductStatusApi(p.id, activate);
+      await loadProducts();
+    } catch (e) {
+      notify('No se pudo cambiar el estado del producto: ' + e.message);
+    }
+  };
+
   const handleDelete = async (id) => {
     const ok = await confirm('¿Seguro que deseas eliminar este producto?', { title: 'Eliminar producto' });
     if (!ok) return;
@@ -332,7 +357,17 @@ export default function ProductsBento() {
               className="w-full pl-10 pr-3 py-1.5 bg-page border border-line rounded-2xl text-xs font-semibold text-ink placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-ink"
             />
           </div>
-          <span className="text-xs font-bold text-ink-muted">{filtered.length} productos registrados</span>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={toggleInactive}
+              className={`px-3 py-1.5 rounded-full text-[11px] font-bold cursor-pointer border transition-colors ${
+                showInactive ? 'bg-solid text-white border-transparent' : 'border-line text-ink-soft hover:border-line-strong'
+              }`}
+            >
+              {showInactive ? 'Viendo inactivos' : 'Ver inactivos'}
+            </button>
+            <span className="text-xs font-bold text-ink-muted">{filtered.length} {showInactive ? 'productos inactivos' : 'productos registrados'}</span>
+          </div>
         </div>
 
         {loading ? (
@@ -432,6 +467,15 @@ export default function ProductsBento() {
                           >
                             <Edit3 className="w-4 h-4" />
                           </button>
+                          {canManageSubcategories && (
+                          <button
+                            onClick={() => handleToggleStatus(p)}
+                            title={p.active === false ? 'Reactivar producto' : 'Desactivar producto'}
+                            className="p-1.5 text-ink-muted hover:text-amber-600 dark:hover:text-amber-400 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer"
+                          >
+                            {p.active === false ? <Power className="w-4 h-4" /> : <PowerOff className="w-4 h-4" />}
+                          </button>
+                          )}
                           <button
                             onClick={() => handleDelete(p.id)}
                             title="Eliminar producto"

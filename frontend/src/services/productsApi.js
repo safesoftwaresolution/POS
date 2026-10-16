@@ -38,3 +38,10 @@ export async function updateProductApi(id, productData) {
 export async function deleteProductApi(id) {
   return await fetchApi(`/products/${id}`, { method: 'DELETE' });
 }
+
+export async function changeProductStatusApi(id, active) {
+  return await fetchApi(`/products/${id}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ active }),
+  });
+}

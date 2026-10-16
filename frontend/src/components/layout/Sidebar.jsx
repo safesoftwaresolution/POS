@@ -10,6 +10,7 @@ import {
   FileCheck2,
   BarChart3,
   Settings,
+  UserCog,
   HelpCircle,
   LogOut,
   ChevronLeft,
@@ -97,6 +98,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
     {
       title: 'Sistema',
       items: [
+        ...(user?.role === 'ADMINISTRATOR' ? [{ path: '/users', label: 'Usuarios', icon: UserCog }] : []),
         { path: '/settings', label: 'Configuración', icon: Settings },
       ],
     },

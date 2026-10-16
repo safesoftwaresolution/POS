@@ -42,6 +42,7 @@ const PAGE_TITLES = {
   '/invoicing': { title: 'Facturación DIAN', subtitle: 'Facturas electrónicas y su estado ante la DIAN' },
   '/documents': { title: 'Documentos', subtitle: 'Documentos legales de tu tienda' },
   '/reports': { title: 'Reportes', subtitle: 'Rendimiento de ventas y compras' },
+  '/users': { title: 'Usuarios', subtitle: 'Personal con acceso a tu local y sus permisos' },
   '/settings': { title: 'Configuración', subtitle: 'Preferencias y datos de tu negocio' },
 };
 

@@ -1,15 +1,39 @@
-<!-- doc-version: 1.2 | last-updated: 2026-09-22 -->
+<!-- doc-version: 1.3 | last-updated: 2026-10-16 -->
 # Esquema de Base de Datos — Vista Global
+
+Fuente de verdad: las migraciones Flyway en `src/main/resources/db/migration/` (hoy `V1` … `V19`). Este documento es el mapa;
+el DDL columna a columna vive en las migraciones y, para los módulos con tablas propias complejas, en su `spec.md`.
 
 ## Diagrama Entidad-Relación
 
 ```mermaid
 erDiagram
+    STORES ||--o{ USERS : emplea
+    STORES ||--o{ PRODUCTS : cataloga
+    STORES ||--o{ CUSTOMERS : atiende
+    STORES ||--o{ SUPPLIERS : compra_a
+    STORES ||--o{ SALES : vende
+    STORES ||--o{ PURCHASES : compra
+    STORES ||--o{ INVENTORY_MOVEMENTS : registra
+    STORES ||--|| SETTINGS : configura
+    STORES ||--o{ NOTIFICATIONS : recibe
+    STORES ||--o{ STORE_DOCUMENTS : adjunta
+    STORES }o--|| STORE_CATEGORIES : clasifica
+    STORES ||--o{ SUPPORT_TICKETS : abre
+    STORES ||--|| STORE_BILLING_CONFIG : habilita
+    STORES ||--o{ NUMBERING_RANGE_AUDIT : audita
+    STORES ||--o{ ELECTRONIC_INVOICES : emite
+    STORES ||--o{ ELECTRONIC_CREDIT_NOTES : emite
+    STORES ||--o{ ELECTRONIC_DEBIT_NOTES : emite
+    STORES ||--o{ PRODUCT_SUBCATEGORIES : define
     USERS ||--o{ PURCHASES : registra
     USERS ||--o{ SALES : registra
     USERS ||--o{ INVENTORY_MOVEMENTS : audita
     USERS ||--o{ REFRESH_TOKENS : posee
+    USERS ||--o{ EMAIL_VERIFICATION_TOKENS : verifica
     CATEGORIES ||--o{ PRODUCTS : clasifica
+    CATEGORIES ||--o{ PRODUCT_SUBCATEGORIES : subdivide
+    PRODUCT_SUBCATEGORIES ||--o{ PRODUCTS : clasifica
     PRODUCTS ||--o{ PURCHASE_ITEMS : contiene
     PRODUCTS ||--o{ SALE_ITEMS : contiene
     PRODUCTS ||--o{ INVENTORY_MOVEMENTS : registra
@@ -17,14 +41,47 @@ erDiagram
     SUPPLIERS ||--o{ PURCHASES : vende
     PURCHASES ||--o{ PURCHASE_ITEMS : desglosa
     SALES ||--o{ SALE_ITEMS : desglosa
-    STORES ||--|| STORE_BILLING_CONFIG : habilita
-    STORES ||--o{ NUMBERING_RANGE_AUDIT : audita
-    STORES ||--o{ ELECTRONIC_INVOICES : emite
+    SALES ||--o{ SALE_RETURNS : devuelve
+    SALE_RETURNS ||--o{ SALE_RETURN_ITEMS : desglosa
+    SALE_ITEMS ||--o{ SALE_RETURN_ITEMS : referencia
     SALES ||--|| ELECTRONIC_INVOICES : factura
+    SALES ||--o{ ELECTRONIC_CREDIT_NOTES : anula
+    SALES ||--o{ ELECTRONIC_DEBIT_NOTES : ajusta
+    PARAMETER_TOPICS ||--o{ PARAMETER_VALUES : agrupa
 ```
 
+## Inventario de tablas por módulo
+
+| Módulo | Tabla | Migración | Notas |
+|---|---|---|---|
+| users / auth | `users` | V1, V3 (`store_id`), V7 (`email_verified`) | `store_id` nulo solo para `SUPER_ADMIN` |
+| auth | `refresh_tokens` | V4 | Hash SHA-256, `family_id`, rotación |
+| auth | `email_verification_tokens` | V7 | Hash del token, `used_at`, expira |
+| categories | `categories` | V1 | **Global** (sin `store_id`) |
+| categories | `product_subcategories` | V12 | Por local; única por (`store_id`, `category_id`, `name`) |
+| products | `products` | V1, V2 (`tax_rate`, `unspsc_code`), V3, V12 (`subcategory_id`) | Único por local: `internal_code` y `barcode` (V9) |
+| customers | `customers` | V1, V2 (campos DIAN), V3 | Un "Cliente General" por local |
+| suppliers | `suppliers` | V1, V3 | |
+| inventory | `inventory_movements` | V1, V9 (`store_id`) | Kardex; `previous_stock` / `new_stock` |
+| purchases | `purchases`, `purchase_items` | V1, V5 (`idempotency_key`), V9 | Única (`supplier_id`, `invoice_number`) |
+| sales | `sales`, `sale_items` | V1, V5, V8 (`payment_method`), V9, V13 (`tax_rate`, `tax_amount`) | `idempotency_key` único (global) |
+| sales | `sale_returns`, `sale_return_items` | V10 | Cada ítem apunta al `sale_item` exacto |
+| settings | `settings` | V1, V3, V16 (se quitan columnas Factus) | PK = id del local |
+| settings | `parameter_topics`, `parameter_values` | V6 | Catálogos dinámicos (`PAYMENT_METHODS`, …) |
+| stores | `store_categories`, `stores`, `store_documents` | V3, V7 (`rejection_reason`, estado `REJECTED`) | Onboarding y KYC |
+| legal | `legal_documents` | V3 | `slug` único |
+| support | `support_tickets` | V3 | `ticket_number` único |
+| notifications | `notifications` | V11 | Por local; `read` |
+| billing | `electronic_invoices` | V2, V5, V13 (`store_id`) | Una por venta |
+| billing | `store_billing_config` | V14 | PK = `store_id`; secretos cifrados |
+| billing | `numbering_range_audit` | V15, V17 | Bitácora de rangos |
+| billing | `electronic_credit_notes` | V18 | `reference_code` único global |
+| billing | `electronic_debit_notes` | V19 | `reference_code` único global |
+
+`backoffice` y `storage` no tienen tablas propias (`backoffice` opera sobre `users` y `stores`; `storage` guarda en Cloudflare R2).
+
 ## Tabla `refresh_tokens` (módulo auth)
-Sesiones de refresh token rotativas (introducida en `V4__Refresh_Tokens.sql`).
+Sesiones de refresh token rotativas (`V4__Refresh_Tokens.sql`).
 
 | Columna | Tipo | Notas |
 |---|---|---|
@@ -37,8 +94,8 @@ Sesiones de refresh token rotativas (introducida en `V4__Refresh_Tokens.sql`).
 | created_at / updated_at | TIMESTAMP | |
 
 ## Tabla `store_billing_config` (módulo billing)
-Habilitación y credenciales de facturación electrónica **por local** (introducida en `V14__Store_Billing_Config.sql`).
-Relación 1 a 1 con `stores`: la PK **es** el `store_id`. Ver DDL completo en `modules/billing/spec.md`.
+Habilitación y credenciales de facturación electrónica **por local** (`V14__Store_Billing_Config.sql`).
+Relación 1 a 1 con `stores`: la PK **es** el `store_id`. DDL completo en `modules/billing/spec.md`.
 
 | Columna | Tipo | Notas |
 |---|---|---|
@@ -52,7 +109,7 @@ Relación 1 a 1 con `stores`: la PK **es** el `store_id`. Ver DDL completo en `m
 | created_at / updated_at | TIMESTAMP | |
 
 ## Tabla `numbering_range_audit` (módulo billing)
-Bitácora de cambios sobre rangos de numeración DIAN (introducida en `V15__Numbering_Range_Audit.sql`).
+Bitácora de cambios sobre rangos de numeración DIAN (`V15`, ampliada en `V17`).
 
 | Columna | Tipo | Notas |
 |---|---|---|
@@ -65,42 +122,57 @@ Bitácora de cambios sobre rangos de numeración DIAN (introducida en `V15__Numb
 | created_at | TIMESTAMP | |
 
 ## Convenciones
-- Motor: PostgreSQL 16 (prod), H2 (dev)
-- Normalización: 3FN
-- PKs: `id BIGINT AUTO_INCREMENT`. Excepciones: `settings` y `store_billing_config` usan como PK el
-  `id` del local (relación 1 a 1 con `stores`), asignada explícitamente por el servicio, no autogenerada.
-- Timestamps: `created_at`, `updated_at` en todas las tablas maestras
-- Borrado lógico: campo `active BOOLEAN DEFAULT TRUE`
-- Tipos monetarios: `DECIMAL(12,2)`
-- Nombres de tablas: snake_case, plural
-- FKs: `FK_<tabla>_<referencia>` (ej. `FK_products_category`)
-- Índices: `IDX_<tabla>_<campo>` (ej. `IDX_products_barcode`)
+- Motor: PostgreSQL 16 (prod), H2 en modo PostgreSQL (dev, **en archivo** `./data/app_db`; tests, en memoria).
+- Normalización: 3FN.
+- PKs: `BIGSERIAL` / `GENERATED BY DEFAULT AS IDENTITY`. Excepciones: `settings` y `store_billing_config` usan como PK el
+  `id` del local (relación 1 a 1 con `stores`), asignada explícitamente por el servicio.
+- Multi-tenancy: toda tabla de negocio lleva `store_id` (excepto `categories`, global). Ver `_security.md`.
+- Timestamps: `created_at`, `updated_at` en las tablas maestras.
+- Borrado lógico: campo `active BOOLEAN DEFAULT TRUE`.
+- Tipos monetarios: `DECIMAL(12,2)`.
+- Nombres de tablas: snake_case, plural.
+- FKs: `FK_<tabla>_<referencia>` (ej. `FK_products_category`).
+- Índices: `IDX_<tabla>_<campo>`.
 
-## Índices de Rendimiento
-| Índice | Tabla.Campo | Propósito |
+## Índices existentes (verificados contra las migraciones)
+| Índice | Tabla.Campo | Migración |
 |---|---|---|
-| IDX_products_barcode | products(barcode) | Búsqueda POS con lector |
-| IDX_products_internal_code | products(internal_code) | Búsqueda interna |
-| IDX_sales_created_at | sales(created_at) | Historial y reportes diarios |
+| IDX_users_store, IDX_users_email_verified | users(store_id), users(email_verified) | V3, V7 |
+| IDX_products_store, IDX_customers_store, IDX_suppliers_store, IDX_settings_store | `store_id` | V3 |
+| IDX_sales_store, IDX_purchases_store, IDX_movements_store | `store_id` | V9 |
+| IDX_stores_status, IDX_stores_email_verified | stores | V3 |
+| IDX_legal_slug, IDX_legal_published | legal_documents | V3 |
+| IDX_tickets_type_status, IDX_tickets_number | support_tickets | V3 |
+| IDX_refresh_tokens_user / _family / _expires | refresh_tokens | V4 |
+| IDX_param_values_topic, IDX_param_values_active | parameter_values | V6 |
+| IDX_evt_user | email_verification_tokens(user_id) | V7 |
+| IDX_sale_returns_sale / _store, IDX_sale_return_items_sale_item | devoluciones | V10 |
+| IDX_notifications_store | notifications(store_id) | V11 |
+| IDX_subcategories_store / _category | product_subcategories | V12 |
+| IDX_electronic_invoices_store / _store_status | electronic_invoices | V13 |
+| IDX_store_billing_config_status | store_billing_config(status) | V14 |
+| IDX_numbering_range_audit_store_range | numbering_range_audit(store_id, range_id) | V15 |
+| IDX_electronic_credit_notes_store / _store_status / _bill | electronic_credit_notes | V18 |
+| IDX_electronic_debit_notes_store / _store_status / _bill | electronic_debit_notes | V19 |
+
+Búsquedas por `barcode`, `internal_code` e `identification` se resuelven con las restricciones `UNIQUE` por local (V9), no con índices `IDX_` aparte.
+
+### Índices recomendados y aún no creados
+Antes este documento los listaba como existentes; **no hay ninguna migración que los cree** (ver `_roadmap.md`):
+
+| Índice propuesto | Tabla.Campo | Propósito |
+|---|---|---|
+| IDX_sales_store_created_at | sales(store_id, created_at) | Historial y reportes diarios por local |
 | IDX_movements_product_date | inventory_movements(product_id, created_at) | Kardex de producto |
-| IDX_customers_identification | customers(identification) | Asociar cliente en POS |
-| IDX_refresh_tokens_user | refresh_tokens(user_id) | Purga y consulta de sesiones por usuario |
-| IDX_refresh_tokens_family | refresh_tokens(family_id) | Revocación de sesión completa (reuso) |
-| IDX_refresh_tokens_expires | refresh_tokens(expires_at) | Limpieza de tokens caducados |
-| IDX_electronic_invoices_store | electronic_invoices(store_id) | Historial de facturas aislado por local |
-| IDX_store_billing_config_status | store_billing_config(status) | Cola de revisión de habilitación en back office |
-| IDX_numbering_range_audit_store_range | numbering_range_audit(store_id, range_id) | Historial de cambios de un rango |
 
 ## Migraciones de Base de Datos (Flyway)
 
-Toda modificación al esquema físico de la base de datos (creación de tablas, alteración de columnas, inserción de datos semilla, creación de índices) **DEBE** gestionarse mediante scripts de migración de Flyway.
+Toda modificación al esquema físico (tablas, columnas, datos semilla, índices) **DEBE** gestionarse mediante scripts de Flyway.
 
 - **Ubicación obligatoria**: `src/main/resources/db/migration/`
-- **Nomenclatura**: `V<Versión>__<descripción_breve_snake_case>.sql`
-  - *Ejemplo*: `V1__init_schema.sql` (creación de tablas base).
-  - *Ejemplo*: `V2__add_idx_products_barcode.sql` (creación de índice).
-- **Inmutabilidad**: Una vez que una migración ha sido mezclada en la rama principal y ejecutada, **NUNCA** debe ser modificada. Cualquier corrección debe realizarse en una nueva versión de migración (ej. `V3__...`).
-- **Validación**: Hibernate está configurado con `ddl-auto=validate`, por lo que cualquier discrepancia entre las entidades JPA de Java y el esquema migrado por Flyway provocará un fallo de compilación/arranque de la aplicación.
+- **Nomenclatura**: `V<Versión>__<Descripcion_Breve>.sql` (ej. `V19__Debit_Notes.sql`). La siguiente libre es `V20`.
+- **Inmutabilidad**: una migración ya aplicada **nunca** se modifica; la corrección va en una versión nueva.
+- **Validación**: Hibernate usa `ddl-auto=validate` en dev y prod, por lo que cualquier discrepancia entre entidades y esquema falla el arranque. Solo el perfil `test` deja que Hibernate cree el esquema (`create-drop`, Flyway desactivado); los `V*MigrationSqlTest` ejecutan Flyway a mano contra su propia H2.
+- **Compatibilidad H2**: las migraciones con datos deben ser seguras en H2 (perfil `dev`); H2 2.4.x falla al validar `CHECK … IN (…)` desde una conexión distinta a la que los creó.
 
-Nota: El DDL detallado de cada tabla está en el `spec.md` del módulo correspondiente.
-
+Nota: el DDL detallado de las tablas de billing está en `modules/billing/spec.md`.

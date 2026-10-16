@@ -1,45 +1,47 @@
-<!-- doc-version: 1.0 | last-updated: 2026-07-09 -->
+<!-- doc-version: 1.1 | last-updated: 2026-10-16 -->
 # Convenciones de Código
 
 ## Estructura de Paquetes (Modular Monolith)
 
-El código Java del proyecto se divide verticalmente en **módulos** bajo el paquete raíz. Cada módulo consta de una API pública en su raíz y capas internas de implementación en el paquete `internal/`.
-
 ```
 src/main/java/com/sciencebot/pos/
-├── Application.java             ← Clase de arranque Spring Boot
+├── Application.java             ← Arranque Spring Boot (carga backend/.env)
 │
-├── config/                      ← Configuración técnica global (Seguridad JWT, CORS)
-├── exceptions/                  ← Clases de excepciones y manejo global de errores
+├── config/                      ← Configuración técnica global
+│   ├── security/                ← SecurityConfig (CORS, rutas), JwtAuthenticationFilter, JwtService
+│   ├── tenant/                  ← TenantContext (storeId por solicitud)
+│   ├── async/  http/  openapi/  ← @Async, OutboundHttp (RestClient con timeouts), Swagger
+├── exceptions/                  ← GlobalExceptionHandler
 │
-├── shared/                      ← Módulo transversal abierto (OPEN)
-│   ├── Money.java               ← Value Object compartido
-│   └── AuditInfo.java
+├── shared/                      ← Utilidades transversales
+│   ├── email/                   ← EmailSender (log | smtp)
+│   └── validation/              ← Preconditions (requireNotNull, checkState, …)
 │
-└── [modulo]/                    ← Carpeta del módulo de negocio (ej. sales, products)
+└── [modulo]/                    ← Módulo de negocio (ej. sales, products)
     ├── [Module]Facade.java      ← Interfaz pública de entrada al módulo
     ├── [Module]Dto.java         ← DTOs de salida públicos
-    ├── Create[Module]Command.java ← DTOs de entrada públicos
-    ├── [Module]CreatedEvent.java ← Eventos de dominio públicos
+    ├── Create[Module]Command.java ← DTOs de entrada públicos (con anotaciones de Bean Validation)
+    ├── [Module]CompletedEvent.java ← Eventos de dominio públicos (ej. SaleCompletedEvent)
     │
     └── internal/                ← Implementación privada (invisible a otros módulos)
-        ├── controllers/         ← Controladores REST HTTP (@RestController)
-        ├── services/            ← Implementación de lógica de negocio y Facade
-        ├── repositories/        ← Interfaces de Repositorio JPA
-        └── entities/            ← Entidades JPA del módulo
+        ├── controllers/         ← @RestController (y controllers/doc/ con la anotación OpenAPI)
+        ├── services/            ← Lógica de negocio; implementan la Facade
+        ├── repositories/        ← JpaRepository (o Dao con JdbcClient en reports)
+        ├── entities/            ← Entidades JPA
+        ├── mappers/             ← @Component Entity ↔ DTO
+        └── adapters/ listeners/ config/  ← según el módulo (billing, storage, …)
 ```
+
+> `billing` coloca su API pública en `billing/api`, `billing/dto` y `billing/exception` (ver `_architecture.md`).
 
 ---
 
 ## Reglas de Visibilidad e Inyección
 
-1. **Encapsulación Estricta**: Todas las clases dentro de `internal/` deben ser declaradas sin modificador de acceso público (`package-private` o `class-private`) siempre que sea posible.
-2. **Inyección de Dependencias**:
-   - Entre clases del mismo módulo: Inyección directa vía constructores.
-   - Entre módulos distintos: **Solo** se permite inyectar la interfaz pública `Facade` (ej. `@Autowired private InventoryFacade inventoryFacade`). Nunca se inyectan clases dentro del paquete `internal/` de otro módulo.
-3. **Mapeo de Datos (DTOs)**:
-   - Las entidades JPA (`@Entity`) nunca deben salir de su módulo ni ser expuestas a otros módulos o al exterior.
-   - Toda comunicación exterior y cross-module utiliza DTOs inmutables (`record` en Java).
+1. **Encapsulación**: las clases de `internal/` deberían ser `package-private` cuando sea posible. **Hoy casi todas son `public` y no hay ArchUnit ni Modulith que lo verifique**; se cumple por revisión.
+2. **Inyección entre módulos**: solo la interfaz `Facade` (o el servicio público de la raíz del módulo). Nunca clases de `internal/` de otro módulo.
+3. **DTOs**: las entidades JPA (`@Entity`) nunca salen de su módulo; toda comunicación externa y entre módulos usa `record` inmutables.
+4. **Validación de entrada**: los Commands/Requests públicos llevan anotaciones `jakarta.validation` y el controller usa `@Valid @RequestBody`. Requiere `spring-boot-starter-validation` (presente en el `pom.xml`); `MethodArgumentNotValidException` se traduce a 400 en `GlobalExceptionHandler`.
 
 ---
 
@@ -48,7 +50,8 @@ src/main/java/com/sciencebot/pos/
 | Elemento | Convención | Ejemplo |
 |---|---|---|
 | Clases e Interfaces | PascalCase | `ProductFacade`, `ProductServiceImpl` |
-| Métodos y Variables | camelCase | `calculateTotalAmount()`, `quantityAvailable` |
+| DTOs | sufijo `Dto` (en billing hay `CreditNoteDTO`/`DebitNoteDTO`, a unificar) | `SaleDto` |
+| Métodos y Variables | camelCase | `calculateTotalAmount()` |
 | Constantes | UPPER_SNAKE_CASE | `MAX_LOGIN_ATTEMPTS` |
 | Paquetes | minúsculas, singular | `com.sciencebot.pos.sales.internal` |
 
@@ -57,30 +60,32 @@ src/main/java/com/sciencebot/pos/
 ## Reglas por Capa Interna
 
 ### Controllers (`internal/controllers`)
-- `@RestController` con mapeo de rutas `/api/v1/[modulo]`.
-- Se comunican únicamente con el servicio interno del módulo.
+- `@RestController` con rutas `/api/v1/[modulo]` (o `/api/v1/backoffice/...` para SUPER_ADMIN).
+- Se comunican únicamente con el servicio interno de su módulo.
+- Todo endpoint (salvo los públicos listados en `_security.md`) lleva `@PreAuthorize` con el rol permitido. Un endpoint sin anotación queda abierto a cualquier usuario autenticado.
 
 ### Services (`internal/services`)
-- Implementan los métodos de la interfaz `Facade` pública del módulo.
-- `@Transactional(readOnly = true)` para operaciones de lectura; `@Transactional` para escritura.
+- Implementan la `Facade` del módulo. `@Transactional(readOnly = true)` para lecturas; `@Transactional` para escrituras. Un método `readOnly` no debe escribir.
+- Lo que sea de un local filtra por `TenantContext.getStoreId()`; si la operación lo exige, falla sin local en vez de asumir uno por defecto.
+- Las llamadas HTTP salientes usan `OutboundHttp.restClient()`, nunca `RestClient.create()` (sin timeouts).
 
 ### Repositories (`internal/repositories`)
-- Heredan de `JpaRepository<Entity, Long>`.
+- Heredan de `JpaRepository<Entity, Long>`. Un recurso compartido que se modifica con ventas concurrentes (el stock) se cambia con un `UPDATE` atómico y condicionado, no leyendo y escribiendo la entidad; para documentos electrónicos se usa una consulta con `@Lock(PESSIMISTIC_WRITE)` cuando la fila no se cargó antes en la misma transacción (Hibernate no refresca una entidad ya cargada).
 
 ### Base de Datos y Migraciones
-- Se prohíbe el uso de generación automática de tablas por JPA (`ddl-auto` configurado a `validate`).
-- Todo cambio al esquema debe implementarse mediante migraciones SQL de Flyway en `src/main/resources/db/migration/`.
+- `ddl-auto=validate` en dev y prod; solo el perfil `test` deja a Hibernate crear el esquema.
+- Todo cambio de esquema es una migración Flyway en `src/main/resources/db/migration/` (ver `_database-schema.md`).
 
 ### Mapeo de Datos (Mappers)
-- Se prohíbe realizar el mapeo de entidades JPA a DTOs (o viceversa) mediante métodos privados dentro de los servicios.
-- Todo mapeo de datos debe estructurarse obligatoriamente mediante clases Mapper dedicadas dentro del paquete `internal/mappers/` de cada módulo (ej. `ProductMapper`).
-- Estas clases Mapper deben ser marcadas con `@Component` e inyectarse vía constructor en los servicios que las requieran.
+- Prohibido mapear entidad ↔ DTO con métodos privados del servicio: usar una clase `@Component` en `internal/mappers/` inyectada por constructor.
+- Incumplimientos conocidos: `BackofficeStaffServiceImpl.toStaffDto` y el armado de la solicitud en `CreditNoteServiceImpl.createFromSale`.
 
 ---
 
 ## Tests
 
-
-- Directorio: `src/test/java/com/sciencebot/pos/`
-- Framework: JUnit 5 + Mockito + ArchUnit (para validación estructural de Spring Modulith).
-- Cobertura: Testear de forma aislada cada módulo y verificar sus API públicas.
+- Directorio: `src/test/java/com/sciencebot/pos/`.
+- Framework: JUnit 5 + Mockito + Spring Boot Test (`MockMvc`, `MockRestServiceServer` para los clientes Factus). **No hay ArchUnit ni Modulith ni Testcontainers**; todo corre sobre H2.
+- Perfil `test`: `src/test/resources/application.properties` **reemplaza por completo** al de `main` (mismo nombre en el classpath). El `DatabaseSeeder` solo siembra datos de desarrollo en el perfil `dev`, así que un test que necesite un usuario debe crearlo.
+- Migraciones: `V*MigrationSqlTest` ejecutan Flyway a mano contra su propia H2 en memoria.
+- Los tests de seguridad por rol (`@PreAuthorize`) con `MockMvc` son escasos; los controllers se prueban casi siempre como POJOs. Al añadir un endpoint con permisos, cubrir al menos el 403.

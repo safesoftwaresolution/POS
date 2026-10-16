@@ -1,107 +1,87 @@
-<!-- doc-version: 1.3 | last-updated: 2026-09-22 -->
+<!-- doc-version: 1.4 | last-updated: 2026-10-16 -->
 # Roadmap y Estado por Módulo
 
-Este documento complementa los `spec.md` de cada módulo (que describen el comportamiento *actual*). Aquí se registra lo que **falta**, la **deuda técnica** conocida y las **próximas ideas**, para que quede como referencia entre sesiones de trabajo. Ver también la skill `pos-doc-sync` para el procedimiento de mantenerlo al día.
+Este documento complementa los `spec.md` de cada módulo (que describen el comportamiento *actual*). Aquí se registra lo que **falta**, la **deuda técnica** conocida y las **próximas ideas**, para que quede como referencia entre sesiones de trabajo.
 
 ## Estado por módulo
 
 | Módulo | Estado actual | Deuda técnica / faltante | Próximas ideas |
 |---|---|---|---|
-| auth | JWT access+refresh, roles ADMIN/SUPERVISOR/SELLER, self-registration de tiendas (V7) | — | 2FA opcional para ADMIN |
-| users | CRUD + seed de superadmin/admin por defecto (`DatabaseSeeder`) | — | Invitación de usuarios por email en vez de creación directa |
-| categories | Catálogo global (no por tienda), seed base de 11 categorías genéricas (`CategorySeeder`). Subcategorías por tienda (`product_subcategories`), creadas libremente por Administrator/Supervisor bajo una categoría global, sin pedírselo a la plataforma (2026-09-16) | — | Íconos/colores por categoría para la grilla del POS |
-| products | CRUD por tienda (`store_id`), barcode + código interno únicos por tienda, subcategoría opcional por producto, seed demo solo en `dev` (`ProductDemoSeeder`) | Sin variantes de producto (talla/color) — fuera de alcance actual | Carga masiva por CSV/Excel |
-| inventory | Movimientos con pessimistic locking en descuento de stock | — | Conteo físico / ajuste de inventario con motivo |
-| purchases | Compras a proveedor, sube stock automáticamente | — | Órdenes de compra sugeridas por stock bajo (ver "Valores agregados") |
-| sales | Multi-método de pago (`payment_method`, catálogo `PAYMENT_METHODS`), devoluciones (`sale_returns`), multi-tenant | Spec de `sales` corregido en esta sesión (ver `modules/sales/spec.md`) | Venta a crédito/fiado (ver "Valores agregados") |
-| customers | CRUD por tienda, cliente genérico sembrado por defecto | — | Historial de compras por cliente en su ficha |
-| suppliers | CRUD por tienda | — | — |
-| reports | CQRS con `JdbcClient` (SQL nativo, sin JPA) | — | Reportes de rentabilidad por categoría |
-| settings | Datos del negocio por local + catálogos dinámicos de parámetros (`PAYMENT_METHODS`, etc.). Credenciales Factus eliminadas de aquí (`V16`, 2026-09-22) | — | Parámetro de impuesto configurable (hoy 19% fijo en frontend, ver hallazgo abajo |
-| billing | Adapter Factus/Mock, estados PENDING/VALIDATED/REJECTED/ERROR, reintentos. **Credenciales por local cifradas en BD (`V14`), ciclo de habilitación con back office, guardas y auditoría de rangos (`V15`)** (2026-09-22) | Sin frontend; sin validación de vigencia/agotamiento del rango en cada emisión; respuestas de Factus no verificadas contra el sandbox real | Notificación al vendedor cuando una factura pasa a `ERROR`; alertas de rango por agotarse |
-| stores | Backoffice SaaS: métricas, ciclo de vida, KYC. Sin `doc-version` header en su spec | Spec no documenta el flujo de self-registration (V7) ni referencia `doc-version`/`last-updated` | — |
-| legal | Documentos legales de plataforma | — | — |
-| support | Tickets de soporte | — | — |
-| notifications | Módulo nuevo (fusionado 2026-09-16): persistencia + alertas en tiempo real para el dashboard | **Sin `spec.md`**, sin entrada en `.ai/init.ps1`/`init.sh` | — |
-| storage | Cloudflare R2 (S3-compatible), subida/eliminación de archivos vía `StorageFacade` | **Sin `spec.md`**, sin entrada en `.ai/init.ps1`/`init.sh` | — |
+| auth | JWT access+refresh con rotación y ventana de gracia, auto-registro con verificación de correo (V7) | Lockout en memoria; sin rate limiting; logout exige token válido; sin caducidad absoluta de sesión; sin `SecurityConfig` test por rol | 2FA opcional para ADMIN |
+| users | CRUD por local, `SUPER_ADMIN` no asignable por el local, seed de superadmin solo con `SEED_SUPERADMIN_PASSWORD` | Listado solo de activos (no se puede reactivar); sin protección del último `SUPER_ADMIN`; no se revocan sesiones al cambiar clave; `PATCH …/password` sin `@PreAuthorize` | Invitación de usuarios por correo |
+| categories | Catálogo global + subcategorías por local (V12) | — | Íconos/colores por categoría |
+| products | CRUD por local, barcode/código únicos por local, stock con `UPDATE` atómico (`adjustStock`) | `updatePurchasePrice` rechaza costo > precio de venta | Carga masiva por CSV/Excel |
+| inventory | Kardex, alerta de stock bajo (notificación + correo) | Tipos de movimiento sin enum (`ENTRY`/`ENTRADA`); `AJUSTE` solo suma; alerta antes del commit | Conteo físico con motivo |
+| purchases | Compras a proveedor, sube stock, idempotencia | — | Órdenes de compra sugeridas por stock bajo |
+| sales | Multi-método de pago, devoluciones, multi-tenant, idempotencia, evento `SaleCompletedEvent` | Método de pago no validado contra el catálogo; stock insuficiente responde 400 (no 409); falta filtro por vendedor; fallback `orElse(1L)` de usuario | Venta a crédito/fiado |
+| customers | CRUD por local, "Cliente General" por local | — | Historial de compras por cliente |
+| suppliers | CRUD por local | — | — |
+| reports | CQRS con `JdbcClient`; incluye cierre de caja (`/cash-closing`) | No descuenta devoluciones; rentabilidad usa precios actuales; sin índices (ver abajo) | Rentabilidad por categoría |
+| settings | Datos del negocio + catálogos de parámetros + logo | Importa `billing.internal` (`FactusTokenManager`); creación de la fila por defecto a verificar | Impuesto configurable (hoy 19% fijo en frontend) |
+| billing | Facturas, notas crédito (V18) y débito (V19), habilitación por local (V14), eventos de dominio, timeouts, referencias deterministas | Factus dentro de la transacción con lock; sin reintento automático/outbox; `PENDING` por fallo temporal se trata como `ERROR`; códigos DIAN hardcodeados; cifrado sin rotación; **sin frontend**; sin verificación contra el sandbox real | Alertas de rango por agotarse |
+| stores | Onboarding del dueño, KYC, back office; spec actualizado | Estados como `String`; documentos KYC con URL pública; `StoreFacade` expone `MultipartFile` | — |
+| legal | Documentos legales de plataforma | Spec sin `spec-version` | — |
+| support | Tickets PQR/bugs con radicado aleatorio y seguimiento público mínimo | Sin rate limiting; acepta `storeId` del cliente | — |
+| notifications | Bandeja por local (V11) | Listado sin paginar | — |
+| storage | R2: subida/borrado con tipos permitidos, carpeta por local y rol | Sin timeouts S3; cliente con credenciales falsas si falta R2; KYC en bucket público | URLs prefirmadas |
+| backoffice | Staff de plataforma y estadísticas del embudo | Mapeo en el servicio; sin tests | — |
 
-> `notifications` y `storage` llegaron en el merge del 2026-09-16 (rama paralela) junto con el módulo de documentos de tienda, el service de auth/onboarding y la config de Spring Security. Ninguno de los dos tiene spec modular todavía — siguiente candidato para `pos-doc-sync` / `pos-new-module` (parte del checklist es justamente crear ese spec).
+## Auditoría SDD y correcciones (2026-10-16)
 
-## Facturación electrónica por local (2026-09-22)
+Una revisión del arnés, los specs y el código encontró desajustes. **Ya corregido en el código:**
 
-Trabajo hecho en esta sesión, en orden:
+- `updateUser` permitía a un `ADMINISTRATOR` asignarse `SUPER_ADMIN`; un `SUPERVISOR` podía restablecer la clave de un `ADMINISTRATOR`; reactivar al único administrador fallaba.
+- `StorageController` sin `@PreAuthorize`, sin validación de tipo y con borrado de cualquier clave del bucket.
+- `DatabaseSeeder` sembraba `superadmin` y `admin` con claves conocidas en todos los perfiles.
+- CORS reflejaba cualquier origen con credenciales.
+- Stock sin bloqueo (read-modify-write) pese a lo que decían README y CLAUDE.md.
+- Sin `spring-boot-starter-validation`: los `@Valid` no se aplicaban.
+- Seguimiento público de tickets exponía correo, teléfono y descripción, con radicado secuencial en memoria.
+- Facturación: sin timeouts, respaldo silencioso a `mock`, respaldo al local 1, notas crédito sin aislar por local, `reference_code` con `currentTimeMillis` (riesgo de documento duplicado ante la DIAN), `sale_id` de la nota crédito nunca persistido, INSERT dentro de una transacción `readOnly`.
+- Corregido el asunto del correo de verificación ("cor reo").
 
-1. **`V14`** — tabla `store_billing_config`: una fila por local, dos juegos de credenciales (sandbox y
-   producción), secretos cifrados con AES-256-GCM (`SecretCryptoConverter`) y máquina de estados de
-   habilitación (`NOT_REQUESTED` → `DOCUMENTS_SUBMITTED` → `AWAITING_PROVIDER` → `ACTIVE`, con `REJECTED` y
-   `SUSPENDED`).
-2. **Adaptador por local** — `FactusCredentialsResolver` + `FactusTokenManager` con cache por
-   (`store_id`, entorno). Se eliminaron las credenciales globales de `application.properties`, `.env.example`
-   y `docker-compose.prod.yml`; ya no existe fallback a una cuenta de plataforma. Los errores de Factus dejan
-   de silenciarse (409 / 422 / 502 con el mensaje del proveedor).
-3. **Endpoints de habilitación** — back office (SUPER_ADMIN: credenciales, `test-connection`, transiciones,
-   cola de revisión) y local (ADMINISTRATOR: consultar estado y solicitar activación).
-4. **Guardas y auditoría de rangos (`V15`)** — rango en uso protegido, un solo rango activo por tipo de
-   documento, consecutivo que nunca retrocede, y bitácora en `numbering_range_audit`.
-5. **`V16`** — eliminación de las columnas `factus_*` de `settings` (verificado en la BD de dev: 0 filas con
-   datos antes de borrar).
+**Documentación puesta al día:** specs nuevos de `storage`, `notifications` y `backoffice`; reescritos `auth`, `users`, `stores`; actualizados `billing`, `sales`, `inventory`, `settings`, `support`, `reports`, `products`, `purchases`, `customers`; y los globales `_architecture`, `_conventions`, `_database-schema`, `_deployment`, `_project`, `_security`, `_index`.
 
-Pendientes conocidos de este bloque:
+## Pendientes priorizados (de la misma auditoría)
 
-- **Verificación contra el sandbox real de Factus** (detalle en `modules/billing/spec.md`): el sobre exacto de
-  la respuesta de `/v2/numbering-ranges/dian` (la doc de Factus describe los campos —`prefix`, `from`, `to`,
-  `resolution_number`, `start_date`, `end_date`, `technical_key`, sin `id`/`current`/`is_active`— pero no un
-  JSON de ejemplo, así que el mapper sigue aceptando objeto, lista o lista anidada sin confirmarlo), tipo del
-  campo `current` al crear un rango (hoy se envía como texto en el `POST`, pero como número en el
-  `PATCH .../current` — sin confirmar que Factus trate ambos igual) y límites de longitud de
-  `resolution_number` (hoy sin `@Size` ni patrón, solo `@NotBlank`).
-- **Vigencia y agotamiento del rango**: validar `is_expired` y `current <= to` antes de cada emisión, más
-  alertas al local cuando un rango esté por agotarse. Hoy el flujo de emisión (`BillingServiceImpl` /
-  `InvoiceService`) no consulta el rango en ningún punto: si está vencido o agotado, el único freno es el
-  rechazo que devuelva Factus después de gastar la llamada, que llega como factura en `ERROR`. Implementar esto
-  implica decidir entre una llamada extra a Factus por venta (coste de latencia/cuota) o cachear el rango
-  localmente (riesgo de desincronización si se agota o desactiva desde el panel de Factus) — decisión
-  pendiente, igual que dónde vive la alerta de rango por agotarse (umbral, canal, si usa `notifications`).
-- **Frontend**: no existe UI para ninguno de estos flujos (pantalla de habilitación del local, cola del back
-  office, formulario de credenciales, gestión de resolución DIAN).
-- **Migración de secretos**: `V16` traslada client_id, username y rango, pero **no** los secretos (el cifrado
-  ocurre en Java, no en SQL). Cualquier local que hubiera tenido credenciales en `settings` debe recargarlas.
+**Seguridad / datos**
+1. Rate limiting (login por IP, `/register`, `/refresh`, `/support/tickets`) y lockout persistente.
+2. Revocar los refresh tokens al cambiar o restablecer la contraseña; hacer público el logout.
+3. ~~Frontend: tokens en `localStorage`~~ — resuelto (2026-10-16): `http.js` guarda los tokens solo en memoria; la sesión viaja en cookies `HttpOnly`.
+4. Validar al arrancar `JWT_SECRET` (≥ 32 bytes) y `BILLING_ENCRYPTION_KEY`; quitar el perfil `dev` por defecto y H2 del JAR de producción.
+5. ~~`docker-compose.prod.yml` no reenviaba `EMAIL_*`, `SMTP_*`, `APP_FRONTEND_URL`, `JWT_COOKIE_SECURE`, `BILLING_PROVIDER`~~ — resuelto (2026-10-16); `JWT_SECRET`, `DB_PASSWORD` y `APP_FRONTEND_URL` son obligatorios.
+6. Aislamiento por local automático (`@Filter` de Hibernate o RLS) en vez de manual por servicio; `ProductFacade.updatePurchasePrice` aún no valida el local.
+7. Documentos KYC y archivos en bucket privado con URLs prefirmadas.
+8. Retirar de git `backend/data_backup_20260824_104444/` (una base H2 con usuarios y hashes) y rotar credenciales si el repo fue compartido.
 
-## Hallazgos detectados en esta revisión (no corregidos, quedan para decidir)
+**Datos / rendimiento**
+9. Crear los índices `sales(store_id, created_at)` e `inventory_movements(product_id, created_at)` (`_database-schema.md` los documentaba como existentes y no lo estaban).
+10. Zona horaria: la imagen `prod` ya fija `TZ`/`-Duser.timezone=America/Bogota`. Falta `hibernate.jdbc.time_zone` y migrar datos ya guardados en UTC, si los hubiera.
+11. Descontar devoluciones en reportes; guardar el costo en `sale_items` para la rentabilidad.
 
-- **`billing` no sigue la estructura de paquetes del resto**: durante esta sesión el módulo quedó reorganizado
-  en subpaquetes `billing/api/`, `billing/dto/` y `billing/exception/`, mientras que `_conventions.md` y
-  `_architecture.md` dicen que la API pública (Facade, DTOs, comandos) va en la **raíz** del paquete del
-  módulo, como hacen los demás. Hay que decidir: o se actualizan las convenciones para todos los módulos, o
-  `billing` vuelve al formato estándar. **No se tocó** para no imponer una de las dos opciones.
-- **`settings/spec.md` corregido en esta revisión**: decía "única configuración global (`id = 1`)" cuando
-  desde `V9` hay una fila por local con PK = `stores.id`.
+**Facturación** (ver `modules/billing/spec.md`, "Pendiente")
+12. Sacar la llamada a Factus de la transacción con lock; reintento automático / outbox; centralizar mapeo DIAN; rotación de claves de cifrado; validar vigencia y agotamiento del rango antes de emitir; frontend de habilitación, rangos y notas.
 
-- **IVA fijo en frontend**: `POSBento.jsx` calcula `tax = subtotal * 0.19` hardcodeado cuando se marca "Transmitir a DIAN", en vez de usar un parámetro configurable de `settings`. Si el negocio no es responsable de IVA (régimen simplificado) esto sobrefactura.
-- **`stores/spec.md`** no sigue el formato estándar (`spec-version`/`last-updated`, secciones RN-/RF-) de los demás specs — pendiente de normalizar cuando se vuelva a tocar el módulo.
-- **`notifications` y `storage` sin documentación modular** (ver fila en la tabla de arriba) — el harness `.ai/init.ps1`/`init.sh` tampoco los valida, así que "ENTORNO SANO" no detecta el hueco.
-- **`.ai/features.json` desactualizado**: sigue en la versión 1.2.0 con FEAT-001 a FEAT-006 (última completada 2026-08-19). No registra como features el trabajo fusionado el 2026-09-03 (notifications, storage/R2 inicial duplicado, auth/onboarding, store documents) ni la config de Spring Security del 2026-09-16 — ese trabajo tampoco tiene entradas correspondientes en `.ai/progress/history.md` (el log salta de 2026-08-27 a 2026-09-16 directo al commit del propio harness). Es una rama paralela que no pasó por el protocolo Leader→Implementer→Reviewer→Committer del arnés.
-- **~~`categories/spec.md` permisos~~ — corregido en esta revisión**: el spec decía "Crear/Editar: Admin, Supervisor" pero `CategoryController` ya exige `SUPER_ADMIN` exclusivamente desde FEAT-006 (2026-08-19). Se corrigió el spec para reflejar el código real.
-- **`CLAUDE.md` (raíz) desactualizado — corregido en esta revisión**: no mencionaba el rol `SUPER_ADMIN` ni los módulos `notifications`/`storage`. Ya se actualizó.
+**Arquitectura**
+13. Sacar `FactusTokenManager` de `settings` vía `BillingFacade`; añadir ArchUnit para que la regla de encapsulación se verifique.
+14. Decidir la ubicación de la API pública de `billing` (`api/`, `dto/`, `exception/` frente a la raíz) y unificar `CreditNoteDTO` / `Dto`.
+15. Mover a mappers: `BackofficeStaffServiceImpl.toStaffDto` y el armado de la solicitud en `CreditNoteServiceImpl.createFromSale`.
+
+**Calidad**
+16. ~~CI y Dependabot~~ — añadidos (`.github/workflows/ci.yml`: backend `mvnw verify`, frontend lint + build, `init.sh --skip-tests`; `.github/dependabot.yml`), **sin ejecutarse aún en GitHub**. Pendiente: dependency-check y Testcontainers con PostgreSQL (los tests y la concurrencia corren solo sobre H2).
+17. ~~springdoc 2.8.x (Boot 3)~~ — resuelto: springdoc 3.1.1 (Boot 4.1), AWS SDK 2.56, jjwt 0.13, jacoco 0.8.15 y `spring-boot-starter-flyway`; `/v3/api-docs` y Swagger UI verificados. Sigue pendiente el análisis de vulnerabilidades (dependency-check) además de Dependabot.
+18. ~~IVA fijo 19% y CUFE inventado en `POSBento.jsx`~~ — resuelto: el total es la suma de precios (IVA incluido), se envía `sendToFactus` y no se muestra un CUFE falso. Sigue pendiente: `InvoicingBento` es un esqueleto y falta toda la UI de facturación.
+19. Tests de seguridad por rol con `MockMvc`; `V18MigrationSqlTest`; test concurrente del stock.
 
 ## Valores agregados propuestos (para retail colombiano)
 
-Priorizados por impacto/esfuerzo estimado, no implementados aún salvo que se indique lo contrario:
-
-1. **Escaneo dinámico en POS** — al escanear un código de barras se agrega directo al carrito sin clicks. *Implementado 2026-09-15* (`POSBento.jsx`).
-1b. **Subcategorías de tienda** — cada tienda crea sus propias subcategorías bajo las categorías globales sembradas, sin depender del equipo de plataforma. *Implementado 2026-09-16* (`categories` — `SubcategoryFacade`, migración `V12`, UI en `ProductsBento.jsx`).
-2. **Venta a crédito / fiado a clientes** — muy común en tiendas de barrio colombianas: registrar saldo pendiente por cliente y abonos parciales. Requiere nuevo campo en `sales` o módulo de cuentas por cobrar.
-3. **Alertas de stock bajo accionables** — hoy el POS muestra el badge de stock bajo, pero no hay notificación proactiva ni sugerencia de orden de compra hacia `purchases`.
-4. **Cierre de caja / arqueo diario** — resumen de ventas por método de pago, efectivo esperado vs. contado, al cierre de turno.
-5. **Impresión térmica directa** (58mm/80mm) en vez de solo `window.print()` del navegador.
-6. **Envío de tiquete por WhatsApp/email** al cliente tras la venta.
-7. **Modo offline / PWA** para seguir vendiendo ante caída de internet, sincronizando ventas al reconectar (impacto alto, esfuerzo alto — requiere cola local y resolución de conflictos con el descuento de stock).
-8. **Reportes de rentabilidad por categoría** (`reports` ya usa `JdbcClient`, es la extensión natural).
-9. **Carga masiva de productos** por CSV/Excel para catálogos grandes al hacer onboarding de una tienda nueva.
-
-## Plan de trabajo
-
-- **Fase 0 — Tooling y documentación (esta sesión)**: skills `pos-new-module`/`pos-doc-sync`, corrección de `_project.md` y `sales/spec.md`, creación de este roadmap.
-- **Fase 1 — Quick wins (esta sesión)**: `CategorySeeder` + `ProductDemoSeeder`, escaneo dinámico en el POS.
-- **Fase 2 — Deuda técnica de documentación**: normalizar `stores/spec.md` al formato estándar; decidir y documentar el hallazgo de IVA fijo.
-- **Fase 3 — Valores agregados**: abordar en orden de la lista de arriba, empezando por cierre de caja y alertas de stock bajo (impacto alto, esfuerzo moderado) antes de offline/PWA (impacto alto, esfuerzo alto).
+1. **Escaneo dinámico en POS** — *Implementado 2026-09-15* (`POSBento.jsx`).
+2. **Subcategorías de tienda** — *Implementado 2026-09-16* (`categories`, `V12`).
+3. **Venta a crédito / fiado a clientes** — saldo pendiente por cliente y abonos parciales. Requiere nuevo campo en `sales` o módulo de cuentas por cobrar.
+4. **Alertas de stock bajo** — *Implementadas*: notificación en la app y correo a ADMINISTRATOR/SUPERVISOR al cruzar el mínimo (`LowStockAlertNotifier`). Falta la sugerencia de orden de compra hacia `purchases`.
+5. **Cierre de caja / arqueo diario** — *Implementado* (`GET /api/v1/reports/cash-closing`, UI en `ReportsBento`). Falta "efectivo contado vs esperado".
+6. **Impresión térmica directa** (58/80 mm) en vez de `window.print()`.
+7. **Envío de tiquete por WhatsApp/correo** al cliente tras la venta.
+8. **Modo offline / PWA** (impacto alto, esfuerzo alto: cola local y conflictos con el descuento de stock).
+9. **Reportes de rentabilidad por categoría** (`/profitability` ya existe por producto).
+10. **Carga masiva de productos** por CSV/Excel.

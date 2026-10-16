@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Save, Store, Key, AlertCircle, ImagePlus, Mail, Phone, MapPin, Hash, Globe, IdCard } from 'lucide-react';
-import { getSettingsApi, updateSettingsApi } from '../services/settingsApi';
+import { getSettingsApi, updateSettingsApi, uploadCompanyLogoApi } from '../services/settingsApi';
 import { getOwnStoreApi, updateOwnStoreApi } from '../services/storesApi';
-import { uploadFileApi } from '../services/http';
 
 const EMPTY_CONFIG = { businessName: '', taxId: '', address: '', phone: '', email: '', logoUrl: '' };
 const EMPTY_STORE_FORM = { name: '', phone: '', website: '', address: '', taxId: '' };
@@ -28,6 +27,7 @@ export default function SettingsBento() {
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [logoNotice, setLogoNotice] = useState('');
   const [config, setConfig] = useState(EMPTY_CONFIG);
   const logoInputRef = useRef(null);
 
@@ -106,13 +106,12 @@ export default function SettingsBento() {
     e.target.value = '';
     if (!file) return;
     setErrorMsg('');
+    setLogoNotice('');
     setUploadingLogo(true);
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('folder', 'imagenes-logos');
-      const result = await uploadFileApi('/storage/upload', formData);
-      setConfig(prev => ({ ...prev, logoUrl: result.url }));
+      const result = await uploadCompanyLogoApi(file);
+      setConfig(prev => ({ ...prev, logoUrl: result.logoUrl }));
+      setLogoNotice(result.message || '');
     } catch (err) {
       setErrorMsg(err.message || 'Error al subir el logo. Intenta nuevamente.');
     } finally {
@@ -270,8 +269,9 @@ export default function SettingsBento() {
                   >
                     {uploadingLogo ? 'Subiendo...' : config.logoUrl ? 'Cambiar logo' : 'Subir logo'}
                   </button>
-                  <p className="text-[10px] text-ink-muted font-semibold">PNG o JPG, se usa en facturas y reportes.</p>
-                  <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoChange} />
+                  <p className="text-[10px] text-ink-muted font-semibold">PNG o JPG, máx. 200 KB y 300×300 px. Se usa en facturas y reportes.</p>
+                  {logoNotice && <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">{logoNotice}</p>}
+                  <input ref={logoInputRef} type="file" accept="image/png,image/jpeg" className="hidden" onChange={handleLogoChange} />
                 </div>
               </div>
 

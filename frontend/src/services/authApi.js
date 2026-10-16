@@ -57,7 +57,7 @@ export async function logoutApi() {
       method: 'POST',
       body: JSON.stringify(getRefreshToken() ? { refreshToken: getRefreshToken() } : {}),
     });
-  } catch (e) {
+  } catch {
     // Ignore on logout
   } finally {
     setAuthToken('');

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState } from 'react';
 import { loginApi, logoutApi, refreshSessionApi } from '../services/authApi';
 import { getAuthToken, setAuthToken } from '../services/http';
 
@@ -11,7 +11,7 @@ export function AuthProvider({ children }) {
     if (token && storedUser) {
       try {
         return JSON.parse(storedUser);
-      } catch (e) {
+      } catch {
         return null;
       }
     }

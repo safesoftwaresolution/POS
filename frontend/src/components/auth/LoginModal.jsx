@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Lock, User, KeyRound, CheckCircle2, ShieldAlert, X, Zap } from 'lucide-react';
+import { User, KeyRound, CheckCircle2, ShieldAlert, X, Zap } from 'lucide-react';
 import { loginApi } from '../../services/authApi';
 
 export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {

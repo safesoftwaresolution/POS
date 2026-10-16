@@ -53,7 +53,7 @@ public class AuthService {
         String link = frontendUrl + "/verify-email?token=" + rawToken;
         emailSender.send(
                 created.email(),
-                "Verifica tu cor reo - ProPOS",
+                "Verifica tu correo - ProPOS",
                 "<p>Hola " + created.fullName() + ",</p>"
                         + "<p>Gracias por registrarte en ProPOS. Confirma tu correo para activar tu cuenta:</p>"
                         + "<p><a href=\"" + link + "\">Verificar mi correo</a></p>"

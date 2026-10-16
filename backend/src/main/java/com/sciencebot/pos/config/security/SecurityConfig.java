@@ -31,6 +31,10 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthFilter;
 
+    /** Lista separada por comas; por defecto sigue a APP_FRONTEND_URL (el SPA es el unico origen legitimo). */
+    @org.springframework.beans.factory.annotation.Value("${app.cors.allowed-origins:${app.frontend-url:http://localhost:3000}}")
+    private String allowedOrigins = "http://localhost:3000";
+
     public SecurityConfig(JwtAuthenticationFilter jwtAuthFilter) {
         this.jwtAuthFilter = jwtAuthFilter;
     }
@@ -100,7 +104,13 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(List.of("*"));
+        // Origenes explicitos: con allowCredentials(true) un "*" reflejaria cualquier Origin y
+        // dejaria a un sitio ajeno hacer peticiones autenticadas con las cookies de la sesion.
+        configuration.setAllowedOrigins(
+                java.util.Arrays.stream(allowedOrigins.split(","))
+                        .map(String::trim)
+                        .filter(origin -> !origin.isEmpty())
+                        .toList());
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(
                 List.of("Authorization", "Content-Type", "X-Requested-With", "Accept", "Origin", "Idempotency-Key"));

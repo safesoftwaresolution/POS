@@ -5,6 +5,7 @@ import com.sciencebot.pos.billing.internal.adapters.ElectronicInvoicingProvider;
 import com.sciencebot.pos.billing.internal.adapters.dto.DebitNoteResult;
 import com.sciencebot.pos.billing.internal.adapters.dto.InvoiceRequest;
 import com.sciencebot.pos.billing.internal.adapters.dto.InvoiceResult;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.util.UUID;
@@ -14,6 +15,7 @@ import java.util.UUID;
  * Permite ejecutar tests y trabajar en modo local/offline sin dependencias de red ni credenciales externas.
  */
 @Component("mockBillingProvider")
+@ConditionalOnProperty(name = "billing.provider", havingValue = "mock")
 public class MockBillingAdapter implements ElectronicInvoicingProvider {
 
     @Override

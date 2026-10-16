@@ -59,7 +59,8 @@ public class CompanyLogoServiceImpl implements CompanyLogoService {
     public CompanyLogoServiceImpl(SettingsRepository settingsRepository,
                                   FactusTokenManager factusTokenManager,
                                   @Autowired(required = false) StorageFacade storageFacade) {
-        this(settingsRepository, factusTokenManager, storageFacade, RestClient.create(), "https://api-sandbox.factus.com.co");
+        this(settingsRepository, factusTokenManager, storageFacade,
+                com.sciencebot.pos.config.http.OutboundHttp.restClient(), "https://api-sandbox.factus.com.co");
     }
 
     public CompanyLogoServiceImpl(SettingsRepository settingsRepository,
@@ -70,7 +71,7 @@ public class CompanyLogoServiceImpl implements CompanyLogoService {
         this.settingsRepository = settingsRepository;
         this.factusTokenManager = factusTokenManager;
         this.storageFacade = storageFacade;
-        this.restClient = restClient != null ? restClient : RestClient.create();
+        this.restClient = restClient != null ? restClient : com.sciencebot.pos.config.http.OutboundHttp.restClient();
         this.factusBaseUrl = factusBaseUrl != null ? factusBaseUrl : "https://api-sandbox.factus.com.co";
     }
 

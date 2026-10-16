@@ -11,8 +11,10 @@ import com.sciencebot.pos.billing.internal.mappers.BillingCanonicalMapper;
 import com.sciencebot.pos.billing.internal.mappers.ElectronicInvoiceMapper;
 import com.sciencebot.pos.billing.internal.repositories.ElectronicInvoiceRepository;
 import com.sciencebot.pos.billing.internal.services.InvoiceServiceImpl;
+import com.sciencebot.pos.config.tenant.TenantContext;
 import com.sciencebot.pos.sales.SaleDto;
 import com.sciencebot.pos.sales.SaleFacade;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -51,6 +53,7 @@ class InvoiceServiceImplTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
+        TenantContext.setStoreId(1L);
         mockAdapter = new MockBillingAdapter();
 
         when(customProvider.getProviderName()).thenReturn("factus");
@@ -64,6 +67,11 @@ class InvoiceServiceImplTest {
                 List.of(mockAdapter, customProvider)
         );
         ReflectionTestUtils.setField(invoiceService, "self", invoiceService);
+    }
+
+    @AfterEach
+    void tearDown() {
+        TenantContext.clear();
     }
 
     @Test
@@ -120,7 +128,7 @@ class InvoiceServiceImplTest {
         ElectronicInvoice validatedEntity = ElectronicInvoice.initialize(1L, 1L);
         validatedEntity.setId(10L);
         validatedEntity.markAsValidated("SETP-001", "cufe", "qr", "pdf", LocalDateTime.now());
-        when(repository.findBySaleId(1L)).thenReturn(Optional.of(validatedEntity));
+        when(repository.findBySaleIdAndStoreId(1L, 1L)).thenReturn(Optional.of(validatedEntity));
 
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
                 () -> invoiceService.retryInvoice(1L));
@@ -135,14 +143,14 @@ class InvoiceServiceImplTest {
         ElectronicInvoice validated = ElectronicInvoice.initialize(1L, 1L);
         validated.setId(10L);
         validated.markAsValidated("SETP-001", "cufe", "qr", "pdf", LocalDateTime.now());
-        when(repository.findBySaleId(1L)).thenReturn(Optional.of(validated));
+        when(repository.findBySaleIdAndStoreId(1L, 1L)).thenReturn(Optional.of(validated));
 
         assertDoesNotThrow(() -> invoiceService.sendInvoiceEmail(1L, "cliente@correo.com"));
     }
 
     @Test
     void sendInvoiceEmail_InvoiceNotFound_ThrowsException() {
-        when(repository.findBySaleId(99L)).thenReturn(Optional.empty());
+        when(repository.findBySaleIdAndStoreId(99L, 1L)).thenReturn(Optional.empty());
 
         assertThrows(IllegalArgumentException.class,
                 () -> invoiceService.sendInvoiceEmail(99L, "cliente@correo.com"));
@@ -152,9 +160,43 @@ class InvoiceServiceImplTest {
     void sendInvoiceEmail_InvoiceNotValidated_ThrowsException() {
         ElectronicInvoice pending = ElectronicInvoice.initialize(1L, 1L);
         pending.setId(10L);
-        when(repository.findBySaleId(1L)).thenReturn(Optional.of(pending));
+        when(repository.findBySaleIdAndStoreId(1L, 1L)).thenReturn(Optional.of(pending));
 
         assertThrows(IllegalStateException.class,
                 () -> invoiceService.sendInvoiceEmail(1L, "cliente@correo.com"));
+    }
+
+    @Test
+    void processElectronicInvoice_WithoutStore_RefusesInsteadOfFallingBackToStoreOne() {
+        TenantContext.clear();
+        SaleDto saleDto = new SaleDto(1L, "FACT-000001", null, "Cliente General", BigDecimal.valueOf(50.0), BigDecimal.valueOf(50.0), BigDecimal.ZERO, "admin", List.of(), "CASH");
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> invoiceService.processElectronicInvoice(saleDto));
+
+        assertTrue(ex.getMessage().contains("sin un local"));
+        verify(repository, never()).saveAndFlush(any());
+        verify(customProvider, never()).emitInvoice(any());
+    }
+
+    @Test
+    void unknownProvider_FailsInsteadOfSilentlyUsingMock() {
+        ReflectionTestUtils.setField(invoiceService, "activeProviderName", "factsus");
+        ElectronicInvoice validated = ElectronicInvoice.initialize(1L, 1L);
+        validated.markAsValidated("SETP-001", "cufe", "qr", "pdf", LocalDateTime.now());
+        when(repository.findBySaleIdAndStoreId(1L, 1L)).thenReturn(Optional.of(validated));
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> invoiceService.sendInvoiceEmail(1L, "cliente@correo.com"));
+
+        assertTrue(ex.getMessage().contains("factsus"));
+    }
+
+    @Test
+    void downloadInvoicePDF_WithoutStore_IsRefused() {
+        TenantContext.clear();
+
+        assertThrows(IllegalStateException.class, () -> invoiceService.downloadInvoicePDF(1L));
+        verify(repository, never()).findBySaleId(any());
     }
 }

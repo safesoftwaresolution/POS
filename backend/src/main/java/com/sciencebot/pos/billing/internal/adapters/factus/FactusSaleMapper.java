@@ -23,7 +23,10 @@ public class FactusSaleMapper {
         Map<String, Object> payload = new LinkedHashMap<>();
 
         // 1. Datos generales de nivel raíz
-        String referenceCode = (request.invoiceNumber() != null ? request.invoiceNumber() : "FACT") + "-" + System.currentTimeMillis();
+        // Determinista por venta: un reintento tras un timeout reenvía el MISMO reference_code, así Factus
+        // lo reconoce en vez de emitir un segundo documento (con System.currentTimeMillis() cada intento
+        // era una factura nueva ante la DIAN).
+        String referenceCode = (request.invoiceNumber() != null ? request.invoiceNumber() : "FACT") + "-" + request.saleId();
         payload.put("reference_code", referenceCode);
         payload.put("document", "01"); // 01 = Factura electrónica de Venta
         payload.put("operation_type", "10"); // 10 = Estándar
@@ -157,7 +160,7 @@ public class FactusSaleMapper {
         String cleanName = item.productName() != null ? item.productName().replaceAll("[^a-zA-Z0-9]", "") : "PROD";
         String codeRef = (item.productCode() != null && !item.productCode().isBlank())
                 ? item.productCode()
-                : "REF-" + cleanName + "-" + System.currentTimeMillis();
+                : "REF-" + cleanName;
 
         itemMap.put("code_reference", codeRef);
         itemMap.put("name", item.productName() != null ? item.productName() : "Producto");

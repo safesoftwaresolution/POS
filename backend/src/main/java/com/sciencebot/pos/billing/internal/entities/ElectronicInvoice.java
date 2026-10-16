@@ -65,7 +65,7 @@ public class ElectronicInvoice {
         Objects.requireNonNull(saleId, "El saleId es obligatorio para inicializar la factura");
         ElectronicInvoice invoice = new ElectronicInvoice();
         invoice.saleId = saleId;
-        invoice.storeId = storeId != null ? storeId : 1L;
+        invoice.storeId = Objects.requireNonNull(storeId, "El storeId es obligatorio para inicializar la factura");
         invoice.status = ElectronicInvoiceStatus.PENDING;
         return invoice;
     }

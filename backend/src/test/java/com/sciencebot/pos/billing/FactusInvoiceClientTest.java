@@ -13,6 +13,7 @@ import com.sciencebot.pos.billing.internal.adapters.factus.FactusSaleMapper;
 import com.sciencebot.pos.billing.internal.adapters.factus.FactusTokenManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
@@ -99,6 +100,51 @@ class FactusInvoiceClientTest {
 
         assertTrue(result.isSuccess());
         assertEquals("SETP1", result.legalInvoiceNumber());
+        server.verify();
+    }
+
+    @Test
+    void emitInvoice_SendsTheSameReferenceCodeOnEveryAttempt() {
+        accessWithRange(77);
+        server.expect(requestTo(URL + "/v2/bills/validate"))
+                .andExpect(jsonPath("$.reference_code").value("FACT-001-1"))
+                .andRespond(withServerError());
+        server.expect(requestTo(URL + "/v2/bills/validate"))
+                .andExpect(jsonPath("$.reference_code").value("FACT-001-1"))
+                .andRespond(withServerError());
+
+        assertEquals("PENDING", invoiceClient.emitInvoice(request(null)).status());
+        assertEquals("PENDING", invoiceClient.emitInvoice(request(null)).status());
+        server.verify();
+    }
+
+    @Test
+    void emitInvoice_On409DeletesTheUnvalidatedDraftAndRetriesOnce() {
+        accessWithRange(77);
+        server.expect(requestTo(URL + "/v2/bills/validate")).andRespond(withStatus(HttpStatus.CONFLICT));
+        server.expect(requestTo(URL + "/v1/bills/destroy/reference/FACT-001-1"))
+                .andExpect(method(HttpMethod.DELETE))
+                .andRespond(withSuccess());
+        server.expect(requestTo(URL + "/v2/bills/validate"))
+                .andRespond(withSuccess("{\"data\":{\"bill\":{\"number\":\"SETP2\",\"cufe\":\"abc\"}}}", MediaType.APPLICATION_JSON));
+
+        InvoiceResult result = invoiceClient.emitInvoice(request(null));
+
+        assertTrue(result.isSuccess());
+        assertEquals("SETP2", result.legalInvoiceNumber());
+        server.verify();
+    }
+
+    @Test
+    void emitInvoice_On409WhenTheDraftCannotBeDeletedIsRejectedNotRetried() {
+        accessWithRange(77);
+        server.expect(requestTo(URL + "/v2/bills/validate")).andRespond(withStatus(HttpStatus.CONFLICT));
+        server.expect(requestTo(URL + "/v1/bills/destroy/reference/FACT-001-1"))
+                .andRespond(withStatus(HttpStatus.UNPROCESSABLE_ENTITY));
+
+        InvoiceResult result = invoiceClient.emitInvoice(request(null));
+
+        assertEquals("REJECTED", result.status());
         server.verify();
     }
 

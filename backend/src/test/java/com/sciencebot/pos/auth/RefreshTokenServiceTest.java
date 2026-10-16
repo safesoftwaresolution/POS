@@ -26,8 +26,11 @@ class RefreshTokenServiceTest {
 
     @BeforeEach
     void setUp() {
-        // 'admin' es sembrado por DatabaseSeeder al arrancar el contexto.
-        userId = userFacade.findByUsername("admin").orElseThrow().id();
+        // DatabaseSeeder solo siembra 'admin' en el perfil dev, asi que el test crea su propio usuario
+        // (la transaccion del test lo revierte al terminar).
+        String suffix = java.util.UUID.randomUUID().toString().substring(0, 8);
+        userId = userFacade.createUser(new com.sciencebot.pos.users.CreateUserCommand(
+                "Refresh Tester", "rt-" + suffix, "rt-" + suffix + "@test.local", "Password123", "SELLER", 1L)).id();
     }
 
     @Test

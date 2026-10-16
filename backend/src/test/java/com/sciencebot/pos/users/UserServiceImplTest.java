@@ -359,6 +359,93 @@ class UserServiceImplTest {
     }
 
     @Test
+    void updateUser_AdministratorCannotPromoteToSuperAdmin() {
+        TenantContext.setStoreId(1L);
+        User seller = userOf(5L, "SELLER", 1L);
+        when(userRepository.findById(5L)).thenReturn(Optional.of(seller));
+
+        UpdateUserCommand command = new UpdateUserCommand("Seller", "seller@tienda.com", "SUPER_ADMIN");
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> userService.updateUser(5L, command));
+        assertTrue(ex.getMessage().contains("SUPER_ADMIN"));
+        assertEquals("SELLER", seller.getRole());
+        verify(userRepository, never()).save(any(User.class));
+    }
+
+    @Test
+    void updateUser_UserWithoutStoreCannotBecomeStoreRole() {
+        User superAdmin = userOf(9L, "SUPER_ADMIN", null);
+        when(userRepository.findById(9L)).thenReturn(Optional.of(superAdmin));
+
+        UpdateUserCommand command = new UpdateUserCommand("Super", "sa@platform.com", "SELLER");
+
+        assertThrows(IllegalArgumentException.class, () -> userService.updateUser(9L, command));
+        verify(userRepository, never()).save(any(User.class));
+    }
+
+    @Test
+    void changePassword_SupervisorCannotResetAdministrator() {
+        TenantContext.setStoreId(1L);
+        User admin = userOf(2L, "ADMINISTRATOR", 1L);
+        admin.setUsername("owner");
+        when(userRepository.findById(2L)).thenReturn(Optional.of(admin));
+        authenticateAs("sup1", "ROLE_SUPERVISOR");
+
+        assertThrows(org.springframework.security.access.AccessDeniedException.class,
+                () -> userService.changePassword(2L, new ChangePasswordCommand(null, "NewPassword123")));
+        verify(userRepository, never()).save(any(User.class));
+    }
+
+    @Test
+    void changePassword_SupervisorCanResetSeller() {
+        TenantContext.setStoreId(1L);
+        User seller = userOf(3L, "SELLER", 1L);
+        seller.setUsername("vendedor");
+        when(userRepository.findById(3L)).thenReturn(Optional.of(seller));
+        when(passwordEncoder.encode("NewPassword123")).thenReturn("encoded");
+        authenticateAs("sup1", "ROLE_SUPERVISOR");
+
+        userService.changePassword(3L, new ChangePasswordCommand(null, "NewPassword123"));
+
+        assertEquals("encoded", seller.getPassword());
+    }
+
+    @Test
+    void changeStatus_ReactivatingTheOnlyAdministratorIsAllowed() {
+        TenantContext.setStoreId(1L);
+        User admin = userOf(2L, "ADMINISTRATOR", 1L);
+        admin.setUsername("owner");
+        admin.setActive(false);
+        when(userRepository.findById(2L)).thenReturn(Optional.of(admin));
+        when(userRepository.countByStoreIdAndRoleAndActiveTrue(1L, "ADMINISTRATOR")).thenReturn(0L);
+        authenticateAs("other", "ROLE_ADMINISTRATOR");
+
+        userService.changeStatus(2L, true);
+
+        assertTrue(admin.isActive());
+    }
+
+    private User userOf(Long id, String role, Long storeId) {
+        User user = new User();
+        user.setId(id);
+        user.setRole(role);
+        user.setStoreId(storeId);
+        user.setEmail("u" + id + "@tienda.com");
+        user.setPassword("old");
+        return user;
+    }
+
+    private void authenticateAs(String username, String authority) {
+        Authentication auth = mock(Authentication.class);
+        when(auth.getName()).thenReturn(username);
+        doReturn(java.util.List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority(authority)))
+                .when(auth).getAuthorities();
+        SecurityContext context = mock(SecurityContext.class);
+        when(context.getAuthentication()).thenReturn(auth);
+        SecurityContextHolder.setContext(context);
+    }
+
+    @Test
     void getById_UserFromAnotherStore_ThrowsNotFound() {
         TenantContext.setStoreId(1L);
         User otherStoreUser = new User();

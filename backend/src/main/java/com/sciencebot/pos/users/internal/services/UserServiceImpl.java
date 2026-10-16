@@ -118,6 +118,17 @@ public class UserServiceImpl implements UserFacade, UserDetailsService {
 
         validateRole(command.role());
 
+        // Mismo invariante que createUser: SUPER_ADMIN nunca se asigna por este endpoint
+        // (evita que un ADMINISTRATOR se promueva a si mismo o a un tercero y llegue a
+        // /backoffice/**) y los roles del POS siempre llevan local.
+        String newRole = command.role().toUpperCase();
+        if ("SUPER_ADMIN".equals(newRole) && !"SUPER_ADMIN".equals(user.getRole())) {
+            throw new IllegalArgumentException("No tiene permisos para asignar el rol SUPER_ADMIN.");
+        }
+        if (!"SUPER_ADMIN".equals(newRole) && user.getStoreId() == null) {
+            throw new IllegalArgumentException("Un usuario sin local solo puede tener el rol SUPER_ADMIN.");
+        }
+
         if (!user.getEmail().equalsIgnoreCase(command.email()) && userRepository.existsByEmail(command.email())) {
             throw new IllegalArgumentException("El correo electronico ya esta registrado");
         }
@@ -172,7 +183,7 @@ public class UserServiceImpl implements UserFacade, UserDetailsService {
             throw new IllegalArgumentException("No puedes desactivar a tu propio usuario");
         }
 
-        if (user.getRole().equals("ADMINISTRATOR")) {
+        if (!active && user.getRole().equals("ADMINISTRATOR")) {
             long adminCount = countActiveAdmins(user.getStoreId());
             if (adminCount <= 1) {
                 throw new IllegalArgumentException("No se puede desactivar al ultimo administrador activo");
@@ -204,9 +215,13 @@ public class UserServiceImpl implements UserFacade, UserDetailsService {
             if (auth == null) {
                 throw new org.springframework.security.access.AccessDeniedException("No autenticado");
             }
-            boolean isAdminOrSupervisor = auth.getAuthorities().stream()
-                    .anyMatch(a -> a.getAuthority().equals("ROLE_ADMINISTRATOR") || a.getAuthority().equals("ROLE_SUPERVISOR") || a.getAuthority().equals("ROLE_SUPER_ADMIN"));
-            if (!isAdminOrSupervisor) {
+            boolean isAdmin = auth.getAuthorities().stream()
+                    .anyMatch(a -> a.getAuthority().equals("ROLE_ADMINISTRATOR") || a.getAuthority().equals("ROLE_SUPER_ADMIN"));
+            // Un SUPERVISOR solo restablece cuentas SELLER: si pudiera resetear la de un
+            // ADMINISTRATOR tomaria su cuenta (escalada de privilegios).
+            boolean isSupervisorResettingSeller = "SELLER".equals(user.getRole())
+                    && auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_SUPERVISOR"));
+            if (!isAdmin && !isSupervisorResettingSeller) {
                 throw new org.springframework.security.access.AccessDeniedException("No tiene permisos para restablecer la contrasena de otro usuario");
             }
         }

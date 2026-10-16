@@ -123,12 +123,12 @@ export default function SettingsBento() {
   return (
     <div className="space-y-6 max-w-4xl">
       <div>
-        <h1 className="text-2xl font-black text-[#0A0A0A] dark:text-[#F4F4F6]">Configuración</h1>
-        <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Nombre, logo y datos de contacto de tu negocio</p>
+        <h1 className="text-2xl font-black text-ink">Configuración</h1>
+        <p className="text-xs text-ink-soft font-medium">Nombre, logo y datos de contacto de tu negocio</p>
       </div>
 
       {loading ? (
-        <div className="py-12 text-center text-xs font-bold text-gray-400 dark:text-gray-500">
+        <div className="py-12 text-center text-xs font-bold text-ink-muted">
           Consultando configuración...
         </div>
       ) : (
@@ -136,7 +136,7 @@ export default function SettingsBento() {
           {/* Registro legal del local */}
           <form onSubmit={handleStoreSubmit} className="space-y-6">
             <div className="flex items-center justify-between">
-              <h2 className="font-black text-sm text-[#0A0A0A] dark:text-[#F4F4F6] uppercase tracking-wide">Registro Legal del Local</h2>
+              <h2 className="font-black text-sm text-ink uppercase tracking-wide">Registro Legal del Local</h2>
               <div className="flex items-center gap-2">
                 {storeStatus && (
                   <span className={`text-[10px] px-2.5 py-1 rounded-full font-extrabold ${STORE_STATUS_STYLES[storeStatus] || ''}`}>
@@ -159,7 +159,7 @@ export default function SettingsBento() {
             )}
 
             <div className="bento-card p-6 space-y-4">
-              <p className="text-[11px] text-gray-400 dark:text-gray-500 font-semibold">
+              <p className="text-[11px] text-ink-muted font-semibold">
                 Estos son los datos con los que tu local quedó registrado. El correo y el estado de verificación solo puede cambiarlos nuestro equipo.
               </p>
 
@@ -170,7 +170,7 @@ export default function SettingsBento() {
                     type="text"
                     value={storeForm.name}
                     onChange={e => setStoreForm({ ...storeForm, name: e.target.value })}
-                    className="w-full p-2.5 bg-[#F7F7F5] dark:bg-[#0E0E12] border border-[#EAEAEA] dark:border-[#272730] rounded-2xl font-semibold text-[#0A0A0A] dark:text-[#F4F4F6] focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#FF5520]"
+                    className="w-full p-2.5 bg-page border border-line rounded-2xl font-semibold text-ink focus:outline-none focus:border-ink dark:focus:border-brand"
                     required
                   />
                 </div>
@@ -182,7 +182,7 @@ export default function SettingsBento() {
                     type="text"
                     value={storeForm.phone}
                     onChange={e => setStoreForm({ ...storeForm, phone: e.target.value })}
-                    className="w-full p-2.5 bg-[#F7F7F5] dark:bg-[#0E0E12] border border-[#EAEAEA] dark:border-[#272730] rounded-2xl font-semibold text-[#0A0A0A] dark:text-[#F4F4F6] focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#FF5520]"
+                    className="w-full p-2.5 bg-page border border-line rounded-2xl font-semibold text-ink focus:outline-none focus:border-ink dark:focus:border-brand"
                   />
                 </div>
                 <div className="md:col-span-2">
@@ -193,7 +193,7 @@ export default function SettingsBento() {
                     type="text"
                     value={storeForm.address}
                     onChange={e => setStoreForm({ ...storeForm, address: e.target.value })}
-                    className="w-full p-2.5 bg-[#F7F7F5] dark:bg-[#0E0E12] border border-[#EAEAEA] dark:border-[#272730] rounded-2xl font-semibold text-[#0A0A0A] dark:text-[#F4F4F6] focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#FF5520]"
+                    className="w-full p-2.5 bg-page border border-line rounded-2xl font-semibold text-ink focus:outline-none focus:border-ink dark:focus:border-brand"
                   />
                 </div>
                 <div>
@@ -204,7 +204,7 @@ export default function SettingsBento() {
                     type="text"
                     value={storeForm.taxId}
                     onChange={e => setStoreForm({ ...storeForm, taxId: e.target.value })}
-                    className="w-full p-2.5 bg-[#F7F7F5] dark:bg-[#0E0E12] border border-[#EAEAEA] dark:border-[#272730] rounded-2xl font-mono font-bold text-[#0A0A0A] dark:text-[#F4F4F6] focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#FF5520]"
+                    className="w-full p-2.5 bg-page border border-line rounded-2xl font-mono font-bold text-ink focus:outline-none focus:border-ink dark:focus:border-brand"
                   />
                 </div>
                 <div>
@@ -215,14 +215,14 @@ export default function SettingsBento() {
                     type="text"
                     value={storeForm.website}
                     onChange={e => setStoreForm({ ...storeForm, website: e.target.value })}
-                    className="w-full p-2.5 bg-[#F7F7F5] dark:bg-[#0E0E12] border border-[#EAEAEA] dark:border-[#272730] rounded-2xl font-semibold text-[#0A0A0A] dark:text-[#F4F4F6] focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#FF5520]"
+                    className="w-full p-2.5 bg-page border border-line rounded-2xl font-semibold text-ink focus:outline-none focus:border-ink dark:focus:border-brand"
                   />
                 </div>
               </div>
 
               <button
                 type="submit"
-                className="w-full py-3 bg-[#0A0A0A] hover:bg-black dark:bg-[#272730] dark:hover:bg-[#2C2C36] text-white font-extrabold text-xs rounded-2xl flex items-center justify-center gap-2 cursor-pointer transition-colors"
+                className="w-full py-3 bg-solid hover:bg-black dark:bg-[#272730] dark:hover:bg-line-strong text-white font-extrabold text-xs rounded-2xl flex items-center justify-center gap-2 cursor-pointer transition-colors"
               >
                 <Save className="w-4 h-4" /> Guardar Registro Legal
               </button>
@@ -232,7 +232,7 @@ export default function SettingsBento() {
           {/* Ajustes operativos / de facturación */}
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="flex items-center justify-between">
-              <h2 className="font-black text-sm text-[#0A0A0A] dark:text-[#F4F4F6] uppercase tracking-wide">Ajustes de Facturación</h2>
+              <h2 className="font-black text-sm text-ink uppercase tracking-wide">Ajustes de Facturación</h2>
               {saved && (
                 <span className="px-3.5 py-1.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-2xl text-xs font-extrabold border border-emerald-500/20 animate-in fade-in">
                   ¡Configuración guardada!
@@ -249,12 +249,12 @@ export default function SettingsBento() {
 
             {/* Identidad del negocio */}
             <div className="bento-card p-6 space-y-4">
-              <h3 className="font-extrabold text-sm text-[#0A0A0A] dark:text-[#F4F4F6] flex items-center gap-2">
-                <Store className="w-4 h-4 text-[#FF5520] dark:text-[#FF5520]" /> Identidad del Negocio
+              <h3 className="font-extrabold text-sm text-ink flex items-center gap-2">
+                <Store className="w-4 h-4 text-brand dark:text-brand" /> Identidad del Negocio
               </h3>
 
               <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-2xl bg-[#F7F7F5] dark:bg-[#0E0E12] border border-[#EAEAEA] dark:border-[#272730] flex items-center justify-center overflow-hidden shrink-0">
+                <div className="w-16 h-16 rounded-2xl bg-page border border-line flex items-center justify-center overflow-hidden shrink-0">
                   {config.logoUrl ? (
                     <img src={config.logoUrl} alt="Logo del negocio" className="w-full h-full object-cover" />
                   ) : (
@@ -270,7 +270,7 @@ export default function SettingsBento() {
                   >
                     {uploadingLogo ? 'Subiendo...' : config.logoUrl ? 'Cambiar logo' : 'Subir logo'}
                   </button>
-                  <p className="text-[10px] text-gray-400 dark:text-gray-500 font-semibold">PNG o JPG, se usa en facturas y reportes.</p>
+                  <p className="text-[10px] text-ink-muted font-semibold">PNG o JPG, se usa en facturas y reportes.</p>
                   <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoChange} />
                 </div>
               </div>
@@ -281,7 +281,7 @@ export default function SettingsBento() {
                   type="text"
                   value={config.businessName}
                   onChange={e => setConfig({ ...config, businessName: e.target.value })}
-                  className="w-full p-2.5 bg-[#F7F7F5] dark:bg-[#0E0E12] border border-[#EAEAEA] dark:border-[#272730] rounded-2xl font-semibold text-xs text-[#0A0A0A] dark:text-[#F4F4F6] focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#FF5520]"
+                  className="w-full p-2.5 bg-page border border-line rounded-2xl font-semibold text-xs text-ink focus:outline-none focus:border-ink dark:focus:border-brand"
                   required
                 />
               </div>
@@ -289,8 +289,8 @@ export default function SettingsBento() {
 
             {/* Contacto y ubicación */}
             <div className="bento-card p-6 space-y-4">
-              <h3 className="font-extrabold text-sm text-[#0A0A0A] dark:text-[#F4F4F6] flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-[#FF5520] dark:text-[#FF5520]" /> Contacto y Ubicación
+              <h3 className="font-extrabold text-sm text-ink flex items-center gap-2">
+                <MapPin className="w-4 h-4 text-brand dark:text-brand" /> Contacto y Ubicación
               </h3>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
@@ -302,7 +302,7 @@ export default function SettingsBento() {
                     type="email"
                     value={config.email}
                     onChange={e => setConfig({ ...config, email: e.target.value })}
-                    className="w-full p-2.5 bg-[#F7F7F5] dark:bg-[#0E0E12] border border-[#EAEAEA] dark:border-[#272730] rounded-2xl font-semibold text-[#0A0A0A] dark:text-[#F4F4F6] focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#FF5520]"
+                    className="w-full p-2.5 bg-page border border-line rounded-2xl font-semibold text-ink focus:outline-none focus:border-ink dark:focus:border-brand"
                   />
                 </div>
                 <div>
@@ -313,7 +313,7 @@ export default function SettingsBento() {
                     type="text"
                     value={config.phone}
                     onChange={e => setConfig({ ...config, phone: e.target.value })}
-                    className="w-full p-2.5 bg-[#F7F7F5] dark:bg-[#0E0E12] border border-[#EAEAEA] dark:border-[#272730] rounded-2xl font-semibold text-[#0A0A0A] dark:text-[#F4F4F6] focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#FF5520]"
+                    className="w-full p-2.5 bg-page border border-line rounded-2xl font-semibold text-ink focus:outline-none focus:border-ink dark:focus:border-brand"
                     required
                   />
                 </div>
@@ -325,7 +325,7 @@ export default function SettingsBento() {
                     type="text"
                     value={config.address}
                     onChange={e => setConfig({ ...config, address: e.target.value })}
-                    className="w-full p-2.5 bg-[#F7F7F5] dark:bg-[#0E0E12] border border-[#EAEAEA] dark:border-[#272730] rounded-2xl font-semibold text-[#0A0A0A] dark:text-[#F4F4F6] focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#FF5520]"
+                    className="w-full p-2.5 bg-page border border-line rounded-2xl font-semibold text-ink focus:outline-none focus:border-ink dark:focus:border-brand"
                     required
                   />
                 </div>
@@ -334,8 +334,8 @@ export default function SettingsBento() {
 
             {/* Datos fiscales */}
             <div className="bento-card p-6 space-y-4">
-              <h3 className="font-extrabold text-sm text-[#0A0A0A] dark:text-[#F4F4F6] flex items-center gap-2">
-                <Hash className="w-4 h-4 text-[#FF5520] dark:text-[#FF5520]" /> Datos Fiscales
+              <h3 className="font-extrabold text-sm text-ink flex items-center gap-2">
+                <Hash className="w-4 h-4 text-brand dark:text-brand" /> Datos Fiscales
               </h3>
               <div className="text-xs">
                 <label className="font-bold text-gray-700 dark:text-gray-300 block mb-1">NIT / Cédula Fiscal:</label>
@@ -343,7 +343,7 @@ export default function SettingsBento() {
                   type="text"
                   value={config.taxId}
                   onChange={e => setConfig({ ...config, taxId: e.target.value })}
-                  className="w-full p-2.5 bg-[#F7F7F5] dark:bg-[#0E0E12] border border-[#EAEAEA] dark:border-[#272730] rounded-2xl font-mono font-bold text-[#0A0A0A] dark:text-[#F4F4F6] focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#FF5520]"
+                  className="w-full p-2.5 bg-page border border-line rounded-2xl font-mono font-bold text-ink focus:outline-none focus:border-ink dark:focus:border-brand"
                   required
                 />
               </div>
@@ -353,18 +353,18 @@ export default function SettingsBento() {
                 (ver backend/docs/modules/billing/spec.md, RN-BILL-005) — el admin del local nunca las
                 ve ni las envía. El estado de habilitación y los rangos DIAN se gestionan en Facturación DIAN. */}
             <div className="bento-card p-6 space-y-3">
-              <h3 className="font-extrabold text-sm text-[#0A0A0A] dark:text-[#F4F4F6] flex items-center gap-2">
-                <Key className="w-4 h-4 text-[#FF5520] dark:text-[#FF5520]" /> Facturación Electrónica Factus DIAN
+              <h3 className="font-extrabold text-sm text-ink flex items-center gap-2">
+                <Key className="w-4 h-4 text-brand dark:text-brand" /> Facturación Electrónica Factus DIAN
               </h3>
-              <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+              <p className="text-xs text-ink-soft font-medium">
                 El estado de habilitación y los rangos de numeración DIAN de tu local se gestionan desde{' '}
-                <a href="/invoicing" className="text-[#FF5520] font-bold underline">Facturación DIAN → Habilitación DIAN</a>.
+                <a href="/invoicing" className="text-brand font-bold underline">Facturación DIAN → Habilitación DIAN</a>.
               </p>
             </div>
 
             <button
               type="submit"
-              className="w-full py-3.5 bg-[#0A0A0A] hover:bg-[#202020] text-white font-extrabold text-xs rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-[#0A0A0A]/10 cursor-pointer transition-all active:scale-[0.99]"
+              className="w-full py-3.5 bg-solid hover:bg-solid-hover text-white font-extrabold text-xs rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-[#0A0A0A]/10 cursor-pointer transition-all active:scale-[0.99]"
             >
               <Save className="w-4 h-4" /> Guardar Ajustes de Facturación
             </button>

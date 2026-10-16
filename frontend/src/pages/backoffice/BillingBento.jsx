@@ -202,7 +202,7 @@ export default function BillingBento() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-[#17171B] dark:text-white">Facturación Electrónica</h1>
-          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Habilitación DIAN/Factus por local: revisión, credenciales y etapa del proceso</p>
+          <p className="text-xs text-ink-soft font-medium">Habilitación DIAN/Factus por local: revisión, credenciales y etapa del proceso</p>
         </div>
       </div>
 
@@ -219,7 +219,7 @@ export default function BillingBento() {
             <button
               key={s}
               onClick={() => setStatusFilter(s)}
-              className={`px-3 py-1.5 rounded-full text-[11px] font-bold cursor-pointer ${statusFilter === s ? 'bg-[#0A0A0A] text-white' : 'bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300'}`}
+              className={`px-3 py-1.5 rounded-full text-[11px] font-bold cursor-pointer ${statusFilter === s ? 'bg-solid text-white' : 'bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300'}`}
             >
               {STATUS_LABELS[s]}
             </button>
@@ -227,7 +227,7 @@ export default function BillingBento() {
         </div>
 
         {loading ? (
-          <div className="py-12 text-center text-xs font-bold text-gray-400 dark:text-gray-500">
+          <div className="py-12 text-center text-xs font-bold text-ink-muted">
             Consultando locales...
           </div>
         ) : rows.length === 0 ? (
@@ -239,7 +239,7 @@ export default function BillingBento() {
           <div className="overflow-x-auto -mx-2">
             <table className="w-full text-xs min-w-[760px]">
               <thead>
-                <tr className="text-left text-[10px] font-extrabold text-gray-400 dark:text-gray-500 uppercase">
+                <tr className="text-left text-[10px] font-extrabold text-ink-muted uppercase">
                   <th className="px-2 py-2">Local</th>
                   <th className="px-2 py-2">Entorno Activo</th>
                   <th className="px-2 py-2 text-center">Sandbox</th>
@@ -250,10 +250,10 @@ export default function BillingBento() {
               </thead>
               <tbody>
                 {rows.map(r => (
-                  <tr key={r.storeId} className="border-t border-[#EAEAEA] dark:border-[#272730] hover:bg-gray-50/60 dark:hover:bg-white/5">
+                  <tr key={r.storeId} className="border-t border-line hover:bg-gray-50/60 dark:hover:bg-white/5">
                     <td className="px-2 py-3">
-                      <p className="font-extrabold text-[#0A0A0A] dark:text-[#F4F4F6]">{storeName(r.storeId)}</p>
-                      <p className="text-[10px] text-gray-400 dark:text-gray-500">{storesById[r.storeId]?.email || '—'}</p>
+                      <p className="font-extrabold text-ink">{storeName(r.storeId)}</p>
+                      <p className="text-[10px] text-ink-muted">{storesById[r.storeId]?.email || '—'}</p>
                     </td>
                     <td className="px-2 py-3 font-semibold text-gray-600 dark:text-gray-300">{r.environment}</td>
                     <td className="px-2 py-3 text-center">
@@ -266,7 +266,7 @@ export default function BillingBento() {
                         ? <CheckCircle2 className="w-4 h-4 text-emerald-500 inline" />
                         : <XCircle className="w-4 h-4 text-gray-300 dark:text-gray-600 inline" />}
                     </td>
-                    <td className="px-2 py-3 font-mono text-[11px] text-gray-500 dark:text-gray-400">
+                    <td className="px-2 py-3 font-mono text-[11px] text-ink-soft">
                       {r.sandboxNumberingRangeId ?? '—'} / {r.productionNumberingRangeId ?? '—'}
                     </td>
                     <td className="px-2 py-3 text-right">
@@ -288,14 +288,14 @@ export default function BillingBento() {
       {/* Detail Modal */}
       {(detail || detailLoading) && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bento-card max-w-2xl w-full bg-white dark:bg-[#17171B] p-6 rounded-3xl shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
+          <div className="bento-card max-w-2xl w-full bg-card p-6 rounded-3xl shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
             {detailLoading || !detail ? (
-              <div className="py-8 text-center text-xs font-bold text-gray-400 dark:text-gray-500">Cargando...</div>
+              <div className="py-8 text-center text-xs font-bold text-ink-muted">Cargando...</div>
             ) : (
               <>
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="font-extrabold text-base text-[#0A0A0A] dark:text-[#F4F4F6]">{storeName(detail.storeId)}</h3>
+                    <h3 className="font-extrabold text-base text-ink">{storeName(detail.storeId)}</h3>
                     <span className={`inline-block mt-1 text-[10px] px-2 py-0.5 rounded-full font-extrabold ${STATUS_STYLES[detail.status]}`}>
                       {STATUS_LABELS[detail.status]}
                     </span>
@@ -312,9 +312,9 @@ export default function BillingBento() {
                 </div>
 
                 {/* Etapa del proceso */}
-                <div className="p-4 bg-gray-50/60 dark:bg-white/5 rounded-2xl border border-[#EAEAEA] dark:border-[#272730] space-y-3">
-                  <h4 className="font-extrabold text-xs text-[#0A0A0A] dark:text-[#F4F4F6] flex items-center gap-2">
-                    <Clock className="w-3.5 h-3.5 text-[#FF5520]" /> Etapa del proceso
+                <div className="p-4 bg-gray-50/60 dark:bg-white/5 rounded-2xl border border-line space-y-3">
+                  <h4 className="font-extrabold text-xs text-ink flex items-center gap-2">
+                    <Clock className="w-3.5 h-3.5 text-brand" /> Etapa del proceso
                   </h4>
 
                   {reasonTarget && (
@@ -324,7 +324,7 @@ export default function BillingBento() {
                         value={reasonText}
                         onChange={e => setReasonText(e.target.value)}
                         placeholder={`Motivo para "${STATUS_LABELS[reasonTarget]}" (obligatorio)`}
-                        className="w-full p-2.5 bg-white dark:bg-[#0E0E12] border border-[#EAEAEA] dark:border-[#272730] rounded-xl text-[11px] text-[#0A0A0A] dark:text-[#F4F4F6] focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#FF5520]"
+                        className="w-full p-2.5 bg-white dark:bg-[#0E0E12] border border-line rounded-xl text-[11px] text-ink focus:outline-none focus:border-ink dark:focus:border-brand"
                       />
                       <div className="flex gap-2">
                         <button
@@ -357,7 +357,7 @@ export default function BillingBento() {
                           className={`px-3 py-1.5 rounded-xl text-[11px] font-extrabold cursor-pointer disabled:opacity-50 flex items-center gap-1.5 ${
                             target === 'REJECTED' || target === 'SUSPENDED'
                               ? 'bg-white dark:bg-[#272730] border border-red-200 dark:border-red-800/40 text-red-600 dark:text-red-400'
-                              : 'bg-[#0A0A0A] hover:bg-[#202020] text-white shadow-sm shadow-[#0A0A0A]/10'
+                              : 'bg-solid hover:bg-solid-hover text-white shadow-sm shadow-[#0A0A0A]/10'
                           }`}
                         >
                           {target === 'REJECTED' && <Ban size={14} />}
@@ -367,16 +367,16 @@ export default function BillingBento() {
                         </button>
                       ))}
                       {(TRANSITIONS[detail.status] || []).length === 0 && (
-                        <p className="text-[11px] text-gray-400 dark:text-gray-500">No hay transiciones disponibles desde este estado.</p>
+                        <p className="text-[11px] text-ink-muted">No hay transiciones disponibles desde este estado.</p>
                       )}
                     </div>
                   )}
                 </div>
 
                 {/* Entorno activo */}
-                <div className="p-4 bg-gray-50/60 dark:bg-white/5 rounded-2xl border border-[#EAEAEA] dark:border-[#272730] space-y-3">
-                  <h4 className="font-extrabold text-xs text-[#0A0A0A] dark:text-[#F4F4F6] flex items-center gap-2">
-                    <ArrowLeftRight className="w-3.5 h-3.5 text-[#FF5520]" /> Entorno activo para facturar: <span className="text-[#FF5520]">{detail.environment}</span>
+                <div className="p-4 bg-gray-50/60 dark:bg-white/5 rounded-2xl border border-line space-y-3">
+                  <h4 className="font-extrabold text-xs text-ink flex items-center gap-2">
+                    <ArrowLeftRight className="w-3.5 h-3.5 text-brand" /> Entorno activo para facturar: <span className="text-brand">{detail.environment}</span>
                   </h4>
                   <div className="flex gap-2">
                     {['SANDBOX', 'PRODUCTION'].map(env => (
@@ -394,9 +394,9 @@ export default function BillingBento() {
                 </div>
 
                 {/* Credenciales */}
-                <div className="p-4 bg-gray-50/60 dark:bg-white/5 rounded-2xl border border-[#EAEAEA] dark:border-[#272730] space-y-3">
-                  <h4 className="font-extrabold text-xs text-[#0A0A0A] dark:text-[#F4F4F6] flex items-center gap-2">
-                    <Key className="w-3.5 h-3.5 text-[#FF5520]" /> Credenciales de Factus
+                <div className="p-4 bg-gray-50/60 dark:bg-white/5 rounded-2xl border border-line space-y-3">
+                  <h4 className="font-extrabold text-xs text-ink flex items-center gap-2">
+                    <Key className="w-3.5 h-3.5 text-brand" /> Credenciales de Factus
                   </h4>
 
                   <div className="flex gap-2">
@@ -405,7 +405,7 @@ export default function BillingBento() {
                         key={env}
                         type="button"
                         onClick={() => { setEnvTab(env); setCredentialsForm(EMPTY_CREDENTIALS); setTestResult(null); }}
-                        className={`px-3 py-1.5 rounded-full text-[11px] font-bold cursor-pointer ${envTab === env ? 'bg-[#0A0A0A] text-white' : 'bg-white dark:bg-white/10 text-gray-600 dark:text-gray-300'}`}
+                        className={`px-3 py-1.5 rounded-full text-[11px] font-bold cursor-pointer ${envTab === env ? 'bg-solid text-white' : 'bg-white dark:bg-white/10 text-gray-600 dark:text-gray-300'}`}
                       >
                         {env} {env === 'SANDBOX' ? (detail.sandboxConfigured ? '✓' : '') : (detail.productionConfigured ? '✓' : '')}
                       </button>
@@ -420,7 +420,7 @@ export default function BillingBento() {
                           type="text"
                           value={credentialsForm.clientId}
                           onChange={e => setCredentialsForm({ ...credentialsForm, clientId: e.target.value })}
-                          className="w-full p-2.5 bg-white dark:bg-[#0E0E12] border border-[#EAEAEA] dark:border-[#272730] rounded-xl text-[11px] text-[#0A0A0A] dark:text-[#F4F4F6] focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#FF5520]"
+                          className="w-full p-2.5 bg-white dark:bg-[#0E0E12] border border-line rounded-xl text-[11px] text-ink focus:outline-none focus:border-ink dark:focus:border-brand"
                         />
                       </div>
                       <div>
@@ -430,7 +430,7 @@ export default function BillingBento() {
                           value={credentialsForm.clientSecret}
                           onChange={e => setCredentialsForm({ ...credentialsForm, clientSecret: e.target.value })}
                           placeholder="Vacío = conservar el guardado"
-                          className="w-full p-2.5 bg-white dark:bg-[#0E0E12] border border-[#EAEAEA] dark:border-[#272730] rounded-xl text-[11px] text-[#0A0A0A] dark:text-[#F4F4F6] focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#FF5520]"
+                          className="w-full p-2.5 bg-white dark:bg-[#0E0E12] border border-line rounded-xl text-[11px] text-ink focus:outline-none focus:border-ink dark:focus:border-brand"
                         />
                       </div>
                     </div>
@@ -441,7 +441,7 @@ export default function BillingBento() {
                           type="text"
                           value={credentialsForm.username}
                           onChange={e => setCredentialsForm({ ...credentialsForm, username: e.target.value })}
-                          className="w-full p-2.5 bg-white dark:bg-[#0E0E12] border border-[#EAEAEA] dark:border-[#272730] rounded-xl text-[11px] text-[#0A0A0A] dark:text-[#F4F4F6] focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#FF5520]"
+                          className="w-full p-2.5 bg-white dark:bg-[#0E0E12] border border-line rounded-xl text-[11px] text-ink focus:outline-none focus:border-ink dark:focus:border-brand"
                         />
                       </div>
                       <div>
@@ -451,7 +451,7 @@ export default function BillingBento() {
                           value={credentialsForm.password}
                           onChange={e => setCredentialsForm({ ...credentialsForm, password: e.target.value })}
                           placeholder="Vacío = conservar la guardada"
-                          className="w-full p-2.5 bg-white dark:bg-[#0E0E12] border border-[#EAEAEA] dark:border-[#272730] rounded-xl text-[11px] text-[#0A0A0A] dark:text-[#F4F4F6] focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#FF5520]"
+                          className="w-full p-2.5 bg-white dark:bg-[#0E0E12] border border-line rounded-xl text-[11px] text-ink focus:outline-none focus:border-ink dark:focus:border-brand"
                         />
                       </div>
                     </div>
@@ -480,7 +480,7 @@ export default function BillingBento() {
                       <button
                         type="submit"
                         disabled={savingCredentials}
-                        className="flex-1 py-2 bg-[#0A0A0A] hover:bg-[#202020] disabled:opacity-50 text-white rounded-xl text-[11px] font-extrabold cursor-pointer shadow-sm shadow-[#0A0A0A]/10"
+                        className="flex-1 py-2 bg-solid hover:bg-solid-hover disabled:opacity-50 text-white rounded-xl text-[11px] font-extrabold cursor-pointer shadow-sm shadow-[#0A0A0A]/10"
                       >
                         {savingCredentials ? 'Guardando...' : `Guardar Credenciales ${envTab}`}
                       </button>

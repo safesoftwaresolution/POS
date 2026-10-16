@@ -10,7 +10,7 @@ const TRIBUTE_IVA = 1;
 const TRIBUTE_NO_RESPONSABLE = 21;
 
 const INPUT_CLASS =
-  'w-full h-11 px-3.5 bg-[#F7F7F5] dark:bg-[#0E0E12] border border-[#EAEAEA] dark:border-[#272730] rounded-2xl text-xs font-semibold text-[#0A0A0A] dark:text-[#F4F4F6] placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#FF5520]';
+  'w-full h-11 px-3.5 bg-page border border-line rounded-2xl text-xs font-semibold text-ink placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-ink dark:focus:border-brand';
 
 // Dígito de verificación del NIT (módulo 11, algoritmo oficial de la DIAN).
 function calculateDv(nit) {
@@ -100,16 +100,16 @@ export default function CreateDianCustomerModal({ onClose, onCreated, initialNam
     <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[70] flex items-center justify-center p-4">
       <form
         onSubmit={handleSubmit}
-        className="bento-card max-w-lg w-full bg-white dark:bg-[#17171B] rounded-3xl shadow-2xl max-h-[92vh] overflow-hidden flex flex-col border border-gray-200 dark:border-[#272730]"
+        className="bento-card max-w-lg w-full bg-card rounded-3xl shadow-2xl max-h-[92vh] overflow-hidden flex flex-col border border-line"
       >
-        <div className="p-6 pb-4 border-b border-[#EAEAEA] dark:border-[#272730] flex items-center justify-between gap-3">
+        <div className="p-6 pb-4 border-b border-line flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-2xl bg-[#FF5520]/10 border border-[#FF5520]/25 flex items-center justify-center text-[#FF5520] shrink-0">
+            <div className="w-10 h-10 rounded-2xl bg-brand/10 border border-brand/25 flex items-center justify-center text-brand shrink-0">
               <FileText className="w-5 h-5" />
             </div>
             <div className="min-w-0">
-              <h3 className="font-extrabold text-base text-[#0A0A0A] dark:text-[#F4F4F6] truncate">Registrar Cliente Fiscal DIAN</h3>
-              <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium">Datos que la DIAN exige para la factura electrónica</p>
+              <h3 className="font-extrabold text-base text-ink truncate">Registrar Cliente Fiscal DIAN</h3>
+              <p className="text-[11px] text-ink-soft font-medium">Datos que la DIAN exige para la factura electrónica</p>
             </div>
           </div>
           <button
@@ -131,7 +131,7 @@ export default function CreateDianCustomerModal({ onClose, onCreated, initialNam
           )}
 
           <div className="space-y-1.5">
-            <span className="text-[10px] font-extrabold uppercase tracking-wider text-gray-400 dark:text-gray-500">Tipo de persona</span>
+            <span className="text-[10px] font-extrabold uppercase tracking-wider text-ink-muted">Tipo de persona</span>
             <div className="grid grid-cols-2 gap-2">
               {personTypes.map(t => {
                 const Icon = t.icon;
@@ -143,11 +143,11 @@ export default function CreateDianCustomerModal({ onClose, onCreated, initialNam
                     onClick={() => selectPersonType(t.id)}
                     className={`p-3 rounded-2xl border flex items-center gap-2.5 font-bold transition-all cursor-pointer ${
                       active
-                        ? 'bg-[#0A0A0A] text-white border-[#D0D0CE] shadow-sm'
-                        : 'bg-white dark:bg-[#0E0E12] text-gray-600 dark:text-gray-300 border-[#EAEAEA] dark:border-[#272730] hover:border-[#D0D0CE]'
+                        ? 'bg-solid text-white border-line-strong shadow-sm'
+                        : 'bg-white dark:bg-[#0E0E12] text-gray-600 dark:text-gray-300 border-line hover:border-line-strong'
                     }`}
                   >
-                    <Icon className={`w-4 h-4 ${active ? 'text-[#FF5520]' : ''}`} />
+                    <Icon className={`w-4 h-4 ${active ? 'text-brand' : ''}`} />
                     <span>{t.label}</span>
                   </button>
                 );
@@ -157,7 +157,7 @@ export default function CreateDianCustomerModal({ onClose, onCreated, initialNam
 
           <div>
             <label htmlFor="dian-name" className="font-bold text-gray-700 dark:text-gray-300 block mb-1">
-              {isJuridica ? 'Razón social' : 'Nombre completo'} <span className="text-[#FF5520]">*</span>
+              {isJuridica ? 'Razón social' : 'Nombre completo'} <span className="text-brand">*</span>
             </label>
             <input
               id="dian-name"
@@ -172,7 +172,7 @@ export default function CreateDianCustomerModal({ onClose, onCreated, initialNam
           <div className="grid grid-cols-3 gap-2">
             <div className="col-span-2">
               <label htmlFor="dian-id" className="font-bold text-gray-700 dark:text-gray-300 block mb-1">
-                {isJuridica ? 'NIT' : 'Cédula / Identificación'} <span className="text-[#FF5520]">*</span>
+                {isJuridica ? 'NIT' : 'Cédula / Identificación'} <span className="text-brand">*</span>
               </label>
               <input
                 id="dian-id"
@@ -200,7 +200,7 @@ export default function CreateDianCustomerModal({ onClose, onCreated, initialNam
 
           <div>
             <label htmlFor="dian-email" className="font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1.5 mb-1">
-              <Mail className="w-3.5 h-3.5 text-[#FF5520]" /> Correo de recepción <span className="text-[#FF5520]">*</span>
+              <Mail className="w-3.5 h-3.5 text-brand" /> Correo de recepción <span className="text-brand">*</span>
             </label>
             <input
               id="dian-email"
@@ -252,7 +252,7 @@ export default function CreateDianCustomerModal({ onClose, onCreated, initialNam
           </div>
 
           <div className="space-y-1.5">
-            <span className="text-[10px] font-extrabold uppercase tracking-wider text-gray-400 dark:text-gray-500">Responsabilidad tributaria</span>
+            <span className="text-[10px] font-extrabold uppercase tracking-wider text-ink-muted">Responsabilidad tributaria</span>
             <div className="grid grid-cols-2 gap-2">
               {tributes.map(t => (
                 <button
@@ -261,32 +261,32 @@ export default function CreateDianCustomerModal({ onClose, onCreated, initialNam
                   onClick={() => set({ tributeId: t.id })}
                   className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
                     form.tributeId === t.id
-                      ? 'bg-[#F7F7F5] dark:bg-[#0E0E12] border-[#0A0A0A] dark:border-[#FF5520] text-[#0A0A0A] dark:text-[#F4F4F6]'
-                      : 'bg-white dark:bg-[#17171B] border-[#EAEAEA] dark:border-[#272730] text-gray-500 dark:text-gray-400'
+                      ? 'bg-page border-[#0A0A0A] dark:border-brand text-ink'
+                      : 'bg-card border-line text-ink-soft'
                   }`}
                 >
                   <span className="font-bold block">{t.label}</span>
-                  <span className="text-[10px] text-gray-400 dark:text-gray-500">{t.hint}</span>
+                  <span className="text-[10px] text-ink-muted">{t.hint}</span>
                 </button>
               ))}
             </div>
           </div>
         </div>
 
-        <div className="p-6 pt-4 border-t border-[#EAEAEA] dark:border-[#272730] flex gap-2">
+        <div className="p-6 pt-4 border-t border-line flex gap-2">
           <button
             type="button"
             onClick={onClose}
-            className="w-1/2 py-3 bg-gray-100 dark:bg-[#272730] hover:bg-gray-200 dark:hover:bg-[#2C2C36] text-gray-700 dark:text-gray-300 rounded-2xl text-xs font-bold cursor-pointer"
+            className="w-1/2 py-3 bg-gray-100 dark:bg-[#272730] hover:bg-gray-200 dark:hover:bg-line-strong text-gray-700 dark:text-gray-300 rounded-2xl text-xs font-bold cursor-pointer"
           >
             Cancelar
           </button>
           <button
             type="submit"
             disabled={saving}
-            className="w-1/2 py-3 bg-[#0A0A0A] hover:bg-[#202020] disabled:opacity-50 text-white rounded-2xl text-xs font-extrabold flex items-center justify-center gap-2 shadow-md shadow-[#0A0A0A]/10 cursor-pointer"
+            className="w-1/2 py-3 bg-solid hover:bg-solid-hover disabled:opacity-50 text-white rounded-2xl text-xs font-extrabold flex items-center justify-center gap-2 shadow-md shadow-[#0A0A0A]/10 cursor-pointer"
           >
-            <CheckCircle2 className="w-4 h-4 text-[#FF5520]" />
+            <CheckCircle2 className="w-4 h-4 text-brand" />
             {saving ? 'Guardando...' : 'Guardar Cliente DIAN'}
           </button>
         </div>

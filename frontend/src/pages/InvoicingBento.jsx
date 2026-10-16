@@ -82,7 +82,7 @@ const ACTIVATION_STYLES = {
 const EMPTY_RANGE_FORM = { document: '', prefix: '', resolutionNumber: '', current: '' };
 
 const FIELD_CLASS =
-  'w-full p-2.5 bg-white dark:bg-[#0E0E12] border border-[#EAEAEA] dark:border-[#272730] rounded-xl text-xs font-semibold text-[#0A0A0A] dark:text-[#F4F4F6] focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#FF5520]';
+  'w-full p-2.5 bg-white dark:bg-[#0E0E12] border border-line rounded-xl text-xs font-semibold text-ink focus:outline-none focus:border-ink dark:focus:border-brand';
 
 const formatDateTime = (value) => (value ? new Date(value).toLocaleString('es-CO', { dateStyle: 'medium', timeStyle: 'short' }) : '—');
 
@@ -93,14 +93,14 @@ function TabButton({ active, onClick, icon: Icon, label, count }) {
       onClick={onClick}
       className={`pb-3 text-sm font-bold flex items-center gap-2 border-b-2 transition-all cursor-pointer whitespace-nowrap ${
         active
-          ? 'border-[#FF5520] text-[#FF5520]'
-          : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-[#0A0A0A] dark:hover:text-white'
+          ? 'border-brand text-brand'
+          : 'border-transparent text-ink-soft hover:text-[#0A0A0A] dark:hover:text-white'
       }`}
     >
       <Icon className="w-4 h-4" />
       <span>{label}</span>
       {count != null && (
-        <span className="ml-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold tabular-nums bg-gray-100 dark:bg-white/10 text-[#0A0A0A] dark:text-[#F4F4F6]">
+        <span className="ml-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold tabular-nums bg-gray-100 dark:bg-white/10 text-ink">
           {count}
         </span>
       )}
@@ -108,17 +108,17 @@ function TabButton({ active, onClick, icon: Icon, label, count }) {
   );
 }
 
-function KpiCard({ label, value, hint, hintClass = 'text-gray-500 dark:text-gray-400', icon: Icon, accent }) {
+function KpiCard({ label, value, hint, hintClass = 'text-ink-soft', icon: Icon, accent }) {
   return (
     <div className="bento-card p-5 flex flex-col justify-between gap-3 min-w-0">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-[10px] font-extrabold uppercase tracking-wider text-gray-500 dark:text-gray-400">{label}</span>
+        <span className="text-[10px] font-extrabold uppercase tracking-wider text-ink-soft">{label}</span>
         <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${accent}`}>
           <Icon className="w-4 h-4" />
         </div>
       </div>
       <div className="min-w-0">
-        <div className={`font-black text-[#0A0A0A] dark:text-[#F4F4F6] tabular-nums truncate ${String(value).length > 8 ? 'text-xl leading-[2.25rem]' : 'text-3xl'}`}>{value}</div>
+        <div className={`font-black text-ink tabular-nums truncate ${String(value).length > 8 ? 'text-xl leading-[2.25rem]' : 'text-3xl'}`}>{value}</div>
         <div className={`text-[11px] font-semibold mt-0.5 truncate ${hintClass}`}>{hint}</div>
       </div>
     </div>
@@ -181,10 +181,10 @@ export default function InvoicingBento() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2.5 flex-wrap">
-            <h1 className="text-2xl font-black text-[#0A0A0A] dark:text-white tracking-tight">Facturación Electrónica DIAN</h1>
-            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-[#FF5520] text-white">Factus</span>
+            <h1 className="text-2xl font-black text-ink tracking-tight">Facturación Electrónica DIAN</h1>
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-brand text-white">Factus</span>
           </div>
-          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mt-1">
+          <p className="text-xs text-ink-soft font-medium mt-1">
             Seguimiento de facturas, CUFE y numeración oficial de tu local ante la DIAN
           </p>
         </div>
@@ -192,7 +192,7 @@ export default function InvoicingBento() {
         <button
           type="button"
           onClick={() => setRefreshKey(k => k + 1)}
-          className="h-10 px-4 rounded-2xl border border-[#EAEAEA] dark:border-[#272730] bg-white dark:bg-[#17171B] text-gray-600 dark:text-gray-300 hover:text-[#0A0A0A] dark:hover:text-white text-xs font-bold flex items-center gap-2 cursor-pointer self-start md:self-auto"
+          className="h-10 px-4 rounded-2xl border border-line bg-card text-gray-600 dark:text-gray-300 hover:text-[#0A0A0A] dark:hover:text-white text-xs font-bold flex items-center gap-2 cursor-pointer self-start md:self-auto"
         >
           <RefreshCw className="w-3.5 h-3.5" /> Sincronizar con la DIAN
         </button>
@@ -211,7 +211,7 @@ export default function InvoicingBento() {
           label="Pendientes y errores"
           value={totalsLoaded ? incidents : '—'}
           hint={totalsLoaded ? (incidents > 0 ? 'Requieren revisión o reintento' : 'Sin incidencias en cola') : 'Consultando...'}
-          hintClass={incidents > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-500 dark:text-gray-400'}
+          hintClass={incidents > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-ink-soft'}
           icon={AlertTriangle}
           accent="bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400"
         />
@@ -228,7 +228,7 @@ export default function InvoicingBento() {
               label="Habilitación del local"
               value={activation ? (ACTIVATION_LABELS[activation.status] || activation.status) : '—'}
               hint={activation ? `Entorno ${activation.environment}` : 'Consultando...'}
-              hintClass={activation?.status === 'ACTIVE' ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-500 dark:text-gray-400'}
+              hintClass={activation?.status === 'ACTIVE' ? 'text-emerald-600 dark:text-emerald-400' : 'text-ink-soft'}
               icon={activation?.status === 'ACTIVE' ? ShieldCheck : ShieldAlert}
               accent={activation?.status === 'ACTIVE' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300'}
             />
@@ -237,7 +237,7 @@ export default function InvoicingBento() {
       </div>
 
       {canSeeActivation && (
-        <div className="border-b border-[#EAEAEA] dark:border-[#272730] flex items-center gap-6 overflow-x-auto">
+        <div className="border-b border-line flex items-center gap-6 overflow-x-auto">
           <TabButton active={tab === 'invoices'} onClick={() => setTab('invoices')} icon={FileText} label="Facturas emitidas" count={totalsLoaded ? totalInvoices : null} />
           <TabButton active={tab === 'activation'} onClick={() => setTab('activation')} icon={Building2} label="Habilitación y rangos" count={ranges.length || null} />
         </div>
@@ -354,20 +354,20 @@ function InvoicesTab({ role, refreshKey, onChanged }) {
     );
   }, [data.content, search]);
 
-  const iconBtn = 'p-1.5 rounded-lg border border-[#EAEAEA] dark:border-[#272730] hover:border-[#0A0A0A] dark:hover:border-[#FF5520] text-gray-500 dark:text-gray-400 cursor-pointer transition-colors';
+  const iconBtn = 'p-1.5 rounded-lg border border-line hover:border-[#0A0A0A] dark:hover:border-brand text-ink-soft cursor-pointer transition-colors';
 
   return (
     <div className="space-y-4">
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
         <div className="relative w-full lg:max-w-md">
-          <Search className="w-4 h-4 text-gray-400 dark:text-gray-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <Search className="w-4 h-4 text-ink-muted absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Buscar por número de factura, CUFE o venta..."
             aria-label="Buscar facturas"
-            className="w-full h-10 pl-10 pr-4 bg-white dark:bg-[#17171B] border border-[#EAEAEA] dark:border-[#272730] rounded-2xl text-xs font-semibold text-[#0A0A0A] dark:text-[#F4F4F6] placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#FF5520]"
+            className="w-full h-10 pl-10 pr-4 bg-card border border-line rounded-2xl text-xs font-semibold text-ink placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-ink dark:focus:border-brand"
           />
         </div>
 
@@ -379,8 +379,8 @@ function InvoicesTab({ role, refreshKey, onChanged }) {
               onClick={() => { setStatusFilter(value); setPage(0); }}
               className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap cursor-pointer transition-all ${
                 statusFilter === value
-                  ? 'bg-[#0A0A0A] text-white shadow-sm'
-                  : 'bg-white dark:bg-[#17171B] text-gray-600 dark:text-gray-300 border border-[#EAEAEA] dark:border-[#272730] hover:border-[#D0D0CE]'
+                  ? 'bg-solid text-white shadow-sm'
+                  : 'bg-card text-gray-600 dark:text-gray-300 border border-line hover:border-line-strong'
               }`}
             >
               {label}
@@ -391,16 +391,16 @@ function InvoicesTab({ role, refreshKey, onChanged }) {
 
       <div className="bento-card overflow-hidden">
         {loading ? (
-          <div className="py-14 text-center text-xs font-bold text-gray-400 dark:text-gray-500">Consultando facturas...</div>
+          <div className="py-14 text-center text-xs font-bold text-ink-muted">Consultando facturas...</div>
         ) : invoices.length === 0 ? (
           <div className="py-14 px-6 text-center space-y-2">
             <div className="w-12 h-12 rounded-2xl bg-gray-100 dark:bg-white/5 text-gray-400 flex items-center justify-center mx-auto">
               <FileText className="w-6 h-6" />
             </div>
-            <p className="text-sm font-bold text-[#0A0A0A] dark:text-[#F4F4F6]">
+            <p className="text-sm font-bold text-ink">
               {search ? 'Ninguna factura coincide con tu búsqueda' : 'Aún no hay facturas electrónicas'}
             </p>
-            <p className="text-[11px] text-gray-500 dark:text-gray-400 max-w-sm mx-auto">
+            <p className="text-[11px] text-ink-soft max-w-sm mx-auto">
               {search
                 ? 'La búsqueda revisa las facturas de esta página. Prueba con otro número o cambia de página.'
                 : 'Al cobrar en la caja con la opción de factura electrónica activada, la factura aparecerá aquí.'}
@@ -410,7 +410,7 @@ function InvoicesTab({ role, refreshKey, onChanged }) {
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs min-w-[760px]">
               <thead>
-                <tr className="border-b border-[#EAEAEA] dark:border-[#272730] bg-gray-50/70 dark:bg-white/[0.03] text-[10px] font-extrabold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                <tr className="border-b border-line bg-gray-50/70 dark:bg-white/[0.03] text-[10px] font-extrabold uppercase tracking-wider text-ink-muted">
                   <th className="py-3.5 px-5">Factura</th>
                   <th className="py-3.5 px-4">Validada el</th>
                   <th className="py-3.5 px-4">Estado DIAN</th>
@@ -418,14 +418,14 @@ function InvoicesTab({ role, refreshKey, onChanged }) {
                   <th className="py-3.5 px-5 text-right">Acciones</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#EAEAEA] dark:divide-[#272730]">
+              <tbody className="divide-y divide-[#EAEAEA] dark:divide-line">
                 {invoices.map(inv => {
                   const validated = inv.status === 'VALIDATED';
                   return (
                     <tr key={inv.id} className="hover:bg-gray-50/60 dark:hover:bg-white/5">
                       <td className="py-3.5 px-5">
-                        <span className="font-mono font-bold text-[#0A0A0A] dark:text-[#F4F4F6] block">{inv.factusNumber || '—'}</span>
-                        <span className="text-[10px] text-gray-400 dark:text-gray-500 font-mono">Venta #{inv.saleId}</span>
+                        <span className="font-mono font-bold text-ink block">{inv.factusNumber || '—'}</span>
+                        <span className="text-[10px] text-ink-muted font-mono">Venta #{inv.saleId}</span>
                       </td>
                       <td className="py-3.5 px-4 text-gray-600 dark:text-gray-300 font-medium">{formatDateTime(inv.validatedAt)}</td>
                       <td className="py-3.5 px-4">
@@ -437,13 +437,13 @@ function InvoicesTab({ role, refreshKey, onChanged }) {
                       <td className="py-3.5 px-4">
                         {inv.cufe ? (
                           <div className="flex items-center gap-1.5 max-w-[170px]">
-                            <span className="font-mono text-[10px] text-gray-500 dark:text-gray-400 truncate" title={inv.cufe}>{inv.cufe}</span>
+                            <span className="font-mono text-[10px] text-ink-soft truncate" title={inv.cufe}>{inv.cufe}</span>
                             <button
                               type="button"
                               onClick={() => copyCufe(inv)}
                               title="Copiar CUFE"
                               aria-label="Copiar CUFE"
-                              className="text-gray-400 hover:text-[#FF5520] shrink-0 cursor-pointer"
+                              className="text-gray-400 hover:text-brand shrink-0 cursor-pointer"
                             >
                               {copiedId === inv.id ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
                             </button>
@@ -457,10 +457,10 @@ function InvoicesTab({ role, refreshKey, onChanged }) {
                           {validated && (
                             <>
                               <button type="button" onClick={() => handleDownload(inv, 'pdf')} title="Descargar PDF" aria-label="Descargar PDF" className={iconBtn}>
-                                <Download className="w-3.5 h-3.5 text-[#FF5520]" />
+                                <Download className="w-3.5 h-3.5 text-brand" />
                               </button>
                               <button type="button" onClick={() => handleDownload(inv, 'xml')} title="Descargar XML" aria-label="Descargar XML" className={iconBtn}>
-                                <FileCode className="w-3.5 h-3.5 text-indigo-500" />
+                                <FileCode className="w-3.5 h-3.5 text-blue-500" />
                               </button>
                               <button type="button" onClick={() => { setEmailTarget(inv); setEmailValue(''); }} title="Enviar por correo" aria-label="Enviar por correo" className={iconBtn}>
                                 <Mail className="w-3.5 h-3.5 text-emerald-500" />
@@ -475,9 +475,9 @@ function InvoicesTab({ role, refreshKey, onChanged }) {
                               type="button"
                               onClick={() => handleRetry(inv)}
                               disabled={retrying === inv.saleId}
-                              className="px-3 py-1.5 rounded-xl bg-[#0A0A0A] hover:bg-[#202020] disabled:opacity-50 text-white text-[11px] font-bold flex items-center gap-1.5 cursor-pointer"
+                              className="px-3 py-1.5 rounded-xl bg-solid hover:bg-solid-hover disabled:opacity-50 text-white text-[11px] font-bold flex items-center gap-1.5 cursor-pointer"
                             >
-                              <RefreshCw className={`w-3 h-3 text-[#FF5520] ${retrying === inv.saleId ? 'animate-spin' : ''}`} />
+                              <RefreshCw className={`w-3 h-3 text-brand ${retrying === inv.saleId ? 'animate-spin' : ''}`} />
                               Reintentar
                             </button>
                           )}
@@ -492,7 +492,7 @@ function InvoicesTab({ role, refreshKey, onChanged }) {
         )}
 
         {data.totalPages > 1 && (
-          <div className="flex items-center justify-center gap-3 p-4 border-t border-[#EAEAEA] dark:border-[#272730]">
+          <div className="flex items-center justify-center gap-3 p-4 border-t border-line">
             <button
               type="button"
               onClick={() => setPage(p => Math.max(0, p - 1))}
@@ -516,16 +516,16 @@ function InvoicesTab({ role, refreshKey, onChanged }) {
 
       {emailTarget && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <form onSubmit={handleSendEmail} className="bento-card max-w-sm w-full bg-white dark:bg-[#17171B] p-6 rounded-3xl shadow-2xl space-y-4">
+          <form onSubmit={handleSendEmail} className="bento-card max-w-sm w-full bg-card p-6 rounded-3xl shadow-2xl space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="font-extrabold text-base text-[#0A0A0A] dark:text-[#F4F4F6] flex items-center gap-2">
+              <h3 className="font-extrabold text-base text-ink flex items-center gap-2">
                 <Mail className="w-5 h-5 text-emerald-500" /> Enviar factura
               </h3>
               <button type="button" onClick={() => setEmailTarget(null)} aria-label="Cerrar" className="p-1 text-gray-400 hover:text-gray-700 dark:hover:text-white cursor-pointer">
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium">
+            <p className="text-[11px] text-ink-soft font-medium">
               Se enviará el PDF y el XML de la factura <span className="font-mono font-bold">{emailTarget.factusNumber}</span>.
             </p>
             <div>
@@ -541,7 +541,7 @@ function InvoicesTab({ role, refreshKey, onChanged }) {
             </div>
             <div className="flex gap-2">
               <button type="button" onClick={() => setEmailTarget(null)} className="w-1/2 py-3 bg-gray-100 dark:bg-[#272730] text-gray-700 dark:text-gray-300 rounded-2xl text-xs font-bold cursor-pointer">Cancelar</button>
-              <button type="submit" disabled={sendingEmail} className="w-1/2 py-3 bg-[#0A0A0A] hover:bg-[#202020] disabled:opacity-50 text-white rounded-2xl text-xs font-extrabold cursor-pointer">
+              <button type="submit" disabled={sendingEmail} className="w-1/2 py-3 bg-solid hover:bg-solid-hover disabled:opacity-50 text-white rounded-2xl text-xs font-extrabold cursor-pointer">
                 {sendingEmail ? 'Enviando...' : 'Enviar'}
               </button>
             </div>
@@ -551,10 +551,10 @@ function InvoicesTab({ role, refreshKey, onChanged }) {
 
       {detail && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bento-card max-w-lg w-full bg-white dark:bg-[#17171B] p-6 rounded-3xl shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-3 border-b border-[#EAEAEA] dark:border-[#272730]">
-              <h3 className="font-extrabold text-base text-[#0A0A0A] dark:text-[#F4F4F6] flex items-center gap-2">
-                <FileText className="w-5 h-5 text-[#FF5520]" /> Factura {detail.factusNumber || `de la venta #${detail.saleId}`}
+          <div className="bento-card max-w-lg w-full bg-card p-6 rounded-3xl shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b border-line">
+              <h3 className="font-extrabold text-base text-ink flex items-center gap-2">
+                <FileText className="w-5 h-5 text-brand" /> Factura {detail.factusNumber || `de la venta #${detail.saleId}`}
               </h3>
               <button type="button" onClick={() => setDetail(null)} aria-label="Cerrar" className="p-1 text-gray-400 hover:text-gray-700 dark:hover:text-white cursor-pointer">
                 <X className="w-5 h-5" />
@@ -562,15 +562,15 @@ function InvoicesTab({ role, refreshKey, onChanged }) {
             </div>
 
             <div className="grid grid-cols-2 gap-2 text-xs">
-              <div className="p-3 rounded-2xl bg-[#F7F7F5] dark:bg-[#0E0E12]">
-                <span className="text-[10px] text-gray-400 dark:text-gray-500 block">Estado en la DIAN</span>
+              <div className="p-3 rounded-2xl bg-page">
+                <span className="text-[10px] text-ink-muted block">Estado en la DIAN</span>
                 <span className={`inline-block mt-1 text-[10px] px-2 py-0.5 rounded-full font-extrabold ${INVOICE_STATUS_STYLES[detail.status] || ''}`}>
                   {INVOICE_STATUS_LABELS[detail.status] || detail.status}
                 </span>
               </div>
-              <div className="p-3 rounded-2xl bg-[#F7F7F5] dark:bg-[#0E0E12]">
-                <span className="text-[10px] text-gray-400 dark:text-gray-500 block">Validada el</span>
-                <span className="font-bold text-[#0A0A0A] dark:text-[#F4F4F6] block mt-1">{formatDateTime(detail.validatedAt)}</span>
+              <div className="p-3 rounded-2xl bg-page">
+                <span className="text-[10px] text-ink-muted block">Validada el</span>
+                <span className="font-bold text-ink block mt-1">{formatDateTime(detail.validatedAt)}</span>
               </div>
             </div>
 
@@ -580,11 +580,11 @@ function InvoicesTab({ role, refreshKey, onChanged }) {
               </p>
             )}
 
-            <div className="p-3 rounded-2xl bg-[#F7F7F5] dark:bg-[#0E0E12] space-y-1">
+            <div className="p-3 rounded-2xl bg-page space-y-1">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-extrabold uppercase text-gray-400 dark:text-gray-500">Código único CUFE</span>
+                <span className="text-[10px] font-extrabold uppercase text-ink-muted">Código único CUFE</span>
                 {detail.cufe && (
-                  <button type="button" onClick={() => copyCufe(detail)} className="text-[#FF5520] font-extrabold text-[10px] flex items-center gap-1 cursor-pointer">
+                  <button type="button" onClick={() => copyCufe(detail)} className="text-brand font-extrabold text-[10px] flex items-center gap-1 cursor-pointer">
                     {copiedId === detail.id ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
                     {copiedId === detail.id ? 'Copiado' : 'Copiar'}
                   </button>
@@ -594,14 +594,14 @@ function InvoicesTab({ role, refreshKey, onChanged }) {
             </div>
 
             {detail.qrCode && (
-              <div className="p-4 rounded-2xl border border-[#EAEAEA] dark:border-[#272730] text-center space-y-2">
-                <QrCode className="w-10 h-10 mx-auto text-[#0A0A0A] dark:text-white" />
-                <p className="text-[11px] text-gray-500 dark:text-gray-400">Consulta esta factura directamente en el catálogo de la DIAN.</p>
+              <div className="p-4 rounded-2xl border border-line text-center space-y-2">
+                <QrCode className="w-10 h-10 mx-auto text-ink" />
+                <p className="text-[11px] text-ink-soft">Consulta esta factura directamente en el catálogo de la DIAN.</p>
                 <a
                   href={detail.qrCode}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#0A0A0A] hover:bg-[#202020] text-white text-xs font-bold"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-solid hover:bg-solid-hover text-white text-xs font-bold"
                 >
                   Abrir portal DIAN <ExternalLink className="w-3.5 h-3.5" />
                 </a>
@@ -717,19 +717,19 @@ function ActivationTab({ role, activation, ranges, rangesLoading, activeRangeId,
     }
   };
 
-  const tile = 'p-3 rounded-2xl bg-[#F7F7F5] dark:bg-[#0E0E12] border border-[#EAEAEA] dark:border-[#272730]';
+  const tile = 'p-3 rounded-2xl bg-page border border-line';
 
   return (
     <div className="space-y-6">
       <div className="bento-card p-6 space-y-4">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-[#0A0A0A] text-[#FF5520] flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 rounded-2xl bg-solid text-brand flex items-center justify-center shrink-0">
               <Building2 className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-extrabold text-sm text-[#0A0A0A] dark:text-[#F4F4F6]">Estado de habilitación ante Factus y la DIAN</h3>
-              <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium">
+              <h3 className="font-extrabold text-sm text-ink">Estado de habilitación ante Factus y la DIAN</h3>
+              <p className="text-[11px] text-ink-soft font-medium">
                 {activation ? `Entorno activo: ${activation.environment}` : 'Consultando...'}
               </p>
             </div>
@@ -748,20 +748,20 @@ function ActivationTab({ role, activation, ranges, rangesLoading, activeRangeId,
         {activation && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
             <div className={tile}>
-              <span className="text-[10px] font-extrabold uppercase text-gray-400 dark:text-gray-500">Sandbox</span>
-              <p className="font-bold text-[#0A0A0A] dark:text-[#F4F4F6] mt-0.5 flex items-center gap-1.5">
+              <span className="text-[10px] font-extrabold uppercase text-ink-muted">Sandbox</span>
+              <p className="font-bold text-ink mt-0.5 flex items-center gap-1.5">
                 {activation.sandboxConfigured ? <><CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> Configurado</> : 'Sin configurar'}
               </p>
             </div>
             <div className={tile}>
-              <span className="text-[10px] font-extrabold uppercase text-gray-400 dark:text-gray-500">Producción</span>
-              <p className="font-bold text-[#0A0A0A] dark:text-[#F4F4F6] mt-0.5 flex items-center gap-1.5">
+              <span className="text-[10px] font-extrabold uppercase text-ink-muted">Producción</span>
+              <p className="font-bold text-ink mt-0.5 flex items-center gap-1.5">
                 {activation.productionConfigured ? <><CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> Configurada</> : 'Pendiente de paso a producción'}
               </p>
             </div>
             <div className={tile}>
-              <span className="text-[10px] font-extrabold uppercase text-gray-400 dark:text-gray-500">Última actualización</span>
-              <p className="font-bold text-[#0A0A0A] dark:text-[#F4F4F6] mt-0.5">{formatDateTime(activation.updatedAt)}</p>
+              <span className="text-[10px] font-extrabold uppercase text-ink-muted">Última actualización</span>
+              <p className="font-bold text-ink mt-0.5">{formatDateTime(activation.updatedAt)}</p>
             </div>
           </div>
         )}
@@ -772,12 +772,12 @@ function ActivationTab({ role, activation, ranges, rangesLoading, activeRangeId,
               type="button"
               onClick={handleRequestActivation}
               disabled={requesting}
-              className="px-4 py-2.5 bg-[#0A0A0A] hover:bg-[#202020] disabled:opacity-50 text-white rounded-2xl text-xs font-bold cursor-pointer"
+              className="px-4 py-2.5 bg-solid hover:bg-solid-hover disabled:opacity-50 text-white rounded-2xl text-xs font-bold cursor-pointer"
             >
               {requesting ? 'Enviando...' : 'Solicitar activación'}
             </button>
-            <p className="text-[11px] text-gray-400 dark:text-gray-500">
-              Necesitas al menos un documento (RUT, cámara de comercio, etc.) cargado en <a href="/documents" className="text-[#FF5520] underline">Documentos</a> antes de solicitar.
+            <p className="text-[11px] text-ink-muted">
+              Necesitas al menos un documento (RUT, cámara de comercio, etc.) cargado en <a href="/documents" className="text-brand underline">Documentos</a> antes de solicitar.
             </p>
           </div>
         )}
@@ -785,18 +785,18 @@ function ActivationTab({ role, activation, ranges, rangesLoading, activeRangeId,
 
       <div className="space-y-4">
         <div className="flex items-center justify-between flex-wrap gap-3">
-          <h3 className="font-extrabold text-sm text-[#0A0A0A] dark:text-[#F4F4F6] flex items-center gap-2">
-            <Hash className="w-4 h-4 text-[#FF5520]" /> Resoluciones y rangos de numeración
+          <h3 className="font-extrabold text-sm text-ink flex items-center gap-2">
+            <Hash className="w-4 h-4 text-brand" /> Resoluciones y rangos de numeración
           </h3>
           <div className="flex items-center gap-3">
-            <button type="button" onClick={loadDianRanges} className="text-xs font-bold text-gray-500 dark:text-gray-400 flex items-center gap-1.5 hover:underline cursor-pointer">
+            <button type="button" onClick={loadDianRanges} className="text-xs font-bold text-ink-soft flex items-center gap-1.5 hover:underline cursor-pointer">
               {dianLoading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Eye className="w-3.5 h-3.5" />} Consultar resoluciones en la DIAN
             </button>
             {isAdmin && (
               <button
                 type="button"
                 onClick={() => setShowCreateForm(v => !v)}
-                className="px-3.5 py-2 bg-[#0A0A0A] hover:bg-[#202020] text-white rounded-xl text-[11px] font-bold flex items-center gap-1.5 cursor-pointer"
+                className="px-3.5 py-2 bg-solid hover:bg-solid-hover text-white rounded-xl text-[11px] font-bold flex items-center gap-1.5 cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" /> Registrar rango
               </button>
@@ -805,12 +805,12 @@ function ActivationTab({ role, activation, ranges, rangesLoading, activeRangeId,
         </div>
 
         {dianRanges && (
-          <div className="p-4 bg-gray-50/60 dark:bg-white/5 rounded-2xl border border-[#EAEAEA] dark:border-[#272730] text-[11px] space-y-1.5">
+          <div className="p-4 bg-gray-50/60 dark:bg-white/5 rounded-2xl border border-line text-[11px] space-y-1.5">
             <p className="font-extrabold text-gray-600 dark:text-gray-300">Resoluciones autorizadas por la DIAN para este local:</p>
             {dianRanges.length === 0 ? (
               <p className="text-gray-400">No hay resoluciones asociadas todavía.</p>
             ) : dianRanges.map((r, idx) => (
-              <p key={idx} className="font-mono text-gray-500 dark:text-gray-400">
+              <p key={idx} className="font-mono text-ink-soft">
                 {r.prefix} · Res. {r.resolutionNumber} · {r.startDate} a {r.endDate}
               </p>
             ))}
@@ -843,7 +843,7 @@ function ActivationTab({ role, activation, ranges, rangesLoading, activeRangeId,
             </div>
             <div className="flex gap-2">
               <button type="button" onClick={() => setShowCreateForm(false)} className="flex-1 py-2.5 bg-gray-100 dark:bg-[#272730] text-gray-700 dark:text-gray-300 rounded-xl text-[11px] font-bold cursor-pointer">Cancelar</button>
-              <button type="submit" disabled={creating} className="flex-1 py-2.5 bg-[#0A0A0A] hover:bg-[#202020] disabled:opacity-50 text-white rounded-xl text-[11px] font-extrabold cursor-pointer">
+              <button type="submit" disabled={creating} className="flex-1 py-2.5 bg-solid hover:bg-solid-hover disabled:opacity-50 text-white rounded-xl text-[11px] font-extrabold cursor-pointer">
                 {creating ? 'Registrando...' : 'Registrar'}
               </button>
             </div>
@@ -851,11 +851,11 @@ function ActivationTab({ role, activation, ranges, rangesLoading, activeRangeId,
         )}
 
         {rangesLoading && ranges.length === 0 ? (
-          <p className="text-xs font-bold text-gray-400 dark:text-gray-500 py-6 text-center">Consultando rangos...</p>
+          <p className="text-xs font-bold text-ink-muted py-6 text-center">Consultando rangos...</p>
         ) : ranges.length === 0 ? (
           <div className="py-10 text-center space-y-1 bg-gray-50/50 dark:bg-white/5 rounded-3xl border border-dashed border-gray-200 dark:border-gray-700">
             <p className="text-xs font-bold text-gray-700 dark:text-gray-300">Sin rangos de numeración registrados</p>
-            {isAdmin && <p className="text-[11px] text-gray-400 dark:text-gray-500">Registra la resolución que la DIAN te asignó para empezar a facturar.</p>}
+            {isAdmin && <p className="text-[11px] text-ink-muted">Registra la resolución que la DIAN te asignó para empezar a facturar.</p>}
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -867,16 +867,16 @@ function ActivationTab({ role, activation, ranges, rangesLoading, activeRangeId,
               return (
                 <div
                   key={r.id}
-                  className={`p-5 rounded-3xl bg-white dark:bg-[#17171B] border space-y-4 transition-all ${
-                    isDefault ? 'border-[#FF5520] ring-1 ring-[#FF5520] shadow-md' : 'border-[#EAEAEA] dark:border-[#272730]'
+                  className={`p-5 rounded-3xl bg-card border space-y-4 transition-all ${
+                    isDefault ? 'border-brand ring-1 ring-brand shadow-md' : 'border-line'
                   }`}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-mono text-base font-black text-[#0A0A0A] dark:text-[#F4F4F6]">Prefijo {r.prefix}</span>
+                        <span className="font-mono text-base font-black text-ink">Prefijo {r.prefix}</span>
                         {isDefault && (
-                          <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-[#FF5520] text-white flex items-center gap-1">
+                          <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-brand text-white flex items-center gap-1">
                             <Star className="w-2.5 h-2.5 fill-current" /> Para facturar
                           </span>
                         )}
@@ -885,20 +885,20 @@ function ActivationTab({ role, activation, ranges, rangesLoading, activeRangeId,
                         ) : r.isActive ? (
                           <span className="text-[10px] px-2 py-0.5 rounded-full font-extrabold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">Activo</span>
                         ) : (
-                          <span className="text-[10px] px-2 py-0.5 rounded-full font-extrabold bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-gray-400">Inactivo</span>
+                          <span className="text-[10px] px-2 py-0.5 rounded-full font-extrabold bg-gray-100 dark:bg-white/10 text-ink-soft">Inactivo</span>
                         )}
                       </div>
-                      <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium mt-0.5">{r.documentName || r.document}</p>
+                      <p className="text-[11px] text-ink-soft font-medium mt-0.5">{r.documentName || r.document}</p>
                     </div>
 
                     {isAdmin && (
                       <div className="flex items-center gap-1 shrink-0">
                         {!isDefault && (
-                          <button type="button" onClick={() => handleSetDefault(r)} title="Elegir para facturar" aria-label="Elegir para facturar" className="p-1.5 text-gray-400 hover:text-[#FF5520] rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer">
+                          <button type="button" onClick={() => handleSetDefault(r)} title="Elegir para facturar" aria-label="Elegir para facturar" className="p-1.5 text-gray-400 hover:text-brand rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer">
                             <Star className="w-4 h-4" />
                           </button>
                         )}
-                        <button type="button" onClick={() => handleToggleStatus(r)} title={r.isActive ? 'Desactivar' : 'Activar'} aria-label={r.isActive ? 'Desactivar' : 'Activar'} className="p-1.5 text-gray-400 hover:text-[#FF5520] rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer">
+                        <button type="button" onClick={() => handleToggleStatus(r)} title={r.isActive ? 'Desactivar' : 'Activar'} aria-label={r.isActive ? 'Desactivar' : 'Activar'} className="p-1.5 text-gray-400 hover:text-brand rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer">
                           {r.isActive ? <PauseCircle className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
                         </button>
                         <button type="button" onClick={() => handleDelete(r)} title="Eliminar" aria-label="Eliminar" className="p-1.5 text-gray-400 hover:text-red-500 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer">
@@ -908,20 +908,20 @@ function ActivationTab({ role, activation, ranges, rangesLoading, activeRangeId,
                     )}
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3 text-xs pt-3 border-t border-[#EAEAEA] dark:border-[#272730]">
+                  <div className="grid grid-cols-2 gap-3 text-xs pt-3 border-t border-line">
                     <div className="min-w-0">
-                      <span className="text-[10px] text-gray-400 dark:text-gray-500 block">Resolución</span>
-                      <span className="font-mono font-bold text-[#0A0A0A] dark:text-[#F4F4F6] block truncate">{r.resolutionNumber || '—'}</span>
+                      <span className="text-[10px] text-ink-muted block">Resolución</span>
+                      <span className="font-mono font-bold text-ink block truncate">{r.resolutionNumber || '—'}</span>
                     </div>
                     <div className="min-w-0">
-                      <span className="text-[10px] text-gray-400 dark:text-gray-500 block">Vigencia</span>
-                      <span className="font-semibold text-[#0A0A0A] dark:text-[#F4F4F6] block">{r.startDate && r.endDate ? `${r.startDate} al ${r.endDate}` : '—'}</span>
+                      <span className="text-[10px] text-ink-muted block">Vigencia</span>
+                      <span className="font-semibold text-ink block">{r.startDate && r.endDate ? `${r.startDate} al ${r.endDate}` : '—'}</span>
                     </div>
                   </div>
 
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between text-[11px] font-semibold gap-2">
-                      <span className="text-gray-500 dark:text-gray-400">Consumo del rango</span>
+                      <span className="text-ink-soft">Consumo del rango</span>
                       {editingCurrent === r.id ? (
                         <span className="flex items-center gap-1">
                           <input
@@ -929,7 +929,7 @@ function ActivationTab({ role, activation, ranges, rangesLoading, activeRangeId,
                             value={currentValue}
                             onChange={e => setCurrentValue(e.target.value)}
                             aria-label="Consecutivo actual"
-                            className="w-24 p-1 bg-white dark:bg-[#0E0E12] border border-[#EAEAEA] dark:border-[#272730] rounded-lg text-xs font-mono"
+                            className="w-24 p-1 bg-white dark:bg-[#0E0E12] border border-line rounded-lg text-xs font-mono"
                           />
                           <button type="button" onClick={() => handleSaveCurrent(r)} aria-label="Guardar consecutivo" className="text-emerald-500 cursor-pointer"><CheckCircle2 className="w-4 h-4" /></button>
                           <button type="button" onClick={() => setEditingCurrent(null)} aria-label="Cancelar" className="text-gray-400 cursor-pointer"><X className="w-4 h-4" /></button>
@@ -939,20 +939,20 @@ function ActivationTab({ role, activation, ranges, rangesLoading, activeRangeId,
                           type="button"
                           disabled={!isAdmin}
                           onClick={() => { setEditingCurrent(r.id); setCurrentValue(String(r.current ?? '')); }}
-                          className={`font-mono tabular-nums text-[#0A0A0A] dark:text-[#F4F4F6] ${isAdmin ? 'hover:underline cursor-pointer' : 'cursor-default'}`}
+                          className={`font-mono tabular-nums text-ink ${isAdmin ? 'hover:underline cursor-pointer' : 'cursor-default'}`}
                         >
                           #{r.current ?? '—'} / #{r.to ?? '—'} ({pct}%)
                         </button>
                       )}
                     </div>
                     <div className="w-full h-2 rounded-full bg-gray-100 dark:bg-white/10 overflow-hidden">
-                      <div className={`h-full rounded-full ${pct >= 90 ? 'bg-red-500' : 'bg-[#FF5520]'}`} style={{ width: `${pct}%` }} />
+                      <div className={`h-full rounded-full ${pct >= 90 ? 'bg-red-500' : 'bg-brand'}`} style={{ width: `${pct}%` }} />
                     </div>
                   </div>
 
                   {r.technicalKey && (
-                    <div className="p-2.5 rounded-xl bg-[#F7F7F5] dark:bg-[#0E0E12] border border-[#EAEAEA] dark:border-[#272730] text-[10px]">
-                      <span className="text-gray-400 dark:text-gray-500 block">Llave técnica DIAN</span>
+                    <div className="p-2.5 rounded-xl bg-page border border-line text-[10px]">
+                      <span className="text-ink-muted block">Llave técnica DIAN</span>
                       <p className="font-mono text-gray-600 dark:text-gray-300 truncate" title={r.technicalKey}>{r.technicalKey}</p>
                     </div>
                   )}

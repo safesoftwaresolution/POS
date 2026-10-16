@@ -107,7 +107,7 @@ function ProtectedLayout() {
 
 function ProtectedLayoutContent({ mobileSidebarOpen, setMobileSidebarOpen, sidebarCollapsed, toggleSidebarCollapse }) {
   return (
-    <div className="min-h-screen bg-[#F7F7F5] dark:bg-[#0E0E12] text-[#0A0A0A] dark:text-[#F4F4F6] flex transition-colors duration-300">
+    <div className="min-h-screen bg-page text-ink flex transition-colors duration-300">
       {/* Expandable / Collapsible Sidebar */}
       <Sidebar
         isOpen={mobileSidebarOpen}
@@ -169,7 +169,7 @@ function BackofficeProtectedLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F7F7F5] dark:bg-[#0E0E12] text-[#0A0A0A] dark:text-[#F4F4F6] flex transition-colors duration-300">
+    <div className="min-h-screen bg-page text-ink flex transition-colors duration-300">
       <BackofficeSidebar
         isOpen={mobileSidebarOpen}
         onClose={() => setMobileSidebarOpen(false)}

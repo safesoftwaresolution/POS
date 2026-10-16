@@ -66,8 +66,8 @@ function MetricCard({ label, value, icon: Icon, accent }) {
         <Icon className="w-5 h-5" />
       </div>
       <div className="min-w-0">
-        <p className="text-lg font-black text-[#0A0A0A] dark:text-[#F4F4F6] leading-tight tabular-nums">{value}</p>
-        <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 truncate">{label}</p>
+        <p className="text-lg font-black text-ink leading-tight tabular-nums">{value}</p>
+        <p className="text-[10px] font-bold text-ink-soft truncate">{label}</p>
       </div>
     </div>
   );
@@ -161,8 +161,8 @@ export default function SupportTicketsBento() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-[#0A0A0A] dark:text-[#F4F4F6]">Soporte y PQRs</h1>
-          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Gestión de peticiones, quejas, reclamos y reportes de bugs</p>
+          <h1 className="text-2xl font-black text-ink">Soporte y PQRs</h1>
+          <p className="text-xs text-ink-soft font-medium">Gestión de peticiones, quejas, reclamos y reportes de bugs</p>
         </div>
       </div>
 
@@ -179,13 +179,13 @@ export default function SupportTicketsBento() {
       <div className="bento-card p-6 space-y-4">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div className="relative w-full sm:w-72">
-            <Search className="w-4 h-4 text-gray-400 dark:text-gray-500 absolute left-3.5 top-2.5" />
+            <Search className="w-4 h-4 text-ink-muted absolute left-3.5 top-2.5" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Buscar por título o radicado..."
-              className="w-full pl-10 pr-3 py-1.5 bg-[#F7F7F5] dark:bg-[#0E0E12] border border-[#EAEAEA] dark:border-[#272730] rounded-2xl text-xs font-semibold text-[#0A0A0A] dark:text-[#F4F4F6] placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#FF5520]"
+              className="w-full pl-10 pr-3 py-1.5 bg-page border border-line rounded-2xl text-xs font-semibold text-ink placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-ink dark:focus:border-brand"
             />
           </div>
 
@@ -218,7 +218,7 @@ export default function SupportTicketsBento() {
         </div>
 
         {loading ? (
-          <div className="py-12 text-center text-xs font-bold text-gray-400 dark:text-gray-500">
+          <div className="py-12 text-center text-xs font-bold text-ink-muted">
             Consultando tickets...
           </div>
         ) : tickets.length === 0 ? (
@@ -226,14 +226,14 @@ export default function SupportTicketsBento() {
             <LifeBuoy className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto stroke-1" />
             <div>
               <p className="text-xs font-bold text-gray-700 dark:text-gray-300">No se encontraron tickets</p>
-              <p className="text-[11px] text-gray-400 dark:text-gray-500">Los PQRs y reportes de bugs radicados aparecerán aquí</p>
+              <p className="text-[11px] text-ink-muted">Los PQRs y reportes de bugs radicados aparecerán aquí</p>
             </div>
           </div>
         ) : (
           <div className="overflow-x-auto -mx-2">
             <table className="w-full text-xs min-w-[820px]">
               <thead>
-                <tr className="text-left text-[10px] font-extrabold text-gray-400 dark:text-gray-500 uppercase">
+                <tr className="text-left text-[10px] font-extrabold text-ink-muted uppercase">
                   <th className="px-2 py-2">Radicado</th>
                   <th className="px-2 py-2">Tipo</th>
                   <th className="px-2 py-2">Contacto</th>
@@ -252,16 +252,16 @@ export default function SupportTicketsBento() {
                     >
                       <td className="px-2 py-3">
                         <p className="font-extrabold text-[#17171B] dark:text-white font-mono">{t.ticketNumber}</p>
-                        <p className="text-[10px] text-gray-400 dark:text-gray-500 truncate max-w-[220px]">{t.title}</p>
+                        <p className="text-[10px] text-ink-muted truncate max-w-[220px]">{t.title}</p>
                       </td>
                       <td className="px-2 py-3">
                         <span className="inline-flex items-center gap-1.5 font-semibold text-gray-600 dark:text-gray-300">
-                          <Icon className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" /> {TYPE_LABELS[t.type] || t.type}
+                          <Icon className="w-3.5 h-3.5 text-ink-muted" /> {TYPE_LABELS[t.type] || t.type}
                         </span>
                       </td>
                       <td className="px-2 py-3">
                         <p className="font-semibold text-gray-600 dark:text-gray-300">{t.contactName}</p>
-                        <p className="text-[10px] text-gray-400 dark:text-gray-500">{t.contactEmail}</p>
+                        <p className="text-[10px] text-ink-muted">{t.contactEmail}</p>
                       </td>
                       <td className="px-2 py-3">
                         <span className={`text-[10px] px-2 py-0.5 rounded-full font-extrabold ${PRIORITY_STYLES[t.priority] || ''}`}>
@@ -285,11 +285,11 @@ export default function SupportTicketsBento() {
       {/* Ticket Detail Modal */}
       {detailTicket && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bento-card max-w-lg w-full bg-white dark:bg-[#17171B] p-6 rounded-3xl shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+          <div className="bento-card max-w-lg w-full bg-card p-6 rounded-3xl shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="font-extrabold text-base text-[#0A0A0A] dark:text-[#F4F4F6] font-mono">{detailTicket.ticketNumber}</h3>
-                <p className="text-[11px] text-gray-400 dark:text-gray-500 font-semibold">{TYPE_LABELS[detailTicket.type] || detailTicket.type}</p>
+                <h3 className="font-extrabold text-base text-ink font-mono">{detailTicket.ticketNumber}</h3>
+                <p className="text-[11px] text-ink-muted font-semibold">{TYPE_LABELS[detailTicket.type] || detailTicket.type}</p>
               </div>
               <button
                 onClick={closeDetail}
@@ -300,7 +300,7 @@ export default function SupportTicketsBento() {
             </div>
 
             {detailLoading ? (
-              <div className="py-8 text-center text-xs font-bold text-gray-400 dark:text-gray-500">Cargando detalle...</div>
+              <div className="py-8 text-center text-xs font-bold text-ink-muted">Cargando detalle...</div>
             ) : (
               <>
                 {detailError && (
@@ -313,24 +313,24 @@ export default function SupportTicketsBento() {
                 <div className="space-y-3 text-xs">
                   <div>
                     <p className="font-bold text-gray-700 dark:text-gray-300 mb-1">Título:</p>
-                    <p className="text-[#0A0A0A] dark:text-[#F4F4F6] font-semibold">{detailTicket.title}</p>
+                    <p className="text-ink font-semibold">{detailTicket.title}</p>
                   </div>
                   <div>
                     <p className="font-bold text-gray-700 dark:text-gray-300 mb-1">Descripción:</p>
-                    <p className="text-gray-600 dark:text-gray-300 whitespace-pre-wrap p-3 bg-gray-50/60 dark:bg-white/5 rounded-2xl border border-[#EAEAEA] dark:border-[#272730]">{detailTicket.description}</p>
+                    <p className="text-gray-600 dark:text-gray-300 whitespace-pre-wrap p-3 bg-gray-50/60 dark:bg-white/5 rounded-2xl border border-line">{detailTicket.description}</p>
                   </div>
 
                   <div className="grid grid-cols-2 gap-2">
                     <div>
                       <p className="font-bold text-gray-700 dark:text-gray-300 mb-1">Contacto:</p>
                       <p className="text-gray-600 dark:text-gray-300 font-semibold">{detailTicket.contactName}</p>
-                      <p className="text-[11px] text-gray-400 dark:text-gray-500">{detailTicket.contactEmail}</p>
-                      {detailTicket.contactPhone && <p className="text-[11px] text-gray-400 dark:text-gray-500">{detailTicket.contactPhone}</p>}
+                      <p className="text-[11px] text-ink-muted">{detailTicket.contactEmail}</p>
+                      {detailTicket.contactPhone && <p className="text-[11px] text-ink-muted">{detailTicket.contactPhone}</p>}
                     </div>
                     {detailTicket.systemInfo && (
                       <div>
                         <p className="font-bold text-gray-700 dark:text-gray-300 mb-1">Info del sistema:</p>
-                        <p className="text-[11px] text-gray-500 dark:text-gray-400 break-words">{detailTicket.systemInfo}</p>
+                        <p className="text-[11px] text-ink-soft break-words">{detailTicket.systemInfo}</p>
                       </div>
                     )}
                   </div>
@@ -341,7 +341,7 @@ export default function SupportTicketsBento() {
                       <select
                         value={statusDraft}
                         onChange={e => setStatusDraft(e.target.value)}
-                        className="w-full p-2.5 bg-[#F7F7F5] dark:bg-[#0E0E12] border border-[#EAEAEA] dark:border-[#272730] rounded-2xl font-semibold text-[#0A0A0A] dark:text-[#F4F4F6] focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#FF5520]"
+                        className="w-full p-2.5 bg-page border border-line rounded-2xl font-semibold text-ink focus:outline-none focus:border-ink dark:focus:border-brand"
                       >
                         {STATUSES.map(s => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
                       </select>
@@ -351,7 +351,7 @@ export default function SupportTicketsBento() {
                       <select
                         value={priorityDraft}
                         onChange={e => setPriorityDraft(e.target.value)}
-                        className="w-full p-2.5 bg-[#F7F7F5] dark:bg-[#0E0E12] border border-[#EAEAEA] dark:border-[#272730] rounded-2xl font-semibold text-[#0A0A0A] dark:text-[#F4F4F6] focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#FF5520]"
+                        className="w-full p-2.5 bg-page border border-line rounded-2xl font-semibold text-ink focus:outline-none focus:border-ink dark:focus:border-brand"
                       >
                         {PRIORITIES.map(p => <option key={p} value={p}>{PRIORITY_LABELS[p]}</option>)}
                       </select>
@@ -365,7 +365,7 @@ export default function SupportTicketsBento() {
                       onChange={e => setNotesDraft(e.target.value)}
                       placeholder="Notas internas sobre la resolución del ticket..."
                       rows={3}
-                      className="w-full p-2.5 bg-[#F7F7F5] dark:bg-[#0E0E12] border border-[#EAEAEA] dark:border-[#272730] rounded-2xl text-xs text-[#0A0A0A] dark:text-[#F4F4F6] resize-y focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#FF5520]"
+                      className="w-full p-2.5 bg-page border border-line rounded-2xl text-xs text-ink resize-y focus:outline-none focus:border-ink dark:focus:border-brand"
                     />
                   </div>
                 </div>
@@ -374,7 +374,7 @@ export default function SupportTicketsBento() {
                   <button
                     type="button"
                     onClick={closeDetail}
-                    className="w-1/2 py-3 bg-gray-100 dark:bg-[#272730] hover:bg-gray-200 dark:hover:bg-[#2C2C36] text-gray-700 dark:text-gray-300 rounded-2xl text-xs font-bold cursor-pointer"
+                    className="w-1/2 py-3 bg-gray-100 dark:bg-[#272730] hover:bg-gray-200 dark:hover:bg-line-strong text-gray-700 dark:text-gray-300 rounded-2xl text-xs font-bold cursor-pointer"
                   >
                     Cerrar
                   </button>
@@ -382,7 +382,7 @@ export default function SupportTicketsBento() {
                     type="button"
                     onClick={handleSaveDetail}
                     disabled={savingDetail}
-                    className="w-1/2 py-3 bg-[#0A0A0A] hover:bg-[#202020] disabled:opacity-50 text-white rounded-2xl text-xs font-extrabold cursor-pointer shadow-md shadow-[#0A0A0A]/10"
+                    className="w-1/2 py-3 bg-solid hover:bg-solid-hover disabled:opacity-50 text-white rounded-2xl text-xs font-extrabold cursor-pointer shadow-md shadow-[#0A0A0A]/10"
                   >
                     {savingDetail ? 'Guardando...' : 'Guardar Cambios'}
                   </button>

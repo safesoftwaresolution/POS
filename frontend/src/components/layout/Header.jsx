@@ -139,7 +139,7 @@ export default function Header({ onToggleMobileMenu }) {
   };
 
   return (
-    <header className="bg-white dark:bg-[#0E0E12] flex justify-between items-center px-4 sm:px-8 py-4 h-20 w-full z-40 select-none border-b border-[#EAEAEA] dark:border-[#272730]">
+    <header className="bg-white dark:bg-[#0E0E12] flex justify-between items-center px-4 sm:px-8 py-4 h-20 w-full z-40 select-none border-b border-line">
 
       {/* Page Title & Subtitle */}
       <div className="flex items-center gap-4 min-w-0">
@@ -147,29 +147,29 @@ export default function Header({ onToggleMobileMenu }) {
           onClick={onToggleMobileMenu}
           className="lg:hidden p-2 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-[#272730] rounded-xl transition-colors cursor-pointer shrink-0"
         >
-          <Menu className="w-5 h-5 text-[#FF5520]" />
+          <Menu className="w-5 h-5 text-brand" />
         </button>
 
         <div className="min-w-0">
           <div className="flex items-center gap-2.5">
-            <h1 className="text-xl font-bold text-[#0A0A0A] dark:text-white tracking-tight truncate">
+            <h1 className="text-xl font-bold text-ink tracking-tight truncate">
               {pageInfo.title}
             </h1>
             {isOnPos && (
-              <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#FFF0EB] text-[#FF5520] border border-[#FFD5C8] shrink-0">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#FF5520]"></span>
+              <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#FFF0EB] text-brand border border-[#FFD5C8] shrink-0">
+                <span className="w-1.5 h-1.5 rounded-full bg-brand"></span>
                 Modo Rápido
               </span>
             )}
           </div>
-          <p className="text-xs text-gray-500 dark:text-gray-400 truncate hidden sm:block">{pageInfo.subtitle}</p>
+          <p className="text-xs text-ink-soft truncate hidden sm:block">{pageInfo.subtitle}</p>
         </div>
       </div>
 
       {/* Right Action Tools: Date, Dark/Light Mode, Bell, Terminal, Profile, + Nueva Venta */}
       <div className="flex items-center gap-2 sm:gap-3 shrink-0">
         {/* Current Date */}
-        <div className="hidden md:flex items-center gap-2 h-10 px-3.5 text-gray-600 dark:text-gray-300 bg-white dark:bg-[#17171B] border border-[#EAEAEA] dark:border-[#272730] rounded-xl text-xs font-semibold">
+        <div className="hidden md:flex items-center gap-2 h-10 px-3.5 text-gray-600 dark:text-gray-300 bg-card border border-line rounded-xl text-xs font-semibold">
           <Calendar className="w-4 h-4" />
           <span>{formatHeaderDate(new Date())}</span>
         </div>
@@ -177,13 +177,13 @@ export default function Header({ onToggleMobileMenu }) {
         {/* Dark / Light Mode Toggle Button */}
         <button
           onClick={toggleTheme}
-          className="group w-10 h-10 text-gray-600 dark:text-amber-400 bg-white dark:bg-[#17171B] border border-[#EAEAEA] dark:border-[#272730] hover:bg-[#F5F5F3] dark:hover:bg-[#272730] rounded-xl transition-all flex items-center justify-center cursor-pointer"
+          className="group w-10 h-10 text-gray-600 dark:text-amber-400 bg-card border border-line hover:bg-[#F5F5F3] dark:hover:bg-[#272730] rounded-xl transition-all flex items-center justify-center cursor-pointer"
           title={darkMode ? 'Cambiar a Modo Claro' : 'Cambiar a Modo Oscuro'}
         >
           {darkMode ? (
-            <Sun className="w-4.5 h-4.5 text-amber-400 fill-amber-400/20 group-hover:text-[#FF5520] group-hover:fill-[#FF5520]/20 transition-colors" />
+            <Sun className="w-4.5 h-4.5 text-amber-400 fill-amber-400/20 group-hover:text-brand group-hover:fill-brand/20 transition-colors" />
           ) : (
-            <Moon className="w-4.5 h-4.5 text-slate-700 group-hover:text-[#FF5520] transition-colors" />
+            <Moon className="w-4.5 h-4.5 text-slate-700 group-hover:text-brand transition-colors" />
           )}
         </button>
 
@@ -191,24 +191,24 @@ export default function Header({ onToggleMobileMenu }) {
         <div className="relative" ref={notifRef}>
           <button
             onClick={handleToggleNotifications}
-            className="group w-10 h-10 text-gray-600 dark:text-gray-300 bg-white dark:bg-[#17171B] border border-[#EAEAEA] dark:border-[#272730] hover:bg-[#F5F5F3] dark:hover:bg-[#272730] rounded-xl transition-all flex items-center justify-center relative cursor-pointer"
+            className="group w-10 h-10 text-gray-600 dark:text-gray-300 bg-card border border-line hover:bg-[#F5F5F3] dark:hover:bg-[#272730] rounded-xl transition-all flex items-center justify-center relative cursor-pointer"
           >
-            <Bell className="w-4.5 h-4.5 group-hover:text-[#FF5520] transition-colors" />
+            <Bell className="w-4.5 h-4.5 group-hover:text-brand transition-colors" />
             {unreadCount > 0 && (
-              <span className="absolute top-1.5 right-1.5 min-w-[16px] h-4 px-1 bg-[#FF5520] rounded-full border border-white dark:border-[#0E0E12] text-[9px] font-extrabold text-white flex items-center justify-center">
+              <span className="absolute top-1.5 right-1.5 min-w-[16px] h-4 px-1 bg-brand rounded-full border border-white dark:border-[#0E0E12] text-[9px] font-extrabold text-white flex items-center justify-center">
                 {unreadCount > 9 ? '9+' : unreadCount}
               </span>
             )}
           </button>
 
           {notifOpen && (
-            <div className="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto bg-white dark:bg-[#17171B] border border-[#EAEAEA] dark:border-[#272730] rounded-2xl shadow-xl z-50">
-              <div className="flex items-center justify-between px-4 py-3 border-b border-[#EAEAEA] dark:border-[#272730]">
-                <span className="font-extrabold text-xs text-[#0A0A0A] dark:text-white">Notificaciones</span>
+            <div className="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto bg-card border border-line rounded-2xl shadow-xl z-50">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-line">
+                <span className="font-extrabold text-xs text-ink">Notificaciones</span>
                 {notifications.some(n => !n.read) && (
                   <button
                     onClick={handleMarkAllRead}
-                    className="flex items-center gap-1 text-[10px] font-bold text-[#FF5520] dark:text-[#FF5520] hover:underline cursor-pointer"
+                    className="flex items-center gap-1 text-[10px] font-bold text-brand dark:text-brand hover:underline cursor-pointer"
                   >
                     <CheckCheck className="w-3.5 h-3.5" /> Marcar todas
                   </button>
@@ -216,7 +216,7 @@ export default function Header({ onToggleMobileMenu }) {
               </div>
 
               {notifications.length === 0 ? (
-                <div className="py-8 text-center text-xs font-semibold text-gray-400 dark:text-gray-500">
+                <div className="py-8 text-center text-xs font-semibold text-ink-muted">
                   No tienes notificaciones.
                 </div>
               ) : (
@@ -227,17 +227,17 @@ export default function Header({ onToggleMobileMenu }) {
                       <button
                         key={notif.id}
                         onClick={() => handleNotificationClick(notif)}
-                        className={`w-full text-left px-4 py-3 border-b border-[#EAEAEA] dark:border-[#272730] last:border-b-0 flex gap-3 hover:bg-gray-50 dark:hover:bg-white/5 cursor-pointer ${!notif.read ? 'bg-[#FF5520]/5 dark:bg-[#FF5520]/10' : ''}`}
+                        className={`w-full text-left px-4 py-3 border-b border-line last:border-b-0 flex gap-3 hover:bg-gray-50 dark:hover:bg-white/5 cursor-pointer ${!notif.read ? 'bg-brand/5 dark:bg-brand/10' : ''}`}
                       >
                         <div className="w-8 h-8 rounded-xl bg-gray-100 dark:bg-white/10 flex items-center justify-center shrink-0">
                           <Icon className="w-4 h-4 text-gray-500 dark:text-gray-300" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="text-xs font-bold text-[#0A0A0A] dark:text-white truncate">{notif.title}</p>
-                          <p className="text-[11px] text-gray-500 dark:text-gray-400 line-clamp-2">{notif.message}</p>
-                          <p className="text-[10px] text-gray-400 dark:text-gray-500 font-semibold mt-0.5">{formatRelativeTime(notif.createdAt)}</p>
+                          <p className="text-xs font-bold text-ink truncate">{notif.title}</p>
+                          <p className="text-[11px] text-ink-soft line-clamp-2">{notif.message}</p>
+                          <p className="text-[10px] text-ink-muted font-semibold mt-0.5">{formatRelativeTime(notif.createdAt)}</p>
                         </div>
-                        {!notif.read && <span className="w-2 h-2 rounded-full bg-[#0A0A0A] dark:bg-[#FF5520] shrink-0 mt-1.5" />}
+                        {!notif.read && <span className="w-2 h-2 rounded-full bg-solid dark:bg-brand shrink-0 mt-1.5" />}
                       </button>
                     );
                   })}
@@ -251,15 +251,15 @@ export default function Header({ onToggleMobileMenu }) {
         {!isOnPos && (
           <button
             onClick={() => navigate('/pos')}
-            className="flex items-center gap-1.5 bg-[#0A0A0A] hover:bg-[#202020] text-white font-bold text-xs rounded-xl px-4 py-2.5 transition-all shadow-md shadow-[#0A0A0A]/10 cursor-pointer"
+            className="flex items-center gap-1.5 bg-solid hover:bg-solid-hover text-white font-bold text-xs rounded-xl px-4 py-2.5 transition-all shadow-md shadow-[#0A0A0A]/10 cursor-pointer"
           >
-            <ShoppingBag className="w-4 h-4 text-[#FF5520]" />
+            <ShoppingBag className="w-4 h-4 text-brand" />
             <span className="hidden sm:inline">Nueva Venta</span>
           </button>
         )}
 
         {/* User Profile Avatar */}
-        <div className="w-10 h-10 rounded-full bg-[#0A0A0A] dark:bg-[#272730] text-white flex items-center justify-center font-bold text-xs shadow-sm border-2 border-white dark:border-[#2C2C36] cursor-pointer" title={user?.fullName || user?.username}>
+        <div className="w-10 h-10 rounded-full bg-solid dark:bg-[#272730] text-white flex items-center justify-center font-bold text-xs shadow-sm border-2 border-white dark:border-[#2C2C36] cursor-pointer" title={user?.fullName || user?.username}>
           {getInitials(user?.fullName || user?.username)}
         </div>
       </div>

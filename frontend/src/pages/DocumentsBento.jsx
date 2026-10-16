@@ -26,11 +26,11 @@ function DocumentCard({ type, latestDoc, uploading, onUpload }) {
         <div>
           <h3 className="font-extrabold text-sm text-[#17171B] dark:text-white">{DOC_TYPE_LABELS[type]}</h3>
           {latestDoc ? (
-            <p className="text-[10px] text-gray-400 dark:text-gray-500 font-semibold">
+            <p className="text-[10px] text-ink-muted font-semibold">
               Subido {new Date(latestDoc.uploadedAt).toLocaleDateString('es-CO')}
             </p>
           ) : (
-            <p className="text-[10px] text-gray-400 dark:text-gray-500 font-semibold">Aún no se ha subido</p>
+            <p className="text-[10px] text-ink-muted font-semibold">Aún no se ha subido</p>
           )}
         </div>
         {latestDoc && (
@@ -62,7 +62,7 @@ function DocumentCard({ type, latestDoc, uploading, onUpload }) {
           type="button"
           disabled={uploading}
           onClick={() => inputRef.current?.click()}
-          className="flex-1 py-2 bg-[#0A0A0A] hover:bg-[#202020] disabled:opacity-50 text-white rounded-2xl text-[11px] font-extrabold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm shadow-[#0A0A0A]/10"
+          className="flex-1 py-2 bg-solid hover:bg-solid-hover disabled:opacity-50 text-white rounded-2xl text-[11px] font-extrabold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm shadow-[#0A0A0A]/10"
         >
           <Upload className="w-3.5 h-3.5" /> {uploading ? 'Subiendo...' : latestDoc ? 'Reemplazar' : 'Subir'}
         </button>
@@ -121,10 +121,10 @@ export default function DocumentsBento() {
   return (
     <div className="space-y-6 max-w-4xl">
       <div>
-        <h1 className="text-2xl font-black text-[#0A0A0A] dark:text-[#F4F4F6] flex items-center gap-2">
-          <FileCheck2 className="w-6 h-6 text-[#FF5520] dark:text-[#FF5520]" /> Documentos Legales
+        <h1 className="text-2xl font-black text-ink flex items-center gap-2">
+          <FileCheck2 className="w-6 h-6 text-brand dark:text-brand" /> Documentos Legales
         </h1>
-        <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+        <p className="text-xs text-ink-soft font-medium">
           Sube los documentos de verificación de tu local. Nuestro equipo los revisará y los verás aprobados o rechazados aquí.
         </p>
       </div>
@@ -137,7 +137,7 @@ export default function DocumentsBento() {
       )}
 
       {loading ? (
-        <div className="py-12 text-center text-xs font-bold text-gray-400 dark:text-gray-500">
+        <div className="py-12 text-center text-xs font-bold text-ink-muted">
           Consultando documentos...
         </div>
       ) : (

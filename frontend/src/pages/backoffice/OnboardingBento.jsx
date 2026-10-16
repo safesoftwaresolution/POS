@@ -11,7 +11,7 @@ function MetricCard({ label, value, icon: Icon, accent }) {
       </div>
       <div className="min-w-0">
         <p className="text-lg font-black text-[#17171B] dark:text-white leading-tight tabular-nums">{value}</p>
-        <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 truncate">{label}</p>
+        <p className="text-[10px] font-bold text-ink-soft truncate">{label}</p>
       </div>
     </div>
   );
@@ -73,7 +73,7 @@ export default function OnboardingBento() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-black text-[#17171B] dark:text-white">Pendientes</h1>
-        <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Usuarios y locales del auto-registro a la espera de verificación o aprobación</p>
+        <p className="text-xs text-ink-soft font-medium">Usuarios y locales del auto-registro a la espera de verificación o aprobación</p>
       </div>
 
       {errorMsg && (
@@ -92,18 +92,18 @@ export default function OnboardingBento() {
 
       {/* Usuarios pendientes de verificar */}
       <div className="bento-card p-6 space-y-4">
-        <h2 className="text-sm font-black text-[#0A0A0A] dark:text-[#F4F4F6] flex items-center gap-2">
+        <h2 className="text-sm font-black text-ink flex items-center gap-2">
           <Users className="w-4 h-4 text-amber-500" /> Usuarios pendientes de verificar su correo
         </h2>
         {loading ? (
-          <div className="py-8 text-center text-xs font-bold text-gray-400 dark:text-gray-500">Cargando...</div>
+          <div className="py-8 text-center text-xs font-bold text-ink-muted">Cargando...</div>
         ) : pendingUsers.length === 0 ? (
-          <div className="py-8 text-center text-xs font-bold text-gray-400 dark:text-gray-500">No hay usuarios pendientes de verificar</div>
+          <div className="py-8 text-center text-xs font-bold text-ink-muted">No hay usuarios pendientes de verificar</div>
         ) : (
           <div className="overflow-x-auto -mx-2">
             <table className="w-full text-xs min-w-[560px]">
               <thead>
-                <tr className="text-left text-[10px] font-extrabold text-gray-400 dark:text-gray-500 uppercase">
+                <tr className="text-left text-[10px] font-extrabold text-ink-muted uppercase">
                   <th className="px-2 py-2">Nombre</th>
                   <th className="px-2 py-2">Usuario</th>
                   <th className="px-2 py-2">Correo</th>
@@ -111,12 +111,12 @@ export default function OnboardingBento() {
               </thead>
               <tbody>
                 {pendingUsers.map(u => (
-                  <tr key={u.id} className="border-t border-[#EAEAEA] dark:border-[#272730]">
-                    <td className="px-2 py-3 font-extrabold text-[#0A0A0A] dark:text-[#F4F4F6]">{u.fullName}</td>
-                    <td className="px-2 py-3 text-gray-500 dark:text-gray-400 font-semibold">{u.username}</td>
+                  <tr key={u.id} className="border-t border-line">
+                    <td className="px-2 py-3 font-extrabold text-ink">{u.fullName}</td>
+                    <td className="px-2 py-3 text-ink-soft font-semibold">{u.username}</td>
                     <td className="px-2 py-3">
                       <span className="flex items-center gap-1.5 font-semibold text-gray-600 dark:text-gray-300">
-                        <Mail className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" /> {u.email}
+                        <Mail className="w-3.5 h-3.5 text-ink-muted" /> {u.email}
                       </span>
                     </td>
                   </tr>
@@ -129,18 +129,18 @@ export default function OnboardingBento() {
 
       {/* Locales pendientes de aprobacion */}
       <div className="bento-card p-6 space-y-4">
-        <h2 className="text-sm font-black text-[#0A0A0A] dark:text-[#F4F4F6] flex items-center gap-2">
+        <h2 className="text-sm font-black text-ink flex items-center gap-2">
           <Store className="w-4 h-4 text-amber-500" /> Locales pendientes de aprobación
         </h2>
         {loading ? (
-          <div className="py-8 text-center text-xs font-bold text-gray-400 dark:text-gray-500">Cargando...</div>
+          <div className="py-8 text-center text-xs font-bold text-ink-muted">Cargando...</div>
         ) : pendingStores.length === 0 ? (
-          <div className="py-8 text-center text-xs font-bold text-gray-400 dark:text-gray-500">No hay locales pendientes</div>
+          <div className="py-8 text-center text-xs font-bold text-ink-muted">No hay locales pendientes</div>
         ) : (
           <div className="overflow-x-auto -mx-2">
             <table className="w-full text-xs min-w-[680px]">
               <thead>
-                <tr className="text-left text-[10px] font-extrabold text-gray-400 dark:text-gray-500 uppercase">
+                <tr className="text-left text-[10px] font-extrabold text-ink-muted uppercase">
                   <th className="px-2 py-2">Local</th>
                   <th className="px-2 py-2">Contacto</th>
                   <th className="px-2 py-2 text-right">Acciones</th>
@@ -148,20 +148,20 @@ export default function OnboardingBento() {
               </thead>
               <tbody>
                 {pendingStores.map(s => (
-                  <tr key={s.id} className="border-t border-[#EAEAEA] dark:border-[#272730]">
+                  <tr key={s.id} className="border-t border-line">
                     <td className="px-2 py-3">
-                      <p className="font-extrabold text-[#0A0A0A] dark:text-[#F4F4F6]">{s.name}</p>
-                      <p className="text-[10px] text-gray-400 dark:text-gray-500 font-mono">NIT: {s.taxId || '—'}</p>
+                      <p className="font-extrabold text-ink">{s.name}</p>
+                      <p className="text-[10px] text-ink-muted font-mono">NIT: {s.taxId || '—'}</p>
                     </td>
                     <td className="px-2 py-3">
                       <span className="flex items-center gap-1.5 font-semibold text-gray-600 dark:text-gray-300">
-                        <Mail className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" /> {s.email}
+                        <Mail className="w-3.5 h-3.5 text-ink-muted" /> {s.email}
                       </span>
                     </td>
                     <td className="px-2 py-3 text-right space-x-2">
                       <button
                         onClick={() => handleApprove(s)}
-                        className="px-3 py-1.5 bg-[#0A0A0A] hover:bg-[#202020] text-white rounded-xl text-[11px] font-bold inline-flex items-center gap-1 cursor-pointer shadow-sm shadow-[#0A0A0A]/10"
+                        className="px-3 py-1.5 bg-solid hover:bg-solid-hover text-white rounded-xl text-[11px] font-bold inline-flex items-center gap-1 cursor-pointer shadow-sm shadow-[#0A0A0A]/10"
                       >
                         <Check className="w-3.5 h-3.5" /> Aprobar
                       </button>
@@ -182,13 +182,13 @@ export default function OnboardingBento() {
 
       {rejectingStore && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bento-card bg-white dark:bg-[#17171B] p-6 rounded-3xl max-w-sm w-full space-y-4">
-            <h3 className="text-sm font-black text-[#0A0A0A] dark:text-[#F4F4F6]">Rechazar "{rejectingStore.name}"</h3>
+          <div className="bento-card bg-card p-6 rounded-3xl max-w-sm w-full space-y-4">
+            <h3 className="text-sm font-black text-ink">Rechazar "{rejectingStore.name}"</h3>
             <textarea
               value={rejectionReason}
               onChange={(e) => setRejectionReason(e.target.value)}
               placeholder="Motivo del rechazo..."
-              className="w-full p-3 bg-[#F7F7F5] dark:bg-[#0E0E12] border border-[#EAEAEA] dark:border-[#272730] rounded-2xl text-xs font-semibold text-[#0A0A0A] dark:text-[#F4F4F6] focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#FF5520]"
+              className="w-full p-3 bg-page border border-line rounded-2xl text-xs font-semibold text-ink focus:outline-none focus:border-ink dark:focus:border-brand"
               rows={3}
             />
             <div className="flex justify-end gap-2">

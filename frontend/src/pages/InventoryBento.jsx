@@ -111,8 +111,8 @@ export default function InventoryBento() {
       {/* Header banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-[#0A0A0A] dark:text-white">Inventario</h1>
-          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Stock, devoluciones y proveedores en un solo módulo de BentoPOS</p>
+          <h1 className="text-2xl font-black text-ink">Inventario</h1>
+          <p className="text-xs text-ink-soft font-medium">Stock, devoluciones y proveedores en un solo módulo de BentoPOS</p>
         </div>
 
         {activeTab === 'stock' && (
@@ -124,7 +124,7 @@ export default function InventoryBento() {
                 notify('Debes crear primero un producto en el catálogo.', { danger: false });
               }
             }}
-            className="px-4 py-2.5 bg-[#0A0A0A] hover:bg-[#202020] text-white rounded-2xl text-xs font-bold flex items-center gap-2 shadow-md shadow-[#0A0A0A]/10 cursor-pointer transition-all"
+            className="px-4 py-2.5 bg-solid hover:bg-solid-hover text-white rounded-2xl text-xs font-bold flex items-center gap-2 shadow-md shadow-[#0A0A0A]/10 cursor-pointer transition-all"
           >
             <Truck className="w-4 h-4" /> Registrar Compra (+Stock)
           </button>
@@ -141,8 +141,8 @@ export default function InventoryBento() {
               onClick={() => setActiveTab(tab.id)}
               className={`px-4 py-2 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
                 activeTab === tab.id
-                  ? 'bg-[#0A0A0A] text-white shadow-xs'
-                  : 'text-gray-500 dark:text-gray-400 hover:text-[#FF5520] dark:hover:text-[#FF5520]'
+                  ? 'bg-solid text-white shadow-xs'
+                  : 'text-ink-soft hover:text-brand dark:hover:text-brand'
               }`}
             >
               <Icon className="w-4 h-4" /> {tab.label}
@@ -158,14 +158,14 @@ export default function InventoryBento() {
       <>
       {/* Bento Stats Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        <div className="bento-card p-6 flex items-center justify-between bg-white dark:bg-[#17171B] border-[#EAEAEA] dark:border-[#272730]">
+        <div className="bento-card p-6 flex items-center justify-between bg-card border-line">
           <div>
-            <span className="text-xs font-extrabold uppercase text-gray-400 dark:text-gray-500">Total Referencias</span>
-            <h3 className="text-2xl font-black text-[#0A0A0A] dark:text-white mt-1 tabular-nums">{productsList.length} ítems</h3>
-            <span className="text-[11px] text-[#FF5520] dark:text-[#FF5520] font-bold">Monitoreo Activo</span>
+            <span className="text-xs font-extrabold uppercase text-ink-muted">Total Referencias</span>
+            <h3 className="text-2xl font-black text-ink mt-1 tabular-nums">{productsList.length} ítems</h3>
+            <span className="text-[11px] text-brand dark:text-brand font-bold">Monitoreo Activo</span>
           </div>
-          <div className="p-3 bg-[#FF5520]/10 dark:bg-[#FF5520]/20 text-[#FF5520] dark:text-[#FF5520] rounded-2xl border border-[#FF5520]/25">
-            <Package className="w-6 h-6 text-[#FF5520] dark:text-[#FF5520]" />
+          <div className="p-3 bg-brand/10 dark:bg-brand/20 text-brand dark:text-brand rounded-2xl border border-brand/25">
+            <Package className="w-6 h-6 text-brand dark:text-brand" />
           </div>
         </div>
 
@@ -191,52 +191,52 @@ export default function InventoryBento() {
           </div>
         </div>
 
-        <div className="bento-card p-6 flex items-center justify-between bg-white dark:bg-[#17171B] border-[#EAEAEA] dark:border-[#272730]">
+        <div className="bento-card p-6 flex items-center justify-between bg-card border-line">
           <div>
-            <span className="text-xs font-extrabold uppercase text-gray-400 dark:text-gray-500">Valorizado Inventario</span>
-            <h3 className="text-2xl font-black text-[#0A0A0A] dark:text-white mt-1 tabular-nums">
+            <span className="text-xs font-extrabold uppercase text-ink-muted">Valorizado Inventario</span>
+            <h3 className="text-2xl font-black text-ink mt-1 tabular-nums">
               ${productsList.reduce((acc, p) => acc + ((p.salePrice || p.price || 0) * (p.quantityAvailable ?? p.stock ?? 0)), 0).toLocaleString('es-CO')}
             </h3>
-            <span className="text-[11px] text-gray-500 dark:text-gray-400 font-bold">Moneda Local (COP)</span>
+            <span className="text-[11px] text-ink-soft font-bold">Moneda Local (COP)</span>
           </div>
-          <div className="p-3 bg-[#FF5520]/10 dark:bg-[#FF5520]/20 text-[#FF5520] dark:text-[#FF5520] rounded-2xl border border-[#FF5520]/25">
-            <ArrowUpRight className="w-6 h-6 text-[#FF5520] dark:text-[#FF5520]" />
+          <div className="p-3 bg-brand/10 dark:bg-brand/20 text-brand dark:text-brand rounded-2xl border border-brand/25">
+            <ArrowUpRight className="w-6 h-6 text-brand dark:text-brand" />
           </div>
         </div>
       </div>
 
       {/* Main Table Card */}
-      <div className="bento-card p-6 space-y-4 bg-white dark:bg-[#17171B] border-[#EAEAEA] dark:border-[#272730]">
+      <div className="bento-card p-6 space-y-4 bg-card border-line">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="relative w-full sm:w-72">
-            <Search className="w-4 h-4 text-gray-400 dark:text-gray-500 absolute left-3.5 top-2.5" />
+            <Search className="w-4 h-4 text-ink-muted absolute left-3.5 top-2.5" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Buscar producto o código..."
-              className="w-full pl-10 pr-3 py-1.5 bg-[#F7F7F5] dark:bg-[#0E0E12] border border-[#EAEAEA] dark:border-[#272730] rounded-2xl text-xs font-semibold text-[#0A0A0A] dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-[#0A0A0A]"
+              className="w-full pl-10 pr-3 py-1.5 bg-page border border-line rounded-2xl text-xs font-semibold text-ink placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-ink"
             />
           </div>
-          <button onClick={loadInventory} className="text-xs font-bold text-[#FF5520] dark:text-[#FF5520] flex items-center gap-1 hover:underline cursor-pointer">
+          <button onClick={loadInventory} className="text-xs font-bold text-brand dark:text-brand flex items-center gap-1 hover:underline cursor-pointer">
             <RefreshCw className="w-3.5 h-3.5" /> Actualizar Kardex
           </button>
         </div>
 
         {loading ? (
-          <div className="py-12 text-center text-xs font-bold text-gray-400 dark:text-gray-500">
+          <div className="py-12 text-center text-xs font-bold text-ink-muted">
             Cargando niveles de stock...
           </div>
         ) : filtered.length === 0 ? (
           <div className="py-10 text-center space-y-2 bg-gray-50/50 dark:bg-white/5 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700">
             <p className="text-xs font-bold text-gray-600 dark:text-gray-300">No hay productos en inventario</p>
-            <p className="text-[11px] text-gray-400 dark:text-gray-500">Crea productos desde el catálogo para visualizar las existencias en tiempo real</p>
+            <p className="text-[11px] text-ink-muted">Crea productos desde el catálogo para visualizar las existencias en tiempo real</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead>
-                <tr className="border-b border-gray-200 dark:border-gray-800 text-gray-400 dark:text-gray-500 uppercase tracking-wider font-extrabold text-[10px]">
+                <tr className="border-b border-gray-200 dark:border-gray-800 text-ink-muted uppercase tracking-wider font-extrabold text-[10px]">
                   <th className="py-3 px-3">Código</th>
                   <th className="py-3 px-3">Producto</th>
                   <th className="py-3 px-3 text-right">Precio Venta</th>
@@ -252,15 +252,15 @@ export default function InventoryBento() {
                   const isLow = stockVal <= (item.minStock || 5);
                   return (
                     <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
-                      <td className="py-3 px-3 font-mono font-bold text-gray-500 dark:text-gray-400">{item.internalCode}</td>
-                      <td className="py-3 px-3 font-bold text-[#0A0A0A] dark:text-white">{item.name}</td>
-                      <td className="py-3 px-3 text-right font-extrabold text-[#0A0A0A] dark:text-white tabular-nums">
+                      <td className="py-3 px-3 font-mono font-bold text-ink-soft">{item.internalCode}</td>
+                      <td className="py-3 px-3 font-bold text-ink">{item.name}</td>
+                      <td className="py-3 px-3 text-right font-extrabold text-ink tabular-nums">
                         ${(item.salePrice || item.price || 0).toLocaleString('es-CO')}
                       </td>
-                      <td className="py-3 px-3 text-center font-black text-sm tabular-nums text-[#0A0A0A] dark:text-white">
+                      <td className="py-3 px-3 text-center font-black text-sm tabular-nums text-ink">
                         {stockVal}
                       </td>
-                      <td className="py-3 px-3 text-center font-semibold text-gray-400 dark:text-gray-500 tabular-nums">
+                      <td className="py-3 px-3 text-center font-semibold text-ink-muted tabular-nums">
                         {item.minStock || 5}
                       </td>
                       <td className="py-3 px-3 text-center">
@@ -275,13 +275,13 @@ export default function InventoryBento() {
                           <button
                             onClick={() => setBarcodeProduct(item)}
                             title="Ver código de barras"
-                            className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-[#FF5520] dark:hover:text-[#FF5520] rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer"
+                            className="p-1.5 text-ink-muted hover:text-brand dark:hover:text-brand rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer"
                           >
                             <Barcode className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => openPurchaseModal(item)}
-                            className="px-2.5 py-1 bg-[#FF5520]/10 dark:bg-[#FF5520]/20 hover:bg-[#0A0A0A] hover:text-white text-[#FF5520] dark:text-[#FF5520] rounded-xl text-[11px] font-bold transition-all cursor-pointer"
+                            className="px-2.5 py-1 bg-brand/10 dark:bg-brand/20 hover:bg-solid hover:text-white text-brand dark:text-brand rounded-xl text-[11px] font-bold transition-all cursor-pointer"
                           >
                             + Cargar Stock
                           </button>
@@ -299,9 +299,9 @@ export default function InventoryBento() {
       {/* Stock Increase Modal */}
       {showPurchaseModal && selectedProduct && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <form onSubmit={handleStockIncrease} className="bento-card max-w-sm w-full bg-white dark:bg-[#17171B] p-6 rounded-3xl shadow-2xl space-y-4 border border-gray-200 dark:border-[#272730]">
-            <h3 className="font-extrabold text-base text-[#0A0A0A] dark:text-white">Registrar Compra / Carga de Stock</h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Producto: <span className="font-bold text-[#FF5520] dark:text-[#FF5520]">{selectedProduct.name}</span></p>
+          <form onSubmit={handleStockIncrease} className="bento-card max-w-sm w-full bg-card p-6 rounded-3xl shadow-2xl space-y-4 border border-line">
+            <h3 className="font-extrabold text-base text-ink">Registrar Compra / Carga de Stock</h3>
+            <p className="text-xs text-ink-soft font-medium">Producto: <span className="font-bold text-brand dark:text-brand">{selectedProduct.name}</span></p>
 
             {suppliers.length === 0 && (
               <div className="p-3 bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30 rounded-xl text-xs font-bold flex items-center gap-2">
@@ -324,7 +324,7 @@ export default function InventoryBento() {
               <select
                 value={selectedSupplierId}
                 onChange={(e) => setSelectedSupplierId(e.target.value)}
-                className="w-full p-2.5 bg-[#F7F7F5] dark:bg-[#0E0E12] border border-gray-300 dark:border-[#272730] rounded-2xl text-sm font-bold text-[#0A0A0A] dark:text-white focus:outline-none focus:border-[#0A0A0A]"
+                className="w-full p-2.5 bg-page border border-gray-300 dark:border-line rounded-2xl text-sm font-bold text-ink focus:outline-none focus:border-ink"
                 required
                 disabled={suppliers.length === 0}
               >
@@ -342,7 +342,7 @@ export default function InventoryBento() {
                 value={increaseAmount}
                 onChange={(e) => setIncreaseAmount(e.target.value)}
                 placeholder="Ej. 10, 25, 50..."
-                className="w-full p-2.5 bg-[#F7F7F5] dark:bg-[#0E0E12] border border-gray-300 dark:border-[#272730] rounded-2xl text-sm font-bold text-[#0A0A0A] dark:text-white focus:outline-none focus:border-[#0A0A0A]"
+                className="w-full p-2.5 bg-page border border-gray-300 dark:border-line rounded-2xl text-sm font-bold text-ink focus:outline-none focus:border-ink"
                 required
                 min="1"
               />
@@ -352,14 +352,14 @@ export default function InventoryBento() {
               <button
                 type="button"
                 onClick={() => setShowPurchaseModal(false)}
-                className="w-1/2 py-2.5 bg-gray-100 dark:bg-[#272730] hover:bg-gray-200 dark:hover:bg-[#2C2C36] text-gray-700 dark:text-gray-300 rounded-2xl text-xs font-bold cursor-pointer"
+                className="w-1/2 py-2.5 bg-gray-100 dark:bg-[#272730] hover:bg-gray-200 dark:hover:bg-line-strong text-gray-700 dark:text-gray-300 rounded-2xl text-xs font-bold cursor-pointer"
               >
                 Cancelar
               </button>
               <button
                 type="submit"
                 disabled={suppliers.length === 0}
-                className="w-1/2 py-2.5 bg-[#0A0A0A] hover:bg-[#202020] disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-2xl text-xs font-extrabold shadow-md shadow-[#0A0A0A]/10 cursor-pointer"
+                className="w-1/2 py-2.5 bg-solid hover:bg-solid-hover disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-2xl text-xs font-extrabold shadow-md shadow-[#0A0A0A]/10 cursor-pointer"
               >
                 Registrar Compra
               </button>

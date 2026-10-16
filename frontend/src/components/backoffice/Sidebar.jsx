@@ -73,21 +73,21 @@ export default function BackofficeSidebar({ isOpen, onClose, isCollapsed, onTogg
       )}
 
       <aside
-        className={`fixed top-0 left-0 h-screen bg-white dark:bg-[#17171B] text-[#0A0A0A] dark:text-[#F4F4F6] z-50 flex flex-col py-6 border-r border-[#EAEAEA] dark:border-[#272730] shadow-xs select-none transition-all duration-300 ${
+        className={`fixed top-0 left-0 h-screen bg-card text-ink z-50 flex flex-col py-6 border-r border-line shadow-xs select-none transition-all duration-300 ${
           isCollapsed ? 'lg:w-20' : 'lg:w-64'
         } ${
           isOpen ? 'translate-x-0 w-64' : '-translate-x-full lg:translate-x-0'
         }`}
       >
-        <div className={`shrink-0 flex items-center gap-3 w-full pb-4 border-b border-[#EAEAEA] dark:border-[#272730] ${
+        <div className={`shrink-0 flex items-center gap-3 w-full pb-4 border-b border-line ${
           isCollapsed ? 'px-3 justify-center' : 'px-5 justify-between'
         }`}>
           <div className="flex items-center gap-3 min-w-0">
             <BentoIcon />
             {(!isCollapsed || isOpen) && (
               <div className="truncate">
-                <h1 className="font-black text-lg leading-tight tracking-tight text-[#0A0A0A] dark:text-white truncate flex items-center gap-1">
-                  <span>Bento</span><span className="text-[#FF5520]">POS</span>
+                <h1 className="font-black text-lg leading-tight tracking-tight text-ink truncate flex items-center gap-1">
+                  <span>Bento</span><span className="text-brand">POS</span>
                 </h1>
                 <p className="text-[10px] text-gray-400 font-semibold tracking-wide">Backoffice SaaS</p>
               </div>
@@ -99,7 +99,7 @@ export default function BackofficeSidebar({ isOpen, onClose, isCollapsed, onTogg
           {navGroups.map((group, groupIdx) => (
             <div key={group.title} className="flex flex-col gap-1.5 w-full">
               {(!isCollapsed || isOpen) ? (
-                <p className="px-3.5 text-[10px] font-extrabold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                <p className="px-3.5 text-[10px] font-extrabold uppercase tracking-wider text-ink-muted">
                   {group.title}
                 </p>
               ) : (
@@ -117,8 +117,8 @@ export default function BackofficeSidebar({ isOpen, onClose, isCollapsed, onTogg
                     className={({ isActive }) =>
                       `rounded-2xl flex items-center transition-all duration-200 cursor-pointer ${
                         isActive
-                          ? 'bg-[#0A0A0A] text-white shadow-md shadow-[#0A0A0A]/10 font-bold'
-                          : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#272730] hover:text-[#FF5520] dark:hover:text-[#FF5520]'
+                          ? 'bg-solid text-white shadow-md shadow-[#0A0A0A]/10 font-bold'
+                          : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#272730] hover:text-brand dark:hover:text-brand'
                       } ${
                         isCollapsed && !isOpen
                           ? 'w-11 h-11 justify-center mx-auto'
@@ -128,7 +128,7 @@ export default function BackofficeSidebar({ isOpen, onClose, isCollapsed, onTogg
                   >
                     {({ isActive }) => (
                       <>
-                        <Icon className={`w-5 h-5 shrink-0 ${isActive ? 'text-[#FF5520]' : ''}`} />
+                        <Icon className={`w-5 h-5 shrink-0 ${isActive ? 'text-brand' : ''}`} />
                         {(!isCollapsed || isOpen) && <span className="truncate">{item.label}</span>}
                       </>
                     )}
@@ -139,32 +139,32 @@ export default function BackofficeSidebar({ isOpen, onClose, isCollapsed, onTogg
           ))}
         </nav>
 
-        <div className="shrink-0 flex flex-col gap-2 w-full px-3 pt-3 border-t border-[#EAEAEA] dark:border-[#272730]">
+        <div className="shrink-0 flex flex-col gap-2 w-full px-3 pt-3 border-t border-line">
           {/* User Card */}
           <div className={`flex items-center gap-2.5 p-2.5 rounded-xl ${isCollapsed && !isOpen ? 'justify-center' : ''}`}>
-            <div className="w-9 h-9 rounded-full bg-[#0A0A0A] text-white flex items-center justify-center font-bold text-xs shrink-0 ring-1 ring-[#EAEAEA] dark:ring-[#272730]">
+            <div className="w-9 h-9 rounded-full bg-solid text-white flex items-center justify-center font-bold text-xs shrink-0 ring-1 ring-[#EAEAEA] dark:ring-[#272730]">
               {getInitials(user?.fullName || user?.username)}
             </div>
             {(!isCollapsed || isOpen) && (
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-bold text-[#0A0A0A] dark:text-white truncate">{user?.fullName || user?.username}</p>
-                <p className="text-[11px] text-gray-400 dark:text-gray-500 truncate">Super Admin</p>
+                <p className="text-xs font-bold text-ink truncate">{user?.fullName || user?.username}</p>
+                <p className="text-[11px] text-ink-muted truncate">Super Admin</p>
               </div>
             )}
           </div>
 
           <button
             onClick={onToggleCollapse}
-            className={`hidden lg:flex items-center gap-3 p-2.5 rounded-2xl text-xs font-bold text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#272730] transition-colors cursor-pointer ${
+            className={`hidden lg:flex items-center gap-3 p-2.5 rounded-2xl text-xs font-bold text-ink-soft hover:bg-gray-100 dark:hover:bg-[#272730] transition-colors cursor-pointer ${
               isCollapsed ? 'justify-center' : 'px-3'
             }`}
             title={isCollapsed ? 'Expandir Menú' : 'Contraer Menú'}
           >
             {isCollapsed ? (
-              <ChevronRight className="w-5 h-5 text-[#FF5520] dark:text-[#FF5520]" />
+              <ChevronRight className="w-5 h-5 text-brand dark:text-brand" />
             ) : (
               <>
-                <ChevronLeft className="w-5 h-5 text-[#FF5520] dark:text-[#FF5520]" />
+                <ChevronLeft className="w-5 h-5 text-brand dark:text-brand" />
                 <span>Contraer Menú</span>
               </>
             )}

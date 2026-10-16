@@ -2,6 +2,24 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Tokens semánticos (DESIGN.md §2). Los valores viven en :root / html.dark, así que
+   las utilidades `bg-card`, `border-line`, `text-ink`... cambian solas con el tema y no
+   hace falta repetir `dark:` en cada componente. */
+@theme inline {
+  --color-page: var(--bg-page);
+  --color-card: var(--bg-card);
+  --color-line: var(--border-card);
+  --color-line-strong: var(--border-strong);
+  --color-ink: var(--text-primary);
+  --color-ink-soft: var(--text-secondary);
+  --color-ink-muted: var(--text-muted);
+  --color-brand: var(--color-primary);
+  --color-brand-hover: var(--color-primary-hover);
+  --color-solid: var(--solid);
+  --color-solid-hover: var(--solid-hover);
+  --color-solid-ink: var(--solid-text);
+}
+
 @layer base {
   :root {
     --bg-page: #F7F7F5;
@@ -10,6 +28,10 @@
     --text-primary: #0A0A0A;
     --text-secondary: #7A7A7A;
     --text-muted: #A0A0A0;
+    --border-strong: #D0D0CE;
+    --solid: #0A0A0A;
+    --solid-hover: #202020;
+    --solid-text: #FFFFFF;
     --color-primary: #FF5520;
     --color-primary-hover: #E64712;
   }
@@ -21,6 +43,10 @@
     --text-primary: #F4F4F6;
     --text-secondary: #A0A0AB;
     --text-muted: #787885;
+    --border-strong: #2C2C36;
+    --solid: #262630;
+    --solid-hover: #31313E;
+    --solid-text: #FFFFFF;
     --color-primary: #FF5520;
     --color-primary-hover: #E64712;
   }
@@ -91,17 +117,6 @@
   html.dark .bento-card:hover {
     border-color: #2C2C36;
     box-shadow: 0 8px 32px rgba(0,0,0,0.6);
-  }
-
-  /* Near-black solid surfaces (buttons, active nav/tabs) read as too-flat against
-     the dark background, so dark mode lifts them to an elevated charcoal instead
-     of inverting to white — mirrors how a pure-black button would vanish on a
-     near-black page. */
-  html.dark .bg-\[\#0A0A0A\] {
-    background-color: #262630 !important;
-  }
-  html.dark .hover\:bg-\[\#202020\]:hover {
-    background-color: #31313E !important;
   }
 }
 

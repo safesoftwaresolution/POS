@@ -44,7 +44,7 @@ export default function VerifyEmailBento() {
 
         {status === 'verifying' && (
           <div className="space-y-3">
-            <Loader2 className="w-8 h-8 text-[#FF5520] mx-auto animate-spin" />
+            <Loader2 className="w-8 h-8 text-brand mx-auto animate-spin" />
             <p className="text-sm font-bold text-white">Verificando tu correo...</p>
           </div>
         )}
@@ -65,7 +65,7 @@ export default function VerifyEmailBento() {
             <button
               type="button"
               onClick={() => navigate('/login')}
-              className="text-xs font-extrabold text-[#FF5520] hover:text-[#FF5520] hover:underline cursor-pointer transition-colors"
+              className="text-xs font-extrabold text-brand hover:text-brand hover:underline cursor-pointer transition-colors"
             >
               Volver a iniciar sesión
             </button>

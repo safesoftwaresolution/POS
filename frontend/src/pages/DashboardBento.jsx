@@ -76,10 +76,10 @@ export default function DashboardBento() {
       {/* Top Welcome Title Row */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mb-2">
         <div>
-          <h1 className="text-2xl sm:text-4xl font-light text-[#0A0A0A] dark:text-white tracking-tight">
-            Bienvenido, <span className="font-extrabold text-[#FF5520] dark:text-[#FF5520]">{user?.fullName || user?.username || 'Usuario'}</span>
+          <h1 className="text-2xl sm:text-4xl font-light text-ink tracking-tight">
+            Bienvenido, <span className="font-extrabold text-brand dark:text-brand">{user?.fullName || user?.username || 'Usuario'}</span>
           </h1>
-          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mt-1">
+          <p className="text-xs text-ink-soft font-medium mt-1">
             Panel de control BentoPOS con la información actualizada de tu negocio
           </p>
         </div>
@@ -87,13 +87,13 @@ export default function DashboardBento() {
         <div className="flex items-center gap-3">
           <button 
             onClick={loadData}
-            className="p-2 text-gray-500 hover:text-[#FF5520] dark:hover:text-[#FF5520] bg-white dark:bg-[#17171B] border border-[#EAEAEA] dark:border-[#272730] rounded-full transition-colors cursor-pointer"
+            className="p-2 text-gray-500 hover:text-brand dark:hover:text-brand bg-card border border-line rounded-full transition-colors cursor-pointer"
             title="Recargar Datos"
           >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-[#FF5520]' : ''}`} />
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-brand' : ''}`} />
           </button>
-          <div className="bg-white dark:bg-[#17171B] border border-[#EAEAEA] dark:border-[#272730] rounded-full px-4 py-2 flex items-center gap-2 shadow-xs text-xs font-semibold text-[#0A0A0A] dark:text-white">
-            <Calendar className="w-4 h-4 text-[#FF5520] dark:text-[#FF5520]" />
+          <div className="bg-card border border-line rounded-full px-4 py-2 flex items-center gap-2 shadow-xs text-xs font-semibold text-ink">
+            <Calendar className="w-4 h-4 text-brand dark:text-brand" />
             <span>{todayFormatted}</span>
           </div>
         </div>
@@ -104,23 +104,23 @@ export default function DashboardBento() {
         {/* KPI 1 - Ventas Reales */}
         <div
           onClick={() => navigate('/pos')}
-          className="bento-card p-6 flex flex-col justify-between cursor-pointer hover:border-[#D0D0CE] dark:hover:border-[#2C2C36] transition-all"
+          className="bento-card p-6 flex flex-col justify-between cursor-pointer hover:border-line-strong  transition-all"
         >
           <div className="flex justify-between items-start">
             <h3 className="text-xs font-semibold text-[#7A7A7A] uppercase tracking-wider">Ventas Totales</h3>
-            <div className="w-7 h-7 rounded-full border border-[#EAEAEA] dark:border-[#272730] flex items-center justify-center text-[#7A7A7A]">
+            <div className="w-7 h-7 rounded-full border border-line flex items-center justify-center text-[#7A7A7A]">
               <ArrowUpRight className="w-4 h-4" />
             </div>
           </div>
 
           <div className="mt-2">
-            <div className="text-2xl font-black tracking-tight tabular-nums text-[#0A0A0A] dark:text-white">
+            <div className="text-2xl font-black tracking-tight tabular-nums text-ink">
               $ {totalSalesAmount.toLocaleString('es-CO')}
             </div>
             <span className="text-[11px] text-[#7A7A7A] mt-1 block">Ticket Promedio: ${averageTicket}</span>
           </div>
 
-          <span className="inline-flex items-center gap-1 self-start text-[11px] font-bold px-2 py-0.5 rounded-full bg-[#FFF0EB] text-[#FF5520] border border-[#FFD5C8] mt-3">
+          <span className="inline-flex items-center gap-1 self-start text-[11px] font-bold px-2 py-0.5 rounded-full bg-[#FFF0EB] text-brand border border-[#FFD5C8] mt-3">
             <ArrowUp className="w-3 h-3" /> {sales.length} ventas
           </span>
         </div>
@@ -128,16 +128,16 @@ export default function DashboardBento() {
         {/* KPI 2 - Transacciones */}
         <div
           onClick={() => navigate('/pos')}
-          className="bento-card p-6 flex flex-col justify-between cursor-pointer hover:border-[#D0D0CE] dark:hover:border-[#2C2C36] transition-all"
+          className="bento-card p-6 flex flex-col justify-between cursor-pointer hover:border-line-strong  transition-all"
         >
           <div className="flex justify-between items-start">
             <h3 className="text-xs font-semibold text-[#7A7A7A] uppercase tracking-wider">Transacciones</h3>
-            <div className="w-7 h-7 rounded-full border border-[#EAEAEA] dark:border-[#272730] flex items-center justify-center text-[#7A7A7A]">
+            <div className="w-7 h-7 rounded-full border border-line flex items-center justify-center text-[#7A7A7A]">
               <Receipt className="w-4 h-4" />
             </div>
           </div>
           <div className="mt-2">
-            <div className="text-2xl font-black tracking-tight tabular-nums text-[#0A0A0A] dark:text-white">
+            <div className="text-2xl font-black tracking-tight tabular-nums text-ink">
               {sales.length}
             </div>
             <span className="text-[11px] text-[#7A7A7A] mt-1 block">Ventas procesadas en total</span>
@@ -147,16 +147,16 @@ export default function DashboardBento() {
         {/* KPI 3 - Productos bajo mínimo */}
         <div
           onClick={() => navigate('/inventory')}
-          className="bento-card p-6 flex flex-col justify-between cursor-pointer hover:border-[#D0D0CE] dark:hover:border-[#2C2C36] transition-all"
+          className="bento-card p-6 flex flex-col justify-between cursor-pointer hover:border-line-strong  transition-all"
         >
           <div className="flex justify-between items-start">
             <h3 className="text-xs font-semibold text-[#7A7A7A] uppercase tracking-wider">Bajo mínimo</h3>
-            <div className="w-7 h-7 rounded-full border border-[#EAEAEA] dark:border-[#272730] flex items-center justify-center text-[#7A7A7A]">
+            <div className="w-7 h-7 rounded-full border border-line flex items-center justify-center text-[#7A7A7A]">
               <Package className="w-4 h-4" />
             </div>
           </div>
           <div className="mt-2">
-            <div className="text-2xl font-black tracking-tight tabular-nums text-[#0A0A0A] dark:text-white">
+            <div className="text-2xl font-black tracking-tight tabular-nums text-ink">
               {lowStockProducts.length}
             </div>
             <span className={`text-[11px] mt-1 block font-bold ${lowStockProducts.length > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
@@ -168,19 +168,19 @@ export default function DashboardBento() {
         {/* KPI 4 - Facturas DIAN */}
         <div
           onClick={() => navigate('/invoicing')}
-          className="bento-card p-6 flex flex-col justify-between cursor-pointer hover:border-[#D0D0CE] dark:hover:border-[#2C2C36] transition-all"
+          className="bento-card p-6 flex flex-col justify-between cursor-pointer hover:border-line-strong  transition-all"
         >
           <div className="flex justify-between items-start">
             <h3 className="text-xs font-semibold text-[#7A7A7A] uppercase tracking-wider">Facturas DIAN</h3>
-            <div className="w-7 h-7 rounded-full border border-[#EAEAEA] dark:border-[#272730] flex items-center justify-center text-[#7A7A7A]">
+            <div className="w-7 h-7 rounded-full border border-line flex items-center justify-center text-[#7A7A7A]">
               <FileText className="w-4 h-4" />
             </div>
           </div>
           <div className="mt-2">
-            <div className="text-2xl font-black tracking-tight tabular-nums text-[#0A0A0A] dark:text-white">
+            <div className="text-2xl font-black tracking-tight tabular-nums text-ink">
               {dianInvoicesCount}
             </div>
-            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-gray-500 dark:text-gray-400 mt-1">
+            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-ink-soft mt-1">
               ✓ Registradas
             </span>
           </div>
@@ -196,19 +196,19 @@ export default function DashboardBento() {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h4 className="text-sm font-bold text-[#0A0A0A] dark:text-white">Bajo stock</h4>
+                <h4 className="text-sm font-bold text-ink">Bajo stock</h4>
                 <span className="text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400">
                   Atención
                 </span>
               </div>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+              <p className="text-xs text-ink-soft mt-0.5">
                 {lowStockProducts.length} {lowStockProducts.length === 1 ? 'producto está' : 'productos están'} por debajo del mínimo. Reabastécelos para no perder ventas.
               </p>
             </div>
           </div>
           <button
             onClick={() => navigate('/inventory')}
-            className="h-10 px-4 rounded-xl bg-[#0A0A0A] hover:bg-[#202020] text-white text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 shrink-0"
+            className="h-10 px-4 rounded-xl bg-solid hover:bg-solid-hover text-white text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 shrink-0"
           >
             <span>Ver inventario</span>
             <ChevronRight className="w-3.5 h-3.5" />
@@ -220,19 +220,19 @@ export default function DashboardBento() {
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6 auto-rows-min">
 
         {/* Chart (Col-span-8) - Ventas Últimos 7 Días */}
-        <div className="md:col-span-12 lg:col-span-8 bento-card p-6 flex flex-col justify-between bg-white dark:bg-[#17171B] rounded-3xl border border-[#EAEAEA] dark:border-[#272730] shadow-xs">
+        <div className="md:col-span-12 lg:col-span-8 bento-card p-6 flex flex-col justify-between bg-card rounded-3xl border border-line shadow-xs">
           <div className="flex justify-between items-center mb-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-[#FF5520]/10 dark:bg-[#FF5520]/20 flex items-center justify-center text-[#FF5520] dark:text-[#FF5520]">
+              <div className="w-10 h-10 rounded-full bg-brand/10 dark:bg-brand/20 flex items-center justify-center text-brand dark:text-brand">
                 <BarChart3 className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-[#0A0A0A] dark:text-white">Ventas Últimos 7 Días</h3>
-                <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium">Calculado dinámicamente con tus transacciones</p>
+                <h3 className="text-lg font-bold text-ink">Ventas Últimos 7 Días</h3>
+                <p className="text-[11px] text-ink-soft font-medium">Calculado dinámicamente con tus transacciones</p>
               </div>
             </div>
             <div className="flex bg-gray-100 dark:bg-[#272730] rounded-full p-1 border border-gray-200 dark:border-gray-700">
-              <button className="px-3.5 py-1 text-xs font-semibold bg-[#0A0A0A] text-white rounded-full shadow-xs cursor-pointer">
+              <button className="px-3.5 py-1 text-xs font-semibold bg-solid text-white rounded-full shadow-xs cursor-pointer">
                 Semanal
               </button>
             </div>
@@ -251,7 +251,7 @@ export default function DashboardBento() {
               return (
                 <div key={day} className="flex-1 flex flex-col items-center gap-2 h-full justify-end relative group">
                   {isBest && (
-                    <span className="absolute -top-3 bg-[#0A0A0A] text-white text-[9px] font-extrabold px-1.5 py-0.5 rounded-full shadow-xs">
+                    <span className="absolute -top-3 bg-solid text-white text-[9px] font-extrabold px-1.5 py-0.5 rounded-full shadow-xs">
                       PICO
                     </span>
                   )}
@@ -259,12 +259,12 @@ export default function DashboardBento() {
                     style={{ height: `${heightPercent}%` }}
                     className={`w-full rounded-t-xl transition-all duration-500 ${
                       isBest 
-                        ? 'bg-[#0A0A0A] shadow-sm' 
-                        : 'bg-[#FFF0EB] dark:bg-[#FF5520]/30 group-hover:bg-[#0A0A0A] dark:group-hover:bg-[#FF5520]'
+                        ? 'bg-solid shadow-sm' 
+                        : 'bg-[#FFF0EB] dark:bg-brand/30 group-hover:bg-solid dark:group-hover:bg-brand'
                     }`}
                   ></div>
                   <span className={`text-[11px] font-bold uppercase ${
-                    isBest ? 'text-[#FF5520] dark:text-[#FF5520]' : 'text-gray-500 dark:text-gray-400'
+                    isBest ? 'text-brand dark:text-brand' : 'text-ink-soft'
                   }`}>
                     {day}
                   </span>
@@ -275,11 +275,11 @@ export default function DashboardBento() {
         </div>
 
         {/* Métodos de Pago (Col-span-4), junto al gráfico */}
-        <div className="md:col-span-12 lg:col-span-4 bento-card p-6 bg-white dark:bg-[#17171B] rounded-3xl border border-[#EAEAEA] dark:border-[#272730] shadow-xs flex flex-col justify-between">
+        <div className="md:col-span-12 lg:col-span-4 bento-card p-6 bg-card rounded-3xl border border-line shadow-xs flex flex-col justify-between">
           <div className="flex justify-between items-center mb-4">
             <div>
-              <h3 className="text-base font-bold text-[#0A0A0A] dark:text-white">Métodos de Pago</h3>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Distribución de cobros en caja</p>
+              <h3 className="text-base font-bold text-ink">Métodos de Pago</h3>
+              <p className="text-xs text-ink-soft">Distribución de cobros en caja</p>
             </div>
             <div className="w-8 h-8 rounded-full border border-gray-200 dark:border-gray-700 flex items-center justify-center text-gray-500 cursor-pointer hover:bg-gray-50 dark:hover:bg-white/5">
               <ArrowUpRight className="w-4 h-4" />
@@ -291,12 +291,12 @@ export default function DashboardBento() {
             <div className="space-y-1.5">
               <div className="flex justify-between items-center text-gray-700 dark:text-gray-300">
                 <span className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#0A0A0A]"></span> Efectivo en Caja
+                  <span className="w-2.5 h-2.5 rounded-full bg-solid"></span> Efectivo en Caja
                 </span>
-                <span className="font-bold text-[#0A0A0A] dark:text-white">85%</span>
+                <span className="font-bold text-ink">85%</span>
               </div>
               <div className="w-full h-2.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                <div className="h-full bg-[#0A0A0A] rounded-full w-[85%]"></div>
+                <div className="h-full bg-solid rounded-full w-[85%]"></div>
               </div>
             </div>
 
@@ -304,12 +304,12 @@ export default function DashboardBento() {
             <div className="space-y-1.5">
               <div className="flex justify-between items-center text-gray-700 dark:text-gray-300">
                 <span className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#0A0A0A] dark:bg-gray-400"></span> Datáfono / Tarjeta
+                  <span className="w-2.5 h-2.5 rounded-full bg-solid dark:bg-gray-400"></span> Datáfono / Tarjeta
                 </span>
-                <span className="font-bold text-[#0A0A0A] dark:text-white">10%</span>
+                <span className="font-bold text-ink">10%</span>
               </div>
               <div className="w-full h-2.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                <div className="h-full bg-[#0A0A0A] dark:bg-gray-400 rounded-full w-[10%]"></div>
+                <div className="h-full bg-solid dark:bg-gray-400 rounded-full w-[10%]"></div>
               </div>
             </div>
 
@@ -319,7 +319,7 @@ export default function DashboardBento() {
                 <span className="flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span> Nequi / Transferencia
                 </span>
-                <span className="font-bold text-[#0A0A0A] dark:text-white">5%</span>
+                <span className="font-bold text-ink">5%</span>
               </div>
               <div className="w-full h-2.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
                 <div className="h-full bg-amber-500 rounded-full w-[5%]"></div>
@@ -329,15 +329,15 @@ export default function DashboardBento() {
         </div>
 
         {/* Ventas Recientes (fila completa) */}
-        <div className="md:col-span-12 bento-card p-6 bg-white dark:bg-[#17171B] rounded-3xl border border-[#EAEAEA] dark:border-[#272730] shadow-xs space-y-4">
+        <div className="md:col-span-12 bento-card p-6 bg-card rounded-3xl border border-line shadow-xs space-y-4">
           <div className="flex justify-between items-center">
             <div>
-              <h3 className="text-base font-bold text-[#0A0A0A] dark:text-white">Ventas Recientes</h3>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Historial de tus ventas más recientes</p>
+              <h3 className="text-base font-bold text-ink">Ventas Recientes</h3>
+              <p className="text-xs text-ink-soft">Historial de tus ventas más recientes</p>
             </div>
             <button 
               onClick={() => navigate('/pos')}
-              className="px-3.5 py-1.5 bg-[#0A0A0A] text-white rounded-full text-xs font-bold flex items-center gap-1 hover:bg-[#202020] shadow-sm shadow-[#0A0A0A]/10 cursor-pointer transition-all"
+              className="px-3.5 py-1.5 bg-solid text-white rounded-full text-xs font-bold flex items-center gap-1 hover:bg-solid-hover shadow-sm shadow-[#0A0A0A]/10 cursor-pointer transition-all"
             >
               <Plus className="w-3.5 h-3.5" /> Nueva Venta
             </button>
@@ -351,12 +351,12 @@ export default function DashboardBento() {
             <div className="py-10 text-center space-y-3 bg-gray-50/50 dark:bg-white/5 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700">
               <Package className="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto stroke-1" />
               <div>
-                <p className="text-xs font-bold text-[#0A0A0A] dark:text-white">No hay ventas registradas aún</p>
-                <p className="text-[11px] text-gray-500 dark:text-gray-400">Abre la pantalla de caja para realizar tu primera transacción</p>
+                <p className="text-xs font-bold text-ink">No hay ventas registradas aún</p>
+                <p className="text-[11px] text-ink-soft">Abre la pantalla de caja para realizar tu primera transacción</p>
               </div>
               <button
                 onClick={() => navigate('/pos')}
-                className="px-4 py-2 bg-[#0A0A0A] text-white rounded-xl text-xs font-extrabold shadow-sm hover:bg-[#202020] cursor-pointer"
+                className="px-4 py-2 bg-solid text-white rounded-xl text-xs font-extrabold shadow-sm hover:bg-solid-hover cursor-pointer"
               >
                 + Ir a la Caja
               </button>
@@ -365,7 +365,7 @@ export default function DashboardBento() {
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead>
-                  <tr className="border-b border-gray-100 dark:border-gray-800 text-gray-500 dark:text-gray-400 font-bold text-[11px]">
+                  <tr className="border-b border-gray-100 dark:border-gray-800 text-ink-soft font-bold text-[11px]">
                     <th className="py-2.5 px-3">Comprobante</th>
                     <th className="py-2.5 px-3">Fecha / Hora</th>
                     <th className="py-2.5 px-3">Cliente</th>
@@ -376,20 +376,20 @@ export default function DashboardBento() {
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-800 font-medium text-gray-700 dark:text-gray-300">
                   {sales.slice(0, 5).map((s, idx) => (
                     <tr key={s.id || idx} className="hover:bg-gray-50 dark:hover:bg-[#272730]/40 transition-colors">
-                      <td className="py-3 px-3 font-bold text-[#FF5520] dark:text-[#FF5520] flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-lg bg-[#FF5520]/10 dark:bg-[#FF5520]/20 text-[#FF5520] dark:text-[#FF5520] flex items-center justify-center">
+                      <td className="py-3 px-3 font-bold text-brand dark:text-brand flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-lg bg-brand/10 dark:bg-brand/20 text-brand dark:text-brand flex items-center justify-center">
                           <Package className="w-3.5 h-3.5" />
                         </div>
                         <span>#{s.invoiceNumber || `FAC-${s.id || idx + 1}`}</span>
                       </td>
-                      <td className="py-3 px-3 text-gray-500 dark:text-gray-400">{s.createdAt || s.date || 'Reciente'}</td>
-                      <td className="py-3 px-3 font-semibold text-[#0A0A0A] dark:text-white">{s.customerName || s.customer || 'Cliente General'}</td>
+                      <td className="py-3 px-3 text-ink-soft">{s.createdAt || s.date || 'Reciente'}</td>
+                      <td className="py-3 px-3 font-semibold text-ink">{s.customerName || s.customer || 'Cliente General'}</td>
                       <td className="py-3 px-3">
                         <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400">
                           <span className="w-2 h-2 rounded-full bg-emerald-500"></span> Completada
                         </span>
                       </td>
-                      <td className="py-3 px-3 text-right font-black text-[#0A0A0A] dark:text-white tabular-nums">
+                      <td className="py-3 px-3 text-right font-black text-ink tabular-nums">
                         ${(s.totalAmount || s.total || 0).toLocaleString('es-CO')} COP
                       </td>
                     </tr>

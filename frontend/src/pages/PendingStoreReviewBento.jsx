@@ -30,13 +30,13 @@ export default function PendingStoreReviewBento({ store }) {
   };
 
   return (
-    <div className="min-h-screen bg-[#F7F7F5] dark:bg-[#0E0E12] text-[#0A0A0A] dark:text-[#F4F4F6] flex items-center justify-center p-4 select-none">
+    <div className="min-h-screen bg-page text-ink flex items-center justify-center p-4 select-none">
       <div className="max-w-md w-full bento-card p-8 rounded-3xl shadow-xl space-y-5 text-center">
         <div className={`w-16 h-16 rounded-2xl bg-gray-100 dark:bg-white/10 flex items-center justify-center mx-auto ${copy.iconClass}`}>
           <Icon className="w-9 h-9" />
         </div>
         <h1 className="text-lg font-black">{copy.title}</h1>
-        <p className="text-xs text-gray-500 dark:text-gray-400 font-semibold leading-relaxed">
+        <p className="text-xs text-ink-soft font-semibold leading-relaxed">
           {copy.message}
         </p>
         {store?.status === 'REJECTED' && store?.rejectionReason && (

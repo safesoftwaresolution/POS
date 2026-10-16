@@ -1,4 +1,4 @@
-<!-- spec-version: 1.0 | last-updated: 2026-07-08 -->
+<!-- spec-version: 1.1 | last-updated: 2026-10-16 -->
 # Módulo: Reportes (Reports)
 
 ## Dependencias
@@ -7,6 +7,10 @@
 
 ## Reglas de Negocio
 Este módulo no define reglas de negocio propias. Solo consulta datos de otros módulos.
+
+- **Sin dependencia de código**: lee las tablas por SQL (`JdbcClient`, parámetros nombrados) y no importa las Facades de los otros módulos; es la excepción CQRS declarada en `_architecture.md`. Su interfaz pública se llama `ReportService` (no `ReportFacade`).
+- **Alcance por local**: todas las consultas filtran por el `storeId` de la sesión.
+- **Período por defecto**: si no se envían `dateFrom`/`dateTo` se usan los **últimos 30 días** (no \
 
 ## Requerimientos Funcionales
 
@@ -52,6 +56,15 @@ Este módulo no define reglas de negocio propias. Solo consulta datos de otros m
 ### GET /api/v1/reports/purchases
 - **Permisos**: Admin
 - **Query params**: dateFrom, dateTo
+
+### RF-REP-006 — Cierre de Caja
+- **Prioridad**: Media
+- Efectivo esperado en caja (suma de ventas `CASH` del período), total vendido por cada método de pago y desglose del efectivo por vendedor para rendir cuentas por cajero.
+
+### GET /api/v1/reports/cash-closing
+- **Permisos**: Admin
+- **Query params**: dateFrom, dateTo
+- **Response 200**: `CashClosingReportDto { dateFrom, dateTo, totalByPaymentMethod, expectedCash, cashBySeller }`. La UI vive en `ReportsBento`.
 
 ## Modelo de Datos
 Este módulo no posee tablas propias. Ejecuta queries de solo lectura sobre las tablas de sales, sale_items, purchases, purchase_items, products e inventory_movements.

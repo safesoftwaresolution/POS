@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, Building2, User, FileText, CheckCircle2, MapPin, Mail, Phone, AlertCircle } from 'lucide-react';
-import { createCustomerApi } from '../../services/customersApi';
+import { createCustomerApi, updateCustomerApi } from '../../services/customersApi';
 
 // Personas según el catálogo de la DIAN: 1 = jurídica (NIT con DV), 13 = natural.
 const LEGAL_ORG_JURIDICA = 1;
@@ -37,8 +37,24 @@ const EMPTY_FORM = {
   address: ''
 };
 
-export default function CreateDianCustomerModal({ onClose, onCreated, initialName = '' }) {
-  const [form, setForm] = useState({ ...EMPTY_FORM, fullName: initialName });
+// Con `customer` el modal edita un cliente existente (la identificación no se puede cambiar).
+function formFromCustomer(c) {
+  return {
+    legalOrganizationId: c.legalOrganizationId ?? LEGAL_ORG_NATURAL,
+    tributeId: c.tributeId ?? TRIBUTE_NO_RESPONSABLE,
+    fullName: c.fullName || '',
+    identification: c.identification || '',
+    dv: c.dv || '',
+    email: c.email || '',
+    phone: c.phone || '',
+    municipalityId: c.municipalityId ?? '',
+    address: c.address || ''
+  };
+}
+
+export default function CreateDianCustomerModal({ onClose, onCreated, initialName = '', customer = null }) {
+  const isEdit = !!customer;
+  const [form, setForm] = useState(isEdit ? formFromCustomer(customer) : { ...EMPTY_FORM, fullName: initialName });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -67,7 +83,7 @@ export default function CreateDianCustomerModal({ onClose, onCreated, initialNam
 
     setSaving(true);
     try {
-      const created = await createCustomerApi({
+      const payload = {
         fullName: form.fullName.trim(),
         identification: form.identification.trim(),
         email: form.email.trim(),
@@ -77,7 +93,10 @@ export default function CreateDianCustomerModal({ onClose, onCreated, initialNam
         legalOrganizationId: form.legalOrganizationId,
         tributeId: form.tributeId,
         municipalityId: form.municipalityId ? Number(form.municipalityId) : undefined
-      });
+      };
+      const created = isEdit
+        ? await updateCustomerApi(customer.id, payload)
+        : await createCustomerApi(payload);
       onCreated?.(created);
       onClose();
     } catch (err) {
@@ -108,7 +127,7 @@ export default function CreateDianCustomerModal({ onClose, onCreated, initialNam
               <FileText className="w-5 h-5" />
             </div>
             <div className="min-w-0">
-              <h3 className="font-extrabold text-base text-ink truncate">Registrar Cliente Fiscal DIAN</h3>
+              <h3 className="font-extrabold text-base text-ink truncate">{isEdit ? 'Editar Cliente Fiscal DIAN' : 'Registrar Cliente Fiscal DIAN'}</h3>
               <p className="text-[11px] text-ink-soft font-medium">Datos que la DIAN exige para la factura electrónica</p>
             </div>
           </div>
@@ -181,7 +200,9 @@ export default function CreateDianCustomerModal({ onClose, onCreated, initialNam
                 required
                 value={form.identification}
                 onChange={e => handleIdentificationChange(e.target.value)}
-                className={`${INPUT_CLASS} font-mono`}
+                disabled={isEdit}
+                title={isEdit ? 'La identificación no se puede modificar' : undefined}
+                className={`${INPUT_CLASS} font-mono disabled:opacity-60`}
               />
             </div>
             <div>
@@ -287,7 +308,7 @@ export default function CreateDianCustomerModal({ onClose, onCreated, initialNam
             className="w-1/2 py-3 bg-solid hover:bg-solid-hover disabled:opacity-50 text-white rounded-2xl text-xs font-extrabold flex items-center justify-center gap-2 shadow-md shadow-[#0A0A0A]/10 cursor-pointer"
           >
             <CheckCircle2 className="w-4 h-4 text-brand" />
-            {saving ? 'Guardando...' : 'Guardar Cliente DIAN'}
+            {saving ? 'Guardando...' : isEdit ? 'Guardar Cambios' : 'Guardar Cliente DIAN'}
           </button>
         </div>
       </form>

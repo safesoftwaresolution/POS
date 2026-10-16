@@ -1,16 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { Users, UserPlus, Search, Mail, Phone, CheckCircle2 } from 'lucide-react';
-import { getCustomersApi } from '../services/customersApi';
+import { Users, UserPlus, Search, Mail, Phone, CheckCircle2, Edit3, Trash2 } from 'lucide-react';
+import { getCustomersApi, deleteCustomerApi } from '../services/customersApi';
 import CreateDianCustomerModal from '../components/customers/CreateDianCustomerModal';
+import { useAuth } from '../context/AuthContext';
+import { useModal } from '../context/ModalContext';
+import { Button, Badge, Card, EmptyState, PageHeader } from '../components/ui';
 
 export default function CustomersBento() {
+  const { user } = useAuth();
+  const { confirm, notify } = useModal();
+  const canDelete = user?.role === 'ADMINISTRATOR';
+
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [showModal, setShowModal] = useState(false);
+  // null = cerrado, {} = alta, {customer} = edición
+  const [modal, setModal] = useState(null);
 
-  const loadCustomers = async () => {
-    setLoading(true);
+  const fetchCustomers = async () => {
     try {
       const data = await getCustomersApi();
       setCustomers(Array.isArray(data) ? data : []);
@@ -23,32 +30,39 @@ export default function CustomersBento() {
   };
 
   useEffect(() => {
-    loadCustomers();
+    fetchCustomers();
   }, []);
 
+  const handleDelete = async (c) => {
+    const ok = await confirm(
+      `¿Eliminar a "${c.fullName || c.name}"? Las ventas ya emitidas conservan sus datos.`,
+      { title: 'Eliminar cliente' }
+    );
+    if (!ok) return;
+    try {
+      await deleteCustomerApi(c.id);
+      await fetchCustomers();
+    } catch (e) {
+      notify('No se pudo eliminar el cliente: ' + e.message);
+    }
+  };
+
+  const term = search.toLowerCase();
   const filtered = customers.filter(c =>
-    (c.fullName && c.fullName.toLowerCase().includes(search.toLowerCase())) ||
-    (c.name && c.name.toLowerCase().includes(search.toLowerCase())) ||
+    (c.fullName && c.fullName.toLowerCase().includes(term)) ||
+    (c.name && c.name.toLowerCase().includes(term)) ||
     (c.identification && c.identification.includes(search))
   );
 
   return (
     <div className="space-y-6 select-none">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-black text-ink">Directorio de Clientes</h1>
-          <p className="text-xs text-ink-soft font-medium">Gestión de clientes para emisión y facturación electrónica DIAN en BentoPOS</p>
-        </div>
+      <PageHeader
+        title="Directorio de Clientes"
+        subtitle="Gestión de clientes para emisión y facturación electrónica DIAN en BentoPOS"
+        actions={<Button icon={UserPlus} onClick={() => setModal({})}>Registrar Nuevo Cliente</Button>}
+      />
 
-        <button
-          onClick={() => setShowModal(true)}
-          className="px-4 py-2.5 bg-solid hover:bg-solid-hover text-white rounded-2xl text-xs font-bold flex items-center gap-2 shadow-md shadow-[#0A0A0A]/10 cursor-pointer transition-all"
-        >
-          <UserPlus className="w-4 h-4" /> Registrar Nuevo Cliente
-        </button>
-      </div>
-
-      <div className="bento-card p-6 space-y-4 bg-card border-line">
+      <Card className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="relative w-72">
             <Search className="w-4 h-4 text-ink-muted absolute left-3.5 top-2.5" />
@@ -64,32 +78,23 @@ export default function CustomersBento() {
         </div>
 
         {loading ? (
-          <div className="py-12 text-center text-xs font-bold text-ink-muted">
-            Consultando clientes...
-          </div>
+          <div className="py-12 text-center text-xs font-bold text-ink-muted">Consultando clientes...</div>
         ) : filtered.length === 0 ? (
-          <div className="py-12 text-center space-y-3 bg-gray-50/50 dark:bg-white/5 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700">
-            <Users className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto stroke-1" />
-            <div>
-              <p className="text-xs font-bold text-gray-700 dark:text-gray-300">No hay clientes registrados aún</p>
-              <p className="text-[11px] text-ink-muted">El sistema incluye automáticamente el Cliente General para ventas en mostrador</p>
-            </div>
-            <button
-              onClick={() => setShowModal(true)}
-              className="px-4 py-2 bg-solid text-white rounded-xl text-xs font-extrabold shadow-sm hover:bg-solid-hover cursor-pointer"
-            >
-              + Registrar Primer Cliente
-            </button>
-          </div>
+          <EmptyState
+            icon={Users}
+            title="No hay clientes registrados aún"
+            description="El sistema incluye automáticamente el Cliente General para ventas en mostrador"
+            action={<Button size="sm" onClick={() => setModal({})}>+ Registrar Primer Cliente</Button>}
+          />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filtered.map(c => (
               <div key={c.id} className="p-5 bg-card rounded-2xl border border-line space-y-3 shadow-xs hover:border-line-strong transition-all">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-mono font-bold text-ink-soft">CC/NIT: {c.identification}</span>
-                  <span className="text-[10px] px-2.5 py-0.5 rounded-full font-extrabold bg-emerald-100 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400">
-                    Habilitado
-                  </span>
+                  <Badge tone={c.active === false ? 'neutral' : 'success'}>
+                    {c.active === false ? 'Inactivo' : 'Habilitado'}
+                  </Badge>
                 </div>
 
                 <div>
@@ -102,19 +107,38 @@ export default function CustomersBento() {
 
                 <div className="pt-2 border-t border-line flex justify-between items-center text-xs">
                   <span className="text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> Facturación Activa
+                    <CheckCircle2 className="w-3.5 h-3.5" /> Facturación Activa
                   </span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => setModal({ customer: c })}
+                      title="Editar cliente"
+                      className="p-1.5 text-ink-muted hover:text-brand rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer"
+                    >
+                      <Edit3 className="w-4 h-4" />
+                    </button>
+                    {canDelete && (
+                      <button
+                        onClick={() => handleDelete(c)}
+                        title="Eliminar cliente"
+                        className="p-1.5 text-ink-muted hover:text-red-600 dark:hover:text-red-400 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
           </div>
         )}
-      </div>
+      </Card>
 
-      {showModal && (
+      {modal && (
         <CreateDianCustomerModal
-          onClose={() => setShowModal(false)}
-          onCreated={loadCustomers}
+          customer={modal.customer}
+          onClose={() => setModal(null)}
+          onCreated={fetchCustomers}
         />
       )}
     </div>

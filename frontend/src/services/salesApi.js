@@ -41,7 +41,8 @@ export async function createSaleApi(saleCommand, idempotencyKey) {
         unitPrice: item.unitPrice
       })),
       cashReceived: saleCommand.cashReceived,
-      paymentMethod: saleCommand.paymentMethod || 'CASH'
+      paymentMethod: saleCommand.paymentMethod || 'CASH',
+      sendToFactus: Boolean(saleCommand.sendToFactus)
     }),
   });
 }

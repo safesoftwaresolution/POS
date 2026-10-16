@@ -1,22 +1,34 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { loginApi, logoutApi, refreshSessionApi } from '../services/authApi';
-import { getAuthToken, setAuthToken } from '../services/http';
+import { setAuthToken, SESSION_EXPIRED_EVENT } from '../services/http';
 
 const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
+  // Solo se persiste el perfil (usuario, rol, local), nunca un token: la sesion la mantienen las cookies HttpOnly.
+  // Si la cookie ya no es valida, la primera llamada recibe 401 y SESSION_EXPIRED_EVENT cierra la sesion de la UI.
   const [user, setUser] = useState(() => {
-    const token = getAuthToken();
     const storedUser = localStorage.getItem('pos_user');
-    if (token && storedUser) {
+    if (storedUser) {
       try {
-        return JSON.parse(storedUser);
+        const parsed = JSON.parse(storedUser);
+        delete parsed.token; // versiones anteriores guardaban el JWT aqui
+        return parsed;
       } catch (e) {
         return null;
       }
     }
     return null;
   });
+
+  useEffect(() => {
+    const onExpired = () => {
+      localStorage.removeItem('pos_user');
+      setUser(null);
+    };
+    window.addEventListener(SESSION_EXPIRED_EVENT, onExpired);
+    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, onExpired);
+  }, []);
 
   const [loading, setLoading] = useState(false);
 
@@ -25,8 +37,7 @@ export function AuthProvider({ children }) {
       username: data.username || fallbackUsername,
       role: data.role || 'ADMINISTRATOR',
       fullName: data.fullName || (data.username === 'admin' ? 'Administrador Principal' : data.username || fallbackUsername),
-      storeId: data.storeId ?? null,
-      token: data.token
+      storeId: data.storeId ?? null
     };
     setAuthToken(data.token);
     localStorage.setItem('pos_user', JSON.stringify(userData));

@@ -202,8 +202,10 @@ export default function POSBento() {
   };
 
   const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const tax = issueDian ? Math.round(subtotal * 0.19) : 0;
-  const total = subtotal + tax;
+  // Los precios de venta ya incluyen IVA y el backend es quien calcula impuestos (por producto, ver tax_rate):
+  // el total a cobrar es la suma de los precios, con o sin factura electrónica. Antes se sumaba un 19% fijo
+  // si se marcaba "Transmitir a DIAN", y el cajero cobraba un valor distinto al que registraba el backend.
+  const total = subtotal;
 
   const cashNumber = parseFloat(cashTendered) || 0;
   const change = cashNumber - total;
@@ -221,7 +223,8 @@ export default function POSBento() {
       })),
       cashReceived: cashNumber,
       totalAmount: total,
-      paymentMethod: selectedPaymentMethod
+      paymentMethod: selectedPaymentMethod,
+      sendToFactus: issueDian
     };
 
     // Reutiliza la clave del intento actual si existe (reintento); si no, genera una nueva.
@@ -250,8 +253,10 @@ export default function POSBento() {
       total,
       cashTendered: cashNumber,
       change,
-      dianStatus: issueDian ? 'APROBADA_DIAN' : 'NO_REQUERIDA',
-      cufe: issueDian ? `cufe-${Math.random().toString(36).substring(2, 12)}-2026` : null
+      // La factura se emite de forma asíncrona tras confirmar la venta; el estado real (VALIDATED / REJECTED / ERROR)
+      // está en el backend. Nunca se muestra un CUFE: solo existe cuando la DIAN valida el documento.
+      dianStatus: issueDian ? 'PENDIENTE_DIAN' : 'NO_REQUERIDA',
+      cufe: null
     };
 
     setSaleCompleted(completed);
@@ -550,9 +555,9 @@ export default function POSBento() {
                 <span className="font-bold text-[#0A0A0A] dark:text-white tabular-nums">${subtotal.toLocaleString('es-CO')} COP</span>
               </div>
               {issueDian && (
-                <div className="flex justify-between text-[#FF5520] dark:text-[#FF5520] font-bold">
-                  <span>IVA Estimado (19%):</span>
-                  <span className="tabular-nums">${tax.toLocaleString('es-CO')} COP</span>
+                <div className="flex justify-between text-gray-500 dark:text-gray-400 text-xs">
+                  <span>Factura electrónica:</span>
+                  <span>Se emitirá a la DIAN al confirmar (precios con IVA incluido)</span>
                 </div>
               )}
               <div className="flex justify-between text-base font-black text-[#0A0A0A] dark:text-white pt-2 border-t border-gray-200 dark:border-gray-700">

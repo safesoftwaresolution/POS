@@ -227,9 +227,9 @@
   3. Adición del rol SUPER_ADMIN (platform-level, sin store_id) y seeding en DatabaseSeeder.
   4. Restricción estricta de creación, edición y eliminación de categorías exclusivamente a SUPER_ADMIN (CategoryController).
   5. Implementación del módulo stores: métricas SaaS (total, activos, inactivos, verificados), buscador y filtro (ALL, ACTIVE, INACTIVE, PENDING_VERIFICATION, SUSPENDED), gestión KYC de documentos, endpoints de verificación de email y estado.
-  6. Implementación del módulo legal: CRUD completo de textos legales (privacy-policy, 	erms-and-conditions, etc.), versionamiento, toggle publish y endpoint público para lectura del texto vigente.
+  6. Implementación del módulo legal: CRUD completo de textos legales (privacy-policy, terms-and-conditions, etc.), versionamiento, toggle publish y endpoint público para lectura del texto vigente.
   7. Implementación del módulo support: radicación pública de PQRs y bugs del sistema con código de radicado automático (PQR-YYYYMMDD-NNNN / BUG-YYYYMMDD-NNNN), tracking público, búsqueda con filtros, métricas y resolución.
-  8. Creación de especificaciones modulares spec.md en ackend/docs/modules/ para stores, legal, support y actualización de SSOT.
+  8. Creación de especificaciones modulares spec.md en backend/docs/modules/ para stores, legal, support y actualización de SSOT.
   9. Creación y ejecución de suite de tests unitarios dedicada para los nuevos servicios (StoreServiceImplTest, LegalDocumentServiceImplTest, SupportTicketServiceImplTest) y actualización de tests existentes.
 - **Resultado:** Éxito. 62 tests pasando en verde sin errores ni fallos.
 
@@ -341,3 +341,83 @@
   - `8045688` docs: update architectural documentation, security guides, and module specifications
 - **Resultado:** Éxito (rama local refactor/factus-billing-module, sin push)
 - **Notas:** Validación `init.ps1` en verde (ENTORNO SANO, 0 errores, 0 fallos, 95+ tests pasando) antes de commitear.
+
+## [2026-10-16 14:30] [EXTERNO] — Registro retroactivo del trabajo posterior al 2026-09-16 (fuera del protocolo)
+- **Tarea:** FEAT-007 a FEAT-013 (registradas retroactivamente en `features.json` v1.3.0)
+- **Acción:** Se deja constancia de trabajo que no pasó por Leader→Implementer→Reviewer→Committer y que no tenía entrada en este historial, reconstruido desde `git log` (no se re-ejecutó ni se re-revisó):
+  - `14b729c` subcategorías de producto (V12) — FEAT-009.
+  - `3ae9d7f`, `a54eb7e`, `27f91c9`, `5ee6000`, `b409487`, `6576b37`, `d3368c8`: interfaz Bento del frontend — FEAT-010.
+  - `7da9b05`, `74096f2`, `1420fd3`: refactor del adaptador Factus y manejo de token — FEAT-011.
+  - `46004d0`, `2782041`: credenciales por local y actualización de Header/Sidebar — FEAT-011/FEAT-010.
+  - `50b05bb` (2026-09-24): emisión de factura por eventos de dominio y modelo rico — FEAT-012.
+  - Sin commitear al 2026-10-16 14:30: notas crédito y débito (`V18`, `V19`, controladores, servicios, tests) — FEAT-013.
+- **Resultado:** Parcial — trazabilidad restituida; la corrección del código no fue revisada por el rol Reviewer.
+- **Archivos tocados:** `.ai/features.json` (v1.3.0), `.ai/progress/history.md`
+- **Notas:** FEAT-007 y FEAT-008 (sesiones/idempotencia/onboarding y notifications/storage) llegaron en una rama paralela fusionada el 2026-09-16; su fecha es la de la fusión. El hash `f6f44cb` ya figuraba en la entrada del 2026-09-17 09:54, mientras que una entrada previa del 2026-09-16 cita el commit `03ee35f` del mismo arnés: son dos commits distintos (el primero versiona el historial, el segundo el arnés).
+
+## [2026-10-16 14:30] [EXTERNO] — Auditoría SDD: Fases 1 a 3 (seguridad, facturación, documentación)
+- **Tarea:** FEAT-014
+- **Acción:** Revisión de specs, arnés e integraciones con tres agentes de exploración (solo lectura) y corrección por fases, con el usuario aprobando el orden. Hallazgos verificados contra el código antes de corregir.
+  - **Fase 1 (seguridad):** `UserServiceImpl` (no asignar `SUPER_ADMIN` por `updateUser`; supervisor solo restablece `SELLER`; reactivar al único admin permitido); `StorageController`/`StorageServiceImpl` (`@PreAuthorize`, carpetas permitidas, prefijo `tienda-{id}`, tipos permitidos); `DatabaseSeeder` (solo `dev`, clave por `SEED_SUPERADMIN_PASSWORD`); `SecurityConfig` (CORS con orígenes explícitos); `ProductRepository.findByIdForUpdate` + `updateStock` (bloqueo pesimista y local); `spring-boot-starter-validation` + `@Valid` en DTO de users/sales/support; seguimiento público de tickets reducido (`TicketTrackingDto`) y radicado aleatorio.
+  - **Fase 2 (facturación):** `OutboundHttp` (timeouts), sin respaldo silencioso a `mock` ni al local 1, notas crédito aisladas por local con `reference_code` determinista y `sale_id` persistido, `reference_code` de factura estable con recuperación ante 409, `getBySaleId` ya no escribe en una transacción `readOnly`.
+  - **Fase 3 (documentación):** specs nuevos de storage, notifications y backoffice; reescritos auth, users, stores; actualizados billing, sales, inventory, settings, support, reports, products, purchases, customers; globales `_architecture`, `_conventions`, `_database-schema`, `_deployment`, `_project`, `_security`, `_index`, `_roadmap`, `_glossary`; `README.md` y `CLAUDE.md`.
+- **Resultado:** Éxito — `mvnw test`: 474 pruebas, 0 fallos (antes 432).
+- **Archivos tocados:** ver `git status`; ~60 archivos de `backend/` y de documentación.
+- **Notas:** Nada está commiteado: el Committer debe separar `feat(billing)` (notas crédito/débito), `fix(security)`, `docs` y `chore(harness)`. Pendiente verificar contra el servidor en ejecución y contra PostgreSQL (los tests usan H2).
+
+## [2026-10-16 14:30] [REVIEWER] — Cambios al arnés (R6): init.* con paridad, módulos derivados del código y reglas aclaradas
+- **Tarea:** FEAT-014
+- **Acción:** Cambios a las reglas del arnés, con motivo:
+  1. `init.sh`: el `exit 1` estaba dentro de un subshell y `set -e` no lo dispara en una lista `||`, así que un arnés roto reportaba "ENTORNO SANO". Se reescribió con contador de errores y salida real; se portaron las fases 3 a 5 de `init.ps1`.
+  2. `init.ps1`: usaba `.\mvnw.cmd` fijo aunque eligiera otro `$mvnCmd`, y descartaba la salida de Maven al fallar. Ahora usa `$mvnCmd` y muestra las últimas 40 líneas.
+  3. Ambos: lista de módulos **derivada del código** (carpeta con `internal/`), aviso por specs huérfanos, `_roadmap.md` como documento obligatorio, anclaje a la raíz del repo, banderas `--skip-tests`/`-SkipTests` y `--frontend`/`-Frontend`.
+  4. `agents.md`: rutas `docs/` → `backend/docs/`; `docker-dev.*` está en `backend/`; límite de documentos de R1 de 3 a 4 (el Context Pack de "crear módulo" ya llevaba 4) sin contar los de arranque; R6 acotada a las reglas del arnés (los roles sí actualizan `features.json` e `history.md`); el flujo incluye al Committer; `.claude/agents` son envoltorios y manda `.ai`.
+  5. `leader.md`: rutas, qué hacer si no hay tareas `pending`, Committer tras la aprobación.
+  6. `history.md`: se repararon dos caracteres de control (un tabulador y un retroceso, de secuencias `\t`/`\b` mal interpretadas) en las líneas 230 y 232; el texto restaurado es "terms-and-conditions" y "backend/docs/modules".
+- **Resultado:** Éxito — ambos scripts dan el mismo veredicto; con `storage/spec.md` y `roles/reviewer.md` ausentes devuelven `exit 1` con 2 errores (probado y restaurado).
+- **Archivos tocados:** `.ai/init.sh`, `.ai/init.ps1`, `.ai/agents.md`, `.ai/roles/leader.md`, `.ai/features.json`, `.ai/progress/history.md`, `.gitattributes`, `.gitignore`, `.claude/agents/*.md`.
+- **Notas:** Esta entrada la escribe el asistente que aplicó los cambios, no un Reviewer independiente: conviene que una revisión humana confirme las reglas.
+
+## [2026-10-16 14:43] [EXTERNO] — Corrección de la corrección: bloqueo de stock de la Fase 1 era insuficiente
+- **Tarea:** FEAT-014
+- **Acción:** Al probar la aplicación en ejecución (20 y luego 30 ventas en paralelo del mismo producto) se vio que el stock no bajaba lo esperado (80 → 78 tras 21 ventas). La entrada anterior de este historial describe `ProductRepository.findByIdForUpdate` (`SELECT … FOR UPDATE`) como la solución: **no lo era**. Dentro de la transacción de la venta el producto ya está cargado y Hibernate devuelve esa instancia con el valor viejo en vez de releerla, así que se seguían pisando las actualizaciones. Los tests unitarios con mocks no podían detectarlo.
+- **Corrección:** `findByIdForUpdate` se eliminó; `ProductFacade.adjustStock` ejecuta un `UPDATE` atómico y condicionado (`adjustStockInStore`/`adjustStock`) y devuelve el stock resultante; `InventoryServiceImpl` toma de ahí `previousStock`/`newStock` del kardex. Nuevo `StockConcurrencyTest` (hilos reales sobre H2). Además se quitó `spring.jpa.properties.hibernate.dialect=PostgreSQLDialect` de `application.properties`: en `dev` con H2 generaba `FOR NO KEY UPDATE`, que H2 no entiende (también afectaba al refresh de tokens en `dev`).
+- **Resultado:** Éxito — app en ejecución: 30 ventas en paralelo, stock 80 → 50 exacto y kardex sin `newStock` repetidos.
+- **Archivos tocados:** `ProductRepository`, `ProductFacade`, `ProductServiceImpl`, `InventoryServiceImpl`, `application.properties`, `InventoryServiceImplTest`, `StockConcurrencyTest` y los docs que describían el mecanismo (README, CLAUDE.md, `_architecture`, `_conventions`, `_roadmap`, specs de inventory y sales).
+- **Notas:** Lección: un cambio de concurrencia se verifica con hilos reales, no con mocks. Pendiente: el resto de bloqueos pesimistas (refresh tokens, documentos electrónicos) funcionan porque la fila no se carga antes en la transacción, pero no tienen un test de concurrencia.
+
+## [2026-10-16 14:48] [EXTERNO] — Auditoría SDD: Fase 5 (infraestructura, dependencias, CI, frontend)
+- **Tarea:** FEAT-015 y FEAT-017 (parciales)
+- **Acción:**
+  - **Dependencias:** springdoc 2.8.5 → 3.1.1 (la serie 2.8.x es de Boot 3; 3.1.1 se construye contra Boot 4.1.0), AWS SDK 2.25.20 → 2.56.0 (sin Netty), jjwt 0.12.5 → 0.13.0, jacoco 0.8.12 → 0.8.15, \spring-boot-flyway\ + \lyway-core\ → \spring-boot-starter-flyway\; versiones como propiedades. Verificado en una instancia real: \/v3/api-docs\ y Swagger UI responden 200.
+  - **Configuración:** se quitó el dialecto PostgreSQL forzado de \pplication.properties\ (rompía los bloqueos en H2).
+  - **Infraestructura:** \docker-compose.prod.yml\ reenvía todas las variables (JWT, cookies, CORS, SMTP, SEED, BILLING) y exige \DB_PASSWORD\, \JWT_SECRET\ y \APP_FRONTEND_URL\; \Dockerfile\ prod con \TZ=America/Bogota\, \HEALTHCHECK\ y \-XX:MaxRAMPercentage=75\; \.dockerignore\ excluye \.env\ y datos; \.github/workflows/ci.yml\ (backend, frontend, arnés) y \.github/dependabot.yml\; \ackend/data_backup_20260824_104444/\ salió del índice de git (\git rm --cached\, sin commit) y se ignora; \ackend/mvnw\ y \.ai/init.sh\ con bit ejecutable en el índice (si no, CI falla con "Permission denied").
+  - **Frontend:** tokens solo en memoria (la sesión son las cookies \HttpOnly\); evento \uth:session-expired\ cierra la sesión de la UI; un 401 de \/auth/login\ muestra el mensaje del backend; el POS ya no suma un 19% fijo, envía \sendToFactus\ y no muestra un CUFE inventado; se eliminó \pnpm-lock.yaml\ (queda \package-lock.json\).
+  - **Corrección de la Fase 1:** ver la entrada anterior (bloqueo de stock).
+- **Resultado:** Éxito — \mvnw clean test\, \
+pm run lint\ (solo avisos) y \
+pm run build\ en verde; en vivo: login/refresh solo con cookie, CORS rechaza \https://evil.example\ y acepta \localhost:3000\, 30 ventas paralelas con stock exacto.
+- **Notas:** Pendiente: ArchUnit, Testcontainers/PostgreSQL, dependency-check, UI de facturación y verificar que el workflow corre en GitHub (no se ha ejecutado). La nota de \.env\: Docker Compose lee \ackend/.env\, que puede pisar los valores por defecto de la compose.
+## [2026-10-16 15:08] [COMMITTER] — Integración de la auditoría SDD (Fases 1 a 5) y de las notas crédito/débito
+- **Tarea:** FEAT-013, FEAT-014 y parte de FEAT-015/FEAT-017
+- **Acción:** 17 commits atómicos tras aprobación humana explícita del plan, en la rama local `refactor/factus-billing-module` (sin push). Cada commit de código se verificó en un worktree limpio (`test-compile` o suite completa) antes de crearse; tras cada uno se corrió `init.sh --skip-tests`. Los archivos con cambios previos y míos mezclados (`MockBillingAdapter`, `ElectronicInvoice`, `InvoiceServiceImplTest`, `FactusInvoiceClientTest`) se separaron en dos commits construyendo cada versión como blob.
+- **Commits:**
+  - `c4314af` chore(repo): untrack H2 backup, ignore dev data, track .claude agents
+  - `10ae941` build: update dependencies and add Bean Validation starter
+  - `1229c7b` feat(billing): add electronic credit and debit notes
+  - `1b925a2` fix(billing): harden invoice emission
+  - `5570aa1` fix(users): block SUPER_ADMIN escalation and seed only in dev
+  - `4d581ef` fix(storage): require roles, restrict file types and scope files per store
+  - `025e50a` fix(support): expose minimal public tracking and random ticket numbers
+  - `7230b2e` fix(auth): explicit CORS origins and verification email subject typo
+  - `ac98d66` fix(inventory): atomic stock adjustment and no forced PostgreSQL dialect
+  - `099041b` feat(validation): enforce Bean Validation on user and sale requests
+  - `e374031` build(infra): production compose, Dockerfile, CI and Dependabot
+  - `9c03429` fix(frontend): keep session tokens in memory and stop adding fixed VAT
+  - `6ffc530` chore(frontend): drop pnpm lockfile
+  - `d0e4bae` docs(modules): add storage, notifications and backoffice specs and update module specs
+  - `a45d4db` docs: bring global docs up to date
+  - `a99fdb4` docs: update README and CLAUDE.md
+  - (este) chore(harness): validate modules from code, align roles and log the audit
+- **Resultado:** Éxito
+- **Notas:** El workflow de CI (`.github/workflows/ci.yml`) no se ha ejecutado en GitHub. Los `V*MigrationSqlTest` y la concurrencia corren solo sobre H2. FEAT-013 queda pendiente de un `V18MigrationSqlTest`.

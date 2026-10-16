@@ -1,12 +1,15 @@
 {
-  "version": "1.2.0",
-  "last_updated": "2026-08-19",
+  "version": "1.4.0",
+  "last_updated": "2026-10-16",
+  "notes": "Los IDs son únicos y no se reutilizan. FEAT-001..006 son anteriores. FEAT-007..013 se registraron RETROACTIVAMENTE el 2026-10-16: ese trabajo se hizo fuera del protocolo Leader→Implementer→Reviewer→Committer (ver progress/history.md). Ojo: las entradas más antiguas de history.md rotuladas 'FEAT-004 — Módulos Auth y Users' (2026-07-09) corresponden a una tarea previa a la renumeración; el FEAT-004 vigente es la formalización de Billing.",
   "features": [
     {
       "id": "FEAT-001",
       "title": "Configuración inicial del arnés de agentes",
       "description": "Crear la estructura base de archivos en .ai/ que permita a los agentes de IA operar de forma coordinada.",
-      "acceptance_criteria": ["Existe la carpeta .ai/ con agents.md, init.sh, features.json"],
+      "acceptance_criteria": [
+        "Existe la carpeta .ai/ con agents.md, init.sh, features.json"
+      ],
       "status": "done",
       "assigned_to": null,
       "completed_at": "2026-07-06"
@@ -15,7 +18,9 @@
       "id": "FEAT-002",
       "title": "Validación de compilación del proyecto base",
       "description": "Asegurar que el proyecto Java/Maven compila correctamente y que los tests existentes pasan.",
-      "acceptance_criteria": ["mvnw compile finaliza con exit code 0"],
+      "acceptance_criteria": [
+        "mvnw compile finaliza con exit code 0"
+      ],
       "status": "done",
       "assigned_to": null,
       "completed_at": "2026-07-09"
@@ -23,8 +28,10 @@
     {
       "id": "FEAT-003",
       "title": "Documentar la arquitectura del proyecto",
-      "description": "Crear suite de arquitectura modular en docs/.",
-      "acceptance_criteria": ["Existe suite de arquitectura modular en docs/"],
+      "description": "Crear suite de arquitectura modular en backend/docs/.",
+      "acceptance_criteria": [
+        "Existe suite de arquitectura modular en backend/docs/"
+      ],
       "status": "done",
       "assigned_to": null,
       "completed_at": "2026-07-09"
@@ -33,7 +40,9 @@
       "id": "FEAT-004",
       "title": "Formalización del módulo Billing en el Harness y Suite Documental",
       "description": "Alinear el arnés y la documentación modular con la integración real de facturación electrónica DIAN (Factus).",
-      "acceptance_criteria": ["Existe docs/modules/billing/spec.md"],
+      "acceptance_criteria": [
+        "Existe backend/docs/modules/billing/spec.md"
+      ],
       "status": "done",
       "assigned_to": "Reviewer",
       "completed_at": "2026-08-13"
@@ -42,7 +51,9 @@
       "id": "FEAT-005",
       "title": "Desacoplamiento de la API de Facturación mediante patrones Adapter y Strategy",
       "description": "Refactorizar el módulo billing introduciendo el puerto ElectronicInvoicingProvider.",
-      "acceptance_criteria": ["Todos los tests pasan en verde"],
+      "acceptance_criteria": [
+        "Todos los tests pasan en verde"
+      ],
       "status": "done",
       "assigned_to": "Implementer",
       "completed_at": "2026-08-13"
@@ -63,6 +74,174 @@
       "status": "done",
       "assigned_to": "Implementer",
       "completed_at": "2026-08-19"
+    },
+    {
+      "id": "FEAT-007",
+      "title": "Sesiones con refresh token rotativo, idempotencia y auto-registro con verificación de correo",
+      "description": "Refresh token opaco con rotación y detección de reuso (V4), claves de idempotencia en ventas/compras y restricciones de factura (V5), catálogos dinámicos (V6), auto-registro y onboarding de locales (V7), método de pago, devoluciones y aislamiento por local (V8-V10).",
+      "acceptance_criteria": [
+        "Migraciones V4..V10 aplicadas",
+        "POST /auth/refresh rota el token y revoca la familia ante reuso",
+        "POST /auth/register + GET /auth/verify-email",
+        "Idempotency-Key en ventas y compras"
+      ],
+      "status": "done",
+      "assigned_to": "Externo",
+      "completed_at": "2026-09-16",
+      "origin": "retroactive"
+    },
+    {
+      "id": "FEAT-008",
+      "title": "Módulos notifications y storage (Cloudflare R2) y documentos KYC de tienda",
+      "description": "Bandeja de notificaciones por local (V11), almacenamiento de archivos en R2 y subida de documentos del local.",
+      "acceptance_criteria": [
+        "backend/docs/modules/notifications/spec.md y storage/spec.md (creados el 2026-10-16)",
+        "Migración V11"
+      ],
+      "status": "done",
+      "assigned_to": "Externo",
+      "completed_at": "2026-09-16",
+      "origin": "retroactive"
+    },
+    {
+      "id": "FEAT-009",
+      "title": "Subcategorías de producto por local",
+      "description": "product_subcategories (V12) y SubcategoryFacade bajo las categorías globales.",
+      "acceptance_criteria": [
+        "Migración V12",
+        "CRUD de subcategorías por local",
+        "backend/docs/modules/categories/spec.md actualizado"
+      ],
+      "status": "done",
+      "assigned_to": "Externo",
+      "completed_at": "2026-09-16",
+      "origin": "retroactive"
+    },
+    {
+      "id": "FEAT-010",
+      "title": "Interfaz Bento del frontend (React)",
+      "description": "Páginas, layouts y componentes de la SPA: POS, inventario, productos, clientes, reportes, documentos, configuración y back office.",
+      "acceptance_criteria": [
+        "npm run build sin errores",
+        "Rutas protegidas por rol (ProtectedLayout / BackofficeProtectedLayout)"
+      ],
+      "status": "done",
+      "assigned_to": "Externo",
+      "completed_at": "2026-09-21",
+      "origin": "retroactive"
+    },
+    {
+      "id": "FEAT-011",
+      "title": "Facturación por local: credenciales cifradas, habilitación y rangos DIAN",
+      "description": "Refactor del adaptador Factus, tabla store_billing_config con secretos AES-256-GCM (V14), ciclo de habilitación con back office, auditoría y elección de rango por el local (V15-V17), eliminación de credenciales globales (V16).",
+      "acceptance_criteria": [
+        "Migraciones V13..V17",
+        "Un local sin credenciales no factura (sin respaldo global)",
+        "Rangos de numeración con guardas y auditoría"
+      ],
+      "status": "done",
+      "assigned_to": "Externo",
+      "completed_at": "2026-09-23",
+      "origin": "retroactive"
+    },
+    {
+      "id": "FEAT-012",
+      "title": "Emisión de factura desacoplada por eventos de dominio y modelo rico",
+      "description": "sales publica SaleCompletedEvent; billing lo escucha (@Async, AFTER_COMMIT) y emite. ElectronicInvoice con invariantes de dominio. Commit 50b05bb.",
+      "acceptance_criteria": [
+        "sales no depende de billing",
+        "Una falla de Factus no revierte la venta"
+      ],
+      "status": "done",
+      "assigned_to": "Externo",
+      "completed_at": "2026-09-24",
+      "origin": "retroactive"
+    },
+    {
+      "id": "FEAT-013",
+      "title": "Notas crédito y débito electrónicas (V18/V19)",
+      "description": "Emisión, consulta, descarga y eliminación de notas crédito y débito sobre facturas validadas, con aislamiento por local.",
+      "acceptance_criteria": [
+        "Migraciones V18 y V19 con sus tests de migración (falta V18MigrationSqlTest)",
+        "Endpoints /api/v1/billing/credit-notes y /debit-notes",
+        "Commiteado el 2026-10-16 (1229c7b)"
+      ],
+      "status": "done",
+      "assigned_to": null,
+      "origin": "retroactive",
+      "completed_at": "2026-10-16"
+    },
+    {
+      "id": "FEAT-014",
+      "title": "Auditoría SDD: seguridad, facturación, documentación y arnés (Fases 1-4)",
+      "description": "Corrección de escalada de rol, storage sin permisos, seeder en producción, CORS, bloqueo de stock, validación de DTO, tracking público de tickets, timeouts y aislamiento en facturación; specs nuevos y puestos al día; scripts init.* con paridad y módulos derivados del código.",
+      "acceptance_criteria": [
+        "mvnw test en verde",
+        "init.sh e init.ps1 con el mismo veredicto",
+        "Specs de storage, notifications y backoffice creados",
+        "Commiteado el 2026-10-16 (commits c4314af..a99fdb4)"
+      ],
+      "status": "done",
+      "assigned_to": "Externo",
+      "completed_at": "2026-10-16"
+    },
+    {
+      "id": "FEAT-015",
+      "title": "Fase 5 de la auditoría: infraestructura, dependencias y CI",
+      "description": "springdoc compatible con Boot 4, AWS SDK/jjwt/jacoco, CI, Dependabot, docker-compose.prod con variables completas, retirar el backup H2 del repo, ArchUnit y Testcontainers.",
+      "acceptance_criteria": [
+        "Existe .github/workflows con mvn verify y lint/build del frontend",
+        "docker-compose.prod.yml reenvía EMAIL_*, SMTP_*, APP_FRONTEND_URL, JWT_COOKIE_SECURE, BILLING_PROVIDER",
+        "backend/data_backup_* fuera del índice de git"
+      ],
+      "status": "in_progress",
+      "assigned_to": null,
+      "notes": "Hecho el 2026-10-16: springdoc 3.1.1, AWS SDK 2.56, jjwt 0.13, jacoco 0.8.15, starter-flyway, ci.yml, dependabot.yml, docker-compose.prod y Dockerfile (TZ, HEALTHCHECK, MaxRAMPercentage), backup H2 fuera del índice. Pendiente: ArchUnit, Testcontainers/PostgreSQL, dependency-check y confirmar que CI corre en GitHub."
+    },
+    {
+      "id": "FEAT-016",
+      "title": "Rate limiting, lockout persistente y revocación de sesiones",
+      "description": "Límites por IP y usuario en login, registro, refresh y tickets públicos; lockout compartido entre instancias; revocar refresh tokens al cambiar la contraseña; logout público.",
+      "acceptance_criteria": [
+        "Respuesta 429 con Retry-After",
+        "Tests de integración del límite"
+      ],
+      "status": "pending",
+      "assigned_to": null
+    },
+    {
+      "id": "FEAT-017",
+      "title": "Frontend: sesión sin tokens en localStorage, IVA del backend y UI de facturación",
+      "description": "Quitar jwt_token/refresh_token de localStorage; mostrar el total del backend en vez del 19% fijo; enviar sendToFactus y mostrar el estado real; pantallas de habilitación, rangos y notas crédito/débito.",
+      "acceptance_criteria": [
+        "POSBento no calcula impuestos",
+        "InvoicingBento consume /api/v1/billing"
+      ],
+      "status": "in_progress",
+      "assigned_to": null,
+      "notes": "Hecho el 2026-10-16: tokens solo en memoria, IVA fijo 19% eliminado, sendToFactus enviado, sin CUFE falso, cierre de sesión de la UI al expirar. Pendiente: pantallas de habilitación, rangos, notas crédito/débito y estado real de la factura."
+    },
+    {
+      "id": "FEAT-018",
+      "title": "Facturación robusta: Factus fuera de la transacción y reintento automático",
+      "description": "Reservar PENDING, llamar a Factus fuera de la transacción con lock, registrar el resultado; job de reintento o outbox; centralizar el mapeo de códigos DIAN; rotación de claves de cifrado.",
+      "acceptance_criteria": [
+        "Ninguna llamada HTTP dentro de una transacción con lock",
+        "Test de reintento tras un fallo temporal"
+      ],
+      "status": "pending",
+      "assigned_to": null
+    },
+    {
+      "id": "FEAT-019",
+      "title": "Índices, zona horaria y reportes con devoluciones",
+      "description": "Crear los índices sales(store_id, created_at) e inventory_movements(product_id, created_at); fijar America/Bogota; descontar devoluciones en reportes; guardar el costo en sale_items.",
+      "acceptance_criteria": [
+        "Migración V20",
+        "Cierre de caja correcto en un contenedor UTC"
+      ],
+      "status": "pending",
+      "assigned_to": null
     }
   ]
 }

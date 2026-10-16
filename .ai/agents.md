@@ -6,6 +6,8 @@
 
 ---
 
+> **Rutas en este monorepo.** La documentación (`docs/` en el resto de este arnés) vive en **`backend/docs/`**, y el código Java en `backend/src/main/java/com/sciencebot/pos/`. Cuando un rol o este archivo diga `docs/...`, léelo como `backend/docs/...`. `init.sh`/`init.ps1` resuelven esa ruta solos.
+
 ## Boot Sequence
 
 ### Todo agente DEBE:
@@ -13,12 +15,12 @@
 2. Leer su archivo de rol en `.ai/roles/<rol>.md`.
 
 ### Solo el Leader DEBE además:
-3. Leer `docs/_index.md` (para resolver rutas a módulos).
+3. Leer `backend/docs/_index.md` (para resolver rutas a módulos).
 4. Leer `.ai/features.json` (para identificar la tarea pendiente).
 
 ### Ningún agente debe:
-- Leer todos los archivos de `docs/` al arrancar.
-- Cargar más de 3 documentos de contexto simultáneamente.
+- Leer todos los archivos de `backend/docs/` al arrancar.
+- Cargar más de 4 documentos de dominio simultáneamente (ver R1).
 - Leer documentos que no estén en su Context Pack.
 
 ---
@@ -28,12 +30,14 @@
 Dependiendo del entorno, ejecutar el script correspondiente:
 
 ```bash
-# Linux / MacOS / WSL
+# Linux / MacOS / WSL / Git Bash
 bash .ai/init.sh
 
 # Windows nativo (PowerShell)
 powershell -ExecutionPolicy Bypass -File .ai/init.ps1
 ```
+
+Ambos scripts son equivalentes (mismas fases, mismo veredicto) y funcionan desde cualquier directorio. Banderas: `--skip-tests` / `-SkipTests` (valida solo arnés, docs y estructura, sin correr Maven) y `--frontend` / `-Frontend` (añade `npm run lint`). La lista de módulos **se deriva del código** (cada carpeta de `com/sciencebot/pos` con `internal/`): un módulo sin `spec.md` hace fallar la validación, y un spec sin módulo da una advertencia. Un código de salida distinto de `0` significa que el arnés, los docs o los tests están rotos; la salida muestra las últimas líneas de Maven si fallaron los tests.
 
 Si el script retorna un código distinto de `0`, el agente **DEBE**:
 1. Leer la salida para identificar el problema.
@@ -48,9 +52,9 @@ El proyecto cuenta con integración completa de Docker para el desarrollo local 
 
 ### Comandos de Control de Desarrollo
 
-Para controlar el ciclo de vida del contenedor de desarrollo, utiliza el script de utilidad disponible en la raíz:
-- **En Windows (PowerShell)**: `.\docker-dev.ps1 <comando>`
-- **En Linux/WSL/MacOS (Bash)**: `./docker-dev.sh <comando>`
+Para controlar el ciclo de vida del contenedor de desarrollo, utiliza el script de utilidad disponible en `backend/`:
+- **En Windows (PowerShell)**: `.\backend\docker-dev.ps1 <comando>`
+- **En Linux/WSL/MacOS (Bash)**: `./backend/docker-dev.sh <comando>`
 
 #### Comandos Disponibles:
 - `start`   - Levanta el backend y la base de datos PostgreSQL en segundo plano.
@@ -64,9 +68,9 @@ Para controlar el ciclo de vida del contenedor de desarrollo, utiliza el script 
 ### Flujo de Trabajo y Pruebas
 1. **Modificación**: Edita el código de la aplicación.
 2. **Reflejar cambios**:
-   - Los cambios de código se sincronizan mediante el volumen montado (`. -> /app`). Spring Boot DevTools reiniciará la app si el IDE compila el código en `target/classes`.
-   - Si no estás usando un IDE con compilación automática, ejecuta `.\docker-dev.ps1 restart` para reiniciar los servicios.
-   - Si modificas dependencias (`pom.xml`), debes ejecutar `.\docker-dev.ps1 rebuild` para descargar las dependencias nuevas y reconstruir la imagen.
+   - El código se sincroniza mediante el volumen montado (`. -> /app`), pero `/app/target` es un volumen anónimo: el `target/` del host queda enmascarado y DevTools solo reinicia con lo que se compila **dentro del contenedor**.
+   - Si no ves tus cambios, ejecuta `.\backend\docker-dev.ps1 restart`.
+   - Si modificas dependencias (`pom.xml`), ejecuta `.\backend\docker-dev.ps1 rebuild`.
 3. **Pruebas de Endpoints**: Realiza solicitudes a `http://localhost:8080`.
 
 
@@ -76,7 +80,7 @@ Para controlar el ciclo de vida del contenedor de desarrollo, utiliza el script 
 
 ### R1 — Contexto mínimo
 - Leer **solo** los archivos del Context Pack asignado por el Leader.
-- Máximo de archivos de documentación simultáneos en contexto: **3**.
+- Máximo de archivos de documentación de dominio simultáneos en contexto: **4** (spec del módulo, `_conventions.md`, y hasta dos más según la tarea: `_architecture.md`, `_security.md`, `_database-schema.md`, otro spec). **No cuentan** los archivos de arranque (`agents.md`, tu rol, `_index.md`, `features.json`).
 - Máximo de archivos de código simultáneos en contexto: **5**.
 
 ### R2 — Validación continua
@@ -86,7 +90,8 @@ Para controlar el ciclo de vida del contenedor de desarrollo, utiliza el script 
 ### R3 — Trazabilidad obligatoria
 - Cada acción relevante debe registrarse en `.ai/progress/history.md`.
 - Formato: `[YYYY-MM-DD HH:MM] [ROL] — Descripción breve del resultado`.
-- Nunca borrar entradas anteriores del historial.
+- Nunca borrar entradas anteriores del historial (solo se corrige formato roto, y se anota en una entrada nueva).
+- Si el trabajo lo hizo un agente o una persona **fuera** del protocolo, se registra igual con una entrada retroactiva marcada como tal (rol `[EXTERNO]`).
 
 ### R4 — Roles definidos
 
@@ -102,11 +107,13 @@ Para controlar el ciclo de vida del contenedor de desarrollo, utiliza el script 
 - Toda decisión y resultado se documenta en `progress/history.md`.
 
 ### R6 — Auto-mejora controlada
-- Solo el rol **Reviewer** puede modificar archivos dentro de `.ai/`.
-- Cualquier cambio al arnés debe documentarse con motivo y diff en el historial.
+- Solo el rol **Reviewer** puede modificar las **reglas del arnés**: `.ai/agents.md`, `.ai/roles/*` e `.ai/init.*`.
+- Los archivos de **estado** sí los actualizan los roles que lo indican: `features.json` (Leader) y `progress/history.md` (todos, solo añadiendo).
+- Cualquier cambio a las reglas del arnés debe documentarse con motivo y diff en el historial.
+- `.claude/agents/*.md` son envoltorios de estos roles para Claude Code: la fuente de verdad es `.ai/roles/*.md`; si difieren, manda `.ai`.
 
 ### R7 — Adherencia a la SSOT (Single Source of Truth)
-- Todo desarrollo debe respetar los specs modulares en `docs/modules/<modulo>/spec.md` y las convenciones de Monolito Modular de `docs/_conventions.md`.
+- Todo desarrollo debe respetar los specs modulares en `backend/docs/modules/<modulo>/spec.md` y las convenciones de Monolito Modular de `backend/docs/_conventions.md`.
 - Si se detecta discrepancia entre documentación y código → detenerse e informar.
 
 ### R8 — Context Pack obligatorio
@@ -130,35 +137,39 @@ Para controlar el ciclo de vida del contenedor de desarrollo, utiliza el script 
 └── progress/
     └── history.md         ← Registro cronológico de acciones
 
-docs/
+backend/docs/
 ├── _index.md              ← Router de navegación
 ├── _project.md            ← Contexto mínimo del proyecto
 ├── _architecture.md       ← Capas y patrones (Monolito Modular)
 ├── _conventions.md        ← Estándares y estructura de paquetes de Java
 ├── _security.md           ← JWT, BCrypt, RBAC
 ├── _database-schema.md    ← Diagrama ER y convenciones
-├── _deployment.md         ← Variables de entorno
+├── _deployment.md         ← Variables de entorno y despliegue
 ├── _glossary.md           ← Terminología del dominio
+├── _roadmap.md            ← Estado por módulo, deuda técnica y plan
+└── (modules/ abajo)
 └── modules/
-    ├── [modulo]/spec.md   ← Specs modulares (auth, sales, products...)
+    └── [modulo]/spec.md   ← Un spec por módulo del código (lo exige init.*)
 ```
 
-La estructura de paquetes Java debe seguir el Vertical Split en `src/main/java/com/sciencebot/pos/[modulo]/` con subpaquetes `internal/` para lógica privada, siguiendo las convenciones de `docs/_conventions.md`.
+La estructura de paquetes Java debe seguir el Vertical Split en `src/main/java/com/sciencebot/pos/[modulo]/` con subpaquetes `internal/` para lógica privada, siguiendo las convenciones de `backend/docs/_conventions.md`. El frontend (`frontend/`) no tiene rol propio en el arnés: lo cubre el Leader y se valida con `--frontend`.
 
 ---
 
 ## Flujo de Trabajo Estándar
 
 ```
-┌─────────┐     ┌──────────────┐     ┌────────────┐
-│ Leader   │────▶│ Implementer  │────▶│  Reviewer   │
-│ Lee task │     │ Lee Context  │     │  Valida     │
-│ Construye│     │ Pack del     │     │  Aprueba/   │
-│ Context  │     │ Leader       │     │  Rechaza    │
-│ Pack     │     │ Escribe code │     │             │
-│ Delega   │     │ Corre init   │     │             │
-└─────────┘     └──────────────┘     └────────────┘
+┌─────────┐     ┌──────────────┐     ┌────────────┐     ┌────────────┐
+│ Leader   │────▶│ Implementer  │────▶│  Reviewer   │────▶│ Committer  │
+│ Lee task │     │ Lee Context  │     │  Valida     │     │ Propone el │
+│ Construye│     │ Pack del     │     │  Aprueba/   │     │ plan de    │
+│ Context  │     │ Leader       │     │  Rechaza    │     │ commits y  │
+│ Pack     │     │ Escribe code │     │             │     │ espera OK  │
+│ Delega   │     │ Corre init   │     │             │     │ humano     │
+└─────────┘     └──────────────┘     └────────────┘     └────────────┘
      ▲                                      │
      └──────────────────────────────────────┘
               (ciclo hasta aprobación)
 ```
+
+El Committer nunca hace `push` ni reescribe historia, y solo commitea con aprobación humana explícita.

@@ -19,7 +19,11 @@ public class CustomerMapper {
                 customer.getEmail(),
                 customer.getPhone(),
                 customer.getAddress(),
-                customer.isActive()
+                customer.isActive(),
+                customer.getDv(),
+                customer.getLegalOrganizationId(),
+                customer.getTributeId(),
+                customer.getMunicipalityId()
         );
     }
 }

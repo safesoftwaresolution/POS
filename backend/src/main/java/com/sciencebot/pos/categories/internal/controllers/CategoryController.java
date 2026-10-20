@@ -22,7 +22,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/categories")
-@Tag(name = "🏷️ Categorías", description = "Gestión de categorías de productos")
+@Tag(name = "Categorias", description = "Gestion de categorias de productos (escritura exclusiva SUPER_ADMIN)")
 public class CategoryController {
 
     private final CategoryFacade categoryFacade;
@@ -32,13 +32,13 @@ public class CategoryController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'SUPERVISOR', 'SELLER')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMINISTRATOR', 'SUPERVISOR', 'SELLER')")
     @Operation(
-            summary = "Listar todas las categorías",
-            description = "Retorna la lista completa de categorías con su conteo de productos asociados. Accesible por todos los roles."
+            summary = "Listar todas las categorias",
+            description = "Retorna la lista completa de categorias con su conteo de productos asociados. Accesible por todos los roles autenticados."
     )
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Lista de categorías",
+            @ApiResponse(responseCode = "200", description = "Lista de categorias",
                     content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
                             array = @ArraySchema(schema = @Schema(implementation = CategoryDto.class)))),
             @ApiResponse(responseCode = "401", description = "No autenticado", content = @Content),
@@ -49,16 +49,16 @@ public class CategoryController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'SUPERVISOR')")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     @Operation(
-            summary = "Crear categoría",
-            description = "Crea una nueva categoría de productos. Requiere rol **ADMINISTRATOR** o **SUPERVISOR**."
+            summary = "Crear categoria",
+            description = "Crea una nueva categoria de productos. Requiere rol **SUPER_ADMIN**."
     )
     @ApiResponses({
-            @ApiResponse(responseCode = "201", description = "Categoría creada exitosamente",
+            @ApiResponse(responseCode = "201", description = "Categoria creada exitosamente",
                     content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
                             schema = @Schema(implementation = CategoryDto.class))),
-            @ApiResponse(responseCode = "400", description = "Datos de entrada inválidos", content = @Content),
+            @ApiResponse(responseCode = "400", description = "Datos de entrada invalidos", content = @Content),
             @ApiResponse(responseCode = "401", description = "No autenticado", content = @Content),
             @ApiResponse(responseCode = "403", description = "Sin permisos suficientes", content = @Content)
     })
@@ -68,21 +68,21 @@ public class CategoryController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'SUPERVISOR')")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     @Operation(
-            summary = "Actualizar categoría",
-            description = "Actualiza el nombre y descripción de una categoría existente. Requiere rol **ADMINISTRATOR** o **SUPERVISOR**."
+            summary = "Actualizar categoria",
+            description = "Actualiza el nombre y descripcion de una categoria existente. Requiere rol **SUPER_ADMIN**."
     )
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Categoría actualizada",
+            @ApiResponse(responseCode = "200", description = "Categoria actualizada",
                     content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
                             schema = @Schema(implementation = CategoryDto.class))),
-            @ApiResponse(responseCode = "404", description = "Categoría no encontrada", content = @Content),
+            @ApiResponse(responseCode = "404", description = "Categoria no encontrada", content = @Content),
             @ApiResponse(responseCode = "401", description = "No autenticado", content = @Content),
             @ApiResponse(responseCode = "403", description = "Sin permisos suficientes", content = @Content)
     })
     public ResponseEntity<CategoryDto> updateCategory(
-            @Parameter(description = "ID de la categoría a actualizar", example = "1", required = true)
+            @Parameter(description = "ID de la categoria a actualizar", example = "1", required = true)
             @PathVariable Long id,
             @RequestBody UpdateCategoryCommand command
     ) {
@@ -91,24 +91,20 @@ public class CategoryController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMINISTRATOR')")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     @Operation(
-            summary = "Eliminar categoría",
-            description = """
-                    Elimina una categoría permanentemente. Solo para **ADMINISTRATOR**.
-                    
-                    > ⚠️ No se puede eliminar una categoría que tenga productos asociados.
-                    """
+            summary = "Eliminar categoria",
+            description = "Elimina una categoria permanentemente. Solo para **SUPER_ADMIN**."
     )
     @ApiResponses({
-            @ApiResponse(responseCode = "204", description = "Categoría eliminada correctamente", content = @Content),
-            @ApiResponse(responseCode = "404", description = "Categoría no encontrada", content = @Content),
-            @ApiResponse(responseCode = "409", description = "La categoría tiene productos asociados y no puede eliminarse", content = @Content),
+            @ApiResponse(responseCode = "204", description = "Categoria eliminada correctamente", content = @Content),
+            @ApiResponse(responseCode = "404", description = "Categoria no encontrada", content = @Content),
+            @ApiResponse(responseCode = "409", description = "La categoria tiene productos asociados y no puede eliminarse", content = @Content),
             @ApiResponse(responseCode = "401", description = "No autenticado", content = @Content),
             @ApiResponse(responseCode = "403", description = "Sin permisos suficientes", content = @Content)
     })
     public ResponseEntity<Void> deleteCategory(
-            @Parameter(description = "ID de la categoría a eliminar", example = "1", required = true)
+            @Parameter(description = "ID de la categoria a eliminar", example = "1", required = true)
             @PathVariable Long id) {
         categoryFacade.deleteCategory(id);
         return ResponseEntity.noContent().build();

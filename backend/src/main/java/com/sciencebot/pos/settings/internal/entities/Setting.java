@@ -11,8 +11,15 @@ import java.time.LocalDateTime;
 @Setter
 public class Setting {
 
+    /**
+     * Llave primaria compartida con el local (tenant) dueño de esta configuracion: id = id del
+     * local en la tabla stores (relacion 1 a 1). No es autogenerada: el servicio la asigna
+     * explicitamente a partir de TenantContext.getStoreId() al crear la fila de un local nuevo.
+     * Antes de esto, 'settings' era un singleton global (id fijo = 1) compartido por todos los
+     * locales.
+     */
     @Id
-    private Integer id = 1;
+    private Long id;
 
     @Column(name = "business_name", nullable = false, length = 100)
     private String businessName;

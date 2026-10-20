@@ -1,5 +1,6 @@
 package com.sciencebot.pos.suppliers.internal.services;
 
+import com.sciencebot.pos.config.tenant.TenantContext;
 import com.sciencebot.pos.suppliers.*;
 import com.sciencebot.pos.suppliers.internal.entities.Supplier;
 import com.sciencebot.pos.suppliers.internal.repositories.SupplierRepository;
@@ -25,7 +26,9 @@ public class SupplierServiceImpl implements SupplierFacade {
 
     @Override
     public Optional<SupplierDto> getById(Long id) {
-        return supplierRepository.findById(id).map(supplierMapper::toDto);
+        return supplierRepository.findById(id)
+                .filter(s -> s.getStoreId().equals(TenantContext.getStoreId()))
+                .map(supplierMapper::toDto);
     }
 
     @Override
@@ -38,12 +41,14 @@ public class SupplierServiceImpl implements SupplierFacade {
             throw new IllegalArgumentException("El identificador fiscal (Tax ID) es obligatorio");
         }
 
+        Long storeId = requireCurrentStoreId();
         String cleanTaxId = command.taxId().trim();
-        if (supplierRepository.existsByTaxId(cleanTaxId)) {
+        if (supplierRepository.existsByStoreIdAndTaxId(storeId, cleanTaxId)) {
             throw new IllegalArgumentException("Ya existe un proveedor con el Tax ID: " + cleanTaxId);
         }
 
         Supplier supplier = new Supplier();
+        supplier.setStoreId(storeId);
         supplier.setCompanyName(command.companyName().trim());
         supplier.setTaxId(cleanTaxId);
         supplier.setContactName(command.contactName() != null ? command.contactName().trim() : null);
@@ -60,6 +65,7 @@ public class SupplierServiceImpl implements SupplierFacade {
     @Transactional
     public SupplierDto updateSupplier(Long id, UpdateSupplierCommand command) {
         Supplier supplier = supplierRepository.findById(id)
+                .filter(s -> s.getStoreId().equals(TenantContext.getStoreId()))
                 .orElseThrow(() -> new EntityNotFoundException("Proveedor no encontrado con ID: " + id));
 
         if (command.companyName() == null || command.companyName().isBlank()) {
@@ -80,6 +86,7 @@ public class SupplierServiceImpl implements SupplierFacade {
     @Transactional
     public void deleteSupplier(Long id) {
         Supplier supplier = supplierRepository.findById(id)
+                .filter(s -> s.getStoreId().equals(TenantContext.getStoreId()))
                 .orElseThrow(() -> new EntityNotFoundException("Proveedor no encontrado con ID: " + id));
         supplier.setActive(false);
         supplierRepository.save(supplier);
@@ -87,7 +94,19 @@ public class SupplierServiceImpl implements SupplierFacade {
 
     @Override
     public Page<SupplierDto> searchSuppliers(String search, Pageable pageable) {
+        Long storeId = requireCurrentStoreId();
         String cleanSearch = (search == null || search.isBlank()) ? null : search.trim();
-        return supplierRepository.searchSuppliers(cleanSearch, pageable).map(supplierMapper::toDto);
+        if (cleanSearch == null) {
+            return supplierRepository.findAllByStoreId(storeId, pageable).map(supplierMapper::toDto);
+        }
+        return supplierRepository.searchSuppliers(storeId, cleanSearch, pageable).map(supplierMapper::toDto);
+    }
+
+    private static Long requireCurrentStoreId() {
+        Long storeId = TenantContext.getStoreId();
+        if (storeId == null) {
+            throw new IllegalStateException("No hay un local activo en el contexto de la solicitud");
+        }
+        return storeId;
     }
 }

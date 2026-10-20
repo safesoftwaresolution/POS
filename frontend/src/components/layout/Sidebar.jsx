@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
+<<<<<<< HEAD
 import { 
   LayoutDashboard, 
   ShoppingCart, 
@@ -8,19 +9,53 @@ import {
   Users, 
   FileText, 
   Settings,
+=======
+import {
+  LayoutDashboard,
+  ShoppingCart,
+  Package,
+  Tag,
+  Users,
+  FileText,
+  FileCheck2,
+  BarChart3,
+  Settings,
+  UserCog,
+>>>>>>> develop
   HelpCircle,
   LogOut,
   ChevronLeft,
   ChevronRight,
+<<<<<<< HEAD
   Zap,
   Tags
+=======
+  X,
+  Moon,
+  Bell
+>>>>>>> develop
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
+import { getProductsApi } from '../../services/productsApi';
+import { getUnreadNotificationCountApi } from '../../services/notificationsApi';
+import BentoIcon from '../BentoIcon';
+
+const ROLE_LABELS = {
+  ADMINISTRATOR: 'Administrador',
+  SUPERVISOR: 'Supervisor',
+  SELLER: 'Vendedor',
+};
 
 export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }) {
-  const { user, logout } = useAuth();
+  const { logout, user } = useAuth();
+  const { darkMode, toggleTheme } = useTheme();
   const navigate = useNavigate();
+  const [lowStockCount, setLowStockCount] = useState(0);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
+<<<<<<< HEAD
   const navItems = [
     { path: '/', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/pos', label: 'Punto de Venta', icon: ShoppingCart },
@@ -30,6 +65,71 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
     { path: '/customers', label: 'Clientes', icon: Users },
     { path: '/invoicing', label: 'Facturación DIAN', icon: FileText },
     { path: '/settings', label: 'Configuración', icon: Settings },
+=======
+  useEffect(() => {
+    getProductsApi()
+      .then(data => {
+        const products = Array.isArray(data) ? data : [];
+        setLowStockCount(products.filter(p => (p.quantityAvailable ?? p.stock ?? 0) <= (p.minStock || 5)).length);
+      })
+      .catch(() => setLowStockCount(0));
+  }, []);
+
+  const refreshUnreadCount = useCallback(async () => {
+    try {
+      setUnreadCount(await getUnreadNotificationCountApi());
+    } catch {
+      setUnreadCount(0);
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshUnreadCount();
+    const interval = setInterval(refreshUnreadCount, 45000);
+    return () => clearInterval(interval);
+  }, [refreshUnreadCount]);
+
+  const getInitials = (name) => {
+    if (!name) return 'US';
+    return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+  };
+
+  // Agrupado por área de trabajo para que el menú sea más fácil de escanear.
+  const navGroups = [
+    {
+      title: 'Principal',
+      items: [
+        { path: '/', label: 'Dashboard', icon: LayoutDashboard },
+      ],
+    },
+    {
+      title: 'Operación',
+      items: [
+        { path: '/pos', label: 'Punto de Venta', icon: ShoppingCart },
+        { path: '/products', label: 'Productos', icon: Tag },
+        { path: '/inventory', label: 'Inventario', icon: Package, badge: lowStockCount > 0 ? lowStockCount : undefined },
+      ],
+    },
+    {
+      title: 'Clientes y Facturación',
+      items: [
+        { path: '/customers', label: 'Clientes', icon: Users },
+        { path: '/invoicing', label: 'Facturación DIAN', icon: FileText },
+        ...(user?.role === 'ADMINISTRATOR' ? [{ path: '/documents', label: 'Documentos', icon: FileCheck2 }] : []),
+      ],
+    },
+    ...(user?.role !== 'SELLER' ? [{
+      title: 'Análisis',
+      items: [{ path: '/reports', label: 'Reportes', icon: BarChart3 }],
+    }] : []),
+    {
+      title: 'Sistema',
+      items: [
+        ...(user?.role === 'ADMINISTRATOR' ? [{ path: '/users', label: 'Usuarios', icon: UserCog }] : []),
+        ...(user?.role !== 'SELLER' ? [{ path: '/settings', label: 'Configuración', icon: Settings }] : []),
+      ],
+    },
+>>>>>>> develop
   ];
 
   const handleLogout = async () => {
@@ -53,107 +153,245 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
       )}
 
       {/* Sidebar - Expandable / Collapsible Sidebar */}
-      <aside 
-        className={`fixed top-0 left-0 h-screen bg-white dark:bg-[#1e293b] text-[#191c1e] dark:text-white z-50 flex flex-col justify-between py-6 border-r border-[#e0e3e6] dark:border-[#334155] shadow-xs select-none transition-all duration-300 ${
+      <aside
+        className={`fixed top-0 left-0 h-screen bg-card text-ink z-50 flex flex-col py-6 border-r border-line shadow-xs select-none transition-all duration-300 ${
           isCollapsed ? 'lg:w-20' : 'lg:w-64'
         } ${
           isOpen ? 'translate-x-0 w-64' : '-translate-x-full lg:translate-x-0'
         }`}
       >
-        <div className="flex flex-col items-center w-full px-3">
-          {/* Brand Header */}
-          <div className={`flex items-center gap-3 w-full pb-4 border-b border-[#e0e3e6] dark:border-[#334155] ${
-            isCollapsed ? 'justify-center' : 'px-2 justify-between'
-          }`}>
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-10 h-10 rounded-2xl bg-[#006d3c] text-white flex items-center justify-center font-black text-xl shadow-md shrink-0">
-                <Zap className="w-5 h-5 fill-white" />
+        {/* Brand Header */}
+        <div className={`shrink-0 flex items-center gap-3 w-full pb-4 border-b border-line ${
+          isCollapsed ? 'px-3 justify-center' : 'px-5 justify-between'
+        }`}>
+          <div className="flex items-center gap-3 min-w-0">
+            <BentoIcon />
+            {(!isCollapsed || isOpen) && (
+              <div className="truncate">
+                <h1 className="font-black text-lg leading-tight tracking-tight text-ink truncate flex items-center gap-1">
+                  <span>Bento</span><span className="text-brand">POS</span>
+                </h1>
+                <p className="text-[10px] text-gray-400 font-semibold tracking-wide">Tu negocio, en equilibrio</p>
               </div>
-              {(!isCollapsed || isOpen) && (
-                <div className="truncate">
-                  <h1 className="font-extrabold text-base leading-tight text-[#191c1e] dark:text-white truncate">
-                    ProPOS <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full bg-[#12b76a]/20 text-[#006d3c] dark:text-[#12b76a]">Bento</span>
-                  </h1>
-                  <p className="text-[10px] text-gray-400 font-medium">Caja Principal</p>
-                </div>
-              )}
-            </div>
+            )}
           </div>
-
-          {/* Navigation Menu */}
-          <nav className="flex flex-col gap-2 w-full mt-4">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <NavLink
-                  key={item.path}
-                  to={item.path}
-                  onClick={handleNavClick}
-                  title={isCollapsed ? item.label : undefined}
-                  className={({ isActive }) =>
-                    `rounded-2xl flex items-center transition-all duration-200 cursor-pointer ${
-                      isActive
-                        ? 'bg-[#006d3c] text-white shadow-md shadow-[#006d3c]/20 font-bold'
-                        : 'text-gray-600 dark:text-gray-300 hover:bg-[#f2f4f7] dark:hover:bg-[#334155] hover:text-[#006d3c] dark:hover:text-white'
-                    } ${
-                      isCollapsed && !isOpen
-                        ? 'w-11 h-11 justify-center mx-auto'
-                        : 'w-full px-3.5 py-3 gap-3 text-xs font-semibold'
-                    }`
-                  }
-                >
-                  <Icon className="w-5 h-5 shrink-0" />
-                  {(!isCollapsed || isOpen) && <span className="truncate">{item.label}</span>}
-                </NavLink>
-              );
-            })}
-          </nav>
         </div>
 
+        {/* Navigation Menu */}
+        <nav className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-4 w-full px-3 mt-4">
+          {navGroups.map((group, groupIdx) => (
+            <div key={group.title} className="flex flex-col gap-1.5 w-full">
+              {(!isCollapsed || isOpen) ? (
+                <p className="px-3.5 text-[10px] font-extrabold uppercase tracking-wider text-ink-muted">
+                  {group.title}
+                </p>
+              ) : (
+                groupIdx > 0 && <div className="h-px w-8 bg-[#EAEAEA] dark:bg-line mx-auto" />
+              )}
+              {group.items.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <NavLink
+                    key={item.path}
+                    to={item.path}
+                    onClick={handleNavClick}
+                    title={isCollapsed ? item.label : undefined}
+                    className={({ isActive }) =>
+                      `relative rounded-2xl flex items-center transition-all duration-200 cursor-pointer ${
+                        isActive
+                          ? 'bg-solid text-white shadow-md shadow-[#0A0A0A]/10 font-bold'
+                          : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-line hover:text-brand dark:hover:text-brand'
+                      } ${
+                        isCollapsed && !isOpen
+                          ? 'w-11 h-11 justify-center mx-auto'
+                          : 'w-full px-3.5 py-3 gap-3 text-xs font-semibold'
+                      }`
+                    }
+                  >
+                    {({ isActive }) => (
+                      <>
+                        <Icon className={`w-5 h-5 shrink-0 ${isActive ? 'text-brand' : ''}`} />
+                        {(!isCollapsed || isOpen) ? (
+                          <>
+                            <span className="truncate">{item.label}</span>
+                            {item.badge != null && (
+                              <span className={`ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                                isActive ? 'bg-white/20 text-white' : 'bg-brand text-white'
+                              }`}>
+                                {item.badge}
+                              </span>
+                            )}
+                          </>
+                        ) : (
+                          item.badge != null && (
+                            <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-brand ring-2 ring-white dark:ring-card" />
+                          )
+                        )}
+                      </>
+                    )}
+                  </NavLink>
+                );
+              })}
+            </div>
+          ))}
+        </nav>
+
         {/* Bottom Tools & Collapse Toggle */}
-        <div className="flex flex-col gap-2 w-full px-3 pt-3 border-t border-[#e0e3e6] dark:border-[#334155]">
+        <div className="shrink-0 flex flex-col gap-2 w-full px-3 pt-3 border-t border-line">
+          {/* User Card (opens account menu) */}
+          <button
+            onClick={() => setProfileOpen(true)}
+            className={`flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-line transition-colors cursor-pointer text-left ${isCollapsed && !isOpen ? 'justify-center' : ''}`}
+          >
+            <div className="relative shrink-0">
+              <div className="w-9 h-9 rounded-full bg-solid text-white flex items-center justify-center font-bold text-xs ring-1 ring-[#EAEAEA] dark:ring-line">
+                {getInitials(user?.fullName || user?.username)}
+              </div>
+              <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-brand ring-2 ring-white dark:ring-card" />
+            </div>
+            {(!isCollapsed || isOpen) && (
+              <>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-bold text-ink truncate">{user?.fullName || user?.username}</p>
+                  <p className="text-[11px] text-ink-muted truncate">{ROLE_LABELS[user?.role] || user?.role}</p>
+                </div>
+                <ChevronRight className="w-4 h-4 text-gray-300 dark:text-gray-600 shrink-0" />
+              </>
+            )}
+          </button>
+
           {/* Collapse/Expand Desktop Button */}
           <button
             onClick={onToggleCollapse}
-            className={`hidden lg:flex items-center gap-3 p-2.5 rounded-2xl text-xs font-bold text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#334155] transition-colors cursor-pointer ${
+            className={`hidden lg:flex items-center gap-3 p-2.5 rounded-2xl text-xs font-bold text-ink-soft hover:bg-gray-100 dark:hover:bg-line transition-colors cursor-pointer ${
               isCollapsed ? 'justify-center' : 'px-3'
             }`}
             title={isCollapsed ? 'Expandir Menú' : 'Contraer Menú'}
           >
             {isCollapsed ? (
-              <ChevronRight className="w-5 h-5 text-[#006d3c] dark:text-[#12b76a]" />
+              <ChevronRight className="w-5 h-5 text-brand dark:text-brand" />
             ) : (
               <>
-                <ChevronLeft className="w-5 h-5 text-[#006d3c] dark:text-[#12b76a]" />
+                <ChevronLeft className="w-5 h-5 text-brand dark:text-brand" />
                 <span>Contraer Menú</span>
               </>
             )}
           </button>
-
-          {/* Help Button */}
-          <button 
-            title="Soporte"
-            className={`flex items-center gap-3 p-2.5 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#334155] hover:text-[#006d3c] rounded-2xl transition-all cursor-pointer text-xs font-semibold ${
-              isCollapsed && !isOpen ? 'justify-center' : 'px-3'
-            }`}
-          >
-            <HelpCircle className="w-5 h-5 shrink-0" />
-            {(!isCollapsed || isOpen) && <span>Soporte</span>}
-          </button>
-
-          {/* Logout Button */}
-          <button
-            onClick={handleLogout}
-            title="Cerrar Sesión"
-            className={`flex items-center gap-3 p-2.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-2xl transition-all cursor-pointer text-xs font-extrabold ${
-              isCollapsed && !isOpen ? 'justify-center' : 'px-3'
-            }`}
-          >
-            <LogOut className="w-5 h-5 shrink-0" />
-            {(!isCollapsed || isOpen) && <span>Cerrar Sesión</span>}
-          </button>
         </div>
       </aside>
+
+      {/* Account Menu Modal */}
+      {profileOpen && (
+        <div
+          onClick={() => setProfileOpen(false)}
+          className="fixed inset-0 bg-black/50 backdrop-blur-xs z-[60] flex items-center justify-center p-4"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-sm bg-card rounded-3xl shadow-2xl border border-line overflow-hidden animate-in fade-in zoom-in duration-150"
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-line">
+              <div className="flex items-center gap-4 min-w-0">
+                <div className="relative shrink-0">
+                  <div className="w-14 h-14 rounded-2xl bg-solid text-white flex items-center justify-center font-bold text-lg ring-2 ring-[#EAEAEA] dark:ring-line">
+                    {getInitials(user?.fullName || user?.username)}
+                  </div>
+                  <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full bg-brand ring-2 ring-white dark:ring-card" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-base font-extrabold text-ink truncate leading-tight">
+                    {user?.fullName || user?.username}
+                  </p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-sm text-ink-soft truncate">
+                      {ROLE_LABELS[user?.role] || user?.role}
+                    </span>
+                    <span className="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#FFF0EB] text-brand border border-[#FFD5C8]">
+                      BentoPOS Pro
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => setProfileOpen(false)}
+                className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 cursor-pointer shrink-0"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Menu Items */}
+            <div className="px-3 py-3 flex flex-col gap-1">
+              {/* Dark Mode Toggle */}
+              <div className="flex items-center justify-between pl-[30px] pr-4 py-3.5 rounded-xl">
+                <div className="flex items-center gap-3 text-sm font-medium text-gray-600 dark:text-gray-300">
+                  <Moon className="w-4 h-4 text-gray-400" />
+                  Modo oscuro
+                </div>
+                <button
+                  onClick={toggleTheme}
+                  className={`w-10 h-[22px] rounded-full transition-colors relative cursor-pointer ${darkMode ? 'bg-brand' : 'bg-gray-300 dark:bg-gray-600'}`}
+                >
+                  <span className={`absolute top-[3px] w-4 h-4 rounded-full bg-white shadow-sm transition-all duration-200 ${darkMode ? 'left-[22px]' : 'left-[3px]'}`} />
+                </button>
+              </div>
+
+              {/* Notifications */}
+              <div className="flex items-center justify-between pl-[30px] pr-4 py-3.5 rounded-xl">
+                <div className="flex items-center gap-3 text-sm font-medium text-gray-600 dark:text-gray-300">
+                  <Bell className="w-4 h-4 text-gray-400" />
+                  Notificaciones
+                </div>
+                {unreadCount > 0 && (
+                  <span className="min-w-[22px] h-[22px] px-1.5 bg-brand rounded-full text-[11px] font-extrabold text-white flex items-center justify-center">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
+              </div>
+
+              {/* Settings */}
+              <button
+                onClick={() => { setProfileOpen(false); navigate('/settings'); }}
+                className="w-full flex items-center gap-3 pl-[30px] pr-4 py-3.5 rounded-xl text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-line cursor-pointer text-left transition-colors"
+              >
+                <Settings className="w-4 h-4 text-gray-400 shrink-0" />
+                Configuración
+              </button>
+            </div>
+
+            <div className="ml-[60px] mr-4 border-t border-line" />
+
+            {/* Manage Account */}
+            <div className="px-3 py-3">
+              <button
+                onClick={() => { if (onClose) onClose(); navigate('/support'); }}
+                className="w-full flex items-center justify-between pl-[30px] pr-4 py-3.5 rounded-xl text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-line cursor-pointer transition-colors"
+              >
+                <span className="flex items-center gap-3">
+                  <HelpCircle className="w-4 h-4 text-gray-400" />
+                  Ayuda y soporte
+                </span>
+                <ChevronRight className="w-4 h-4 text-ink-muted" />
+              </button>
+            </div>
+
+            <div className="ml-[60px] mr-4 border-t border-line" />
+
+            {/* Logout */}
+            <div className="px-3 py-3">
+              <button
+                onClick={handleLogout}
+                className="w-full flex items-center gap-3 pl-[30px] pr-4 py-3.5 rounded-xl text-sm font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 cursor-pointer transition-colors"
+              >
+                <LogOut className="w-4 h-4 shrink-0" />
+                Cerrar sesión
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
+

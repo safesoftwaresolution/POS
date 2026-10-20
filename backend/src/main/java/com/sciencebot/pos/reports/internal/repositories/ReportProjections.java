@@ -23,4 +23,9 @@ public final class ReportProjections {
             String supplierName,
             BigDecimal totalAmount
     ) {}
+
+    public record PaymentMethodTotalProjection(
+            String paymentMethod,
+            BigDecimal totalAmount
+    ) {}
 }

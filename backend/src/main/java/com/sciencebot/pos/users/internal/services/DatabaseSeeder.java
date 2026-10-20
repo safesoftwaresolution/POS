@@ -1,5 +1,6 @@
 package com.sciencebot.pos.users.internal.services;
 
+import com.sciencebot.pos.config.tenant.TenantContext;
 import com.sciencebot.pos.users.CreateUserCommand;
 import com.sciencebot.pos.users.UserFacade;
 import com.sciencebot.pos.users.internal.repositories.UserRepository;
@@ -8,9 +9,15 @@ import com.sciencebot.pos.customers.CreateCustomerCommand;
 import com.sciencebot.pos.settings.SettingsFacade;
 import com.sciencebot.pos.settings.SettingsDto;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
+/**
+ * Corre primero (Order 1): siembra el store/admin base del que dependen los demás seeders
+ * (CategorySeeder Order 2, ProductDemoSeeder Order 3 en el perfil dev).
+ */
 @Component
+@Order(1)
 public class DatabaseSeeder implements CommandLineRunner {
 
     private final UserRepository userRepository;
@@ -31,37 +38,54 @@ public class DatabaseSeeder implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        // Seed default administrator
-        if (userRepository.count() == 0) {
-            CreateUserCommand adminCommand = new CreateUserCommand(
+        if (!userRepository.existsByUsername("superadmin")) {
+            userFacade.createUser(new CreateUserCommand(
+                    "Super Admin",
+                    "superadmin",
+                    "superadmin@platform.internal",
+                    "SuperAdmin123!",
+                    "SUPER_ADMIN",
+                    null
+            ));
+            System.out.println("==================================================");
+            System.out.println("SUPER_ADMIN seeded: superadmin / SuperAdmin123!");
+            System.out.println("==================================================");
+        }
+
+        if (!userRepository.existsByUsername("admin")) {
+            userFacade.createUser(new CreateUserCommand(
                     "Administrator",
                     "admin",
                     "admin@tienda.com",
                     "Password123",
-                    "ADMINISTRATOR"
-            );
-            userFacade.createUser(adminCommand);
-            System.out.println("==================================================");
-            System.out.println("Default administrator seeded: admin / Password123");
-            System.out.println("==================================================");
-        }
-
-        // Seed General Customer (RN-CUST-001)
-        if (customerFacade.getByIdentification("9999999999").isEmpty()) {
-            customerFacade.createCustomer(new CreateCustomerCommand(
-                    "Cliente General",
-                    "9999999999",
-                    null, null, null
+                    "ADMINISTRATOR",
+                    1L
             ));
             System.out.println("==================================================");
-            System.out.println("General Customer seeded: 9999999999");
+            System.out.println("Default administrator seeded: admin / Password123 (store_id=1)");
             System.out.println("==================================================");
         }
 
-        // Seed default business settings (RN-SET-001)
+        // El seeder corre en el arranque, fuera de cualquier request HTTP, asi que no hay
+        // TenantContext poblado por el JwtAuthenticationFilter. Se fija manualmente al local
+        // por defecto (store_id=1, el mismo que se usa arriba para el admin sembrado) para que
+        // los servicios de customers/settings (que ahora dependen de TenantContext) sepan a
+        // que local pertenece lo que se esta sembrando.
+        TenantContext.setStoreId(1L);
         try {
-            settingsFacade.getSettings();
-        } catch (Exception e) {
+            if (customerFacade.getByIdentification("9999999999").isEmpty()) {
+                customerFacade.createCustomer(new CreateCustomerCommand(
+                        "Cliente General",
+                        "9999999999",
+                        null, null, null
+                ));
+                System.out.println("==================================================");
+                System.out.println("General Customer seeded: 9999999999");
+                System.out.println("==================================================");
+            }
+
+            // seedSettings ya valida internamente si el local todavia no tiene fila propia
+            // (existsById) antes de crearla, asi que es seguro llamarla siempre en el arranque.
             settingsFacade.seedSettings(new SettingsDto(
                     "Mi Tienda",
                     "Calle Principal 123",
@@ -70,10 +94,8 @@ public class DatabaseSeeder implements CommandLineRunner {
                     "info@mitienda.com",
                     null
             ));
-            System.out.println("==================================================");
-            System.out.println("Default settings seeded");
-            System.out.println("==================================================");
+        } finally {
+            TenantContext.clear();
         }
     }
 }
-

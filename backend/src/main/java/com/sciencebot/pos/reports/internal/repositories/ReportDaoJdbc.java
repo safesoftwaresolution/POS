@@ -3,6 +3,7 @@ package com.sciencebot.pos.reports.internal.repositories;
 import com.sciencebot.pos.reports.ProfitabilityReportDto;
 import com.sciencebot.pos.reports.StockReportDto;
 import com.sciencebot.pos.reports.TopProductDto;
+import com.sciencebot.pos.reports.internal.repositories.ReportProjections.PaymentMethodTotalProjection;
 import com.sciencebot.pos.reports.internal.repositories.ReportProjections.SalesTotalsProjection;
 import com.sciencebot.pos.reports.internal.repositories.ReportProjections.SellerSaleProjection;
 import com.sciencebot.pos.reports.internal.repositories.ReportProjections.SupplierPurchaseProjection;
@@ -23,16 +24,17 @@ public class ReportDaoJdbc implements ReportDao {
     }
 
     @Override
-    public SalesTotalsProjection findSalesTotals(LocalDateTime from, LocalDateTime to) {
+    public SalesTotalsProjection findSalesTotals(Long storeId, LocalDateTime from, LocalDateTime to) {
         String sql = """
-            SELECT 
+            SELECT
                 COALESCE(SUM(s.total_amount), 0) AS totalSold,
                 COUNT(s.id) AS transactionCount
             FROM sales s
-            WHERE s.created_at >= :from AND s.created_at <= :to
+            WHERE s.store_id = :storeId AND s.created_at >= :from AND s.created_at <= :to
             """;
 
         return jdbcClient.sql(sql)
+                .param("storeId", storeId)
                 .param("from", from)
                 .param("to", to)
                 .query(SalesTotalsProjection.class)
@@ -40,19 +42,20 @@ public class ReportDaoJdbc implements ReportDao {
     }
 
     @Override
-    public List<SellerSaleProjection> findSalesBySeller(LocalDateTime from, LocalDateTime to) {
+    public List<SellerSaleProjection> findSalesBySeller(Long storeId, LocalDateTime from, LocalDateTime to) {
         String sql = """
-            SELECT 
+            SELECT
                 COALESCE(u.username, 'Desconocido') AS sellerName,
                 COALESCE(SUM(s.total_amount), 0) AS totalAmount
             FROM sales s
             LEFT JOIN users u ON u.id = s.user_id
-            WHERE s.created_at >= :from AND s.created_at <= :to
+            WHERE s.store_id = :storeId AND s.created_at >= :from AND s.created_at <= :to
             GROUP BY u.username
             ORDER BY totalAmount DESC
             """;
 
         return jdbcClient.sql(sql)
+                .param("storeId", storeId)
                 .param("from", from)
                 .param("to", to)
                 .query(SellerSaleProjection.class)
@@ -60,22 +63,23 @@ public class ReportDaoJdbc implements ReportDao {
     }
 
     @Override
-    public List<TopProductDto> findTopSellingProducts(LocalDateTime from, LocalDateTime to, int limit) {
+    public List<TopProductDto> findTopSellingProducts(Long storeId, LocalDateTime from, LocalDateTime to, int limit) {
         String sql = """
-            SELECT 
+            SELECT
                 p.id AS productId,
                 p.name AS productName,
                 COALESCE(SUM(si.quantity), 0) AS quantitySold
             FROM sale_items si
             JOIN sales s ON s.id = si.sale_id
             JOIN products p ON p.id = si.product_id
-            WHERE s.created_at >= :from AND s.created_at <= :to
+            WHERE s.store_id = :storeId AND s.created_at >= :from AND s.created_at <= :to
             GROUP BY p.id, p.name
             ORDER BY quantitySold DESC
             LIMIT :limit
             """;
 
         return jdbcClient.sql(sql)
+                .param("storeId", storeId)
                 .param("from", from)
                 .param("to", to)
                 .param("limit", limit)
@@ -84,19 +88,19 @@ public class ReportDaoJdbc implements ReportDao {
     }
 
     @Override
-    public List<StockReportDto> findStockReport(Boolean belowMinStock) {
+    public List<StockReportDto> findStockReport(Long storeId, Boolean belowMinStock) {
         StringBuilder sql = new StringBuilder("""
-            SELECT 
+            SELECT
                 p.id AS productId,
                 p.name AS productName,
                 p.quantity_available AS quantityAvailable,
                 p.min_stock AS minStock,
-                CASE 
+                CASE
                     WHEN p.quantity_available <= p.min_stock THEN 'Bajo Stock'
                     ELSE 'OK'
                 END AS status
             FROM products p
-            WHERE p.active = true
+            WHERE p.store_id = :storeId AND p.active = true
             """);
 
         if (Boolean.TRUE.equals(belowMinStock)) {
@@ -106,26 +110,28 @@ public class ReportDaoJdbc implements ReportDao {
         sql.append(" ORDER BY p.name ASC");
 
         return jdbcClient.sql(sql.toString())
+                .param("storeId", storeId)
                 .query(StockReportDto.class)
                 .list();
     }
 
     @Override
-    public List<ProfitabilityReportDto> findProfitabilityReport(LocalDateTime from, LocalDateTime to) {
+    public List<ProfitabilityReportDto> findProfitabilityReport(Long storeId, LocalDateTime from, LocalDateTime to) {
         String sql = """
-            SELECT 
+            SELECT
                 p.id AS productId,
                 p.name AS productName,
                 COALESCE(SUM((p.sale_price - p.purchase_price) * si.quantity), 0) AS profitAmount
             FROM sale_items si
             JOIN sales s ON s.id = si.sale_id
             JOIN products p ON p.id = si.product_id
-            WHERE s.created_at >= :from AND s.created_at <= :to
+            WHERE s.store_id = :storeId AND s.created_at >= :from AND s.created_at <= :to
             GROUP BY p.id, p.name, p.sale_price, p.purchase_price
             ORDER BY profitAmount DESC
             """;
 
         return jdbcClient.sql(sql)
+                .param("storeId", storeId)
                 .param("from", from)
                 .param("to", to)
                 .query(ProfitabilityReportDto.class)
@@ -133,14 +139,15 @@ public class ReportDaoJdbc implements ReportDao {
     }
 
     @Override
-    public BigDecimal findPurchasesTotal(LocalDateTime from, LocalDateTime to) {
+    public BigDecimal findPurchasesTotal(Long storeId, LocalDateTime from, LocalDateTime to) {
         String sql = """
             SELECT COALESCE(SUM(p.total_amount), 0)
             FROM purchases p
-            WHERE p.created_at >= :from AND p.created_at <= :to
+            WHERE p.store_id = :storeId AND p.created_at >= :from AND p.created_at <= :to
             """;
 
         return jdbcClient.sql(sql)
+                .param("storeId", storeId)
                 .param("from", from)
                 .param("to", to)
                 .query(BigDecimal.class)
@@ -148,22 +155,65 @@ public class ReportDaoJdbc implements ReportDao {
     }
 
     @Override
-    public List<SupplierPurchaseProjection> findPurchasesBySupplier(LocalDateTime from, LocalDateTime to) {
+    public List<SupplierPurchaseProjection> findPurchasesBySupplier(Long storeId, LocalDateTime from, LocalDateTime to) {
         String sql = """
-            SELECT 
+            SELECT
                 COALESCE(sup.company_name, 'Proveedor Desconocido') AS supplierName,
                 COALESCE(SUM(p.total_amount), 0) AS totalAmount
             FROM purchases p
             LEFT JOIN suppliers sup ON sup.id = p.supplier_id
-            WHERE p.created_at >= :from AND p.created_at <= :to
+            WHERE p.store_id = :storeId AND p.created_at >= :from AND p.created_at <= :to
             GROUP BY sup.company_name
             ORDER BY totalAmount DESC
             """;
 
         return jdbcClient.sql(sql)
+                .param("storeId", storeId)
                 .param("from", from)
                 .param("to", to)
                 .query(SupplierPurchaseProjection.class)
+                .list();
+    }
+
+    @Override
+    public List<PaymentMethodTotalProjection> findSalesTotalsByPaymentMethod(Long storeId, LocalDateTime from, LocalDateTime to) {
+        String sql = """
+            SELECT
+                s.payment_method AS paymentMethod,
+                COALESCE(SUM(s.total_amount), 0) AS totalAmount
+            FROM sales s
+            WHERE s.store_id = :storeId AND s.created_at >= :from AND s.created_at <= :to
+            GROUP BY s.payment_method
+            ORDER BY totalAmount DESC
+            """;
+
+        return jdbcClient.sql(sql)
+                .param("storeId", storeId)
+                .param("from", from)
+                .param("to", to)
+                .query(PaymentMethodTotalProjection.class)
+                .list();
+    }
+
+    @Override
+    public List<SellerSaleProjection> findCashSalesBySeller(Long storeId, LocalDateTime from, LocalDateTime to) {
+        String sql = """
+            SELECT
+                COALESCE(u.username, 'Desconocido') AS sellerName,
+                COALESCE(SUM(s.total_amount), 0) AS totalAmount
+            FROM sales s
+            LEFT JOIN users u ON u.id = s.user_id
+            WHERE s.store_id = :storeId AND s.payment_method = 'CASH'
+                AND s.created_at >= :from AND s.created_at <= :to
+            GROUP BY u.username
+            ORDER BY totalAmount DESC
+            """;
+
+        return jdbcClient.sql(sql)
+                .param("storeId", storeId)
+                .param("from", from)
+                .param("to", to)
+                .query(SellerSaleProjection.class)
                 .list();
     }
 }

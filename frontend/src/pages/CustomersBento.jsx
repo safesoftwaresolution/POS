@@ -1,22 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { Users, UserPlus, Search, Mail, Phone, CheckCircle2, AlertCircle } from 'lucide-react';
-import { getCustomersApi, createCustomerApi } from '../services/api';
+import { Users, UserPlus, Search, Mail, Phone, CheckCircle2, Edit3, Trash2 } from 'lucide-react';
+import { getCustomersApi, deleteCustomerApi } from '../services/customersApi';
+import CreateDianCustomerModal from '../components/customers/CreateDianCustomerModal';
+import { useAuth } from '../context/AuthContext';
+import { useModal } from '../context/ModalContext';
+import { Button, Badge, Card, EmptyState, PageHeader } from '../components/ui';
 
 export default function CustomersBento() {
+  const { user } = useAuth();
+  const { confirm, notify } = useModal();
+  const canDelete = user?.role === 'ADMINISTRATOR';
+
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [showModal, setShowModal] = useState(false);
-  const [errorMsg, setErrorMsg] = useState('');
-  const [newCustomer, setNewCustomer] = useState({
-    name: '',
-    identification: '',
-    email: '',
-    phone: ''
-  });
+  // null = cerrado, {} = alta, {customer} = edición
+  const [modal, setModal] = useState(null);
 
-  const loadCustomers = async () => {
-    setLoading(true);
+  const fetchCustomers = async () => {
     try {
       const data = await getCustomersApi();
       setCustomers(Array.isArray(data) ? data : []);
@@ -29,186 +30,116 @@ export default function CustomersBento() {
   };
 
   useEffect(() => {
-    loadCustomers();
+    fetchCustomers();
   }, []);
 
-  const handleCreateCustomer = async (e) => {
-    e.preventDefault();
-    setErrorMsg('');
+  const handleDelete = async (c) => {
+    const ok = await confirm(
+      `¿Eliminar a "${c.fullName || c.name}"? Las ventas ya emitidas conservan sus datos.`,
+      { title: 'Eliminar cliente' }
+    );
+    if (!ok) return;
     try {
-      await createCustomerApi(newCustomer);
-      setShowModal(false);
-      setNewCustomer({ name: '', identification: '', email: '', phone: '' });
-      await loadCustomers();
-    } catch (err) {
-      setErrorMsg(err.message || 'Error al guardar el cliente. Intenta nuevamente.');
+      await deleteCustomerApi(c.id);
+      await fetchCustomers();
+    } catch (e) {
+      notify('No se pudo eliminar el cliente: ' + e.message);
     }
   };
 
+  const term = search.toLowerCase();
   const filtered = customers.filter(c =>
-    (c.fullName && c.fullName.toLowerCase().includes(search.toLowerCase())) ||
-    (c.name && c.name.toLowerCase().includes(search.toLowerCase())) ||
+    (c.fullName && c.fullName.toLowerCase().includes(term)) ||
+    (c.name && c.name.toLowerCase().includes(term)) ||
     (c.identification && c.identification.includes(search))
   );
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-black text-[#191c1e] dark:text-white">Clientes Bento UI</h1>
-          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Directorio real de clientes para facturación electrónica DIAN</p>
-        </div>
+    <div className="space-y-6 select-none">
+      <PageHeader
+        title="Directorio de Clientes"
+        subtitle="Gestión de clientes para emisión y facturación electrónica DIAN en BentoPOS"
+        actions={<Button icon={UserPlus} onClick={() => setModal({})}>Registrar Nuevo Cliente</Button>}
+      />
 
-        <button
-          onClick={() => setShowModal(true)}
-          className="px-4 py-2.5 bg-[#006d3c] hover:bg-[#00522c] text-white rounded-2xl text-xs font-bold flex items-center gap-2 shadow-md shadow-[#006d3c]/20 cursor-pointer"
-        >
-          <UserPlus className="w-4 h-4" /> Registrar Nuevo Cliente
-        </button>
-      </div>
-
-      <div className="bento-card p-6 space-y-4">
+      <Card className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="relative w-72">
-            <Search className="w-4 h-4 text-gray-400 dark:text-gray-500 absolute left-3.5 top-2.5" />
+            <Search className="w-4 h-4 text-ink-muted absolute left-3.5 top-2.5" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Buscar por cédula, NIT o nombre..."
-              className="w-full pl-10 pr-3 py-1.5 bg-[#f7f9fc] dark:bg-[#0b1411] border border-[#e0e3e6] dark:border-[#1d332c] rounded-2xl text-xs font-semibold text-[#191c1e] dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-[#006d3c] dark:focus:border-[#12b76a]"
+              className="w-full pl-10 pr-3 py-1.5 bg-page border border-line rounded-2xl text-xs font-semibold text-ink placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-ink"
             />
           </div>
-          <span className="text-xs font-bold text-gray-400 dark:text-gray-500">{filtered.length} clientes registrados</span>
+          <span className="text-xs font-bold text-ink-muted">{filtered.length} clientes registrados</span>
         </div>
 
         {loading ? (
-          <div className="py-12 text-center text-xs font-bold text-gray-400 dark:text-gray-500">
-            Consultando clientes...
-          </div>
+          <div className="py-12 text-center text-xs font-bold text-ink-muted">Consultando clientes...</div>
         ) : filtered.length === 0 ? (
-          <div className="py-12 text-center space-y-3 bg-gray-50/50 dark:bg-white/5 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700">
-            <Users className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto stroke-1" />
-            <div>
-              <p className="text-xs font-bold text-gray-700 dark:text-gray-300">No hay clientes registrados aún</p>
-              <p className="text-[11px] text-gray-400 dark:text-gray-500">El sistema incluye automáticamente el Cliente General para ventas en mostrador</p>
-            </div>
-            <button
-              onClick={() => setShowModal(true)}
-              className="px-4 py-2 bg-[#006d3c] text-white rounded-xl text-xs font-extrabold shadow-sm hover:bg-[#00522c]"
-            >
-              + Registrar Primer Cliente DIAN
-            </button>
-          </div>
+          <EmptyState
+            icon={Users}
+            title="No hay clientes registrados aún"
+            description="El sistema incluye automáticamente el Cliente General para ventas en mostrador"
+            action={<Button size="sm" onClick={() => setModal({})}>+ Registrar Primer Cliente</Button>}
+          />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filtered.map(c => (
-              <div key={c.id} className="p-5 bg-gray-50/70 dark:bg-white/5 rounded-2xl border border-gray-200 dark:border-gray-700 space-y-3">
+              <div key={c.id} className="p-5 bg-card rounded-2xl border border-line space-y-3 shadow-xs hover:border-line-strong transition-all">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-mono font-bold text-gray-500 dark:text-gray-400">CC/NIT: {c.identification}</span>
-                  <span className="text-[10px] px-2.5 py-0.5 rounded-full font-extrabold bg-emerald-100 dark:bg-[#12b76a]/20 text-[#006d3c] dark:text-[#12b76a]">
-                    Habilitado
-                  </span>
+                  <span className="text-[10px] font-mono font-bold text-ink-soft">CC/NIT: {c.identification}</span>
+                  <Badge tone={c.active === false ? 'neutral' : 'success'}>
+                    {c.active === false ? 'Inactivo' : 'Habilitado'}
+                  </Badge>
                 </div>
 
                 <div>
-                  <h3 className="font-extrabold text-sm text-[#191c1e] dark:text-white">{c.fullName || c.name}</h3>
-                  <div className="mt-2 space-y-1 text-xs text-gray-500 dark:text-gray-400 font-medium">
-                    <p className="flex items-center gap-1.5"><Mail className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" /> {c.email || 'Sin correo'}</p>
-                    <p className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" /> {c.phone || 'Sin teléfono'}</p>
+                  <h3 className="font-extrabold text-sm text-ink">{c.fullName || c.name}</h3>
+                  <div className="mt-2 space-y-1 text-xs text-ink-soft font-medium">
+                    <p className="flex items-center gap-1.5"><Mail className="w-3.5 h-3.5 text-ink-muted" /> {c.email || 'Sin correo'}</p>
+                    <p className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5 text-ink-muted" /> {c.phone || 'Sin teléfono'}</p>
                   </div>
                 </div>
 
-                <div className="pt-2 border-t border-gray-200 dark:border-gray-700 flex justify-between items-center text-xs">
-                  <span className="text-[#006d3c] dark:text-[#12b76a] font-bold flex items-center gap-1">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-[#12b76a]" /> Facturación Activa
+                <div className="pt-2 border-t border-line flex justify-between items-center text-xs">
+                  <span className="text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
+                    <CheckCircle2 className="w-3.5 h-3.5" /> Facturación Activa
                   </span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => setModal({ customer: c })}
+                      title="Editar cliente"
+                      className="p-1.5 text-ink-muted hover:text-brand rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer"
+                    >
+                      <Edit3 className="w-4 h-4" />
+                    </button>
+                    {canDelete && (
+                      <button
+                        onClick={() => handleDelete(c)}
+                        title="Eliminar cliente"
+                        className="p-1.5 text-ink-muted hover:text-red-600 dark:hover:text-red-400 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
           </div>
         )}
-      </div>
+      </Card>
 
-      {/* Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-navy-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <form onSubmit={handleCreateCustomer} className="bento-card max-w-md w-full bg-white dark:bg-[#14231e] p-6 rounded-3xl shadow-2xl space-y-4">
-            <h3 className="font-extrabold text-base text-[#191c1e] dark:text-white">Registrar Cliente</h3>
-
-            {errorMsg && (
-              <div className="p-3 bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800/40 rounded-xl text-xs font-bold flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>{errorMsg}</span>
-              </div>
-            )}
-
-            <div className="space-y-3 text-xs">
-              <div>
-                <label className="font-bold text-gray-700 dark:text-gray-300 block mb-1">Nombre Completo / Razón Social:</label>
-                <input
-                  type="text"
-                  value={newCustomer.name}
-                  onChange={e => setNewCustomer({ ...newCustomer, name: e.target.value })}
-                  placeholder="Ej. Juan Pérez u Homero S.A.S."
-                  className="w-full p-2.5 bg-[#f7f9fc] dark:bg-[#0b1411] border border-gray-300 dark:border-gray-700 rounded-2xl font-semibold text-[#191c1e] dark:text-white"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="font-bold text-gray-700 dark:text-gray-300 block mb-1">Cédula o NIT:</label>
-                <input
-                  type="text"
-                  value={newCustomer.identification}
-                  onChange={e => setNewCustomer({ ...newCustomer, identification: e.target.value })}
-                  placeholder="1020304050 o 900123456-1"
-                  className="w-full p-2.5 bg-[#f7f9fc] dark:bg-[#0b1411] border border-gray-300 dark:border-gray-700 rounded-2xl font-mono text-xs text-[#191c1e] dark:text-white"
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="font-bold text-gray-700 dark:text-gray-300 block mb-1">Correo Electrónico:</label>
-                  <input
-                    type="email"
-                    value={newCustomer.email}
-                    onChange={e => setNewCustomer({ ...newCustomer, email: e.target.value })}
-                    placeholder="cliente@correo.com"
-                    className="w-full p-2.5 bg-[#f7f9fc] dark:bg-[#0b1411] border border-gray-300 dark:border-gray-700 rounded-2xl text-xs text-[#191c1e] dark:text-white"
-                  />
-                </div>
-                <div>
-                  <label className="font-bold text-gray-700 dark:text-gray-300 block mb-1">Teléfono:</label>
-                  <input
-                    type="text"
-                    value={newCustomer.phone}
-                    onChange={e => setNewCustomer({ ...newCustomer, phone: e.target.value })}
-                    placeholder="3001234567"
-                    className="w-full p-2.5 bg-[#f7f9fc] dark:bg-[#0b1411] border border-gray-300 dark:border-gray-700 rounded-2xl text-xs text-[#191c1e] dark:text-white"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="flex gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setShowModal(false)}
-                className="w-1/2 py-3 bg-gray-100 dark:bg-[#1e293b] hover:bg-gray-200 dark:hover:bg-[#334155] text-gray-700 dark:text-gray-300 rounded-2xl text-xs font-bold"
-              >
-                Cancelar
-              </button>
-              <button
-                type="submit"
-                className="w-1/2 py-3 bg-[#006d3c] hover:bg-[#00522c] text-white rounded-2xl text-xs font-extrabold"
-              >
-                Guardar Cliente
-              </button>
-            </div>
-          </form>
-        </div>
+      {modal && (
+        <CreateDianCustomerModal
+          customer={modal.customer}
+          onClose={() => setModal(null)}
+          onCreated={fetchCustomers}
+        />
       )}
     </div>
   );

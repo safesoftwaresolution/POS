@@ -1,0 +1,68 @@
+{
+  "version": "1.2.0",
+  "last_updated": "2026-08-19",
+  "features": [
+    {
+      "id": "FEAT-001",
+      "title": "Configuración inicial del arnés de agentes",
+      "description": "Crear la estructura base de archivos en .ai/ que permita a los agentes de IA operar de forma coordinada.",
+      "acceptance_criteria": ["Existe la carpeta .ai/ con agents.md, init.sh, features.json"],
+      "status": "done",
+      "assigned_to": null,
+      "completed_at": "2026-07-06"
+    },
+    {
+      "id": "FEAT-002",
+      "title": "Validación de compilación del proyecto base",
+      "description": "Asegurar que el proyecto Java/Maven compila correctamente y que los tests existentes pasan.",
+      "acceptance_criteria": ["mvnw compile finaliza con exit code 0"],
+      "status": "done",
+      "assigned_to": null,
+      "completed_at": "2026-07-09"
+    },
+    {
+      "id": "FEAT-003",
+      "title": "Documentar la arquitectura del proyecto",
+      "description": "Crear suite de arquitectura modular en docs/.",
+      "acceptance_criteria": ["Existe suite de arquitectura modular en docs/"],
+      "status": "done",
+      "assigned_to": null,
+      "completed_at": "2026-07-09"
+    },
+    {
+      "id": "FEAT-004",
+      "title": "Formalización del módulo Billing en el Harness y Suite Documental",
+      "description": "Alinear el arnés y la documentación modular con la integración real de facturación electrónica DIAN (Factus).",
+      "acceptance_criteria": ["Existe docs/modules/billing/spec.md"],
+      "status": "done",
+      "assigned_to": "Reviewer",
+      "completed_at": "2026-08-13"
+    },
+    {
+      "id": "FEAT-005",
+      "title": "Desacoplamiento de la API de Facturación mediante patrones Adapter y Strategy",
+      "description": "Refactorizar el módulo billing introduciendo el puerto ElectronicInvoicingProvider.",
+      "acceptance_criteria": ["Todos los tests pasan en verde"],
+      "status": "done",
+      "assigned_to": "Implementer",
+      "completed_at": "2026-08-13"
+    },
+    {
+      "id": "FEAT-006",
+      "title": "Back Office SaaS, Multi-Tenancy y Restricción de Categorías a Super Administradores",
+      "description": "Implementación de arquitectura multi-tenant (store_id, TenantContext), rol SUPER_ADMIN, restricción exclusiva de categorías a SUPER_ADMIN, y módulos de Back Office: stores (locales y métricas SaaS), legal (CRUD textos legales) y support (PQRs y reporte de bugs).",
+      "acceptance_criteria": [
+        "Migración Flyway V3 con tablas stores, store_categories, store_documents, legal_documents, support_tickets y store_id",
+        "Rol SUPER_ADMIN con token JWT platform-level y TenantContext",
+        "POST/PUT/DELETE /api/v1/categories restringido a SUPER_ADMIN",
+        "Módulo stores con métricas SaaS, buscador con filtros, verificación de documentos KYC",
+        "Módulo legal con CRUD completo y endpoint público para texto vigente",
+        "Módulo support con radicación pública de PQRs/bugs, tracking y resolución backoffice",
+        "Suite de tests en verde (BUILD SUCCESS)"
+      ],
+      "status": "done",
+      "assigned_to": "Implementer",
+      "completed_at": "2026-08-19"
+    }
+  ]
+}

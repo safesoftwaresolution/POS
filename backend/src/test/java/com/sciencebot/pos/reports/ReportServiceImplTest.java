@@ -1,10 +1,12 @@
 package com.sciencebot.pos.reports;
 
+import com.sciencebot.pos.config.tenant.TenantContext;
 import com.sciencebot.pos.reports.internal.repositories.ReportDao;
 import com.sciencebot.pos.reports.internal.repositories.ReportProjections.SalesTotalsProjection;
 import com.sciencebot.pos.reports.internal.repositories.ReportProjections.SellerSaleProjection;
 import com.sciencebot.pos.reports.internal.repositories.ReportProjections.SupplierPurchaseProjection;
 import com.sciencebot.pos.reports.internal.services.ReportServiceImpl;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -30,13 +32,19 @@ class ReportServiceImplTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
+        TenantContext.setStoreId(1L);
+    }
+
+    @AfterEach
+    void tearDown() {
+        TenantContext.clear();
     }
 
     @Test
     void getSalesReport_Success() {
-        when(reportDao.findSalesTotals(any(), any()))
+        when(reportDao.findSalesTotals(any(), any(), any()))
                 .thenReturn(new SalesTotalsProjection(BigDecimal.valueOf(100.00), 5L));
-        when(reportDao.findSalesBySeller(any(), any()))
+        when(reportDao.findSalesBySeller(any(), any(), any()))
                 .thenReturn(List.of(new SellerSaleProjection("cajero1", BigDecimal.valueOf(100.00))));
 
         SalesReportDto result = reportService.getSalesReport(LocalDateTime.now().minusDays(5), LocalDateTime.now());
@@ -54,7 +62,7 @@ class ReportServiceImplTest {
                 new TopProductDto(1L, "Arroz", 50L),
                 new TopProductDto(2L, "Frijol", 30L)
         );
-        when(reportDao.findTopSellingProducts(any(), any(), eq(10)))
+        when(reportDao.findTopSellingProducts(any(), any(), any(), eq(10)))
                 .thenReturn(mockList);
 
         List<TopProductDto> result = reportService.getTopProductsReport(null, null, 10);
@@ -69,7 +77,7 @@ class ReportServiceImplTest {
         List<StockReportDto> mockList = List.of(
                 new StockReportDto(1L, "Aceite", 2, 5, "Bajo Stock")
         );
-        when(reportDao.findStockReport(true)).thenReturn(mockList);
+        when(reportDao.findStockReport(any(), eq(true))).thenReturn(mockList);
 
         List<StockReportDto> result = reportService.getStockReport(true);
 
@@ -83,7 +91,7 @@ class ReportServiceImplTest {
         List<ProfitabilityReportDto> mockList = List.of(
                 new ProfitabilityReportDto(1L, "Arroz", BigDecimal.valueOf(50000.00))
         );
-        when(reportDao.findProfitabilityReport(any(), any())).thenReturn(mockList);
+        when(reportDao.findProfitabilityReport(any(), any(), any())).thenReturn(mockList);
 
         List<ProfitabilityReportDto> result = reportService.getProfitabilityReport(null, null);
 
@@ -94,8 +102,8 @@ class ReportServiceImplTest {
 
     @Test
     void getPurchasesReport_Success() {
-        when(reportDao.findPurchasesTotal(any(), any())).thenReturn(BigDecimal.valueOf(250000.00));
-        when(reportDao.findPurchasesBySupplier(any(), any())).thenReturn(List.of(
+        when(reportDao.findPurchasesTotal(any(), any(), any())).thenReturn(BigDecimal.valueOf(250000.00));
+        when(reportDao.findPurchasesBySupplier(any(), any(), any())).thenReturn(List.of(
                 new SupplierPurchaseProjection("Distribuidora ABC", BigDecimal.valueOf(250000.00))
         ));
 
@@ -104,5 +112,37 @@ class ReportServiceImplTest {
         assertNotNull(result);
         assertEquals(BigDecimal.valueOf(250000.00), result.totalInverted());
         assertEquals(BigDecimal.valueOf(250000.00), result.purchasesBySupplier().get("Distribuidora ABC"));
+    }
+
+    @Test
+    void getCashClosingReport_Success() {
+        when(reportDao.findSalesTotalsByPaymentMethod(any(), any(), any())).thenReturn(List.of(
+                new com.sciencebot.pos.reports.internal.repositories.ReportProjections.PaymentMethodTotalProjection("CASH", BigDecimal.valueOf(80000.00)),
+                new com.sciencebot.pos.reports.internal.repositories.ReportProjections.PaymentMethodTotalProjection("NEQUI", BigDecimal.valueOf(20000.00))
+        ));
+        when(reportDao.findCashSalesBySeller(any(), any(), any())).thenReturn(List.of(
+                new SellerSaleProjection("cajero1", BigDecimal.valueOf(50000.00)),
+                new SellerSaleProjection("cajero2", BigDecimal.valueOf(30000.00))
+        ));
+
+        CashClosingReportDto result = reportService.getCashClosingReport(null, null);
+
+        assertNotNull(result);
+        assertEquals(BigDecimal.valueOf(80000.00), result.expectedCash());
+        assertEquals(BigDecimal.valueOf(20000.00), result.totalByPaymentMethod().get("NEQUI"));
+        assertEquals(BigDecimal.valueOf(50000.00), result.cashBySeller().get("cajero1"));
+    }
+
+    @Test
+    void getCashClosingReport_NoCashSales_ExpectedCashIsZero() {
+        when(reportDao.findSalesTotalsByPaymentMethod(any(), any(), any())).thenReturn(List.of(
+                new com.sciencebot.pos.reports.internal.repositories.ReportProjections.PaymentMethodTotalProjection("NEQUI", BigDecimal.valueOf(20000.00))
+        ));
+        when(reportDao.findCashSalesBySeller(any(), any(), any())).thenReturn(List.of());
+
+        CashClosingReportDto result = reportService.getCashClosingReport(null, null);
+
+        assertEquals(BigDecimal.ZERO, result.expectedCash());
+        assertTrue(result.cashBySeller().isEmpty());
     }
 }

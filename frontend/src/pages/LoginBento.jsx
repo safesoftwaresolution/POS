@@ -1,54 +1,45 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
-import { Zap, User, KeyRound, ArrowRight, ShieldCheck, AlertCircle } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
+import { User, KeyRound, ArrowRight, AlertCircle } from 'lucide-react';
+import BentoIcon from '../components/BentoIcon';
 
 export default function LoginBento() {
   const { login, loading } = useAuth();
   const navigate = useNavigate();
-  const [username, setUsername] = useState('admin');
-  const [password, setPassword] = useState('Password123');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     try {
-      await login(username, password);
-      navigate('/');
+      const loggedInUser = await login(username, password);
+      navigate(loggedInUser?.role === 'SUPER_ADMIN' ? '/backoffice' : '/');
     } catch (err) {
       setError(err.message || 'Error de autenticación. Verifica tu usuario y contraseña.');
     }
   };
 
-  const handleUseDemoAdmin = () => {
-    setUsername('admin');
-    setPassword('Password123');
-  };
-
   return (
-    <div className="min-h-screen bg-[#101e19] text-white flex items-center justify-center p-4 relative overflow-hidden select-none">
-      {/* Ambient Glows */}
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#006d3c]/30 rounded-full blur-3xl pointer-events-none"></div>
-      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#12b76a]/20 rounded-full blur-3xl pointer-events-none"></div>
+    <div className="min-h-screen bg-[#0E0E12] text-white flex items-center justify-center p-4 relative overflow-hidden select-none">
+      <div className="max-w-md w-full bento-card bg-[#17171B] border-[#272730] p-8 rounded-3xl shadow-2xl space-y-6 relative z-10">
 
-      <div className="max-w-md w-full bento-card bg-[#14231e] border-[#1d332c] p-8 rounded-3xl shadow-2xl space-y-6 relative z-10">
-        
-        {/* Header */}
-        <div className="text-center space-y-2">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-[#006d3c] to-[#12b76a] flex items-center justify-center mx-auto shadow-lg shadow-[#006d3c]/40">
-            <Zap className="w-8 h-8 fill-white text-white" />
+        {/* Brand Header */}
+        <div className="text-center space-y-3">
+          <BentoIcon size="w-16 h-16 mx-auto" rounded="rounded-3xl" />
+          <div className="flex items-baseline justify-center gap-1">
+            <span className="font-black text-2xl tracking-tight text-white">Bento</span>
+            <span className="font-black text-2xl tracking-tight text-brand">POS</span>
           </div>
-          <h1 className="text-2xl font-black tracking-tight text-white mt-3">
-            ProPOS <span className="text-[#12b76a] font-bold">Bento</span>
-          </h1>
-          <p className="text-xs text-gray-300 font-semibold">
+          <p className="text-xs text-gray-400 font-semibold tracking-wide">
             Sistema de Punto de Venta • Iniciar Sesión
           </p>
         </div>
 
         {error && (
-          <div className="p-3.5 bg-red-500/10 border border-red-500/30 rounded-2xl text-xs font-bold text-red-300 flex items-center gap-2">
+          <div className="p-3.5 bg-red-500/10 border border-red-500/30 rounded-2xl text-xs font-bold text-red-300 flex items-center gap-2 animate-in fade-in">
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span>{error}</span>
           </div>
@@ -64,8 +55,12 @@ export default function LoginBento() {
                 type="text"
                 value={username}
                 onChange={e => setUsername(e.target.value)}
-                placeholder="admin"
-                className="w-full pl-10 pr-4 py-2.5 bg-[#0b1411] border border-[#1d332c] rounded-2xl text-xs font-semibold text-white placeholder-gray-500 focus:outline-none focus:border-[#12b76a] transition-all"
+                placeholder="Ingresa tu usuario"
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck="false"
+                className="w-full pl-10 pr-4 py-2.5 bg-[#0E0E12] border border-[#272730] rounded-2xl text-xs font-semibold text-white placeholder-gray-500 focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand transition-all"
                 required
               />
             </div>
@@ -80,40 +75,39 @@ export default function LoginBento() {
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full pl-10 pr-4 py-2.5 bg-[#0b1411] border border-[#1d332c] rounded-2xl text-xs font-semibold text-white placeholder-gray-500 focus:outline-none focus:border-[#12b76a] transition-all"
+                autoComplete="off"
+                className="w-full pl-10 pr-4 py-2.5 bg-[#0E0E12] border border-[#272730] rounded-2xl text-xs font-semibold text-white placeholder-gray-500 focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand transition-all"
                 required
               />
             </div>
           </div>
 
-          {/* Preset Admin Credentials Box */}
-          <div className="p-3.5 bg-[#12b76a]/10 rounded-2xl border border-[#12b76a]/20 text-xs space-y-1.5">
-            <div className="flex items-center justify-between">
-              <span className="font-extrabold text-[#12b76a] flex items-center gap-1.5">
-                <ShieldCheck className="w-4 h-4 text-[#12b76a]" /> Credenciales de Acceso por Defecto:
-              </span>
-              <button
-                type="button"
-                onClick={handleUseDemoAdmin}
-                className="text-[10px] bg-[#006d3c] hover:bg-[#00522c] text-white font-extrabold px-2 py-0.5 rounded-lg transition-colors cursor-pointer"
-              >
-                Autocompletar
-              </button>
-            </div>
-            <p className="text-[11px] text-gray-300">
-              • Usuario: <code className="text-[#12b76a] font-bold font-mono">admin</code> | Contraseña: <code className="text-[#12b76a] font-bold font-mono">Password123</code>
-            </p>
-          </div>
-
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3.5 bg-[#006d3c] hover:bg-[#00522c] text-white font-black text-xs rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-[#006d3c]/40 active:scale-98 transition-all cursor-pointer"
+            className="w-full py-3.5 bg-solid hover:bg-solid-hover text-white font-black text-xs rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-[#0A0A0A]/10 active:scale-98 transition-all cursor-pointer disabled:opacity-50"
           >
             <span>{loading ? 'Autenticando...' : 'Ingresar al Sistema'}</span>
             <ArrowRight className="w-4 h-4" />
           </button>
         </form>
+
+        <p className="text-center text-xs text-gray-400 font-semibold">
+          ¿No tienes cuenta?{' '}
+          <button
+            type="button"
+            onClick={() => navigate('/register')}
+            className="text-brand hover:text-brand font-extrabold hover:underline cursor-pointer transition-colors"
+          >
+            Regístrate
+          </button>
+        </p>
+
+        <p className="text-center text-[11px] text-gray-500 font-semibold space-x-3">
+          <Link to="/legal/terms-and-conditions" className="hover:text-gray-300">Términos</Link>
+          <Link to="/legal/privacy-policy" className="hover:text-gray-300">Privacidad</Link>
+          <Link to="/support" className="hover:text-gray-300">Soporte</Link>
+        </p>
 
       </div>
     </div>

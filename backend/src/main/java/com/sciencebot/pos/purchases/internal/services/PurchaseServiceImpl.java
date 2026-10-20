@@ -1,5 +1,6 @@
 package com.sciencebot.pos.purchases.internal.services;
 
+import com.sciencebot.pos.config.tenant.TenantContext;
 import com.sciencebot.pos.purchases.*;
 import com.sciencebot.pos.purchases.internal.entities.Purchase;
 import com.sciencebot.pos.purchases.internal.entities.PurchaseItem;
@@ -53,6 +54,26 @@ public class PurchaseServiceImpl implements PurchaseFacade {
     @Override
     @Transactional
     public PurchaseDto registerPurchase(CreatePurchaseCommand command) {
+        return registerPurchase(command, null);
+    }
+
+    @Override
+    @Transactional
+    public PurchaseDto registerPurchase(CreatePurchaseCommand command, String idempotencyKey) {
+        final String key = normalizeIdempotencyKey(idempotencyKey);
+        final Long storeId = requireCurrentStoreId();
+
+        // Fast-path de idempotencia: un reenvio secuencial con la misma clave devuelve la
+        // compra original sin volver a incrementar inventario ni actualizar precios.
+        if (key != null) {
+            Optional<PurchaseDto> existing = purchaseRepository.findByIdempotencyKey(key)
+                    .filter(p -> p.getStoreId().equals(storeId))
+                    .map(purchaseMapper::toDto);
+            if (existing.isPresent()) {
+                return existing.get();
+            }
+        }
+
         if (command.supplierId() == null) {
             throw new IllegalArgumentException("El proveedor es obligatorio");
         }
@@ -75,6 +96,7 @@ public class PurchaseServiceImpl implements PurchaseFacade {
                 .orElse(1L);
 
         Purchase purchase = new Purchase();
+        purchase.setStoreId(storeId);
         purchase.setSupplierId(command.supplierId());
         purchase.setInvoiceNumber(command.invoiceNumber() != null ? command.invoiceNumber().trim() : null);
         purchase.setUserId(userId);
@@ -119,14 +141,39 @@ public class PurchaseServiceImpl implements PurchaseFacade {
 
         purchase.setTotalAmount(total);
         purchase.setItems(items);
+        purchase.setIdempotencyKey(key);
 
-        Purchase saved = purchaseRepository.save(purchase);
+        // saveAndFlush fuerza la validacion de las restricciones unicas (idempotency_key y
+        // supplier_id+invoice_number) dentro de esta transaccion; una violacion revierte el
+        // incremento de inventario y la actualizacion de precios ya aplicados arriba.
+        Purchase saved = purchaseRepository.saveAndFlush(purchase);
         return purchaseMapper.toDto(saved);
     }
 
     @Override
+    public Optional<PurchaseDto> findByIdempotencyKey(String idempotencyKey) {
+        String key = normalizeIdempotencyKey(idempotencyKey);
+        if (key == null) {
+            return Optional.empty();
+        }
+        return purchaseRepository.findByIdempotencyKey(key)
+                .filter(p -> p.getStoreId().equals(TenantContext.getStoreId()))
+                .map(purchaseMapper::toDto);
+    }
+
+    @Override
     public Optional<PurchaseDto> getById(Long id) {
-        return purchaseRepository.findById(id).map(purchaseMapper::toDto);
+        return purchaseRepository.findById(id)
+                .filter(p -> p.getStoreId().equals(TenantContext.getStoreId()))
+                .map(purchaseMapper::toDto);
+    }
+
+    private static String normalizeIdempotencyKey(String idempotencyKey) {
+        if (idempotencyKey == null) {
+            return null;
+        }
+        String trimmed = idempotencyKey.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 
     @Override
@@ -136,7 +183,15 @@ public class PurchaseServiceImpl implements PurchaseFacade {
             LocalDateTime dateTo,
             Pageable pageable
     ) {
-        return purchaseRepository.searchPurchases(supplierId, dateFrom, dateTo, pageable)
+        return purchaseRepository.searchPurchases(requireCurrentStoreId(), supplierId, dateFrom, dateTo, pageable)
                 .map(purchaseMapper::toDto);
+    }
+
+    private static Long requireCurrentStoreId() {
+        Long storeId = TenantContext.getStoreId();
+        if (storeId == null) {
+            throw new IllegalStateException("No hay un local activo en el contexto de la solicitud");
+        }
+        return storeId;
     }
 }

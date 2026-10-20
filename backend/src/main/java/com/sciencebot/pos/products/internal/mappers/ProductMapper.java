@@ -1,6 +1,7 @@
 package com.sciencebot.pos.products.internal.mappers;
 
 import com.sciencebot.pos.categories.CategoryFacade;
+import com.sciencebot.pos.categories.SubcategoryFacade;
 import com.sciencebot.pos.products.ProductDto;
 import com.sciencebot.pos.products.internal.entities.Product;
 import org.springframework.stereotype.Component;
@@ -9,9 +10,13 @@ import org.springframework.stereotype.Component;
 public class ProductMapper {
 
     private final CategoryFacade categoryFacade;
+    private final SubcategoryFacade subcategoryFacade;
 
-    public ProductMapper(@org.springframework.context.annotation.Lazy CategoryFacade categoryFacade) {
+    public ProductMapper(
+            @org.springframework.context.annotation.Lazy CategoryFacade categoryFacade,
+            @org.springframework.context.annotation.Lazy SubcategoryFacade subcategoryFacade) {
         this.categoryFacade = categoryFacade;
+        this.subcategoryFacade = subcategoryFacade;
     }
 
 
@@ -24,18 +29,26 @@ public class ProductMapper {
                 .map(category -> category.name())
                 .orElse("Sin Categoría");
 
+        String subcategoryName = product.getSubcategoryId() != null
+                ? subcategoryFacade.getById(product.getSubcategoryId()).map(sub -> sub.name()).orElse(null)
+                : null;
+
         return new ProductDto(
                 product.getId(),
                 product.getInternalCode(),
                 product.getBarcode(),
                 product.getName(),
                 categoryName,
+                product.getSubcategoryId(),
+                subcategoryName,
                 product.getPurchasePrice(),
                 product.getSalePrice(),
                 product.getQuantityAvailable(),
                 product.getMinStock(),
                 product.isActive(),
-                product.getImageUrl()
+                product.getImageUrl(),
+                product.getTaxRate(),
+                product.getUnspscCode()
         );
     }
 }

@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -42,7 +43,11 @@ public class PurchaseController {
                     2. Se actualiza automáticamente el stock de cada producto comprado (`ENTRY` en inventario)
                     3. Se actualiza el precio de compra del producto
                     
-                    El `invoiceNumber` corresponde al número de factura del proveedor.
+                    El `invoiceNumber` corresponde al número de factura del proveedor y no puede repetirse
+                    para el mismo proveedor (se rechaza con `409 Conflict`).
+
+                    **Idempotencia:** envíe el header `Idempotency-Key` (un UUID por registro). Un reenvío con
+                    la misma clave devuelve la compra original en lugar de duplicar el stock.
                     """
     )
     @ApiResponses({
@@ -51,11 +56,27 @@ public class PurchaseController {
                             schema = @Schema(implementation = PurchaseDto.class))),
             @ApiResponse(responseCode = "400", description = "Datos inválidos o proveedor inexistente", content = @Content),
             @ApiResponse(responseCode = "401", description = "No autenticado", content = @Content),
-            @ApiResponse(responseCode = "403", description = "Sin permisos suficientes", content = @Content)
+            @ApiResponse(responseCode = "403", description = "Sin permisos suficientes", content = @Content),
+            @ApiResponse(responseCode = "409", description = "Factura de proveedor ya registrada", content = @Content)
     })
-    public ResponseEntity<PurchaseDto> registerPurchase(@RequestBody CreatePurchaseCommand command) {
-        PurchaseDto created = purchaseFacade.registerPurchase(command);
-        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    public ResponseEntity<PurchaseDto> registerPurchase(
+            @Parameter(description = "Clave de idempotencia (UUID) para evitar compras duplicadas por reenvío")
+            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
+            @RequestBody CreatePurchaseCommand command) {
+        try {
+            PurchaseDto created = purchaseFacade.registerPurchase(command, idempotencyKey);
+            return ResponseEntity.status(HttpStatus.CREATED).body(created);
+        } catch (DataIntegrityViolationException ex) {
+            // Reenvío concurrente con la misma Idempotency-Key: la transacción perdedora se
+            // revirtió por completo; devolvemos la compra ya persistida.
+            if (idempotencyKey != null && !idempotencyKey.isBlank()) {
+                return purchaseFacade.findByIdempotencyKey(idempotencyKey)
+                        .map(existing -> ResponseEntity.status(HttpStatus.CREATED).body(existing))
+                        .orElseThrow(() -> ex);
+            }
+            // Sin clave, una violación aquí es factura de proveedor duplicada → 409 vía handler.
+            throw ex;
+        }
     }
 
     @GetMapping

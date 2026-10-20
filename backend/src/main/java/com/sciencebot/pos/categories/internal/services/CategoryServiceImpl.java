@@ -3,6 +3,7 @@ package com.sciencebot.pos.categories.internal.services;
 import com.sciencebot.pos.categories.*;
 import com.sciencebot.pos.categories.internal.entities.Category;
 import com.sciencebot.pos.categories.internal.repositories.CategoryRepository;
+import com.sciencebot.pos.categories.internal.repositories.SubcategoryRepository;
 import com.sciencebot.pos.categories.internal.mappers.CategoryMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,15 +18,18 @@ import java.util.stream.Collectors;
 public class CategoryServiceImpl implements CategoryFacade {
 
     private final CategoryRepository categoryRepository;
+    private final SubcategoryRepository subcategoryRepository;
     private final List<CategoryDeleteValidator> deleteValidators;
     private final CategoryMapper categoryMapper;
 
     public CategoryServiceImpl(
             CategoryRepository categoryRepository,
+            SubcategoryRepository subcategoryRepository,
             List<CategoryDeleteValidator> deleteValidators,
             CategoryMapper categoryMapper
     ) {
         this.categoryRepository = categoryRepository;
+        this.subcategoryRepository = subcategoryRepository;
         this.deleteValidators = deleteValidators;
         this.categoryMapper = categoryMapper;
     }
@@ -72,6 +76,9 @@ public class CategoryServiceImpl implements CategoryFacade {
     public void deleteCategory(Long id) {
         if (!categoryRepository.existsById(id)) {
             throw new EntityNotFoundException("Categoría no encontrada con ID: " + id);
+        }
+        if (subcategoryRepository.existsByCategoryId(id)) {
+            throw new IllegalStateException("No se puede eliminar la categoría porque tiene subcategorías creadas por una o más tiendas");
         }
 
         for (CategoryDeleteValidator validator : deleteValidators) {

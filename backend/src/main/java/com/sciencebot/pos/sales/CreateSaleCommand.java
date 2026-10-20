@@ -13,5 +13,7 @@ public record CreateSaleCommand(
         @Schema(description = "Emitir automáticamente a Factus/DIAN (opcional — false para solo guardar en POS y emitir manualmente después)", example = "false")
         Boolean sendToFactus,
         @Schema(description = "Lista de productos a vender", requiredMode = Schema.RequiredMode.REQUIRED)
-        List<CreateSaleItemCommand> items
+        List<CreateSaleItemCommand> items,
+        @Schema(description = "Código del método de pago (valor del tema PAYMENT_METHODS: CASH, NEQUI, CARD, TRANSFER...). Por defecto CASH.", example = "CASH")
+        String paymentMethod
 ) {}

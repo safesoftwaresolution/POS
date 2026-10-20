@@ -45,10 +45,12 @@ public class InventoryController {
                     | `ENTRY` | Entrada de mercancía (aumenta stock) |
                     | `EXIT` | Salida de mercancía (disminuye stock) |
                     | `ADJUSTMENT` | Ajuste de inventario (puede ser positivo o negativo) |
-                    | `RETURN` | Devolución de mercancía al proveedor |
-                    
+                    | `RETURN` | Devolución de mercancía al proveedor (disminuye stock) |
+                    | `DEVOLUCION_VENTA` | Devolución de un cliente (aumenta stock) |
+
                     > Las ventas generan movimientos de tipo `EXIT` automáticamente.
                     > Las compras generan movimientos de tipo `ENTRY` automáticamente.
+                    > Las devoluciones de venta (`/api/v1/sales/{saleId}/returns`) generan movimientos de tipo `DEVOLUCION_VENTA` automáticamente.
                     """
     )
     @ApiResponses({

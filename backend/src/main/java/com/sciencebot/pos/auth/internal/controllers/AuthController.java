@@ -1,38 +1,46 @@
 package com.sciencebot.pos.auth.internal.controllers;
 
 import com.sciencebot.pos.auth.internal.services.AuthService;
+import com.sciencebot.pos.users.RegisterOwnerCommand;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.ExampleObject;
-import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import com.sciencebot.pos.auth.LoginRequest;
+import com.sciencebot.pos.auth.LoginResponse;
 
 import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/auth")
-@Tag(name = "🔐 Autenticación", description = "Login y gestión de sesión JWT con Cookies HttpOnly y soporte Bearer Token")
+@Tag(name = "Autenticacion", description = "Login y gestion de sesion JWT con Cookies HttpOnly y soporte Bearer Token")
 public class AuthController {
+
+    private static final String REFRESH_COOKIE_PATH = "/api/v1/auth";
 
     private final AuthService authService;
 
     @Value("${security.jwt.cookie-name:jwt_token}")
     private String cookieName = "jwt_token";
 
+    @Value("${security.jwt.refresh-cookie-name:refresh_token}")
+    private String refreshCookieName = "refresh_token";
+
     @Value("${security.jwt.cookie-secure:false}")
     private boolean cookieSecure = false;
 
     @Value("${security.jwt.cookie-same-site:Strict}")
     private String cookieSameSite = "Strict";
+
+    @Value("${security.jwt.refresh-expiration-ms:604800000}")
+    private long refreshExpirationMs = 604800000L;
 
     public AuthController(AuthService authService) {
         this.authService = authService;
@@ -47,76 +55,122 @@ public class AuthController {
     @PostMapping("/login")
     @SecurityRequirements
     @Operation(
-            summary = "Iniciar sesión",
-            description = """
-                    Autentica al usuario con credenciales `username` y `password`.
-                    Emite una **Cookie HttpOnly** segura (`SameSite=Strict`, `Secure`) con el token JWT para máxima
-                    protección contra ataques XSS, y devuelve la respuesta JSON con metadatos del usuario y token.
-                    
-                    El token tiene vigencia de 8 horas por defecto.
-                    """,
-            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                    required = true,
-                    content = @Content(
-                            mediaType = MediaType.APPLICATION_JSON_VALUE,
-                            schema = @Schema(
-                                     example = "{\"username\": \"admin\", \"password\": \"admin123\"}"
-                            ),
-                            examples = {
-                                    @ExampleObject(name = "Administrador", value = "{\"username\": \"admin\", \"password\": \"admin123\"}"),
-                                    @ExampleObject(name = "Vendedor", value = "{\"username\": \"seller01\", \"password\": \"pass1234\"}")
-                            }
-                    )
-            )
+            summary = "Iniciar sesion",
+            description = "Autentica al usuario con credenciales username y password."
     )
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Login exitoso — emite Cookie HttpOnly y devuelve datos de sesión",
-                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
-                            schema = @Schema(implementation = AuthService.LoginResponse.class))),
-            @ApiResponse(responseCode = "401", description = "Credenciales inválidas", content = @Content),
-            @ApiResponse(responseCode = "400", description = "Cuerpo de solicitud inválido", content = @Content)
-    })
-    public ResponseEntity<AuthService.LoginResponse> login(@RequestBody Map<String, String> credentials) {
-        String username = credentials.get("username");
-        String password = credentials.get("password");
-        AuthService.LoginResponse response = authService.login(username, password);
-
-        ResponseCookie cookie = ResponseCookie.from(cookieName, response.token())
-                .httpOnly(true)
-                .secure(cookieSecure)
-                .sameSite(cookieSameSite)
-                .path("/")
-                .maxAge(response.expiresIn())
-                .build();
+    public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest loginRequest) {
+        if (loginRequest == null) {
+        throw new IllegalArgumentException("Los campos username y password son requeridos");
+    }
+        LoginResponse response = authService.login(loginRequest.username(), loginRequest.password());
 
         return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                .header(HttpHeaders.SET_COOKIE, accessCookie(response.token(), response.expiresIn()).toString())
+                .header(HttpHeaders.SET_COOKIE, refreshCookie(response.refreshToken(), refreshExpirationMs / 1000).toString())
+                .body(response);
+    }
+
+    @PostMapping("/register")
+    @SecurityRequirements
+    @Operation(
+            summary = "Auto-registro publico",
+            description = "Crea una cuenta ADMINISTRATOR pendiente de verificar su correo y envia el enlace de verificacion."
+    )
+    public ResponseEntity<Void> register(@RequestBody RegisterOwnerCommand command) {
+        authService.register(command);
+        return ResponseEntity.status(HttpStatus.CREATED).build();
+    }
+
+    @GetMapping("/verify-email")
+    @SecurityRequirements
+    @Operation(
+            summary = "Verificar correo",
+            description = "Consume el token del enlace de verificacion, activa el correo del usuario y lo autologuea."
+    )
+    public ResponseEntity<LoginResponse> verifyEmail(@RequestParam String token) {
+        LoginResponse response = authService.verifyEmail(token);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, accessCookie(response.token(), response.expiresIn()).toString())
+                .header(HttpHeaders.SET_COOKIE, refreshCookie(response.refreshToken(), refreshExpirationMs / 1000).toString())
+                .body(response);
+    }
+
+    @PostMapping("/refresh")
+    @SecurityRequirements
+    @Operation(
+            summary = "Renovar sesion",
+            description = "Emite un nuevo access token usando el refresh token (cookie HttpOnly o campo refreshToken en el body). Rota el refresh token."
+    )
+    public ResponseEntity<LoginResponse> refresh(
+            @RequestBody(required = false) Map<String, String> body,
+            HttpServletRequest request
+    ) {
+        String rawRefreshToken = extractRefreshToken(body, request);
+        LoginResponse response = authService.refresh(rawRefreshToken);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, accessCookie(response.token(), response.expiresIn()).toString())
+                .header(HttpHeaders.SET_COOKIE, refreshCookie(response.refreshToken(), refreshExpirationMs / 1000).toString())
                 .body(response);
     }
 
     @PostMapping("/logout")
-    @Operation(
-            summary = "Cerrar sesión",
-            description = """
-                    Invalida la sesión del usuario eliminando la cookie HttpOnly (`Max-Age=0`).
-                    No requiere cuerpo de solicitud.
-                    """
-    )
-    @ApiResponses({
-            @ApiResponse(responseCode = "204", description = "Sesión cerrada correctamente y cookie eliminada", content = @Content),
-            @ApiResponse(responseCode = "401", description = "Token inválido o expirado", content = @Content)
-    })
-    public ResponseEntity<Void> logout() {
-        ResponseCookie cleanCookie = ResponseCookie.from(cookieName, "")
+    @Operation(summary = "Cerrar sesion")
+    public ResponseEntity<Void> logout(
+            @RequestBody(required = false) Map<String, String> body,
+            HttpServletRequest request
+    ) {
+        authService.logout(extractRefreshToken(body, request));
+
+        return ResponseEntity.noContent()
+                .header(HttpHeaders.SET_COOKIE, expiredCookie(cookieName, "/").toString())
+                .header(HttpHeaders.SET_COOKIE, expiredCookie(refreshCookieName, REFRESH_COOKIE_PATH).toString())
+                .build();
+    }
+
+    private String extractRefreshToken(Map<String, String> body, HttpServletRequest request) {
+        if (body != null && body.get("refreshToken") != null && !body.get("refreshToken").isBlank()) {
+            return body.get("refreshToken");
+        }
+        Cookie[] cookies = request.getCookies();
+        if (cookies != null) {
+            for (Cookie cookie : cookies) {
+                if (refreshCookieName.equals(cookie.getName()) && cookie.getValue() != null && !cookie.getValue().isBlank()) {
+                    return cookie.getValue();
+                }
+            }
+        }
+        return null;
+    }
+
+    private ResponseCookie accessCookie(String value, long maxAgeSeconds) {
+        return ResponseCookie.from(cookieName, value)
                 .httpOnly(true)
                 .secure(cookieSecure)
                 .sameSite(cookieSameSite)
                 .path("/")
-                .maxAge(0)
+                .maxAge(maxAgeSeconds)
                 .build();
+    }
 
-        return ResponseEntity.noContent()
-                .header(HttpHeaders.SET_COOKIE, cleanCookie.toString())
+    private ResponseCookie refreshCookie(String value, long maxAgeSeconds) {
+        return ResponseCookie.from(refreshCookieName, value)
+                .httpOnly(true)
+                .secure(cookieSecure)
+                .sameSite(cookieSameSite)
+                .path(REFRESH_COOKIE_PATH)
+                .maxAge(maxAgeSeconds)
+                .build();
+    }
+
+    private ResponseCookie expiredCookie(String name, String path) {
+        return ResponseCookie.from(name, "")
+                .httpOnly(true)
+                .secure(cookieSecure)
+                .sameSite(cookieSameSite)
+                .path(path)
+                .maxAge(0)
                 .build();
     }
 }

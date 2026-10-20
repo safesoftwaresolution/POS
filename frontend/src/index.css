@@ -2,27 +2,57 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Tokens semánticos (DESIGN.md §2). Los valores viven en :root / html.dark, así que
+   las utilidades `bg-card`, `border-line`, `text-ink`... cambian solas con el tema y no
+   hace falta repetir `dark:` en cada componente. */
+@theme inline {
+  --color-page: var(--bg-page);
+  --color-card: var(--bg-card);
+  --color-line: var(--border-card);
+  --color-line-strong: var(--border-strong);
+  --color-ink: var(--text-primary);
+  --color-ink-soft: var(--text-secondary);
+  --color-ink-muted: var(--text-muted);
+  --color-brand: var(--color-primary);
+  --color-brand-hover: var(--color-primary-hover);
+  --color-solid: var(--solid);
+  --color-solid-hover: var(--solid-hover);
+  --color-solid-ink: var(--solid-text);
+}
+
 @layer base {
   :root {
-    --bg-page: #f7f9fc;
-    --bg-card: #ffffff;
-    --border-card: #e0e3e6;
-    --text-primary: #191c1e;
-    --text-secondary: #6d7b6e;
-    --text-muted: #94a49b;
+    --bg-page: #F7F7F5;
+    --bg-card: #FFFFFF;
+    --border-card: #EAEAEA;
+    --text-primary: #0A0A0A;
+    --text-secondary: #7A7A7A;
+    --text-muted: #A0A0A0;
+    --border-strong: #D0D0CE;
+    --solid: #0A0A0A;
+    --solid-hover: #202020;
+    --solid-text: #FFFFFF;
+    --color-primary: #FF5520;
+    --color-primary-hover: #E64712;
   }
 
   html.dark {
-    --bg-page: #0b1411;
-    --bg-card: #14231e;
-    --border-card: #1d332c;
-    --text-primary: #f7f9fc;
-    --text-secondary: #a3b8ad;
-    --text-muted: #62796e;
+    --bg-page: #0E0E12;
+    --bg-card: #17171B;
+    --border-card: #272730;
+    --text-primary: #F4F4F6;
+    --text-secondary: #A0A0AB;
+    --text-muted: #787885;
+    --border-strong: #2C2C36;
+    --solid: #262630;
+    --solid-hover: #31313E;
+    --solid-text: #FFFFFF;
+    --color-primary: #FF5520;
+    --color-primary-hover: #E64712;
   }
 
   body {
-    font-family: 'Plus Jakarta Sans', 'Hanken Grotesk', system-ui, -apple-system, sans-serif;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
     background-color: var(--bg-page);
     color: var(--text-primary);
     transition: background-color 0.25s ease, color 0.25s ease;
@@ -31,50 +61,62 @@
   .tabular-nums {
     font-variant-numeric: tabular-nums;
   }
+
+  .no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 @layer components {
-  /* Custom Scrollbar */
+  /* Custom Scrollbar - Neutral Bento Style */
   ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
   }
   ::-webkit-scrollbar-track {
-    background: #f1f3f5;
+    background: #F5F5F3;
   }
   html.dark ::-webkit-scrollbar-track {
-    background: #14231e;
+    background: #17171B;
   }
   ::-webkit-scrollbar-thumb {
-    background: #95d3ba;
+    background: #E2E2DF;
     border-radius: 9999px;
   }
+  html.dark ::-webkit-scrollbar-thumb {
+    background: #2D2D36;
+  }
   ::-webkit-scrollbar-thumb:hover {
-    background: #006d3c;
+    background: #FF5520;
+  }
+  html.dark ::-webkit-scrollbar-thumb:hover {
+    background: #FF5520;
   }
 
   /* Bento card styling */
   .bento-card {
-    background-color: #ffffff;
-    border: 1px solid #e0e3e6;
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-card);
     border-radius: 1.5rem;
-    box-shadow: 0 4px 24px rgba(0,0,0,0.02);
+    box-shadow: 0 2px 12px rgba(0,0,0,0.02);
     transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s ease, background-color 0.25s ease, border-color 0.25s ease;
   }
 
   html.dark .bento-card {
-    background-color: #14231e;
-    border-color: #1d332c;
-    box-shadow: 0 4px 24px rgba(0,0,0,0.3);
+    box-shadow: 0 4px 24px rgba(0,0,0,0.4);
   }
 
   .bento-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 32px rgba(0,0,0,0.05);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.05);
   }
   html.dark .bento-card:hover {
-    border-color: #12b76a;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    border-color: #2C2C36;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.6);
   }
 }
 

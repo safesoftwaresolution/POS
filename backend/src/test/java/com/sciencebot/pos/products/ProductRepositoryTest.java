@@ -26,6 +26,7 @@ class ProductRepositoryTest {
     void testSearchProducts() {
         for (int i = 0; i < 15; i++) {
             Product product = new Product();
+            product.setStoreId(1L);
             product.setInternalCode("PROD-100" + i);
             product.setName("Test Product " + i);
             product.setCategoryId(1L);

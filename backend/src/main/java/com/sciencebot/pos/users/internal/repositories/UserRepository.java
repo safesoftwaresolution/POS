@@ -4,6 +4,7 @@ import com.sciencebot.pos.users.internal.entities.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import java.util.List;
 import java.util.Optional;
 
 public interface UserRepository extends JpaRepository<User, Long> {
@@ -13,4 +14,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
     boolean existsByEmail(String email);
     long countByRoleAndActiveTrue(String role);
     Page<User> findAllByActiveTrue(Pageable pageable);
+    Page<User> findAllByRole(String role, Pageable pageable);
+    Page<User> findAllByRoleAndEmailVerifiedFalse(String role, Pageable pageable);
+    List<User> findAllByStoreIdAndRoleInAndActiveTrue(Long storeId, List<String> roles);
+    Page<User> findAllByStoreIdAndActiveTrue(Long storeId, Pageable pageable);
+    Page<User> findAllByStoreIdAndRole(Long storeId, String role, Pageable pageable);
+    long countByStoreIdAndRoleAndActiveTrue(Long storeId, String role);
 }

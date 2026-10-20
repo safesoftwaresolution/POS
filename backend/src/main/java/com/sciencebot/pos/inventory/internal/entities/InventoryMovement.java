@@ -15,6 +15,10 @@ public class InventoryMovement {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    /** Local (tenant) donde ocurrio el movimiento. */
+    @Column(name = "store_id", nullable = false)
+    private Long storeId;
+
     @Column(name = "product_id", nullable = false)
     private Long productId;
 

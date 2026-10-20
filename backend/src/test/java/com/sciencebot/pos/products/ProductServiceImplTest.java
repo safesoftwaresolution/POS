@@ -2,10 +2,12 @@ package com.sciencebot.pos.products;
 
 import com.sciencebot.pos.categories.CategoryDto;
 import com.sciencebot.pos.categories.CategoryFacade;
+import com.sciencebot.pos.config.tenant.TenantContext;
 import com.sciencebot.pos.products.internal.entities.Product;
 import com.sciencebot.pos.products.internal.repositories.ProductRepository;
 import com.sciencebot.pos.products.internal.services.ProductServiceImpl;
 import com.sciencebot.pos.products.internal.mappers.ProductMapper;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 
 import org.junit.jupiter.api.Test;
@@ -23,6 +25,8 @@ import static org.mockito.Mockito.*;
 
 class ProductServiceImplTest {
 
+    private static final Long STORE_ID = 1L;
+
     @Mock
     private ProductRepository productRepository;
 
@@ -38,22 +42,34 @@ class ProductServiceImplTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
+        TenantContext.setStoreId(STORE_ID);
+    }
+
+    @AfterEach
+    void tearDown() {
+        TenantContext.clear();
     }
 
 
     @Test
     void createProduct_Success() {
         CreateProductCommand command = new CreateProductCommand(
+<<<<<<< HEAD
                 "PROD-001", "7701234567890", "Coca Cola 350ml", 1L,
                 BigDecimal.valueOf(1.20), BigDecimal.valueOf(1.80), 10, 0, "Coca Cola", null
+=======
+                "PROD-001", "7701234567890", "Coca Cola 350ml", 1L, null,
+                BigDecimal.valueOf(1.20), BigDecimal.valueOf(1.80), 10, "Coca Cola", null
+>>>>>>> develop
         );
 
         when(categoryFacade.getById(1L)).thenReturn(Optional.of(new CategoryDto(1L, "Bebidas", "Bebidas", 0)));
-        when(productRepository.existsByInternalCode("PROD-001")).thenReturn(false);
-        when(productRepository.existsByBarcode("7701234567890")).thenReturn(false);
+        when(productRepository.existsByStoreIdAndInternalCode(STORE_ID, "PROD-001")).thenReturn(false);
+        when(productRepository.existsByStoreIdAndBarcode(STORE_ID, "7701234567890")).thenReturn(false);
 
         Product saved = new Product();
         saved.setId(10L);
+        saved.setStoreId(STORE_ID);
         saved.setInternalCode("PROD-001");
         saved.setBarcode("7701234567890");
         saved.setName("Coca Cola 350ml");
@@ -65,7 +81,7 @@ class ProductServiceImplTest {
         when(productRepository.save(any(Product.class))).thenReturn(saved);
 
         ProductDto expectedDto = new ProductDto(
-                10L, "PROD-001", "7701234567890", "Coca Cola 350ml", "Bebidas",
+                10L, "PROD-001", "7701234567890", "Coca Cola 350ml", "Bebidas", null, null,
                 BigDecimal.valueOf(1.20), BigDecimal.valueOf(1.80), 0, 10, true, null
         );
         when(productMapper.toDto(any(Product.class))).thenReturn(expectedDto);
@@ -121,8 +137,13 @@ class ProductServiceImplTest {
     @Test
     void createProduct_InvalidMargin_ThrowsException() {
         CreateProductCommand command = new CreateProductCommand(
+<<<<<<< HEAD
                 "PROD-001", "7701234567890", "Coca Cola 350ml", 1L,
                 BigDecimal.valueOf(1.80), BigDecimal.valueOf(1.20), 10, 0, "Coca Cola", null
+=======
+                "PROD-001", "7701234567890", "Coca Cola 350ml", 1L, null,
+                BigDecimal.valueOf(1.80), BigDecimal.valueOf(1.20), 10, "Coca Cola", null
+>>>>>>> develop
         );
 
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> productService.createProduct(command));

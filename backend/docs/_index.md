@@ -1,4 +1,4 @@
-<!-- doc-version: 1.0 | last-updated: 2026-07-08 -->
+<!-- doc-version: 1.4 | last-updated: 2026-10-02 -->
 # Índice del Proyecto POS
 
 ## Resolución Rápida por Módulo
@@ -16,22 +16,12 @@
 | suppliers | modules/suppliers/spec.md | suppliers | /api/v1/suppliers |
 | reports | modules/reports/spec.md | (read-only) | /api/v1/reports |
 | settings | modules/settings/spec.md | settings | /api/v1/settings |
-| billing | modules/billing/spec.md | electronic_invoices | /api/v1/billing |
-
-## Resolución por ID de Requerimiento
-
-- RF-AUTH-* / RN-AUTH-* → modules/auth/spec.md
-- RF-USER-* / RN-USER-* → modules/users/spec.md
-- RF-PROD-* / RN-PROD-* → modules/products/spec.md
-- RF-CAT-* / RN-CAT-* → modules/categories/spec.md
-- RF-INV-* / RN-INV-* → modules/inventory/spec.md
-- RF-PUR-* / RN-PUR-* → modules/purchases/spec.md
-- RF-SALE-* / RN-SALE-* → modules/sales/spec.md
-- RF-BILL-* / RN-BILL-* → modules/billing/spec.md
-- RF-CUST-* / RN-CUST-* → modules/customers/spec.md
-- RF-SUPP-* / RN-SUPP-* → modules/suppliers/spec.md
-- RF-REP-* → modules/reports/spec.md
-- RF-SET-* / RN-SET-* → modules/settings/spec.md
+| billing | modules/billing/spec.md | electronic_invoices, store_billing_config, numbering_range_audit | /api/v1/billing, /api/v1/backoffice/billing, /api/v1/backoffice/stores/{id}/billing |
+| stores | modules/stores/spec.md | stores, store_categories, store_documents | /api/v1/backoffice/stores, /api/v1/stores/me, /api/v1/backoffice/onboarding, /api/v1/backoffice/staff |
+| legal | modules/legal/spec.md | legal_documents | /api/v1/legal, /api/v1/backoffice/legal-documents |
+| support | modules/support/spec.md | support_tickets | /api/v1/support, /api/v1/backoffice/support |
+| notifications | modules/notifications/spec.md | notifications | /api/v1/notifications |
+| storage | modules/storage/spec.md | (ninguna; objetos en Cloudflare R2) | /api/v1/storage |
 
 ## Documentos Globales
 
@@ -44,3 +34,4 @@
 | _database-schema.md | Crear tablas nuevas o relaciones |
 | _deployment.md | Configurar entorno o desplegar |
 | _glossary.md | Término desconocido del dominio |
+| _roadmap.md | Estado por módulo, deuda técnica, ideas de valor agregado y plan de trabajo vigente |

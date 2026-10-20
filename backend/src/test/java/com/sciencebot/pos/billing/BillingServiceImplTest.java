@@ -1,22 +1,16 @@
 package com.sciencebot.pos.billing;
 
-import com.sciencebot.pos.billing.internal.adapters.ElectronicInvoicingProvider;
-import com.sciencebot.pos.billing.internal.adapters.dto.CustomerBillingData;
-import com.sciencebot.pos.billing.internal.adapters.dto.InvoiceItemData;
-import com.sciencebot.pos.billing.internal.adapters.dto.InvoiceRequest;
-import com.sciencebot.pos.billing.internal.adapters.mock.MockBillingAdapter;
-import com.sciencebot.pos.billing.internal.entities.ElectronicInvoice;
-import com.sciencebot.pos.billing.internal.mappers.BillingCanonicalMapper;
-import com.sciencebot.pos.billing.internal.mappers.ElectronicInvoiceMapper;
-import com.sciencebot.pos.billing.internal.repositories.ElectronicInvoiceRepository;
+import com.sciencebot.pos.billing.api.*;
+import com.sciencebot.pos.billing.dto.*;
+import com.sciencebot.pos.billing.exception.*;
 import com.sciencebot.pos.billing.internal.services.BillingServiceImpl;
+import com.sciencebot.pos.billing.internal.services.InvoiceService;
+import com.sciencebot.pos.billing.internal.services.NumberingRangeService;
 import com.sciencebot.pos.sales.SaleDto;
-import com.sciencebot.pos.sales.SaleFacade;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -24,109 +18,99 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 class BillingServiceImplTest {
 
     @Mock
-    private ElectronicInvoiceRepository repository;
+    private InvoiceService invoiceService;
 
     @Mock
-    private BillingCanonicalMapper canonicalMapper;
+    private NumberingRangeService numberingRangeService;
 
-    @Mock
-    private ElectronicInvoiceMapper invoiceMapper;
-
-    @Mock
-    private SaleFacade saleFacade;
-
-    @Mock
-    private ElectronicInvoicingProvider customProvider;
-
-    private MockBillingAdapter mockAdapter;
     private BillingServiceImpl billingService;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        mockAdapter = new MockBillingAdapter();
-
-        when(customProvider.getProviderName()).thenReturn("factus");
-
-        billingService = new BillingServiceImpl(
-                repository,
-                canonicalMapper,
-                invoiceMapper,
-                saleFacade,
-                List.of(mockAdapter, customProvider)
-        );
+        billingService = new BillingServiceImpl(invoiceService, numberingRangeService);
     }
 
     @Test
-    void processElectronicInvoice_WithMockProvider_Success() {
-        ReflectionTestUtils.setField(billingService, "activeProviderName", "mock");
-
-        SaleDto saleDto = new SaleDto(1L, "FACT-000001", null, "Cliente General", BigDecimal.valueOf(50.0), BigDecimal.valueOf(50.0), BigDecimal.ZERO, "admin", List.of());
-        ElectronicInvoice pendingEntity = new ElectronicInvoice();
-        pendingEntity.setId(10L);
-        pendingEntity.setSaleId(1L);
-        pendingEntity.setStatus("PENDING");
-
-        when(repository.findBySaleId(1L)).thenReturn(Optional.of(pendingEntity));
-        when(repository.save(any(ElectronicInvoice.class))).thenAnswer(invocation -> invocation.getArgument(0));
-
-        CustomerBillingData customerData = new CustomerBillingData("222222222222", "", "Consumidor Final", "a@a.com", 13, 21, null);
-        InvoiceItemData itemData = new InvoiceItemData("REF-PROD", "Producto 1", 1, BigDecimal.valueOf(50.0), BigDecimal.ZERO, BigDecimal.valueOf(50.0));
-        InvoiceRequest request = new InvoiceRequest(1L, "FACT-000001", "10", customerData, List.of(itemData), BigDecimal.valueOf(50.0));
-        when(canonicalMapper.toInvoiceRequest(saleDto)).thenReturn(request);
-
-        ElectronicInvoiceDto expectedDto = new ElectronicInvoiceDto(10L, 1L, "SETP-MOCK-000001", "mock-cufe", "mock-qr", "VALIDATED", null, "mock-pdf", LocalDateTime.now());
-        when(invoiceMapper.toDto(any(ElectronicInvoice.class))).thenReturn(expectedDto);
+    void processElectronicInvoice_DelegatesToInvoiceService() {
+        SaleDto saleDto = new SaleDto(1L, "FACT-000001", null, "Cliente General", BigDecimal.valueOf(50.0), BigDecimal.valueOf(50.0), BigDecimal.ZERO, "admin", List.of(), "CASH");
+        ElectronicInvoiceDto expected = new ElectronicInvoiceDto(10L, 1L, "SETP-001", "cufe", "qr", "VALIDATED", null, "pdf", LocalDateTime.now());
+        when(invoiceService.processElectronicInvoice(saleDto)).thenReturn(expected);
 
         ElectronicInvoiceDto result = billingService.processElectronicInvoice(saleDto);
 
         assertNotNull(result);
         assertEquals("VALIDATED", result.status());
-        assertEquals("SETP-MOCK-000001", result.factusNumber());
-        verify(repository, atLeastOnce()).save(any(ElectronicInvoice.class));
+        verify(invoiceService).processElectronicInvoice(saleDto);
     }
 
     @Test
-    void processElectronicInvoice_AlreadyValidated_DoesNotCallProvider() {
-        SaleDto saleDto = new SaleDto(1L, "FACT-000001", null, "Cliente General", BigDecimal.valueOf(50.0), BigDecimal.valueOf(50.0), BigDecimal.ZERO, "admin", List.of());
-        ElectronicInvoice validatedEntity = new ElectronicInvoice();
-        validatedEntity.setId(10L);
-        validatedEntity.setSaleId(1L);
-        validatedEntity.setStatus("VALIDATED");
-        validatedEntity.setFactusNumber("SETP-001");
+    void getBySaleId_DelegatesToInvoiceService() {
+        ElectronicInvoiceDto expected = new ElectronicInvoiceDto(10L, 1L, "SETP-001", "cufe", "qr", "VALIDATED", null, "pdf", LocalDateTime.now());
+        when(invoiceService.getBySaleId(1L)).thenReturn(Optional.of(expected));
 
-        when(repository.findBySaleId(1L)).thenReturn(Optional.of(validatedEntity));
-        ElectronicInvoiceDto validatedDto = new ElectronicInvoiceDto(10L, 1L, "SETP-001", "cufe", "qr", "VALIDATED", null, "pdf", LocalDateTime.now());
-        when(invoiceMapper.toDto(validatedEntity)).thenReturn(validatedDto);
+        Optional<ElectronicInvoiceDto> result = billingService.getBySaleId(1L);
 
-        ElectronicInvoiceDto result = billingService.processElectronicInvoice(saleDto);
+        assertTrue(result.isPresent());
+        assertEquals("SETP-001", result.get().factusNumber());
+        verify(invoiceService).getBySaleId(1L);
+    }
+
+    @Test
+    void retryInvoice_DelegatesToInvoiceService() {
+        ElectronicInvoiceDto expected = new ElectronicInvoiceDto(10L, 1L, "SETP-001", "cufe", "qr", "VALIDATED", null, "pdf", LocalDateTime.now());
+        when(invoiceService.retryInvoice(1L)).thenReturn(expected);
+
+        ElectronicInvoiceDto result = billingService.retryInvoice(1L);
 
         assertNotNull(result);
-        assertEquals("VALIDATED", result.status());
-        verify(customProvider, never()).emitInvoice(any());
-        verify(canonicalMapper, never()).toInvoiceRequest(any());
+        assertEquals("SETP-001", result.factusNumber());
+        verify(invoiceService).retryInvoice(1L);
     }
 
     @Test
-    void retryInvoice_AlreadyValidated_ThrowsException() {
-        SaleDto saleDto = new SaleDto(1L, "FACT-000001", null, "Cliente General", BigDecimal.valueOf(50.0), BigDecimal.valueOf(50.0), BigDecimal.ZERO, "admin", List.of());
-        when(saleFacade.getById(1L)).thenReturn(Optional.of(saleDto));
+    void sendInvoiceEmail_DelegatesToInvoiceService() {
+        doNothing().when(invoiceService).sendInvoiceEmail(1L, "test@mail.com");
 
-        ElectronicInvoice validatedEntity = new ElectronicInvoice();
-        validatedEntity.setId(10L);
-        validatedEntity.setSaleId(1L);
-        validatedEntity.setStatus("VALIDATED");
-        when(repository.findBySaleId(1L)).thenReturn(Optional.of(validatedEntity));
+        billingService.sendInvoiceEmail(1L, "test@mail.com");
 
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-                () -> billingService.retryInvoice(1L));
+        verify(invoiceService).sendInvoiceEmail(1L, "test@mail.com");
+    }
 
-        assertTrue(ex.getMessage().contains("ya está validada"));
+    @Test
+    void numberingRangeOperations_DelegateToNumberingRangeService() {
+        NumberingRangeDto rangeDto = new NumberingRangeDto(1L, "01", "SETP", "18764000001234", 1L, 5000L, 1L, "2026-01-01", "2027-01-01", "key", true);
+
+        when(numberingRangeService.queryDianNumberingRanges()).thenReturn(List.of(rangeDto));
+        when(numberingRangeService.listNumberingRanges()).thenReturn(List.of(rangeDto));
+        when(numberingRangeService.getNumberingRange(1L)).thenReturn(rangeDto);
+        NumberingRangeDto toggled = new NumberingRangeDto(1L, "01", "SETP", "18764000001234", 1L, 5000L, 1L, "2026-01-01", "2027-01-01", "key", false);
+        when(numberingRangeService.toggleNumberingRangeStatus(1L)).thenReturn(toggled);
+        NumberingRangeDto adjusted = new NumberingRangeDto(1L, "01", "SETP", "18764000001234", 1L, 5000L, 150L, "2026-01-01", "2027-01-01", "key", true);
+        when(numberingRangeService.updateNumberingRangeCurrent(1L, 150L)).thenReturn(adjusted);
+
+        CreateNumberingRangeRequest createReq = new CreateNumberingRangeRequest("01", "SETP", "18764000001234", 1L);
+        when(numberingRangeService.createNumberingRange(createReq)).thenReturn(rangeDto);
+
+        assertEquals(1, billingService.queryDianNumberingRanges().size());
+        assertEquals(1, billingService.listNumberingRanges().size());
+        assertEquals(rangeDto, billingService.getNumberingRange(1L));
+        assertEquals(rangeDto, billingService.createNumberingRange(createReq));
+        billingService.deleteNumberingRange(1L);
+        assertEquals(toggled, billingService.toggleNumberingRangeStatus(1L));
+        assertEquals(adjusted, billingService.updateNumberingRangeCurrent(1L, 150L));
+
+        verify(numberingRangeService).queryDianNumberingRanges();
+        verify(numberingRangeService).listNumberingRanges();
+        verify(numberingRangeService).getNumberingRange(1L);
+        verify(numberingRangeService).createNumberingRange(createReq);
+        verify(numberingRangeService).deleteNumberingRange(1L);
+        verify(numberingRangeService).toggleNumberingRangeStatus(1L);
+        verify(numberingRangeService).updateNumberingRangeCurrent(1L, 150L);
     }
 }

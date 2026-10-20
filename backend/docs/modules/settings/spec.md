@@ -1,4 +1,4 @@
-<!-- spec-version: 1.0 | last-updated: 2026-07-08 -->
+<!-- spec-version: 1.1 | last-updated: 2026-09-22 -->
 # Módulo: Configuración (Settings)
 
 ## Dependencias
@@ -7,8 +7,16 @@
 
 ## Reglas de Negocio
 
-### RN-SET-001 — Única Configuración Global
-- Solo existe un registro de configuración (`id = 1`). No hay soporte para múltiples sucursales.
+### RN-SET-001 — Una Configuración por Local
+- Existe **una fila por local**: la PK de `settings` es el `id` del local (`stores.id`), asignada
+  explícitamente desde `TenantContext`, no autogenerada (desde `V9__Store_Scoping_Isolation.sql`).
+- Un local recién registrado todavía no tiene fila; la primera consulta la crea con valores por defecto
+  editables, en vez de responder 404.
+
+### RN-SET-002 — Sin Credenciales de Facturación
+- Este módulo **no guarda credenciales de Factus**. Las columnas `factus_*` que existieron aquí se
+  eliminaron en `V16__Drop_Settings_Factus_Columns.sql`; la habilitación y las credenciales por local viven
+  en `store_billing_config`, propiedad del módulo `billing` (ver `modules/billing/spec.md`).
 
 ## Requerimientos Funcionales
 
@@ -40,7 +48,7 @@
 ### Tabla: `settings`
 | Campo | Tipo | Restricciones |
 |---|---|---|
-| id | INT | PK, forzado a 1 |
+| id | BIGINT | PK = `stores.id` del local dueño (1 a 1, no autogenerada) |
 | business_name | VARCHAR(100) | NOT NULL |
 | address | VARCHAR(255) | NOT NULL |
 | phone | VARCHAR(20) | NOT NULL |

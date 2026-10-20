@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "suppliers", uniqueConstraints = {
-        @UniqueConstraint(name = "UK_suppliers_tax_id", columnNames = "tax_id")
+        @UniqueConstraint(name = "UK_suppliers_store_tax_id", columnNames = {"store_id", "tax_id"})
 })
 @Getter
 @Setter
@@ -16,6 +16,10 @@ public class Supplier {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    /** Local (tenant) dueño del proveedor. */
+    @Column(name = "store_id", nullable = false)
+    private Long storeId;
 
     @Column(name = "company_name", nullable = false, length = 100)
     private String companyName;

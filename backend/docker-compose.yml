@@ -24,14 +24,21 @@ services:
     ports:
       - "8080:8080"
       - "5005:5005"
+    # Trae el resto de variables (R2_*, JWT_SECRET, FACTUS_*, etc.) desde backend/.env; los
+    # valores explícitos en "environment" de abajo tienen prioridad sobre los de env_file.
+    env_file:
+      - .env
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/app_db
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgres
-      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.postgresql.Driver
+      SPRING_JPA_DATABASE_PLATFORM: org.hibernate.dialect.PostgreSQLDialect
+      SPRING_JPA_HIBERNATE_DDL_AUTO: validate
       SPRING_PROFILES_ACTIVE: dev
     volumes:
       - .:/app
+      - /app/target
       - maven-repo:/root/.m2
     depends_on:
       db:

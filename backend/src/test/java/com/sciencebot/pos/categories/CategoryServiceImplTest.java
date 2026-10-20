@@ -2,6 +2,7 @@ package com.sciencebot.pos.categories;
 
 import com.sciencebot.pos.categories.internal.entities.Category;
 import com.sciencebot.pos.categories.internal.repositories.CategoryRepository;
+import com.sciencebot.pos.categories.internal.repositories.SubcategoryRepository;
 import com.sciencebot.pos.categories.internal.services.CategoryServiceImpl;
 import com.sciencebot.pos.categories.internal.mappers.CategoryMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,6 +23,9 @@ class CategoryServiceImplTest {
     private CategoryRepository categoryRepository;
 
     @Mock
+    private SubcategoryRepository subcategoryRepository;
+
+    @Mock
     private CategoryDeleteValidator deleteValidator;
 
     @Mock
@@ -37,6 +41,7 @@ class CategoryServiceImplTest {
         MockitoAnnotations.openMocks(this);
         categoryService = new CategoryServiceImpl(
                 categoryRepository,
+                subcategoryRepository,
                 List.of(deleteValidator),
                 categoryMapper
         );

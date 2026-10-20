@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "customers", uniqueConstraints = {
-        @UniqueConstraint(name = "UK_customers_identification", columnNames = "identification")
+        @UniqueConstraint(name = "UK_customers_store_identification", columnNames = {"store_id", "identification"})
 })
 @Getter
 @Setter
@@ -16,6 +16,10 @@ public class Customer {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    /** Local (tenant) dueño del cliente. */
+    @Column(name = "store_id", nullable = false)
+    private Long storeId;
 
     @Column(name = "full_name", nullable = false, length = 100)
     private String fullName;
@@ -34,6 +38,18 @@ public class Customer {
 
     @Column(nullable = false)
     private boolean active = true;
+
+    @Column(length = 1)
+    private String dv;
+
+    @Column(name = "legal_organization_id")
+    private Integer legalOrganizationId = 13;
+
+    @Column(name = "tribute_id")
+    private Integer tributeId = 21;
+
+    @Column(name = "municipality_id")
+    private Integer municipalityId;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

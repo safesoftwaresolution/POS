@@ -1,12 +1,13 @@
 package com.sciencebot.pos.billing;
 
-import com.sciencebot.pos.billing.internal.adapters.dto.CustomerBillingData;
-import com.sciencebot.pos.billing.internal.adapters.dto.InvoiceItemData;
+import com.sciencebot.pos.billing.api.*;
+import com.sciencebot.pos.billing.dto.*;
+import com.sciencebot.pos.billing.exception.*;
 import com.sciencebot.pos.billing.internal.adapters.dto.InvoiceRequest;
 import com.sciencebot.pos.billing.internal.adapters.dto.InvoiceResult;
 import com.sciencebot.pos.billing.internal.adapters.factus.FactusBillingAdapter;
-import com.sciencebot.pos.billing.internal.adapters.factus.FactusSaleMapper;
-import com.sciencebot.pos.billing.internal.adapters.factus.FactusTokenManager;
+import com.sciencebot.pos.billing.internal.adapters.factus.FactusInvoiceClient;
+import com.sciencebot.pos.billing.internal.adapters.factus.FactusNumberingRangeClient;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -16,20 +17,22 @@ import java.math.BigDecimal;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 class FactusBillingAdapterTest {
 
     @Mock
-    private FactusTokenManager tokenManager;
+    private FactusInvoiceClient invoiceClient;
 
-    private FactusSaleMapper saleMapper;
+    @Mock
+    private FactusNumberingRangeClient rangeClient;
+
     private FactusBillingAdapter adapter;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        saleMapper = new FactusSaleMapper();
-        adapter = new FactusBillingAdapter(tokenManager, saleMapper);
+        adapter = new FactusBillingAdapter(invoiceClient, rangeClient);
     }
 
     @Test
@@ -37,29 +40,149 @@ class FactusBillingAdapterTest {
         assertEquals("factus", adapter.getProviderName());
     }
 
+    // --- Pruebas de delegación hacia FactusInvoiceClient ---
+
     @Test
-    void emitInvoice_NullSaleId_ReturnsErrorResult() {
-        InvoiceRequest request = new InvoiceRequest(null, "FACT-001", "10", null, List.of(), BigDecimal.TEN);
+    void emitInvoice_DelegatesToInvoiceClient() {
+        InvoiceRequest request = new InvoiceRequest(1L, "FACT-001", "10", null, List.of(), BigDecimal.TEN);
+        InvoiceResult expectedResult = InvoiceResult.success("FACT-001", "cufe-123", "qr-url", "public-url");
+
+        when(invoiceClient.emitInvoice(request)).thenReturn(expectedResult);
+
         InvoiceResult result = adapter.emitInvoice(request);
 
-        assertNotNull(result);
-        assertFalse(result.isSuccess());
-        assertEquals("ERROR", result.status());
-        assertTrue(result.errorMessage().contains("ID de la venta es obligatorio"));
+        assertSame(expectedResult, result);
+        verify(invoiceClient).emitInvoice(request);
     }
 
     @Test
-    void saleMapper_TransformsInvoiceRequest_Correctly() {
-        CustomerBillingData customer = new CustomerBillingData("123456789", "1", "Empresa XYZ", "info@xyz.com", 1, 1, 11001);
-        InvoiceItemData item = new InvoiceItemData("REF-01", "Laptop", 2, BigDecimal.valueOf(1500.0), BigDecimal.ZERO, BigDecimal.valueOf(3000.0));
-        InvoiceRequest request = new InvoiceRequest(10L, "FACT-000010", "10", customer, List.of(item), BigDecimal.valueOf(3000.0));
+    void queryInvoice_DelegatesToInvoiceClient() {
+        InvoiceResult expectedResult = InvoiceResult.success("FACT-001", "cufe-123", "qr-url", "public-url");
+        when(invoiceClient.queryInvoice("FACT-001")).thenReturn(expectedResult);
 
-        var payload = saleMapper.toFactusRequestPayload(request, 8);
+        InvoiceResult result = adapter.queryInvoice("FACT-001");
 
-        assertNotNull(payload);
-        assertEquals(8, payload.get("numbering_range_id"));
-        assertEquals("10", payload.get("payment_method_code"));
-        assertTrue(payload.containsKey("customer"));
-        assertTrue(payload.containsKey("items"));
+        assertSame(expectedResult, result);
+        verify(invoiceClient).queryInvoice("FACT-001");
+    }
+
+    @Test
+    void downloadInvoicePDF_DelegatesToInvoiceClient() {
+        byte[] expectedPdf = new byte[]{1, 2, 3};
+        when(invoiceClient.downloadInvoicePDF("FACT-001")).thenReturn(expectedPdf);
+
+        byte[] result = adapter.downloadInvoicePDF("FACT-001");
+
+        assertSame(expectedPdf, result);
+        verify(invoiceClient).downloadInvoicePDF("FACT-001");
+    }
+
+    @Test
+    void downloadInvoiceXML_DelegatesToInvoiceClient() {
+        byte[] expectedXml = new byte[]{4, 5, 6};
+        when(invoiceClient.downloadInvoiceXML("FACT-001")).thenReturn(expectedXml);
+
+        byte[] result = adapter.downloadInvoiceXML("FACT-001");
+
+        assertSame(expectedXml, result);
+        verify(invoiceClient).downloadInvoiceXML("FACT-001");
+    }
+
+    @Test
+    void deleteUnvalidatedInvoice_DelegatesToInvoiceClient() {
+        when(invoiceClient.deleteUnvalidatedInvoice("FACT-001")).thenReturn(true);
+
+        boolean result = adapter.deleteUnvalidatedInvoice("FACT-001");
+
+        assertTrue(result);
+        verify(invoiceClient).deleteUnvalidatedInvoice("FACT-001");
+    }
+
+    @Test
+    void sendInvoiceEmail_DelegatesToInvoiceClient() {
+        when(invoiceClient.sendInvoiceEmail("FACT-001", "cliente@tienda.com")).thenReturn(true);
+
+        boolean result = adapter.sendInvoiceEmail("FACT-001", "cliente@tienda.com");
+
+        assertTrue(result);
+        verify(invoiceClient).sendInvoiceEmail("FACT-001", "cliente@tienda.com");
+    }
+
+    // --- Pruebas de delegación hacia FactusNumberingRangeClient ---
+
+    @Test
+    void queryDianNumberingRanges_DelegatesToRangeClient() {
+        List<NumberingRangeDto> expectedList = List.of();
+        when(rangeClient.queryDianNumberingRanges()).thenReturn(expectedList);
+
+        List<NumberingRangeDto> result = adapter.queryDianNumberingRanges();
+
+        assertSame(expectedList, result);
+        verify(rangeClient).queryDianNumberingRanges();
+    }
+
+    @Test
+    void listNumberingRanges_DelegatesToRangeClient() {
+        List<NumberingRangeDto> expectedList = List.of();
+        when(rangeClient.listNumberingRanges()).thenReturn(expectedList);
+
+        List<NumberingRangeDto> result = adapter.listNumberingRanges();
+
+        assertSame(expectedList, result);
+        verify(rangeClient).listNumberingRanges();
+    }
+
+    @Test
+    void getNumberingRange_DelegatesToRangeClient() {
+        NumberingRangeDto expectedDto = new NumberingRangeDto(1L, "01", "SETP", "18764", 1L, 1000L, 1L, "2026-01-01", "2027-01-01", "key-xyz", true);
+        when(rangeClient.getNumberingRange(1L)).thenReturn(expectedDto);
+
+        NumberingRangeDto result = adapter.getNumberingRange(1L);
+
+        assertSame(expectedDto, result);
+        verify(rangeClient).getNumberingRange(1L);
+    }
+
+    @Test
+    void createNumberingRange_DelegatesToRangeClient() {
+        CreateNumberingRangeRequest request = new CreateNumberingRangeRequest(
+                "01", "SETP", "18764000001234", 1L
+        );
+        NumberingRangeDto expectedDto = new NumberingRangeDto(2L, "01", "SETP", "18764000001234", 1L, 5000L, 1L, "2026-01-01", "2027-01-01", "key-xyz", true);
+        when(rangeClient.createNumberingRange(request)).thenReturn(expectedDto);
+
+        NumberingRangeDto result = adapter.createNumberingRange(request);
+
+        assertSame(expectedDto, result);
+        verify(rangeClient).createNumberingRange(request);
+    }
+
+    @Test
+    void deleteNumberingRange_DelegatesToRangeClient() {
+        adapter.deleteNumberingRange(1L);
+
+        verify(rangeClient).deleteNumberingRange(1L);
+    }
+
+    @Test
+    void toggleNumberingRangeStatus_DelegatesToRangeClient() {
+        NumberingRangeDto expected = new NumberingRangeDto(1L, "01", "SETP", "18764", 1L, 1000L, 1L, "2026-01-01", "2027-01-01", "key", false);
+        when(rangeClient.toggleNumberingRangeStatus(1L)).thenReturn(expected);
+
+        NumberingRangeDto result = adapter.toggleNumberingRangeStatus(1L);
+
+        assertSame(expected, result);
+        verify(rangeClient).toggleNumberingRangeStatus(1L);
+    }
+
+    @Test
+    void updateNumberingRangeCurrent_DelegatesToRangeClient() {
+        NumberingRangeDto expected = new NumberingRangeDto(1L, "01", "SETP", "18764", 1L, 1000L, 150L, "2026-01-01", "2027-01-01", "key", true);
+        when(rangeClient.updateNumberingRangeCurrent(1L, 150L)).thenReturn(expected);
+
+        NumberingRangeDto result = adapter.updateNumberingRangeCurrent(1L, 150L);
+
+        assertSame(expected, result);
+        verify(rangeClient).updateNumberingRangeCurrent(1L, 150L);
     }
 }

@@ -9,4 +9,5 @@ public interface ReportService {
     List<StockReportDto> getStockReport(Boolean belowMinStock);
     List<ProfitabilityReportDto> getProfitabilityReport(LocalDateTime dateFrom, LocalDateTime dateTo);
     PurchasesReportDto getPurchasesReport(LocalDateTime dateFrom, LocalDateTime dateTo);
+    CashClosingReportDto getCashClosingReport(LocalDateTime dateFrom, LocalDateTime dateTo);
 }

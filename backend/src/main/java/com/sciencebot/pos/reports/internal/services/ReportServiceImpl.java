@@ -1,5 +1,6 @@
 package com.sciencebot.pos.reports.internal.services;
 
+import com.sciencebot.pos.config.tenant.TenantContext;
 import com.sciencebot.pos.reports.*;
 import com.sciencebot.pos.reports.internal.repositories.ReportDao;
 import com.sciencebot.pos.reports.internal.repositories.ReportProjections.SalesTotalsProjection;
@@ -31,9 +32,10 @@ public class ReportServiceImpl implements ReportService {
     public SalesReportDto getSalesReport(LocalDateTime dateFrom, LocalDateTime dateTo) {
         LocalDateTime from = (dateFrom != null) ? dateFrom : LocalDateTime.now().minusDays(DEFAULT_REPORT_DAYS);
         LocalDateTime to = (dateTo != null) ? dateTo : LocalDateTime.now();
+        Long storeId = requireCurrentStoreId();
 
-        SalesTotalsProjection totals = reportDao.findSalesTotals(from, to);
-        List<SellerSaleProjection> sellerSales = reportDao.findSalesBySeller(from, to);
+        SalesTotalsProjection totals = reportDao.findSalesTotals(storeId, from, to);
+        List<SellerSaleProjection> sellerSales = reportDao.findSalesBySeller(storeId, from, to);
 
         Map<String, BigDecimal> salesBySeller = new LinkedHashMap<>();
         for (SellerSaleProjection sale : sellerSales) {
@@ -49,12 +51,12 @@ public class ReportServiceImpl implements ReportService {
         LocalDateTime to = (dateTo != null) ? dateTo : LocalDateTime.now();
         int maxResults = (limit > 0) ? limit : DEFAULT_TOP_PRODUCTS_LIMIT;
 
-        return reportDao.findTopSellingProducts(from, to, maxResults);
+        return reportDao.findTopSellingProducts(requireCurrentStoreId(), from, to, maxResults);
     }
 
     @Override
     public List<StockReportDto> getStockReport(Boolean belowMinStock) {
-        return reportDao.findStockReport(belowMinStock);
+        return reportDao.findStockReport(requireCurrentStoreId(), belowMinStock);
     }
 
     @Override
@@ -62,16 +64,17 @@ public class ReportServiceImpl implements ReportService {
         LocalDateTime from = (dateFrom != null) ? dateFrom : LocalDateTime.now().minusDays(DEFAULT_REPORT_DAYS);
         LocalDateTime to = (dateTo != null) ? dateTo : LocalDateTime.now();
 
-        return reportDao.findProfitabilityReport(from, to);
+        return reportDao.findProfitabilityReport(requireCurrentStoreId(), from, to);
     }
 
     @Override
     public PurchasesReportDto getPurchasesReport(LocalDateTime dateFrom, LocalDateTime dateTo) {
         LocalDateTime from = (dateFrom != null) ? dateFrom : LocalDateTime.now().minusDays(DEFAULT_REPORT_DAYS);
         LocalDateTime to = (dateTo != null) ? dateTo : LocalDateTime.now();
+        Long storeId = requireCurrentStoreId();
 
-        BigDecimal totalInverted = reportDao.findPurchasesTotal(from, to);
-        List<SupplierPurchaseProjection> supplierPurchases = reportDao.findPurchasesBySupplier(from, to);
+        BigDecimal totalInverted = reportDao.findPurchasesTotal(storeId, from, to);
+        List<SupplierPurchaseProjection> supplierPurchases = reportDao.findPurchasesBySupplier(storeId, from, to);
 
         Map<String, BigDecimal> purchasesBySupplier = new LinkedHashMap<>();
         for (SupplierPurchaseProjection purchase : supplierPurchases) {
@@ -79,5 +82,34 @@ public class ReportServiceImpl implements ReportService {
         }
 
         return new PurchasesReportDto(from, to, totalInverted, purchasesBySupplier);
+    }
+
+    @Override
+    public CashClosingReportDto getCashClosingReport(LocalDateTime dateFrom, LocalDateTime dateTo) {
+        LocalDateTime from = (dateFrom != null) ? dateFrom : LocalDateTime.now().minusDays(DEFAULT_REPORT_DAYS);
+        LocalDateTime to = (dateTo != null) ? dateTo : LocalDateTime.now();
+        Long storeId = requireCurrentStoreId();
+
+        Map<String, BigDecimal> totalByPaymentMethod = new LinkedHashMap<>();
+        for (var row : reportDao.findSalesTotalsByPaymentMethod(storeId, from, to)) {
+            totalByPaymentMethod.put(row.paymentMethod(), row.totalAmount());
+        }
+
+        Map<String, BigDecimal> cashBySeller = new LinkedHashMap<>();
+        for (SellerSaleProjection row : reportDao.findCashSalesBySeller(storeId, from, to)) {
+            cashBySeller.put(row.sellerName(), row.totalAmount());
+        }
+
+        BigDecimal expectedCash = totalByPaymentMethod.getOrDefault("CASH", BigDecimal.ZERO);
+
+        return new CashClosingReportDto(from, to, totalByPaymentMethod, expectedCash, cashBySeller);
+    }
+
+    private static Long requireCurrentStoreId() {
+        Long storeId = TenantContext.getStoreId();
+        if (storeId == null) {
+            throw new IllegalStateException("No hay un local activo en el contexto de la solicitud");
+        }
+        return storeId;
     }
 }

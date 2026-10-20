@@ -9,14 +9,15 @@ import org.springframework.data.repository.query.Param;
 import java.util.Optional;
 
 public interface CustomerRepository extends JpaRepository<Customer, Long> {
-    
-    Optional<Customer> findByIdentification(String identification);
-    
-    boolean existsByIdentification(String identification);
-    
-    @Query("SELECT c FROM Customer c WHERE " +
-           "(:search IS NULL OR " +
+
+    Optional<Customer> findByStoreIdAndIdentification(Long storeId, String identification);
+
+    boolean existsByStoreIdAndIdentification(Long storeId, String identification);
+
+    Page<Customer> findAllByStoreId(Long storeId, Pageable pageable);
+
+    @Query("SELECT c FROM Customer c WHERE c.storeId = :storeId AND (" +
            "LOWER(c.fullName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
            "LOWER(c.identification) LIKE LOWER(CONCAT('%', :search, '%')))")
-    Page<Customer> searchCustomers(@Param("search") String search, Pageable pageable);
+    Page<Customer> searchCustomers(@Param("storeId") Long storeId, @Param("search") String search, Pageable pageable);
 }

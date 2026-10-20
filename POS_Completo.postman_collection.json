@@ -1,0 +1,2263 @@
+{
+  "info": {
+    "_postman_id": "pos-completo-v2",
+    "name": "POS System — Colección Completa",
+    "description": "# POS System — Todos los Endpoints\n\nCubre el flujo completo de prueba: desde el registro hasta la facturación electrónica DIAN, incluyendo el flujo del Super Admin para habilitar un local.\n\n**Novedades de Arquitectura:**\n- **Facturación Asíncrona por Eventos:** La emisión ante la DIAN opera desacoplada del hilo del cajero mediante el evento de dominio `SaleCompletedEvent`.\n- **Modelo de Dominio Rico:** La factura electrónica protege sus invariantes con la máquina de estados `ElectronicInvoiceStatus` (`PENDING`, `VALIDATED`, `REJECTED`, `ERROR`).\n\n**Flujo recomendado:**\n1. Super Admin: crear local y cargar credenciales de Factus\n2. Admin: registrar catálogo, clientes, proveedores y stock\n3. Admin: configurar rango de numeración\n4. Admin: registrar ventas con factura electrónica\n\n**Credenciales por defecto:** `admin` / `Password123`\n\nTodos los tokens y IDs se propagan automáticamente entre peticiones.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{bearer_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "bearer_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "superadmin_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "store_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "category_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "subcategory_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "product_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "customer_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "supplier_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "range_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "sale_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "purchase_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "user_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "01. 🔐 Autenticación",
+      "description": "Login del Super Admin y del Administrador de local. El Super Admin activa la facturación; el Admin gestiona el día a día.",
+      "item": [
+        {
+          "name": "Login Super Admin (captura superadmin_token)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 OK\", () => pm.response.to.have.status(200));",
+                  "var d = pm.response.json();",
+                  "pm.collectionVariables.set('superadmin_token', d.token || d.accessToken || '');",
+                  "console.log('✅ Super Admin logueado');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"superadmin\",\n  \"password\": \"Password123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login Administrador (captura bearer_token)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 OK\", () => pm.response.to.have.status(200));",
+                  "var d = pm.response.json();",
+                  "pm.collectionVariables.set('bearer_token', d.token || d.accessToken || '');",
+                  "if (d.storeId) pm.collectionVariables.set('store_id', String(d.storeId));",
+                  "console.log('✅ Admin logueado. Store ID:', d.storeId);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"Password123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Registrar nuevo Administrador (opcional)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201 o 400 si ya existe\", () => pm.expect(pm.response.code).to.be.oneOf([201,400]));",
+                  "console.log('ℹ️ Si es 400, el usuario ya existe — usa Login directamente.');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"nuevo_admin\",\n  \"email\": \"nuevo@tienda.com\",\n  \"password\": \"Password123\",\n  \"firstName\": \"Juan\",\n  \"lastName\": \"García\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "register"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  var d = pm.response.json();",
+                  "  pm.collectionVariables.set('bearer_token', d.accessToken || d.token || '');",
+                  "  console.log('✅ Token renovado.');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/refresh",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "refresh"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "02. 🏪 Local Comercial (Admin)",
+      "description": "El Administrador registra y consulta su local. Sin local, no puede operar.",
+      "item": [
+        {
+          "name": "Registrar Mi Local",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201 o 400\", () => pm.expect(pm.response.code).to.be.oneOf([200,201,400,409]));",
+                  "var d = pm.response.json();",
+                  "if (d && d.id) { pm.collectionVariables.set('store_id', String(d.id)); console.log('✅ Local creado ID:', d.id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Tienda Demo\",\n  \"address\": \"Calle 123 # 45-67, Bogotá\",\n  \"phone\": \"+57 310 123 4567\",\n  \"taxId\": \"900123456-7\",\n  \"email\": \"contacto@tiendademo.com\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/stores",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "stores"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Consultar Mi Local",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 OK\", () => pm.response.to.have.status(200));",
+                  "var d = pm.response.json();",
+                  "pm.collectionVariables.set('store_id', String(d.id));",
+                  "console.log('📍 Local:', d.name, '| ID:', d.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/stores/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "stores",
+                "me"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Actualizar Mi Local",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Tienda Demo Actualizada\",\n  \"address\": \"Av. Principal # 10-20\",\n  \"phone\": \"+57 310 999 8888\",\n  \"email\": \"nuevo@tiendademo.com\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/stores/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "stores",
+                "me"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Subir Documento del Local (RUT, etc.)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "/ruta/a/rut.pdf",
+                  "description": "Selecciona el archivo"
+                },
+                {
+                  "key": "documentType",
+                  "value": "RUT",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/stores/me/documents",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "stores",
+                "me",
+                "documents"
+              ]
+            },
+            "description": "Sube un documento del local (RUT, cámara de comercio, etc.) en multipart/form-data."
+          }
+        }
+      ]
+    },
+    {
+      "name": "03. ⚙️ Configuración del Negocio",
+      "description": "Ajustes generales del local: nombre, NIT, dirección, logo.",
+      "item": [
+        {
+          "name": "Consultar Configuración",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/settings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "settings"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Actualizar Configuración",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"businessName\": \"Tienda Demo SAS\",\n  \"address\": \"Calle 123 # 45-67, Bogotá\",\n  \"phone\": \"+57 1 234 5678\",\n  \"taxId\": \"900123456-1\",\n  \"email\": \"info@tiendademo.com\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/settings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "settings"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "04. 📦 Catálogo — Categorías y Productos",
+      "description": "Gestión del catálogo de productos.",
+      "item": [
+        {
+          "name": "Listar Categorías (globales, SUPER_ADMIN las crea)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 OK\", () => pm.response.to.have.status(200));",
+                  "var cats = pm.response.json();",
+                  "if (Array.isArray(cats) && cats.length > 0) {",
+                  "  pm.collectionVariables.set('category_id', String(cats[0].id));",
+                  "  console.log('📂 Categorías disponibles:', cats.map(c => c.id + ':' + c.name).join(', '));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/categories",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "categories"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Listar Subcategorías del Local",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 OK\", () => pm.response.to.have.status(200));",
+                  "var subs = pm.response.json();",
+                  "if (Array.isArray(subs) && subs.length > 0) pm.collectionVariables.set('subcategory_id', String(subs[0].id));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/subcategories",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "subcategories"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Crear Subcategoría del Local",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201 Created\", () => pm.response.to.have.status(201));",
+                  "var d = pm.response.json();",
+                  "pm.collectionVariables.set('subcategory_id', String(d.id));",
+                  "console.log('✅ Subcategoría creada ID:', d.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Lácteos\",\n  \"categoryId\": {{category_id}}\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/subcategories",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "subcategories"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Listar Productos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/products?page=0&size=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "products"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "20"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Crear Producto",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201 Created\", () => pm.response.to.have.status(201));",
+                  "var d = pm.response.json();",
+                  "pm.collectionVariables.set('product_id', String(d.id));",
+                  "console.log('✅ Producto creado ID:', d.id, '|', d.name);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"internalCode\": \"PROD-001\",\n  \"barcode\": \"7702011477014\",\n  \"name\": \"Arroz Diana 500g\",\n  \"categoryId\": {{category_id}},\n  \"purchasePrice\": 2500.00,\n  \"salePrice\": 3200.00,\n  \"minStock\": 20,\n  \"description\": \"Arroz blanco de primera calidad\",\n  \"taxRate\": 0.00,\n  \"unspscCode\": \"50202301\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/products",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "products"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Consultar Producto por ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/products/{{product_id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "products",
+                "{{product_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Actualizar Producto",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Arroz Diana 500g Premium\",\n  \"purchasePrice\": 2800.00,\n  \"salePrice\": 3500.00,\n  \"minStock\": 25,\n  \"taxRate\": 0.00\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/products/{{product_id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "products",
+                "{{product_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Activar / Desactivar Producto",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"active\": false }"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/products/{{product_id}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "products",
+                "{{product_id}}",
+                "status"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "05. 📥 Inventario",
+      "description": "Movimientos de stock: entradas, salidas y ajustes.",
+      "item": [
+        {
+          "name": "Registrar Entrada de Stock",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201 Created\", () => pm.response.to.have.status(201));",
+                  "console.log('✅ Movimiento registrado. Stock actualizado.');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": {{product_id}},\n  \"movementType\": \"ENTRY\",\n  \"quantity\": 100,\n  \"reason\": \"Recepción inicial de mercancía\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/inventory/movements",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "inventory",
+                "movements"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Registrar Ajuste de Inventario",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": {{product_id}},\n  \"movementType\": \"ADJUSTMENT\",\n  \"quantity\": -5,\n  \"reason\": \"Merma por deterioro\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/inventory/movements",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "inventory",
+                "movements"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Listar Movimientos de Inventario",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/inventory/movements?productId={{product_id}}&page=0&size=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "inventory",
+                "movements"
+              ],
+              "query": [
+                {
+                  "key": "productId",
+                  "value": "{{product_id}}"
+                },
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "20"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "06. 👥 Clientes",
+      "description": "Gestión de clientes compradores.",
+      "item": [
+        {
+          "name": "Listar Clientes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/customers?page=0&size=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "customers"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "20"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Crear Cliente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201 Created\", () => pm.response.to.have.status(201));",
+                  "var d = pm.response.json();",
+                  "pm.collectionVariables.set('customer_id', String(d.id));",
+                  "console.log('✅ Cliente creado ID:', d.id, '|', d.fullName);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Juan García López\",\n  \"identification\": \"1234567890\",\n  \"email\": \"juan.garcia@email.com\",\n  \"phone\": \"+57 310 123 4567\",\n  \"address\": \"Calle 123 # 45-67, Bogotá\",\n  \"legalOrganizationId\": 13,\n  \"tributeId\": 21,\n  \"municipalityId\": 11001\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/customers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "customers"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Actualizar Cliente",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Juan García López\",\n  \"email\": \"nuevo@email.com\",\n  \"phone\": \"+57 310 999 9999\",\n  \"address\": \"Nueva dirección # 1\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/customers/{{customer_id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "customers",
+                "{{customer_id}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "07. 🚚 Proveedores y Compras",
+      "description": "Gestión de proveedores y registro de compras de mercancía.",
+      "item": [
+        {
+          "name": "Listar Proveedores",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/suppliers?page=0&size=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "suppliers"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "20"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Crear Proveedor",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201 Created\", () => pm.response.to.have.status(201));",
+                  "var d = pm.response.json();",
+                  "pm.collectionVariables.set('supplier_id', String(d.id));",
+                  "console.log('✅ Proveedor creado ID:', d.id, '|', d.companyName);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"companyName\": \"Distribuidora Central S.A.S.\",\n  \"taxId\": \"900123456-7\",\n  \"contactName\": \"María Rodríguez\",\n  \"email\": \"contacto@distribcentral.com\",\n  \"phone\": \"+57 1 234 5678\",\n  \"address\": \"Zona Industrial # 15-30, Bogotá\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/suppliers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "suppliers"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Registrar Compra",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201 Created\", () => pm.response.to.have.status(201));",
+                  "var d = pm.response.json();",
+                  "pm.collectionVariables.set('purchase_id', String(d.id));",
+                  "console.log('✅ Compra registrada ID:', d.id, '| Total:', d.totalAmount);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"supplierId\": {{supplier_id}},\n  \"invoiceNumber\": \"FV-2026-001234\",\n  \"items\": [\n    {\n      \"productId\": {{product_id}},\n      \"quantity\": 50,\n      \"unitCost\": 2500.00\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/purchases",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "purchases"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Listar Compras",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/purchases?page=0&size=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "purchases"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "20"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "08. 🏛️ Facturación — Super Admin configura el local",
+      "description": "Solo SUPER_ADMIN. Usa el token de superadmin_token.\n\nFlujo: Ver locales → Aprobar solicitud → Cargar credenciales Factus → Cambiar entorno → Probar conexión.",
+      "item": [
+        {
+          "name": "Listar Locales por Etapa de Habilitación",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{superadmin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/backoffice/billing?status=DOCUMENTS_SUBMITTED",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "backoffice",
+                "billing"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "DOCUMENTS_SUBMITTED",
+                  "description": "NOT_REQUESTED | DOCUMENTS_SUBMITTED | AWAITING_PROVIDER | ACTIVE | REJECTED | SUSPENDED"
+                }
+              ]
+            },
+            "description": "Filtra locales por etapa del proceso. Valores posibles: NOT_REQUESTED, DOCUMENTS_SUBMITTED, AWAITING_PROVIDER, ACTIVE, REJECTED, SUSPENDED."
+          }
+        },
+        {
+          "name": "Consultar Estado de Facturación del Local",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{superadmin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/backoffice/stores/{{store_id}}/billing",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "backoffice",
+                "stores",
+                "{{store_id}}",
+                "billing"
+              ]
+            },
+            "description": "Muestra el estado del local, si cada entorno tiene credenciales configuradas y qué rango de numeración eligió el administrador."
+          }
+        },
+        {
+          "name": "Cargar Credenciales Factus — SANDBOX",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 OK\", () => pm.response.to.have.status(200));",
+                  "console.log('✅ Credenciales SANDBOX cargadas para el local.');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{superadmin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clientId\": \"TU_CLIENT_ID_SANDBOX\",\n  \"clientSecret\": \"TU_CLIENT_SECRET_SANDBOX\",\n  \"username\": \"tu_usuario@factus.com\",\n  \"password\": \"TU_PASSWORD_SANDBOX\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/backoffice/stores/{{store_id}}/billing/credentials?environment=SANDBOX",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "backoffice",
+                "stores",
+                "{{store_id}}",
+                "billing",
+                "credentials"
+              ],
+              "query": [
+                {
+                  "key": "environment",
+                  "value": "SANDBOX"
+                }
+              ]
+            },
+            "description": "El campo `numberingRangeId` es OPCIONAL. El rango lo elige el administrador del local con el endpoint `set-default`. Un secret/password vacío conserva el valor ya guardado."
+          }
+        },
+        {
+          "name": "Cargar Credenciales Factus — PRODUCTION",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{superadmin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clientId\": \"TU_CLIENT_ID_PRODUCCION\",\n  \"clientSecret\": \"TU_CLIENT_SECRET_PRODUCCION\",\n  \"username\": \"tu_usuario@factus.com\",\n  \"password\": \"TU_PASSWORD_PRODUCCION\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/backoffice/stores/{{store_id}}/billing/credentials?environment=PRODUCTION",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "backoffice",
+                "stores",
+                "{{store_id}}",
+                "billing",
+                "credentials"
+              ],
+              "query": [
+                {
+                  "key": "environment",
+                  "value": "PRODUCTION"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Probar Conexión con Factus",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 OK\", () => pm.response.to.have.status(200));",
+                  "var d = pm.response.json();",
+                  "console.log(d.success ? '✅ Conexión OK:' : '❌ Conexión FALLIDA:', d.message);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{superadmin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/backoffice/stores/{{store_id}}/billing/test-connection?environment=SANDBOX",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "backoffice",
+                "stores",
+                "{{store_id}}",
+                "billing",
+                "test-connection"
+              ],
+              "query": [
+                {
+                  "key": "environment",
+                  "value": "SANDBOX"
+                }
+              ]
+            },
+            "description": "Pide un token real a Factus sin activar nada. Nunca lanza error por rechazo — devuelve `{success, environment, message}`."
+          }
+        },
+        {
+          "name": "Cambiar Entorno Activo (sandbox ↔ producción)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{superadmin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/backoffice/stores/{{store_id}}/billing/environment?environment=PRODUCTION",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "backoffice",
+                "stores",
+                "{{store_id}}",
+                "billing",
+                "environment"
+              ],
+              "query": [
+                {
+                  "key": "environment",
+                  "value": "PRODUCTION",
+                  "description": "SANDBOX | PRODUCTION"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Cambiar Etapa de Habilitación (ACTIVE, REJECTED, etc.)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 OK\", () => pm.response.to.have.status(200));",
+                  "var d = pm.response.json();",
+                  "console.log('✅ Estado cambiado a:', d.status);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{superadmin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"ACTIVE\",\n  \"reason\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/backoffice/stores/{{store_id}}/billing/transition",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "backoffice",
+                "stores",
+                "{{store_id}}",
+                "billing",
+                "transition"
+              ]
+            },
+            "description": "Avanza o retrocede la etapa. `reason` es obligatorio para REJECTED y SUSPENDED.\n\nEstados posibles: NOT_REQUESTED → DOCUMENTS_SUBMITTED → AWAITING_PROVIDER → ACTIVE | REJECTED | SUSPENDED"
+          }
+        }
+      ]
+    },
+    {
+      "name": "09. 📄 Rangos de Numeración DIAN (Admin)",
+      "description": "El Administrador del local consulta, registra y elige el rango activo para facturar.",
+      "item": [
+        {
+          "name": "Estado de Habilitación del Local (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/billing/activation/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "billing",
+                "activation",
+                "status"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Solicitar Activación de Facturación",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/billing/activation/request",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "billing",
+                "activation",
+                "request"
+              ]
+            },
+            "description": "El local solicita la revisión de sus documentos. Requiere al menos un documento subido."
+          }
+        },
+        {
+          "name": "Consultar Rangos DIAN en Tiempo Real",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/billing/numbering-ranges/dian",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "billing",
+                "numbering-ranges",
+                "dian"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Listar Rangos Registrados en Factus",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 OK\", () => pm.response.to.have.status(200));",
+                  "var ranges = pm.response.json();",
+                  "if (Array.isArray(ranges) && ranges.length > 0) {",
+                  "  var active = ranges.find(r => r.isActive) || ranges[0];",
+                  "  pm.collectionVariables.set('range_id', String(active.id));",
+                  "  console.log('📋 Rangos:', ranges.map(r => r.id + ':' + r.prefix + '(' + (r.isActive?'activo':'inactivo') + ')').join(', '));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/billing/numbering-ranges",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "billing",
+                "numbering-ranges"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Registrar Rango de Numeración en Factus",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201 o 200\", () => pm.expect(pm.response.code).to.be.oneOf([200,201]));",
+                  "var d = pm.response.json();",
+                  "if (d && d.id) {",
+                  "  pm.collectionVariables.set('range_id', String(d.id));",
+                  "  console.log('✅ Rango registrado ID:', d.id, '| Auto-asignado como predeterminado si era el primero.');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"document\": \"01\",\n  \"prefix\": \"SETP\",\n  \"resolution_number\": \"18760000001\",\n  \"current\": 990017598,\n  \"start_date\": \"2019-01-19\",\n  \"end_date\": \"2030-01-19\",\n  \"from\": 990000000,\n  \"to\": 995000000,\n  \"technical_key\": \"fc8eac422eba16e22ffd8c6f94b3f40a6e38162c\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/billing/numbering-ranges",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "billing",
+                "numbering-ranges"
+              ]
+            },
+            "description": "Si es el primer rango del local en el entorno activo, queda elegido automáticamente como predeterminado."
+          }
+        },
+        {
+          "name": "✅ Elegir Rango para Facturar (set-default)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 OK\", () => pm.response.to.have.status(200));",
+                  "var d = pm.response.json();",
+                  "pm.test(\"Rango activo\", () => pm.expect(d.isActive).to.be.true);",
+                  "console.log('🎯 Rango predeterminado configurado:', d.id, '| Prefijo:', d.prefix);",
+                  "console.log('✅ Las próximas facturas usarán este rango.');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/billing/numbering-ranges/{{range_id}}/set-default",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "billing",
+                "numbering-ranges",
+                "{{range_id}}",
+                "set-default"
+              ]
+            },
+            "description": "Elige el rango con el que el local facturará en su entorno activo. Solo ADMINISTRATOR.\n\n- 200: configurado ✅\n- 404: rango no existe en la cuenta del local\n- 409: rango inactivo o resolución vencida"
+          }
+        },
+        {
+          "name": "Activar / Desactivar Rango",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/billing/numbering-ranges/{{range_id}}/toggle-status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "billing",
+                "numbering-ranges",
+                "{{range_id}}",
+                "toggle-status"
+              ]
+            },
+            "description": "⚠️ No puedes desactivar el rango que tienes configurado como predeterminado. Cambia primero el predeterminado con set-default."
+          }
+        },
+        {
+          "name": "Actualizar Consecutivo del Rango",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"current\": 990018000 }"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/billing/numbering-ranges/{{range_id}}/current",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "billing",
+                "numbering-ranges",
+                "{{range_id}}",
+                "current"
+              ]
+            },
+            "description": "Solo puede avanzar (nunca retroceder). Útil al migrar desde otro software."
+          }
+        },
+        {
+          "name": "Verificar Rango Activo Guardado (Super Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 OK\", () => pm.response.to.have.status(200));",
+                  "var d = pm.response.json();",
+                  "console.log('👁️  sandboxNumberingRangeId  :', d.sandboxNumberingRangeId);",
+                  "console.log('👁️  productionNumberingRangeId:', d.productionNumberingRangeId);",
+                  "console.log('👁️  Entorno activo            :', d.environment);",
+                  "console.log('👁️  Estado facturación        :', d.status);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{superadmin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/backoffice/stores/{{store_id}}/billing",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "backoffice",
+                "stores",
+                "{{store_id}}",
+                "billing"
+              ]
+            },
+            "description": "Confirma que `sandboxNumberingRangeId` quedó con el ID elegido por el administrador."
+          }
+        }
+      ]
+    },
+    {
+      "name": "10. 💰 Ventas y Factura Electrónica",
+      "description": "Registro de ventas con o sin facturación electrónica DIAN.",
+      "item": [
+        {
+          "name": "Registrar Venta con Factura Electrónica",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201 Created\", () => pm.response.to.have.status(201));",
+                  "var d = pm.response.json();",
+                  "pm.collectionVariables.set(\"sale_id\", String(d.id));",
+                  "console.log(\"🎉 VENTA REGISTRADA EXITOSAMENTE!\");",
+                  "console.log(\"🏷️  ID Venta:\", d.id, \"| Consecutivo:\", d.invoiceNumber);",
+                  "console.log(\"💵  Total:\", d.totalAmount, \"| Cambio:\", d.cashChange);",
+                  "console.log(\"⚡ Emisión DIAN disparada en segundo plano vía SaleCompletedEvent.\");"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "Evita facturas duplicadas por reenvío"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerId\": {{customer_id}},\n  \"cashReceived\": 50000.00,\n  \"sendToFactus\": true,\n  \"paymentMethod\": \"CASH\",\n  \"items\": [\n    {\n      \"productId\": {{product_id}},\n      \"quantity\": 2\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/sales",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "sales"
+              ]
+            },
+            "description": "⚡ **Emisión Asíncrona por Eventos de Dominio:**\nAl registrar la venta con `sendToFactus: true`, el POS responde de inmediato (`201 Created` en ~50ms) y publica internamente el evento de dominio `SaleCompletedEvent`.\nLa emisión ante la DIAN/Factus se ejecuta en segundo plano. La factura nace en estado `PENDING` y transiciona de forma reactiva a `VALIDATED`, `ERROR` o `REJECTED`."
+          }
+        },
+        {
+          "name": "Registrar Venta sin Factura (solo POS)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201 Created\", () => pm.response.to.have.status(201));",
+                  "var d = pm.response.json();",
+                  "pm.collectionVariables.set('sale_id', String(d.id));",
+                  "console.log('✅ Venta POS sin factura. ID:', d.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerId\": null,\n  \"cashReceived\": 10000.00,\n  \"sendToFactus\": false,\n  \"paymentMethod\": \"CASH\",\n  \"items\": [\n    {\n      \"productId\": {{product_id}},\n      \"quantity\": 1\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/sales",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "sales"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Consultar Estado de Factura Electrónica",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 OK\", () => pm.response.to.have.status(200));",
+                  "var d = pm.response.json();",
+                  "pm.test(\"Estado pertenece a ElectronicInvoiceStatus\", () => {",
+                  "  pm.expect([\"PENDING\", \"VALIDATED\", \"REJECTED\", \"ERROR\"]).to.include(d.status);",
+                  "});",
+                  "console.log(\"📑 Estado factura electrónica:\", d.status);",
+                  "if (d.status === \"PENDING\") {",
+                  "  console.log(\"⏳ Factura en procesamiento asíncrono ante la DIAN...\");",
+                  "} else if (d.status === \"VALIDATED\") {",
+                  "  console.log(\"✅ Factura Validada por la DIAN. CUFE:\", d.cufe, \"| Número Factus:\", d.factusNumber);",
+                  "} else if (d.status === \"ERROR\" || d.status === \"REJECTED\") {",
+                  "  console.log(\"❌ Error o rechazo en facturación:\", d.errorMessage);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/billing/sales/{{sale_id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "billing",
+                "sales",
+                "{{sale_id}}"
+              ]
+            },
+            "description": "Consulta el registro de la factura electrónica asociada a la venta.\n\nDebido a la emisión asíncrona, si se consulta inmediatamente tras crear la venta, su estado será `PENDING` y pasará a `VALIDATED` tan pronto la DIAN certifique el documento legal."
+          }
+        },
+        {
+          "name": "Reintentar Emisión de Factura (si falló)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/billing/sales/{{sale_id}}/retry",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "billing",
+                "sales",
+                "{{sale_id}}",
+                "retry"
+              ]
+            },
+            "description": "🛡️ **Protección de Invariantes del Modelo Rico:**\nReintenta la emisión ante la DIAN si la factura se encuentra en estado `ERROR` o `REJECTED`.\nSi la factura ya está en estado `VALIDATED`, el modelo de dominio rechaza la operación protegiendo la inmutabilidad fiscal (`400 Bad Request`)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 OK o 400 si ya fue validada\", () => {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 400]);",
+                  "});",
+                  "var d = pm.response.json();",
+                  "if (pm.response.code === 200) {",
+                  "  console.log(\"🔄 Reintento procesado. Estado resultante:\", d.status);",
+                  "} else {",
+                  "  console.log(\"🛡️ Reintento prevenido por invariante de dominio:\", d.message);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Enviar Factura por Correo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"email\": \"cliente@correo.com\" }"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/billing/sales/{{sale_id}}/send-email",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "billing",
+                "sales",
+                "{{sale_id}}",
+                "send-email"
+              ]
+            },
+            "description": "🛡️ **Invariante de Dominio:** Solo se pueden enviar facturas formalmente certificadas por la DIAN (`VALIDATED` con número oficial). Si la factura está en `PENDING` o `ERROR`, la solicitud será rechazada."
+          }
+        },
+        {
+          "name": "Descargar PDF Legal",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/billing/sales/{{sale_id}}/pdf",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "billing",
+                "sales",
+                "{{sale_id}}",
+                "pdf"
+              ]
+            },
+            "description": "🛡️ **Invariante de Dominio:** Requiere que la factura tenga número legal oficial asignado por la DIAN."
+          }
+        },
+        {
+          "name": "Descargar XML Legal (DIAN)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/billing/sales/{{sale_id}}/xml",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "billing",
+                "sales",
+                "{{sale_id}}",
+                "xml"
+              ]
+            },
+            "description": "🛡️ **Invariante de Dominio:** Requiere que la factura tenga número legal oficial asignado por la DIAN."
+          }
+        },
+        {
+          "name": "Historial de Facturas del Local",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/billing/invoices?page=0&size=20&status=VALIDATED",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "billing",
+                "invoices"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "20"
+                },
+                {
+                  "key": "status",
+                  "value": "VALIDATED",
+                  "disabled": true,
+                  "description": "Filtro opcional por estado: PENDING | VALIDATED | REJECTED | ERROR"
+                }
+              ]
+            },
+            "description": "Lista el historial paginado de facturas electrónicas del local autenticado. Permite filtrar opcionalmente por el enum de estado (`PENDING`, `VALIDATED`, `REJECTED`, `ERROR`)."
+          }
+        },
+        {
+          "name": "Listar Ventas",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/sales?page=0&size=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "sales"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "20"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Registrar Devolución de Venta",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Producto defectuoso\",\n  \"items\": [\n    {\n      \"saleItemId\": 1,\n      \"quantity\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/sales/{{sale_id}}/returns",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "sales",
+                "{{sale_id}}",
+                "returns"
+              ]
+            },
+            "description": "Usa el `saleItemId` de la línea de venta (no el productId)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "11. 📊 Reportes",
+      "description": "Reportes analíticos del local.",
+      "item": [
+        {
+          "name": "Reporte de Ventas",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/reports/sales",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "reports",
+                "sales"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Top Productos Más Vendidos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/reports/top-products",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "reports",
+                "top-products"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Reporte de Stock",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/reports/stock",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "reports",
+                "stock"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Reporte de Rentabilidad",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/reports/profitability",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "reports",
+                "profitability"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Reporte de Compras",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/reports/purchases",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "reports",
+                "purchases"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Cierre de Caja",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/reports/cash-closing",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "reports",
+                "cash-closing"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "12. 👤 Usuarios (Super Admin y Admin)",
+      "description": "Gestión de usuarios del sistema.",
+      "item": [
+        {
+          "name": "Listar Usuarios del Local",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users?page=0&size=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "users"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "20"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Activar / Desactivar Usuario",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"active\": false }"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users/{{user_id}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "users",
+                "{{user_id}}",
+                "status"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Cambiar Contraseña de Usuario",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"newPassword\": \"NuevaPassword123\" }"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users/{{user_id}}/password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "users",
+                "{{user_id}}",
+                "password"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

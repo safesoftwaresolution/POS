@@ -164,4 +164,37 @@ public class ReportController {
     ) {
         return ResponseEntity.ok(reportService.getPurchasesReport(dateFrom, dateTo));
     }
+
+    @GetMapping("/cash-closing")
+    @PreAuthorize("hasRole('ADMINISTRATOR')")
+    @Operation(
+            summary = "Cierre de caja",
+            description = """
+                    Calcula cuánto efectivo debería haber en caja al final de un turno/día: la suma de
+                    las ventas en efectivo (`CASH`) del período, desglosada por vendedor para que cada
+                    cajero pueda rendir cuentas. También incluye el total vendido por cada método de
+                    pago (`totalByPaymentMethod`) como referencia, aunque solo el efectivo requiere
+                    conteo físico.
+
+                    El conteo físico de efectivo y la diferencia contra `expectedCash` se calculan en el
+                    cliente; este endpoint no persiste ningún cierre.
+
+                    Solo para **ADMINISTRATOR**.
+                    """
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Cierre de caja generado",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = CashClosingReportDto.class))),
+            @ApiResponse(responseCode = "401", description = "No autenticado", content = @Content),
+            @ApiResponse(responseCode = "403", description = "Solo ADMINISTRATOR puede acceder a reportes", content = @Content)
+    })
+    public ResponseEntity<CashClosingReportDto> getCashClosingReport(
+            @Parameter(description = "Fecha inicial del período (ISO 8601)", example = "2025-01-01T00:00:00")
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime dateFrom,
+            @Parameter(description = "Fecha final del período (ISO 8601)", example = "2025-12-31T23:59:59")
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime dateTo
+    ) {
+        return ResponseEntity.ok(reportService.getCashClosingReport(dateFrom, dateTo));
+    }
 }

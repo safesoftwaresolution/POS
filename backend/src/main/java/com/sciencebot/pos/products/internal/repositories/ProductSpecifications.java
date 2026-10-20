@@ -41,4 +41,9 @@ public class ProductSpecifications {
                 cb.equal(root.get("active"), active);
     }
 
+    public static Specification<Product> hasStoreId(Long storeId) {
+        return (root, query, cb) ->
+                cb.equal(root.get("storeId"), storeId);
+    }
+
 }

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Lock, User, KeyRound, CheckCircle2, ShieldAlert, X, Zap } from 'lucide-react';
-import { loginApi } from '../../services/api';
+import { User, KeyRound, CheckCircle2, ShieldAlert, X, Zap } from 'lucide-react';
+import { loginApi } from '../../services/authApi';
 
 export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
   const [username, setUsername] = useState('admin');
@@ -37,7 +37,7 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
               <Zap className="w-5 h-5 fill-white" />
             </div>
             <div>
-              <h3 className="font-extrabold text-base text-[#111c2d]">Iniciar Sesión en POS</h3>
+              <h3 className="font-extrabold text-base text-[#17171B]">Iniciar Sesión en POS</h3>
               <p className="text-[11px] text-gray-500 font-medium">Ingresa tu usuario y contraseña</p>
             </div>
           </div>
@@ -63,7 +63,7 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
                 value={username}
                 onChange={e => setUsername(e.target.value)}
                 placeholder="admin"
-                className="w-full pl-9 pr-3 py-2.5 bg-gray-50 border border-gray-300 rounded-xl font-semibold text-[#111c2d] focus:outline-none focus:border-blue-600"
+                className="w-full pl-9 pr-3 py-2.5 bg-gray-50 border border-gray-300 rounded-xl font-semibold text-[#17171B] focus:outline-none focus:border-blue-600"
                 required
               />
             </div>
@@ -78,7 +78,7 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 placeholder="Password123"
-                className="w-full pl-9 pr-3 py-2.5 bg-gray-50 border border-gray-300 rounded-xl font-semibold text-[#111c2d] focus:outline-none focus:border-blue-600"
+                className="w-full pl-9 pr-3 py-2.5 bg-gray-50 border border-gray-300 rounded-xl font-semibold text-[#17171B] focus:outline-none focus:border-blue-600"
                 required
               />
             </div>

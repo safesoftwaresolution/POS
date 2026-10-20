@@ -1,6 +1,6 @@
 {
-  "version": "1.4.0",
-  "last_updated": "2026-10-16",
+  "version": "1.5.0",
+  "last_updated": "2026-10-20",
   "notes": "Los IDs son únicos y no se reutilizan. FEAT-001..006 son anteriores. FEAT-007..013 se registraron RETROACTIVAMENTE el 2026-10-16: ese trabajo se hizo fuera del protocolo Leader→Implementer→Reviewer→Committer (ver progress/history.md). Ojo: las entradas más antiguas de history.md rotuladas 'FEAT-004 — Módulos Auth y Users' (2026-07-09) corresponden a una tarea previa a la renumeración; el FEAT-004 vigente es la formalización de Billing.",
   "features": [
     {
@@ -223,14 +223,16 @@
     },
     {
       "id": "FEAT-018",
-      "title": "Facturación robusta: Factus fuera de la transacción y reintento automático",
-      "description": "Reservar PENDING, llamar a Factus fuera de la transacción con lock, registrar el resultado; job de reintento o outbox; centralizar el mapeo de códigos DIAN; rotación de claves de cifrado.",
+      "title": "Facturación robusta: proveedor fuera de la transacción y reintento automático",
+      "description": "Emisión en 3 pasos (reservar PENDING con lease en transacción corta, llamar al proveedor sin transacción ni lock, registrar el resultado en otra transacción) para facturas y notas crédito/débito, y job de reintento con espera creciente para facturas. Detalle en .ai/tasks/FEAT-018-emision-tres-pasos-reintento.md.",
       "acceptance_criteria": [
         "Ninguna llamada HTTP dentro de una transacción con lock",
+        "Dos emisiones simultáneas de la misma venta llaman una sola vez al proveedor",
         "Test de reintento tras un fallo temporal"
       ],
       "status": "pending",
-      "assigned_to": null
+      "assigned_to": null,
+      "notes": "Alcance acotado el 2026-10-20: el mapeo de códigos DIAN y la rotación de claves de cifrado pasaron a FEAT-030. Prerrequisito de FEAT-025 (Alegra). Ver .ai/tasks/README.md."
     },
     {
       "id": "FEAT-019",
@@ -242,6 +244,137 @@
       ],
       "status": "pending",
       "assigned_to": null
+    },
+    {
+      "id": "FEAT-020",
+      "title": "Alegra: spike en sandbox (sin código)",
+      "description": "Confirmar contra el sandbox de Alegra: bloque company, Idempotency-Key en POST /invoices, contenido de attachedDocument/zip/correo (¿PDF?), numeración de notas, token por entorno y formato de errores. Detalle en .ai/tasks/FEAT-020-alegra-spike-sandbox.md.",
+      "acceptance_criteria": [
+        "Existe .ai/tasks/FEAT-020-resultados.md con las 6 respuestas",
+        "Ningún token ni dato real queda en el repo"
+      ],
+      "status": "pending",
+      "assigned_to": null,
+      "notes": "Requiere token y company.id del sandbox, aportados por el usuario. Bloquea FEAT-025, 026 y 028."
+    },
+    {
+      "id": "FEAT-021",
+      "title": "Alegra: preparar los puertos del proveedor (refactor sin Alegra)",
+      "description": "BillingProviderException + handler 501, puerto BillingAccountProvider (Factus/Mock), ActiveBillingProvider, BillingProviderStartupValidator, StoreBillingConfigServiceImpl y BillingActivationMapper por el puerto, guarda del sync de logo. Detalle en .ai/tasks/FEAT-021-puertos-proveedor-billing.md.",
+      "acceptance_criteria": [
+        "Suite verde y Factus se comporta igual",
+        "BILLING_PROVIDER desconocido falla al arrancar"
+      ],
+      "status": "pending",
+      "assigned_to": null
+    },
+    {
+      "id": "FEAT-022",
+      "title": "Alegra: migración y entidades de numeración local + company.id",
+      "description": "Tablas billing_numbering_range y billing_document_number, columnas *_company_id y provider_document_id, endpoint backoffice company-id. Detalle en .ai/tasks/FEAT-022-migracion-numeracion-local.md.",
+      "acceptance_criteria": [
+        "Test de migración en H2 privada verde",
+        "ddl-auto=validate arranca en dev"
+      ],
+      "status": "pending",
+      "assigned_to": null,
+      "notes": "FEAT-019 reserva V20: usar la siguiente versión libre al implementar (comprobar el directorio de migraciones)."
+    },
+    {
+      "id": "FEAT-023",
+      "title": "Alegra: asignador de consecutivos y rangos locales",
+      "description": "AlegraNumberAllocator (REQUIRES_NEW, lock pesimista, idempotente por referencia) y AlegraNumberingRangeClient sobre tablas locales. Detalle en .ai/tasks/FEAT-023-numeracion-local-allocator.md.",
+      "acceptance_criteria": [
+        "Prueba de concurrencia con hilos reales sin huecos ni duplicados",
+        "NumberingRangeServiceImpl sigue verde"
+      ],
+      "status": "pending",
+      "assigned_to": null,
+      "notes": "Depende de FEAT-022."
+    },
+    {
+      "id": "FEAT-024",
+      "title": "Alegra: infraestructura (acceso, empresa, adaptador esqueleto)",
+      "description": "Propiedades alegra.*, AlegraAccessResolver, AlegraClientHelper, AlegraCompanyProvider con caché, AlegraBillingAdapter condicional con test-connection. Detalle en .ai/tasks/FEAT-024-alegra-infraestructura.md.",
+      "acceptance_criteria": [
+        "test-connection funciona contra el sandbox con token y company.id",
+        "Sin tokens la app arranca y reporta cuenta no configurada"
+      ],
+      "status": "pending",
+      "assigned_to": null,
+      "notes": "Depende de FEAT-021 y FEAT-022."
+    },
+    {
+      "id": "FEAT-025",
+      "title": "Alegra: emisión de facturas electrónicas",
+      "description": "AlegraInvoiceMapper y AlegraInvoiceClient: asignación de número, Idempotency-Key, mapeo de status/legalStatus, providerDocumentId y conciliación de WAITING_RESPONSE. Detalle en .ai/tasks/FEAT-025-alegra-facturas.md.",
+      "acceptance_criteria": [
+        "Venta con sendToFactus=true termina VALIDATED con CUFE y número consecutivo en sandbox",
+        "Reintentos no duplican documento ni número"
+      ],
+      "status": "pending",
+      "assigned_to": null,
+      "notes": "Depende de FEAT-018 (decidido el 2026-10-20: va antes), FEAT-020, 023 y 024."
+    },
+    {
+      "id": "FEAT-026",
+      "title": "Alegra: notas crédito y débito",
+      "description": "AlegraCreditNoteClient y AlegraDebitNoteClient con associatedDocuments (CUFE), conceptCode y numeración propia. Detalle en .ai/tasks/FEAT-026-alegra-notas-credito-debito.md.",
+      "acceptance_criteria": [
+        "NC y ND emitidas en sandbox sobre una factura validada",
+        "Idempotencia por reference_code"
+      ],
+      "status": "pending",
+      "assigned_to": null,
+      "notes": "Depende de FEAT-025."
+    },
+    {
+      "id": "FEAT-027",
+      "title": "Alegra: envío por correo y descarga de XML",
+      "description": "POST /send-email y descarga de files.xml con links temporales. Detalle en .ai/tasks/FEAT-027-alegra-email-y-xml.md.",
+      "acceptance_criteria": [
+        "Correo enviado y XML descargado en sandbox",
+        "El Bearer no se envía a hosts de terceros"
+      ],
+      "status": "pending",
+      "assigned_to": null,
+      "notes": "Depende de FEAT-025."
+    },
+    {
+      "id": "FEAT-028",
+      "title": "Alegra: PDF de la factura",
+      "description": "Ruta A: descargar el PDF de Alegra si FEAT-020 lo confirma; Ruta B: generarlo en el backend (OpenPDF + ZXing) con CUFE y QR. Detalle en .ai/tasks/FEAT-028-alegra-pdf-factura.md.",
+      "acceptance_criteria": [
+        "GET .../pdf devuelve un PDF con CUFE y QR válidos",
+        "Campos contrastados con el anexo técnico DIAN vigente"
+      ],
+      "status": "pending",
+      "assigned_to": null,
+      "notes": "Depende de FEAT-025 y FEAT-020."
+    },
+    {
+      "id": "FEAT-029",
+      "title": "Alegra: cierre (configuración por defecto, documentación y E2E)",
+      "description": "billing.provider=alegra por defecto, variables de entorno, documentación (billing/spec, _security, _deployment, _database-schema, _roadmap, CLAUDE.md, README) y verificación E2E. Detalle en .ai/tasks/FEAT-029-alegra-cierre-config-docs.md.",
+      "acceptance_criteria": [
+        "Suite completa verde; mock, factus y alegra arrancan",
+        "Documentación sin contradicciones con el código"
+      ],
+      "status": "pending",
+      "assigned_to": null,
+      "notes": "Última tarea; depende de FEAT-021..028."
+    },
+    {
+      "id": "FEAT-030",
+      "title": "Billing: catálogo central de códigos DIAN y rotación de claves de cifrado",
+      "description": "Centralizar los códigos DIAN hoy repartidos en BillingCanonicalMapper, FactusSaleMapper y los mappers de Alegra; soportar rotación de la clave AES-GCM de SecretCryptoConverter con identificador de clave y re-cifrado de los secretos de store_billing_config. Detalle en .ai/tasks/FEAT-030-codigos-dian-y-rotacion-claves.md.",
+      "acceptance_criteria": [
+        "Un único catálogo de códigos DIAN usado por todos los mappers, con tests",
+        "Secretos cifrados con la clave anterior se leen y se re-cifran con la nueva sin pérdida"
+      ],
+      "status": "pending",
+      "assigned_to": null,
+      "notes": "Salió de FEAT-018 el 2026-10-20. No bloquea la integración con Alegra. La rotación solo afecta a los secretos de Factus en BD: el token de Alegra vive en variable de entorno."
     }
   ]
 }

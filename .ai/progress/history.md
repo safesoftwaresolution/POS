@@ -421,3 +421,35 @@ pm run build\ en verde; en vivo: login/refresh solo con cookie, CORS rechaza \ht
   - (este) chore(harness): validate modules from code, align roles and log the audit
 - **Resultado:** Éxito
 - **Notas:** El workflow de CI (`.github/workflows/ci.yml`) no se ha ejecutado en GitHub. Los `V*MigrationSqlTest` y la concurrencia corren solo sobre H2. FEAT-013 queda pendiente de un `V18MigrationSqlTest`.
+## [2026-10-20 12:00] [LEADER] — Backlog de la integración con Alegra (FEAT-020 a FEAT-029)
+- **Tarea:** FEAT-020..029 — Reemplazar Factus por Alegra como proveedor de facturación electrónica por defecto (Factus queda como alterno). Solo backend.
+- **Acción:** Se registran 10 tareas `pending` en `features.json` y un brief autocontenido por tarea en `.ai/tasks/FEAT-0NN-*.md` (Context Pack, archivos, pasos, criterios, pruebas, fuera de alcance, riesgos). No se tocó código de producción, tests ni `frontend/`.
+- **Orden y dependencias:** FEAT-020 (spike en sandbox, necesita token y company.id del usuario) ∥ FEAT-021 (puertos) ∥ FEAT-022 (migración) → FEAT-023 (asignador) → FEAT-024 (infraestructura) → FEAT-025 (facturas) → FEAT-026 (notas) ∥ FEAT-027 (correo y XML) ∥ FEAT-028 (PDF) → FEAT-029 (cierre).
+- **Hallazgos que condicionan la ejecución:**
+  - Alegra exige que el sistema envíe `number` y la `resolution` completa: hace falta numeración local (no es un simple cambio de adaptador).
+  - La API no documenta un endpoint de PDF; FEAT-020 decide entre descargarlo de Alegra o generarlo en el servidor (FEAT-028).
+  - FEAT-019 (pending) reserva la migración V20: la de FEAT-022 usa la siguiente versión libre.
+  - FEAT-018 (pending) solapa con FEAT-025 (llamada al proveedor fuera de la transacción con lock): se recomienda hacerlo antes; decisión pendiente del usuario.
+- **Resultado:** Éxito (solo planificación y registro)
+- **Notas:** Decisiones del usuario: Factus se conserva como proveedor alterno; credenciales = token de plataforma por entorno (variable de entorno) + `company.id` por local; PDF a decidir tras el spike.
+## [2026-10-20 12:30] [LEADER] — Orden de ejecución de la integración con Alegra (FEAT-018 antes de FEAT-025)
+- **Tarea:** FEAT-018, FEAT-020..029 — secuenciación
+- **Decisión del usuario:** hacer FEAT-018 (llamada al proveedor fuera de la transacción con lock + reintento) antes de FEAT-025.
+- **Acción:** Se crea `.ai/tasks/README.md` con el grafo de dependencias, las olas de ejecución y las reglas de coordinación; se actualizan la dependencia de FEAT-025 (brief y `features.json`) y la nota de FEAT-018. No se tocó código.
+- **Orden:** Ola 0: FEAT-020 ∥ FEAT-021 → Ola 1: FEAT-022 → Ola 2: FEAT-018 ∥ (FEAT-023 → FEAT-024) → Ola 3: FEAT-025 → Ola 4: FEAT-026 ∥ FEAT-027 ∥ FEAT-028 → Ola 5: FEAT-029.
+- **Resultado:** Éxito (solo planificación)
+- **Notas:** Las migraciones (FEAT-019, FEAT-022, y la de FEAT-018 si la necesita) se numeran una a la vez al implementar. Alcance de FEAT-018 propuesto (núcleo + reintento; mapeo DIAN y rotación de claves aparte), pendiente de confirmar.
+## [2026-10-20 13:00] [LEADER] — Alcance de FEAT-018 acotado y registro de FEAT-030
+- **Tarea:** FEAT-018, FEAT-030
+- **Decisión del usuario:** limitar FEAT-018 al núcleo (emisión en tres pasos) y al job de reintento; registrar FEAT-030 con el mapeo de códigos DIAN y la rotación de claves de cifrado.
+- **Acción:** `features.json`: FEAT-018 reescrito (descripción, criterios y nota) y FEAT-030 añadido como `pending`. Nuevos briefs `.ai/tasks/FEAT-018-emision-tres-pasos-reintento.md` y `.ai/tasks/FEAT-030-codigos-dian-y-rotacion-claves.md`. `.ai/tasks/README.md` actualizado (alcance confirmado y ola opcional 6). No se tocó código.
+- **Resultado:** Éxito (solo planificación)
+- **Notas:** FEAT-018 puede requerir una migración (columnas `attempts`, `processing_started_at`, `next_retry_at`): numerar al implementar, una migración a la vez junto a FEAT-019 y FEAT-022. FEAT-030 no bloquea la integración con Alegra.
+## [2026-10-20 13:30] [COMMITTER] — Backlog de la integración con Alegra (FEAT-018, FEAT-020 a FEAT-030)
+- **Tarea:** registro de la planificación de FEAT-018 y FEAT-020..030
+- **Acción:** 2 commits atómicos tras aprobación humana explícita del plan, en la rama local `refactor/factus-billing-module` (sin push). Solo se tocó `.ai/`: ningún código de producción, test ni `frontend/`. No se ejecutó `init.sh` (el entorno denegó el permiso al agente); se verificó a mano que `features.json` es JSON válido, que el diff está acotado a `.ai/` y que no hay secretos.
+- **Commits:**
+  - `ae4e935` chore(harness): add task briefs for Alegra integration and FEAT-018
+  - (este) chore(harness): register Alegra backlog and narrow FEAT-018 scope
+- **Resultado:** Éxito
+- **Notas:** Pendiente de ejecución todo el backlog (FEAT-018 y FEAT-020..030 siguen `pending`). Primera ola: FEAT-020 (spike, necesita token y `company.id` del sandbox) y FEAT-021. Git avisa de conversión LF→CRLF por `core.autocrlf` en los archivos nuevos; no cambia el contenido.

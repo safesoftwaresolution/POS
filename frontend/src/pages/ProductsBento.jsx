@@ -3,19 +3,6 @@ import { Plus, Search, Package, Layers } from 'lucide-react';
 import { getProductsApi, createProductApi, updateProductApi, deleteProductApi, changeProductStatusApi } from '../services/productsApi';
 import { getCategoriesApi } from '../services/categoriesApi';
 import {
-<<<<<<< HEAD
-  Tag,
-  Plus,
-  Search,
-  Edit3,
-  Trash2,
-  Barcode,
-  Package,
-  Check,
-  AlertCircle
-} from 'lucide-react';
-import { getProductsApi, createProductApi, deleteProductApi, getCategoriesApi } from '../services/api';
-=======
   getSubcategoriesApi,
   createSubcategoryApi,
   updateSubcategoryApi,
@@ -25,7 +12,6 @@ import { createInventoryMovementApi } from '../services/inventoryApi';
 import { useModal } from '../context/ModalContext';
 import { useAuth } from '../context/AuthContext';
 import { uploadFileApi } from '../services/http';
->>>>>>> develop
 import BarcodeModal from '../components/BarcodeModal';
 import ProductTable from '../components/products/ProductTable';
 import ProductFormModal from '../components/products/ProductFormModal';
@@ -61,27 +47,13 @@ export default function ProductsBento() {
   const [activeTab, setActiveTab] = useState('catalog');
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
-<<<<<<< HEAD
-=======
   const [subcategories, setSubcategories] = useState([]);
->>>>>>> develop
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [showInactive, setShowInactive] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [barcodeProduct, setBarcodeProduct] = useState(null);
   const [errorMsg, setErrorMsg] = useState('');
-<<<<<<< HEAD
-  const [newProduct, setNewProduct] = useState({
-    name: '',
-    barcode: '',
-    internalCode: '',
-    categoryId: '',
-    price: '',
-    stock: '',
-    minStock: 5
-  });
-=======
   const [newProduct, setNewProduct] = useState(EMPTY_PRODUCT);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [showNewSubcategory, setShowNewSubcategory] = useState(false);
@@ -90,7 +62,6 @@ export default function ProductsBento() {
   const [showSubModal, setShowSubModal] = useState(false);
   const [subForm, setSubForm] = useState(EMPTY_SUBCATEGORY);
   const [subErrorMsg, setSubErrorMsg] = useState('');
->>>>>>> develop
 
   const loadProducts = async (inactive = showInactive) => {
     setLoading(true);
@@ -107,23 +78,13 @@ export default function ProductsBento() {
 
   const loadCategories = async () => {
     try {
-<<<<<<< HEAD
-      const data = await getCategoriesApi();
-      setCategories(Array.isArray(data) ? data : []);
-=======
       setCategories(await getCategoriesApi());
->>>>>>> develop
     } catch (e) {
       console.warn('Error cargando categorías:', e);
       setCategories([]);
     }
   };
 
-<<<<<<< HEAD
-  useEffect(() => {
-    loadProducts();
-    loadCategories();
-=======
   const loadSubcategories = async () => {
     try {
       setSubcategories(await getSubcategoriesApi());
@@ -137,7 +98,6 @@ export default function ProductsBento() {
     loadProducts();
     loadCategories();
     loadSubcategories();
->>>>>>> develop
   }, []);
 
   const subcategoriesForSelectedCategory = subcategories.filter(
@@ -229,19 +189,6 @@ export default function ProductsBento() {
     if (!newProduct.name || !newProduct.price || !newProduct.categoryId) return;
 
     try {
-<<<<<<< HEAD
-      await createProductApi({
-        name: newProduct.name,
-        barcode: newProduct.barcode || `${Math.floor(1000000000000 + Math.random() * 9000000000000)}`,
-        internalCode: newProduct.internalCode || `PROD-00${products.length + 1}`,
-        categoryId: newProduct.categoryId,
-        price: parseFloat(newProduct.price),
-        stock: parseInt(newProduct.stock) || 0,
-        minStock: parseInt(newProduct.minStock) || 5
-      });
-      setShowAddModal(false);
-      setNewProduct({ name: '', barcode: '', internalCode: '', categoryId: '', price: '', stock: '', minStock: 5 });
-=======
       if (newProduct.id) {
         await updateProductApi(newProduct.id, {
           name: newProduct.name,
@@ -274,7 +221,6 @@ export default function ProductsBento() {
 
       setShowAddModal(false);
       setNewProduct(EMPTY_PRODUCT);
->>>>>>> develop
       await loadProducts();
     } catch (err) {
       setErrorMsg(err.message || 'Error al guardar el producto. Intenta nuevamente.');
@@ -442,118 +388,6 @@ export default function ProductsBento() {
       )}
 
       {showAddModal && (
-<<<<<<< HEAD
-        <div className="fixed inset-0 bg-navy-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <form onSubmit={handleAddProduct} className="bento-card max-w-md w-full bg-white dark:bg-[#14231e] p-6 rounded-3xl shadow-2xl space-y-4">
-            <h3 className="font-extrabold text-base text-[#191c1e] dark:text-white">Crear Nuevo Producto</h3>
-
-            {errorMsg && (
-              <div className="p-3 bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800/40 rounded-xl text-xs font-bold flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>{errorMsg}</span>
-              </div>
-            )}
-
-            <div className="space-y-3 text-xs">
-              <div>
-                <label className="font-bold text-gray-700 dark:text-gray-300 block mb-1">Nombre Comercial del Producto:</label>
-                <input
-                  type="text"
-                  value={newProduct.name}
-                  onChange={e => setNewProduct({ ...newProduct, name: e.target.value })}
-                  placeholder="Ej. Arroz 1kg"
-                  className="w-full p-2.5 bg-[#f7f9fc] dark:bg-[#0b1411] border border-gray-300 dark:border-gray-700 rounded-2xl font-semibold text-[#191c1e] dark:text-white"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="font-bold text-gray-700 dark:text-gray-300 block mb-1">Categoría:</label>
-                {categories.length === 0 ? (
-                  <p className="text-[11px] text-amber-700 dark:text-amber-400 font-semibold bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-2xl p-2.5">
-                    No hay categorías creadas. Ve a <span className="font-extrabold">Categorías</span> en el menú y crea una primero.
-                  </p>
-                ) : (
-                  <select
-                    value={newProduct.categoryId}
-                    onChange={e => setNewProduct({ ...newProduct, categoryId: e.target.value })}
-                    className="w-full p-2.5 bg-[#f7f9fc] dark:bg-[#0b1411] border border-gray-300 dark:border-gray-700 rounded-2xl font-semibold text-[#191c1e] dark:text-white"
-                    required
-                  >
-                    <option value="">Selecciona una categoría...</option>
-                    {categories.map(c => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </select>
-                )}
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="font-bold text-gray-700 dark:text-gray-300 block mb-1">Código de Barras:</label>
-                  <input
-                    type="text"
-                    value={newProduct.barcode}
-                    onChange={e => setNewProduct({ ...newProduct, barcode: e.target.value })}
-                    placeholder="770..."
-                    className="w-full p-2.5 bg-[#f7f9fc] dark:bg-[#0b1411] border border-gray-300 dark:border-gray-700 rounded-2xl font-mono text-xs text-[#191c1e] dark:text-white"
-                  />
-                </div>
-                <div>
-                  <label className="font-bold text-gray-700 dark:text-gray-300 block mb-1">Código Interno:</label>
-                  <input
-                    type="text"
-                    value={newProduct.internalCode}
-                    onChange={e => setNewProduct({ ...newProduct, internalCode: e.target.value })}
-                    placeholder="PROD-101"
-                    className="w-full p-2.5 bg-[#f7f9fc] dark:bg-[#0b1411] border border-gray-300 dark:border-gray-700 rounded-2xl font-mono text-xs text-[#191c1e] dark:text-white"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="font-bold text-gray-700 dark:text-gray-300 block mb-1">Precio Venta ($ COP):</label>
-                  <input
-                    type="number"
-                    value={newProduct.price}
-                    onChange={e => setNewProduct({ ...newProduct, price: e.target.value })}
-                    placeholder="12000"
-                    className="w-full p-2.5 bg-[#f7f9fc] dark:bg-[#0b1411] border border-gray-300 dark:border-gray-700 rounded-2xl font-bold text-[#191c1e] dark:text-white"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="font-bold text-gray-700 dark:text-gray-300 block mb-1">Stock Inicial:</label>
-                  <input
-                    type="number"
-                    value={newProduct.stock}
-                    onChange={e => setNewProduct({ ...newProduct, stock: e.target.value })}
-                    placeholder="50"
-                    className="w-full p-2.5 bg-[#f7f9fc] dark:bg-[#0b1411] border border-gray-300 dark:border-gray-700 rounded-2xl font-bold text-[#191c1e] dark:text-white"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="flex gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setShowAddModal(false)}
-                className="w-1/2 py-3 bg-gray-100 dark:bg-[#1e293b] hover:bg-gray-200 dark:hover:bg-[#334155] text-gray-700 dark:text-gray-300 rounded-2xl text-xs font-bold"
-              >
-                Cancelar
-              </button>
-              <button
-                type="submit"
-                className="w-1/2 py-3 bg-[#006d3c] hover:bg-[#00522c] text-white rounded-2xl text-xs font-extrabold"
-              >
-                Guardar Producto
-              </button>
-            </div>
-          </form>
-        </div>
-=======
         <ProductFormModal
           product={newProduct}
           setProduct={setNewProduct}
@@ -570,7 +404,6 @@ export default function ProductsBento() {
           onSubmit={handleSubmitProduct}
           onClose={() => setShowAddModal(false)}
         />
->>>>>>> develop
       )}
 
       <BarcodeModal product={barcodeProduct} onClose={() => setBarcodeProduct(null)} />

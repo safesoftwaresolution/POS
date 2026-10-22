@@ -54,13 +54,9 @@ class ProductServiceImplTest {
     @Test
     void createProduct_Success() {
         CreateProductCommand command = new CreateProductCommand(
-<<<<<<< HEAD
-                "PROD-001", "7701234567890", "Coca Cola 350ml", 1L,
-                BigDecimal.valueOf(1.20), BigDecimal.valueOf(1.80), 10, 0, "Coca Cola", null
-=======
                 "PROD-001", "7701234567890", "Coca Cola 350ml", 1L, null,
-                BigDecimal.valueOf(1.20), BigDecimal.valueOf(1.80), 10, "Coca Cola", null
->>>>>>> develop
+                BigDecimal.valueOf(1.20), BigDecimal.valueOf(1.80), 10, 0, "Coca Cola", null,
+                BigDecimal.ZERO, null
         );
 
         when(categoryFacade.getById(1L)).thenReturn(Optional.of(new CategoryDto(1L, "Bebidas", "Bebidas", 0)));
@@ -99,16 +95,17 @@ class ProductServiceImplTest {
     @Test
     void createProduct_WithInitialStock_SetsQuantityAvailable() {
         CreateProductCommand command = new CreateProductCommand(
-                "PROD-001", "7701234567890", "Coca Cola 350ml", 1L,
-                BigDecimal.valueOf(1.20), BigDecimal.valueOf(1.80), 10, 50, "Coca Cola", null
+                "PROD-001", "7701234567890", "Coca Cola 350ml", 1L, null,
+                BigDecimal.valueOf(1.20), BigDecimal.valueOf(1.80), 10, 50, "Coca Cola", null,
+                BigDecimal.ZERO, null
         );
 
         when(categoryFacade.getById(1L)).thenReturn(Optional.of(new CategoryDto(1L, "Bebidas", "Bebidas", 0)));
-        when(productRepository.existsByInternalCode("PROD-001")).thenReturn(false);
-        when(productRepository.existsByBarcode("7701234567890")).thenReturn(false);
+        when(productRepository.existsByStoreIdAndInternalCode(STORE_ID, "PROD-001")).thenReturn(false);
+        when(productRepository.existsByStoreIdAndBarcode(STORE_ID, "7701234567890")).thenReturn(false);
         when(productRepository.save(any(Product.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(productMapper.toDto(any(Product.class))).thenReturn(
-                new ProductDto(10L, "PROD-001", "7701234567890", "Coca Cola 350ml", "Bebidas",
+                new ProductDto(10L, "PROD-001", "7701234567890", "Coca Cola 350ml", "Bebidas", null, null,
                         BigDecimal.valueOf(1.20), BigDecimal.valueOf(1.80), 50, 10, true, null)
         );
 
@@ -122,13 +119,14 @@ class ProductServiceImplTest {
     @Test
     void createProduct_NegativeInitialStock_ThrowsException() {
         CreateProductCommand command = new CreateProductCommand(
-                "PROD-001", "7701234567890", "Coca Cola 350ml", 1L,
-                BigDecimal.valueOf(1.20), BigDecimal.valueOf(1.80), 10, -5, "Coca Cola", null
+                "PROD-001", "7701234567890", "Coca Cola 350ml", 1L, null,
+                BigDecimal.valueOf(1.20), BigDecimal.valueOf(1.80), 10, -5, "Coca Cola", null,
+                BigDecimal.ZERO, null
         );
 
         when(categoryFacade.getById(1L)).thenReturn(Optional.of(new CategoryDto(1L, "Bebidas", "Bebidas", 0)));
-        when(productRepository.existsByInternalCode("PROD-001")).thenReturn(false);
-        when(productRepository.existsByBarcode("7701234567890")).thenReturn(false);
+        when(productRepository.existsByStoreIdAndInternalCode(STORE_ID, "PROD-001")).thenReturn(false);
+        when(productRepository.existsByStoreIdAndBarcode(STORE_ID, "7701234567890")).thenReturn(false);
 
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> productService.createProduct(command));
         assertTrue(ex.getMessage().contains("stock inicial"));
@@ -137,13 +135,9 @@ class ProductServiceImplTest {
     @Test
     void createProduct_InvalidMargin_ThrowsException() {
         CreateProductCommand command = new CreateProductCommand(
-<<<<<<< HEAD
-                "PROD-001", "7701234567890", "Coca Cola 350ml", 1L,
-                BigDecimal.valueOf(1.80), BigDecimal.valueOf(1.20), 10, 0, "Coca Cola", null
-=======
                 "PROD-001", "7701234567890", "Coca Cola 350ml", 1L, null,
-                BigDecimal.valueOf(1.80), BigDecimal.valueOf(1.20), 10, "Coca Cola", null
->>>>>>> develop
+                BigDecimal.valueOf(1.80), BigDecimal.valueOf(1.20), 10, 0, "Coca Cola", null,
+                BigDecimal.ZERO, null
         );
 
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> productService.createProduct(command));

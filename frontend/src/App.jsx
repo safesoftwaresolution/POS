@@ -11,16 +11,6 @@ import BackofficeSidebar from './components/backoffice/Sidebar';
 import BackofficeHeader from './components/backoffice/Header';
 
 import LoginBento from './pages/LoginBento';
-<<<<<<< HEAD
-import DashboardBento from './pages/DashboardBento';
-import POSBento from './pages/POSBento';
-import InventoryBento from './pages/InventoryBento';
-import ProductsBento from './pages/ProductsBento';
-import CategoriesBento from './pages/CategoriesBento';
-import CustomersBento from './pages/CustomersBento';
-import InvoicingBento from './pages/InvoicingBento';
-import SettingsBento from './pages/SettingsBento';
-=======
 import RegisterBento from './pages/RegisterBento';
 import VerifyEmailBento from './pages/VerifyEmailBento';
 import PendingStoreReviewBento from './pages/PendingStoreReviewBento';
@@ -82,7 +72,6 @@ function RequireActiveStore({ children }) {
   }
   return children;
 }
->>>>>>> develop
 
 function ProtectedLayout() {
   const { isAuthenticated, user } = useAuth();

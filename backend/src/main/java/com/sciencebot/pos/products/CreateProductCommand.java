@@ -34,6 +34,6 @@ public record CreateProductCommand(
 ) {
     public CreateProductCommand(String internalCode, String barcode, String name, Long categoryId, Long subcategoryId,
                                 BigDecimal purchasePrice, BigDecimal salePrice, int minStock, String description, String imageUrl) {
-        this(internalCode, barcode, name, categoryId, subcategoryId, purchasePrice, salePrice, minStock, description, imageUrl, BigDecimal.ZERO, null);
+        this(internalCode, barcode, name, categoryId, subcategoryId, purchasePrice, salePrice, minStock, 0, description, imageUrl, BigDecimal.ZERO, null);
     }
 }

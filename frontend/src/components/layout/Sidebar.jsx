@@ -1,15 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-<<<<<<< HEAD
-import { 
-  LayoutDashboard, 
-  ShoppingCart, 
-  Package, 
-  Tag, 
-  Users, 
-  FileText, 
-  Settings,
-=======
 import {
   LayoutDashboard,
   ShoppingCart,
@@ -21,19 +11,13 @@ import {
   BarChart3,
   Settings,
   UserCog,
->>>>>>> develop
   HelpCircle,
   LogOut,
   ChevronLeft,
   ChevronRight,
-<<<<<<< HEAD
-  Zap,
-  Tags
-=======
   X,
   Moon,
   Bell
->>>>>>> develop
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -55,17 +39,6 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
   const [profileOpen, setProfileOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
-<<<<<<< HEAD
-  const navItems = [
-    { path: '/', label: 'Dashboard', icon: LayoutDashboard },
-    { path: '/pos', label: 'Punto de Venta', icon: ShoppingCart },
-    { path: '/products', label: 'Productos', icon: Tag },
-    { path: '/categories', label: 'Categorías', icon: Tags },
-    { path: '/inventory', label: 'Inventario', icon: Package },
-    { path: '/customers', label: 'Clientes', icon: Users },
-    { path: '/invoicing', label: 'Facturación DIAN', icon: FileText },
-    { path: '/settings', label: 'Configuración', icon: Settings },
-=======
   useEffect(() => {
     getProductsApi()
       .then(data => {
@@ -129,7 +102,6 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
         ...(user?.role !== 'SELLER' ? [{ path: '/settings', label: 'Configuración', icon: Settings }] : []),
       ],
     },
->>>>>>> develop
   ];
 
   const handleLogout = async () => {

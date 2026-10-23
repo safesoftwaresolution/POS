@@ -8,6 +8,7 @@ import CheckoutModal, { SaleResultModal } from '../components/pos/CheckoutModal'
 import ScanToasts from '../components/pos/ScanToasts';
 import ProductCatalog from '../components/pos/ProductCatalog';
 import CartPanel from '../components/pos/CartPanel';
+import { BarcodeScanner } from '../components/scanner';
 import { getCategoriesApi } from '../services/categoriesApi';
 import { getParameterValuesApi } from '../services/parametersApi';
 import { newIdempotencyKey } from '../services/http';
@@ -32,6 +33,7 @@ export default function POSBento() {
   const [saleCompleted, setSaleCompleted] = useState(null);
   const [showMobileCart, setShowMobileCart] = useState(false);
   const [isSubmittingSale, setIsSubmittingSale] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
 
   const barcodeInputRef = useRef(null);
   // Clave de idempotencia estable para el intento de cobro en curso: se reutiliza en
@@ -143,31 +145,32 @@ export default function POSBento() {
   // hacer click en nada.
   const handleBarcodeScan = useCallback((rawCode) => {
     const code = rawCode.trim();
-    if (!code) return;
+    if (!code) return { ok: false, message: '' };
 
     const product = productsList.find(p => p.barcode === code) ||
       productsList.find(p => p.internalCode && p.internalCode.toLowerCase() === code.toLowerCase());
 
+    let result;
     if (!product) {
-      playScanTone(false);
-      pushScanToast('error', `Código no encontrado: ${code}`);
-      setSearchQuery('');
-      return;
+      result = { ok: false, message: `Código no encontrado: ${code}` };
+    } else {
+      const stockVal = product.quantityAvailable ?? product.stock ?? 0;
+      const inCart = cart.find(item => item.id === product.id)?.quantity ?? 0;
+      if (stockVal <= 0) {
+        result = { ok: false, message: `${product.name}: sin stock disponible` };
+      } else if (inCart >= stockVal) {
+        result = { ok: false, message: `${product.name}: ya tienes todo el stock en el carrito` };
+      } else {
+        addToCart(product);
+        result = { ok: true, message: `${product.name} agregado al carrito` };
+      }
     }
 
-    const stockVal = product.quantityAvailable ?? product.stock ?? 0;
-    if (stockVal <= 0) {
-      playScanTone(false);
-      pushScanToast('error', `${product.name}: sin stock disponible`);
-      setSearchQuery('');
-      return;
-    }
-
-    addToCart(product);
-    playScanTone(true);
-    pushScanToast('success', `${product.name} agregado al carrito`);
+    playScanTone(result.ok);
+    pushScanToast(result.ok ? 'success' : 'error', result.message);
     setSearchQuery('');
-  }, [productsList, playScanTone, pushScanToast]);
+    return result;
+  }, [productsList, cart, playScanTone, pushScanToast]);
 
   const handleBarcodeInputKeyDown = (e) => {
     if (e.key === 'Enter') {
@@ -284,6 +287,7 @@ export default function POSBento() {
           products={filteredProducts}
           loading={loading}
           onAdd={addToCart}
+          onOpenScanner={() => setShowScanner(true)}
         />
 
         <CartPanel
@@ -314,6 +318,13 @@ export default function POSBento() {
           <span className="text-sm font-extrabold tabular-nums">${total.toLocaleString('es-CO')} COP</span>
         </button>
       </div>
+
+      {showScanner && (
+        <BarcodeScanner
+          onDetect={handleBarcodeScan}
+          onClose={() => { setShowScanner(false); focusBarcodeInput(); }}
+        />
+      )}
 
       {showCheckoutModal && (
         <CheckoutModal

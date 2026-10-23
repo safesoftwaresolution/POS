@@ -42,6 +42,7 @@ class StoreServiceImplTest {
     @Mock private com.sciencebot.pos.stores.internal.repositories.StoreStatusAuditQueryDao statusAuditQueryDao;
     @Mock private com.sciencebot.pos.stores.internal.repositories.StorePurgeDao storePurgeDao;
     @Mock private com.sciencebot.pos.stores.internal.repositories.StoreUserAuditRepository storeUserAuditRepository;
+    @Mock private com.sciencebot.pos.stores.internal.repositories.PlanRepository planRepository;
     @InjectMocks private StoreServiceImpl storeService;
 
     @BeforeEach
@@ -80,7 +81,7 @@ class StoreServiceImplTest {
         saved.setEmail("tienda1@test.com");
         when(storeRepository.save(any(StoreEntity.class))).thenReturn(saved);
 
-        StoreDto dto = new StoreDto(1L, "Tienda 1", 1L, "Retail", "3001234567", "tienda1@test.com", "https://tienda1.com", "Calle 1", "900123", "PENDING_VERIFICATION", false, null, null);
+        StoreDto dto = new StoreDto(1L, "Tienda 1", 1L, "Retail", "3001234567", "tienda1@test.com", "https://tienda1.com", "Calle 1", "900123", "PENDING_VERIFICATION", false, null, null, "BASIC");
         when(storeMapper.toDto(any(), any())).thenReturn(dto);
 
         StoreDto result = storeService.createStore(command);
@@ -98,7 +99,7 @@ class StoreServiceImplTest {
 
         when(storeRepository.findById(1L)).thenReturn(Optional.of(entity));
         when(storeRepository.save(any())).thenReturn(entity);
-        when(storeMapper.toDto(any(), any())).thenReturn(new StoreDto(1L, "Tienda", null, null, null, "t@test.com", null, null, null, "ACTIVE", false, null, null));
+        when(storeMapper.toDto(any(), any())).thenReturn(new StoreDto(1L, "Tienda", null, null, null, "t@test.com", null, null, null, "ACTIVE", false, null, null, "BASIC"));
 
         StoreDto result = storeService.changeStatus(1L, "ACTIVE");
         assertNotNull(result);
@@ -123,7 +124,7 @@ class StoreServiceImplTest {
         saved.setName("Tienda 1");
         when(storeRepository.save(any(StoreEntity.class))).thenReturn(saved);
         when(storeMapper.toDto(any(), any())).thenReturn(
-                new StoreDto(9L, "Tienda 1", 1L, "Retail", "3001234567", "tienda1@test.com", "https://tienda1.com", "Calle 1", "900123", "PENDING_VERIFICATION", false, null, null));
+                new StoreDto(9L, "Tienda 1", 1L, "Retail", "3001234567", "tienda1@test.com", "https://tienda1.com", "Calle 1", "900123", "PENDING_VERIFICATION", false, null, null, "BASIC"));
 
         StoreDto result = storeService.registerOwnStore("carlos", command);
 
@@ -160,7 +161,7 @@ class StoreServiceImplTest {
         when(storeRepository.findById(1L)).thenReturn(Optional.of(entity));
         when(storeRepository.save(any())).thenReturn(entity);
         when(storeMapper.toDto(any(), any())).thenReturn(
-                new StoreDto(1L, "Tienda", null, null, null, "t@test.com", null, null, null, "REJECTED", false, "Documentos incompletos", null));
+                new StoreDto(1L, "Tienda", null, null, null, "t@test.com", null, null, null, "REJECTED", false, "Documentos incompletos", null, "BASIC"));
 
         StoreDto result = storeService.rejectStore(1L, "Documentos incompletos");
 
@@ -239,6 +240,72 @@ class StoreServiceImplTest {
 
         when(storeRepository.findById(9L)).thenReturn(Optional.empty());
         assertThrows(jakarta.persistence.EntityNotFoundException.class, () -> storeService.assignOwner(9L, 21L));
+    }
+
+    private com.sciencebot.pos.stores.internal.entities.PlanEntity plan(String code, String name, int extra, int order) {
+        var p = new com.sciencebot.pos.stores.internal.entities.PlanEntity();
+        p.setCode(code);
+        p.setName(name);
+        p.setMaxAdditionalUsers(extra);
+        p.setSortOrder(order);
+        return p;
+    }
+
+    @Test
+    void listPlans_ReturnsPlansWithTotalActiveUserCap() {
+        when(planRepository.findAllByOrderBySortOrderAsc()).thenReturn(List.of(plan("BASIC", "Básico", 1, 1), plan("PRO", "Pro", 10, 3)));
+
+        List<PlanDto> plans = storeService.listPlans();
+
+        assertEquals(2, plans.size());
+        assertEquals("BASIC", plans.get(0).code());
+        assertEquals(1, plans.get(0).maxAdditionalUsers());
+        assertEquals(2, plans.get(0).maxActiveUsers());
+        assertEquals(11, plans.get(1).maxActiveUsers());
+    }
+
+    @Test
+    void changePlan_Success_UpdatesPlanAndAudits() {
+        StoreEntity store = storeWithStatus("ACTIVE");
+        store.setPlanCode("BASIC");
+        when(storeRepository.findById(5L)).thenReturn(Optional.of(store));
+        when(planRepository.findById("PRO")).thenReturn(Optional.of(plan("PRO", "Pro", 10, 3)));
+        when(planRepository.findById("BASIC")).thenReturn(Optional.of(plan("BASIC", "Básico", 1, 1)));
+        when(storeRepository.save(any(StoreEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        storeService.changePlan(5L, " pro ");
+
+        assertEquals("PRO", store.getPlanCode());
+        var captor = org.mockito.ArgumentCaptor.forClass(com.sciencebot.pos.stores.internal.entities.StoreStatusAuditEntity.class);
+        verify(statusAuditRepository).save(captor.capture());
+        assertEquals("PLAN_CHANGED", captor.getValue().getNewStatus());
+        assertEquals("Plan: Básico -> Pro", captor.getValue().getReason());
+        assertEquals("Tienda Rechazada", captor.getValue().getStoreName());
+    }
+
+    @Test
+    void changePlan_SamePlan_ChangesAndAuditsNothing() {
+        StoreEntity store = storeWithStatus("ACTIVE");
+        store.setPlanCode("PRO");
+        when(storeRepository.findById(5L)).thenReturn(Optional.of(store));
+        when(planRepository.findById("PRO")).thenReturn(Optional.of(plan("PRO", "Pro", 10, 3)));
+
+        storeService.changePlan(5L, "PRO");
+
+        verify(storeRepository, never()).save(any(StoreEntity.class));
+        verifyNoInteractions(statusAuditRepository);
+    }
+
+    @Test
+    void changePlan_InvalidPlanBlankOrUnknownStore_IsRefused() {
+        when(planRepository.findById("NOPE")).thenReturn(Optional.empty());
+        assertThrows(IllegalArgumentException.class, () -> storeService.changePlan(5L, "NOPE"));
+        assertThrows(IllegalArgumentException.class, () -> storeService.changePlan(5L, " "));
+        assertThrows(IllegalArgumentException.class, () -> storeService.changePlan(5L, null));
+
+        when(planRepository.findById("PRO")).thenReturn(Optional.of(plan("PRO", "Pro", 10, 3)));
+        when(storeRepository.findById(9L)).thenReturn(Optional.empty());
+        assertThrows(jakarta.persistence.EntityNotFoundException.class, () -> storeService.changePlan(9L, "PRO"));
     }
 
     @Test
@@ -347,7 +414,7 @@ class StoreServiceImplTest {
         when(storeRepository.save(any(StoreEntity.class))).thenAnswer(inv -> inv.getArgument(0));
         when(storeMapper.toDto(any(), any())).thenAnswer(inv -> {
             StoreEntity e = inv.getArgument(0);
-            return new StoreDto(e.getId(), e.getName(), null, null, e.getPhone(), e.getEmail(), e.getWebsite(), e.getAddress(), e.getTaxId(), e.getStatus(), e.isEmailVerified(), null, null);
+            return new StoreDto(e.getId(), e.getName(), null, null, e.getPhone(), e.getEmail(), e.getWebsite(), e.getAddress(), e.getTaxId(), e.getStatus(), e.isEmailVerified(), null, null, "BASIC");
         });
 
         UpdateOwnStoreCommand command = new UpdateOwnStoreCommand("Tienda Nueva", "3009999999", "https://nueva.com", "Calle Nueva 1", "900999999-1");

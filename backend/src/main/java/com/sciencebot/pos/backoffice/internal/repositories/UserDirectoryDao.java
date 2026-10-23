@@ -1,6 +1,7 @@
 package com.sciencebot.pos.backoffice.internal.repositories;
 
 import com.sciencebot.pos.backoffice.BackofficeUserDto;
+import com.sciencebot.pos.backoffice.StorePlanUsageDto;
 import com.sciencebot.pos.backoffice.StoreWithoutOwnerDto;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -94,6 +95,18 @@ public class UserDirectoryDao {
                 """).query((rs, i) -> new StoreWithoutOwnerDto(
                 rs.getLong("id"), rs.getString("name"), rs.getString("email"),
                 rs.getString("tax_id"), rs.getString("status"))).list();
+    }
+
+    /** Plan de cada local y usuarios activos que usa (el tope incluye al administrador). */
+    public List<StorePlanUsageDto> findStorePlanUsage() {
+        return jdbcClient.sql("""
+                SELECT s.id, s.plan_code, p.name AS plan_name, p.max_additional_users,
+                       (SELECT COUNT(*) FROM users u WHERE u.store_id = s.id AND u.active = TRUE) AS active_users
+                FROM stores s JOIN plans p ON p.code = s.plan_code
+                ORDER BY s.id
+                """).query((rs, i) -> new StorePlanUsageDto(
+                rs.getLong("id"), rs.getString("plan_code"), rs.getString("plan_name"),
+                1 + rs.getInt("max_additional_users"), rs.getLong("active_users"))).list();
     }
 
     private static BackofficeUserDto mapUser(ResultSet rs, int rowNum) throws SQLException {

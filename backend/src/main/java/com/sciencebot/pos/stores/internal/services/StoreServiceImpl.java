@@ -3,10 +3,12 @@ package com.sciencebot.pos.stores.internal.services;
 import com.sciencebot.pos.stores.*;
 import com.sciencebot.pos.stores.internal.entities.StoreCategoryEntity;
 import com.sciencebot.pos.stores.internal.entities.StoreDocumentEntity;
+import com.sciencebot.pos.stores.internal.entities.PlanEntity;
 import com.sciencebot.pos.stores.internal.entities.StoreEntity;
 import com.sciencebot.pos.stores.internal.entities.StoreStatusAuditEntity;
 import com.sciencebot.pos.stores.internal.entities.StoreUserAuditEntity;
 import com.sciencebot.pos.stores.internal.mappers.StoreMapper;
+import com.sciencebot.pos.stores.internal.repositories.PlanRepository;
 import com.sciencebot.pos.stores.internal.repositories.StoreCategoryRepository;
 import com.sciencebot.pos.stores.internal.repositories.StoreDocumentRepository;
 import com.sciencebot.pos.stores.internal.repositories.StoreRepository;
@@ -57,6 +59,7 @@ public class StoreServiceImpl implements StoreFacade {
     private final StoreStatusAuditQueryDao statusAuditQueryDao;
     private final StorePurgeDao storePurgeDao;
     private final StoreUserAuditRepository storeUserAuditRepository;
+    private final PlanRepository planRepository;
 
     public StoreServiceImpl(StoreRepository storeRepository,
                             StoreCategoryRepository categoryRepository,
@@ -68,7 +71,8 @@ public class StoreServiceImpl implements StoreFacade {
                             StoreStatusAuditRepository statusAuditRepository,
                             StoreStatusAuditQueryDao statusAuditQueryDao,
                             StorePurgeDao storePurgeDao,
-                            StoreUserAuditRepository storeUserAuditRepository) {
+                            StoreUserAuditRepository storeUserAuditRepository,
+                            PlanRepository planRepository) {
         this.storeRepository = storeRepository;
         this.categoryRepository = categoryRepository;
         this.documentRepository = documentRepository;
@@ -80,6 +84,7 @@ public class StoreServiceImpl implements StoreFacade {
         this.statusAuditQueryDao = statusAuditQueryDao;
         this.storePurgeDao = storePurgeDao;
         this.storeUserAuditRepository = storeUserAuditRepository;
+        this.planRepository = planRepository;
     }
 
     @Override
@@ -363,6 +368,37 @@ public class StoreServiceImpl implements StoreFacade {
         entry.setPerformedBy(authentication != null ? authentication.getName() : "system");
         storeUserAuditRepository.save(entry);
 
+        return storeMapper.toDto(store, resolveCategoryName(store.getStoreCategoryId()));
+    }
+
+    @Override
+    public List<PlanDto> listPlans() {
+        return planRepository.findAllByOrderBySortOrderAsc().stream()
+                .map(p -> new PlanDto(p.getCode(), p.getName(), p.getMaxAdditionalUsers(), 1 + p.getMaxAdditionalUsers()))
+                .toList();
+    }
+
+    /**
+     * Cambia el plan del local. Bajar de plan no desactiva a nadie: si el local ya excede el nuevo tope,
+     * conserva sus usuarios pero no podrá crear ni reactivar más hasta estar dentro del límite.
+     */
+    @Override
+    @Transactional
+    public StoreDto changePlan(Long storeId, String planCode) {
+        if (planCode == null || planCode.isBlank()) {
+            throw new IllegalArgumentException("planCode es obligatorio.");
+        }
+        PlanEntity plan = planRepository.findById(planCode.trim().toUpperCase())
+                .orElseThrow(() -> new IllegalArgumentException("Plan invalido: " + planCode));
+        StoreEntity store = storeRepository.findById(storeId)
+                .orElseThrow(() -> new EntityNotFoundException("Local no encontrado con ID: " + storeId));
+        String previousCode = store.getPlanCode();
+        if (!plan.getCode().equals(previousCode)) {
+            String previousName = planRepository.findById(previousCode).map(PlanEntity::getName).orElse(previousCode);
+            store.setPlanCode(plan.getCode());
+            store = storeRepository.save(store);
+            recordStatusChange(store, null, "PLAN_CHANGED", "Plan: " + previousName + " -> " + plan.getName());
+        }
         return storeMapper.toDto(store, resolveCategoryName(store.getStoreCategoryId()));
     }
 

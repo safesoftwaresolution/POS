@@ -1,6 +1,7 @@
 package com.sciencebot.pos.backoffice.internal.controllers;
 
 import com.sciencebot.pos.backoffice.BackofficeUserDto;
+import com.sciencebot.pos.backoffice.StorePlanUsageDto;
 import com.sciencebot.pos.backoffice.StoreWithoutOwnerDto;
 import com.sciencebot.pos.backoffice.internal.repositories.UserDirectoryDao;
 import io.swagger.v3.oas.annotations.Operation;
@@ -53,6 +54,12 @@ public class BackofficeUserDirectoryController {
     @Operation(summary = "ADMINISTRATOR verificados que aun no tienen local (candidatos a asignar)")
     public ResponseEntity<List<BackofficeUserDto>> assignableOwners() {
         return ResponseEntity.ok(userDirectoryDao.findAssignableOwners());
+    }
+
+    @GetMapping("/store-plan-usage")
+    @Operation(summary = "Plan de cada local y usuarios activos que usa frente a su tope")
+    public ResponseEntity<List<StorePlanUsageDto>> storePlanUsage() {
+        return ResponseEntity.ok(userDirectoryDao.findStorePlanUsage());
     }
 
     @GetMapping("/stores-without-owner")

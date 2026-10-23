@@ -22,4 +22,5 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Page<User> findAllByStoreIdAndActiveTrue(Long storeId, Pageable pageable);
     Page<User> findAllByStoreIdAndRole(Long storeId, String role, Pageable pageable);
     long countByStoreIdAndRoleAndActiveTrue(Long storeId, String role);
+    long countByStoreIdAndActiveTrue(Long storeId);
 }

@@ -31,14 +31,17 @@ public class UserServiceImpl implements UserFacade, UserDetailsService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final UserMapper userMapper;
+    private final UserQuotaPolicy userQuotaPolicy;
 
     public UserServiceImpl(
             UserRepository userRepository,
             @org.springframework.context.annotation.Lazy PasswordEncoder passwordEncoder,
-            UserMapper userMapper) {
+            UserMapper userMapper,
+            UserQuotaPolicy userQuotaPolicy) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.userMapper = userMapper;
+        this.userQuotaPolicy = userQuotaPolicy;
     }
 
     @Override
@@ -96,6 +99,9 @@ public class UserServiceImpl implements UserFacade, UserDetailsService {
 
         if (userRepository.existsByUsername(command.username())) {
             throw new IllegalArgumentException("El nombre de usuario ya esta registrado");
+        }
+        if (!"SUPER_ADMIN".equals(effectiveRole)) {
+            enforceUserQuota(effectiveStoreId);
         }
         if (userRepository.existsByEmail(command.email())) {
             throw new IllegalArgumentException("El correo electronico ya esta registrado");
@@ -184,6 +190,9 @@ public class UserServiceImpl implements UserFacade, UserDetailsService {
             }
         }
 
+        if (active && !user.isActive() && user.getStoreId() != null) {
+            enforceUserQuota(user.getStoreId()); // reactivar ocupa un cupo igual que crear
+        }
         user.setActive(active);
         userRepository.save(user);
     }
@@ -344,6 +353,30 @@ public class UserServiceImpl implements UserFacade, UserDetailsService {
      * contexto (SUPER_ADMIN vía backoffice, o una llamada interna del arranque/otros módulos
      * sin request HTTP) se preserva el comportamiento sin restricción anterior.
      */
+    /** Rechaza ocupar un cupo más si el local ya alcanzó el tope de usuarios activos de su plan. */
+    private void enforceUserQuota(Long storeId) {
+        userQuotaPolicy.quotaFor(storeId).ifPresent(quota -> {
+            long active = userRepository.countByStoreIdAndActiveTrue(storeId);
+            if (active >= quota.maxActiveUsers()) {
+                throw new IllegalArgumentException("El plan " + quota.planName() + " de este local permite hasta "
+                        + quota.maxActiveUsers() + " usuarios activos (administrador incluido) y ya los alcanzo. "
+                        + "Desactiva un usuario o pide cambiar de plan.");
+            }
+        });
+    }
+
+    @Override
+    public Optional<UserQuotaStatusDto> getQuotaStatus() {
+        Long storeId = TenantContext.getStoreId();
+        if (storeId == null) {
+            return Optional.empty();
+        }
+        return userQuotaPolicy.quotaFor(storeId).map(quota -> {
+            long active = userRepository.countByStoreIdAndActiveTrue(storeId);
+            return new UserQuotaStatusDto(quota.planName(), active, quota.maxActiveUsers(), active < quota.maxActiveUsers());
+        });
+    }
+
     private boolean belongsToCallerStoreOrGlobalCaller(User user) {
         Long callerStoreId = TenantContext.getStoreId();
         return callerStoreId == null || callerStoreId.equals(user.getStoreId());

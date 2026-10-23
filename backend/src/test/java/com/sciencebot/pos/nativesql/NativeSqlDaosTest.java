@@ -1,6 +1,7 @@
 package com.sciencebot.pos.nativesql;
 
 import com.sciencebot.pos.backoffice.BackofficeUserDto;
+import com.sciencebot.pos.backoffice.StorePlanUsageDto;
 import com.sciencebot.pos.backoffice.StoreWithoutOwnerDto;
 import com.sciencebot.pos.backoffice.internal.repositories.UserDirectoryDao;
 import com.sciencebot.pos.stores.StoreStatusAuditDto;
@@ -171,6 +172,23 @@ class NativeSqlDaosTest {
         assertEquals(1L, count("SELECT COUNT(*) FROM users WHERE id = " + keepUser));
         assertEquals(1L, count("SELECT COUNT(*) FROM email_verification_tokens WHERE user_id = " + keepUser));
         assertEquals(1L, count("SELECT COUNT(*) FROM store_documents WHERE store_id = " + keep));
+    }
+
+    @Test
+    void storePlanUsage_countsActiveUsersAgainstThePlanCap() {
+        long id = store("Plan Usage Store", "plan-usage@test.com", "ACTIVE");
+        jdbc.sql("UPDATE stores SET plan_code = 'BASIC' WHERE id = :id").param("id", id).update();
+        user("plan_admin", "ADMINISTRATOR", id, true, true);
+        user("plan_seller", "SELLER", id, true, true);
+        user("plan_old", "SELLER", id, false, true); // los inactivos no ocupan cupo
+
+        List<StorePlanUsageDto> usage = new UserDirectoryDao(jdbc).findStorePlanUsage();
+        StorePlanUsageDto mine = usage.stream().filter(u -> u.storeId() == id).findFirst().orElseThrow();
+
+        assertEquals("BASIC", mine.planCode());
+        assertEquals("Básico", mine.planName());
+        assertEquals(2, mine.maxActiveUsers());
+        assertEquals(2, mine.activeUsers());
     }
 
     private static long count(String sql) {

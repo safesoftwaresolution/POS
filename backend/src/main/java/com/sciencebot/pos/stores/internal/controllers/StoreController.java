@@ -78,6 +78,21 @@ public class StoreController {
         return ResponseEntity.ok(storeFacade.changeStatus(id, body.get("status")));
     }
 
+    @GetMapping("/api/v1/backoffice/plans")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @Operation(summary = "Planes disponibles y su tope de usuarios")
+    public ResponseEntity<List<PlanDto>> listPlans() {
+        return ResponseEntity.ok(storeFacade.listPlans());
+    }
+
+    @PatchMapping("/api/v1/backoffice/stores/{id}/plan")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @Operation(summary = "Cambiar el plan de un local",
+            description = "Bajar de plan no desactiva usuarios: el local conserva los que ya tiene pero no puede crear ni reactivar mas hasta estar dentro del limite.")
+    public ResponseEntity<StoreDto> changePlan(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        return ResponseEntity.ok(storeFacade.changePlan(id, body == null ? null : body.get("planCode")));
+    }
+
     @PostMapping("/api/v1/backoffice/stores/{storeId}/assign-owner")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     @Operation(summary = "Asignar un ADMINISTRATOR sin local a un local sin administrador",

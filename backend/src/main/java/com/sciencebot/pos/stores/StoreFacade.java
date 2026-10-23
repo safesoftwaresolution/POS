@@ -32,6 +32,10 @@ public interface StoreFacade {
     StoreDto assignOwner(Long storeId, Long userId);
     /** Historial de solo lectura de las asignaciones de usuarios a locales, de la más reciente a la más antigua. */
     Page<StoreUserAuditDto> getOwnerAssignments(Pageable pageable);
+    /** Planes disponibles, del más básico al más alto. */
+    List<PlanDto> listPlans();
+    /** Cambia el plan de un local (SUPER_ADMIN; auditado). No borra usuarios si el nuevo tope es menor. */
+    StoreDto changePlan(Long storeId, String planCode);
     /** Historial de solo lectura de cambios de estado de locales (registro, aprobación, rechazo...). */
     Page<StoreStatusAuditDto> getStatusAudit(String newStatus, String q, Pageable pageable);
     List<StoreDocumentDto> getDocuments(Long storeId);

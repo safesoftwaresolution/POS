@@ -4,14 +4,22 @@ import com.sciencebot.pos.users.internal.entities.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import java.util.List;
 import java.util.Optional;
 
 public interface UserRepository extends JpaRepository<User, Long> {
-    Optional<User> findByUsername(String username);
-    Optional<User> findByEmail(String email);
-    boolean existsByUsername(String username);
-    boolean existsByEmail(String email);
+    // Usuario y correo se comparan sin distinguir mayusculas: el login normaliza a minusculas lo que escribe la
+    // persona, asi que un usuario registrado como "AndresV" nunca coincidiria con una busqueda exacta.
+    @Query("select u from User u where lower(u.username) = lower(:username)")
+    Optional<User> findByUsername(@Param("username") String username);
+    @Query("select u from User u where lower(u.email) = lower(:email)")
+    Optional<User> findByEmail(@Param("email") String email);
+    @Query("select count(u) > 0 from User u where lower(u.username) = lower(:username)")
+    boolean existsByUsername(@Param("username") String username);
+    @Query("select count(u) > 0 from User u where lower(u.email) = lower(:email)")
+    boolean existsByEmail(@Param("email") String email);
     long countByRoleAndActiveTrue(String role);
     Page<User> findAllByActiveTrue(Pageable pageable);
     Page<User> findAllByRole(String role, Pageable pageable);

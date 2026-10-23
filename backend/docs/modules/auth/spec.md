@@ -82,7 +82,7 @@
 ### POST /api/v1/auth/forgot-password
 - **Permisos**: Público
 - **Request**: `{ "email": "..." }`
-- **Response**: `204 No Content` siempre. Envía un enlace `…/reset-password?token=…` (vigencia `SECURITY_PASSWORD_RESET_EXPIRATION_MS`, 1 h) solo si la cuenta está activa y con el correo verificado; máximo un envío por correo por minuto.
+- **Response**: `204 No Content` siempre. Envía un enlace `…/reset-password?token=…` (vigencia `SECURITY_PASSWORD_RESET_EXPIRATION_MS`, 1 h) solo si la cuenta está activa y con el correo verificado; máximo un envío por correo por minuto. El token y el correo se generan en segundo plano (`PasswordResetMailer`, `@Async`), así que la respuesta no depende del SMTP ni revela por tiempo qué correos existen; un fallo de envío solo se registra en el log.
 
 ### POST /api/v1/auth/reset-password
 - **Permisos**: Público

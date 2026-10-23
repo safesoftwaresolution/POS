@@ -22,7 +22,7 @@ Gestión centralizada de los comercios/locales que utilizan la plataforma POS co
 - `GET /api/v1/backoffice/stores/{id}`: Detalle de local.
 - `POST /api/v1/backoffice/stores`: Creación de local.
 - `PUT /api/v1/backoffice/stores/{id}`: Actualización de datos.
-- `PATCH /api/v1/backoffice/stores/{id}/status`: Cambio de estado.
+- `PATCH /api/v1/backoffice/stores/{id}/status`: Cambio de estado. Al pasar de `PENDING_VERIFICATION` a `ACTIVE` (aprobación) se envía, tras confirmar la transacción y en segundo plano (`StoreApprovalMailer`, `@Async`), un correo con la marca BentoPOS a los administradores del local (o al correo del local si aún no tiene) avisando que fue aprobado, con un botón a `/login`. Reactivar un local suspendido no lo envía; un fallo de SMTP no revierte la aprobación. La pantalla "en revisión" del administrador consulta el estado cada 15 s y abre el POS sola al aprobarse.
 - `PATCH /api/v1/backoffice/stores/{id}/reject`: Rechazo del local (motivo).
 - `PATCH /api/v1/backoffice/stores/{id}/verify-email`: Verificación de correo.
 - `GET /api/v1/backoffice/store-status-audit`: Historial de solo lectura de cambios de estado de locales (registro, aprobación, rechazo, suspensión…) con quién y cuándo. Filtros `status` (estado nuevo) y `q` (local, NIT, correo o responsable), paginado. Se alimenta de `store_status_audit` (V18), que solo se inserta; los locales anteriores a V18 tienen una fila de respaldo con `performed_by` nulo.

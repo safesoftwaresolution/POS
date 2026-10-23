@@ -17,6 +17,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -30,6 +31,7 @@ public class AuthService {
     private final UserFacade userFacade;
     private final EmailVerificationService emailVerificationService;
     private final EmailSender emailSender;
+    private final PasswordResetService passwordResetService;
 
     @Value("${app.frontend-url:http://localhost:3000}")
     private String frontendUrl;
@@ -39,10 +41,12 @@ public class AuthService {
 
     private final ConcurrentHashMap<String, LockoutDetails> lockoutCache = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, Long> lastResendAt = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Long> lastForgotAt = new ConcurrentHashMap<>();
 
     public AuthService(UserDetailsService userDetailsService, PasswordEncoder passwordEncoder,
                        JwtService jwtService, RefreshTokenService refreshTokenService, UserFacade userFacade,
-                       EmailVerificationService emailVerificationService, EmailSender emailSender) {
+                       EmailVerificationService emailVerificationService, EmailSender emailSender,
+                       PasswordResetService passwordResetService) {
         this.userDetailsService = userDetailsService;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
@@ -50,6 +54,7 @@ public class AuthService {
         this.userFacade = userFacade;
         this.emailVerificationService = emailVerificationService;
         this.emailSender = emailSender;
+        this.passwordResetService = passwordResetService;
     }
 
     /** Auto-registro publico: crea al futuro dueno pendiente de verificar su correo y le envia el enlace. */
@@ -90,6 +95,59 @@ public class AuthService {
                         log.warn("No se pudo reenviar la verificacion a la cuenta {}", u.username(), e);
                     }
                 });
+    }
+
+    /**
+     * Inicia la recuperacion de contrasena: si la cuenta existe, esta activa y con el correo verificado,
+     * envia un enlace de un solo uso. Responde siempre igual (no revela que correos existen) y limita a
+     * un envio por correo cada {@value #RESEND_COOLDOWN_MS} ms. Una cuenta sin verificar debe verificar
+     * primero su correo (ver {@link #resendVerification}).
+     */
+    public void forgotPassword(String email) {
+        if (email == null || email.isBlank()) {
+            return;
+        }
+        String cleanEmail = email.trim().toLowerCase();
+
+        long now = System.currentTimeMillis();
+        Long last = lastForgotAt.get(cleanEmail);
+        if (last != null && now - last < RESEND_COOLDOWN_MS) {
+            return;
+        }
+
+        userFacade.findByEmail(cleanEmail)
+                .filter(u -> u.active() && u.emailVerified())
+                .ifPresent(u -> {
+                    lastForgotAt.put(cleanEmail, now);
+                    try {
+                        String rawToken = passwordResetService.issue(u.id());
+                        String link = frontendUrl + "/reset-password?token=" + rawToken;
+                        emailSender.send(
+                                u.email(),
+                                "Restablece tu contraseña - ProPOS",
+                                "<p>Hola " + u.fullName() + ",</p>"
+                                        + "<p>Recibimos una solicitud para restablecer tu contraseña de ProPOS. "
+                                        + "El enlace vence en 1 hora:</p>"
+                                        + "<p><a href=\"" + link + "\">Restablecer mi contraseña</a></p>"
+                                        + "<p>Si no fuiste tu, ignora este mensaje: tu contraseña no cambiará.</p>"
+                        );
+                    } catch (RuntimeException e) {
+                        log.warn("No se pudo enviar el correo de recuperacion a la cuenta {}", u.username(), e);
+                    }
+                });
+    }
+
+    /**
+     * Consume el token y fija la nueva contrasena. Transaccional: si la contrasena no cumple los
+     * requisitos, el token no queda consumido. Cierra todas las sesiones abiertas del usuario y le
+     * levanta el bloqueo por intentos fallidos.
+     */
+    @Transactional
+    public void resetPassword(String rawToken, String newPassword) {
+        Long userId = passwordResetService.consume(rawToken);
+        userFacade.resetPassword(userId, newPassword);
+        refreshTokenService.revokeAllForUser(userId);
+        lockoutCache.remove(userFacade.getById(userId).username().toLowerCase());
     }
 
     private void sendVerificationEmail(UserDto user) {

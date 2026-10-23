@@ -48,6 +48,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/auth/register").permitAll()
                         .requestMatchers("/api/v1/auth/verify-email").permitAll()
                         .requestMatchers("/api/v1/auth/resend-verification").permitAll()
+                        .requestMatchers("/api/v1/auth/forgot-password", "/api/v1/auth/reset-password").permitAll()
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/api/v1/legal/**").permitAll()
                         .requestMatchers("/api/v1/support/tickets").permitAll()

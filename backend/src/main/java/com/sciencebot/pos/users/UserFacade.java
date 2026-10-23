@@ -19,6 +19,8 @@ public interface UserFacade {
 
     /** Auto-registro publico: crea un ADMINISTRATOR sin local (storeId=null) y con el correo sin verificar. */
     UserDto registerPendingAdmin(RegisterOwnerCommand command);
+    /** Establece una nueva contrasena sin contexto de sesion (flujo "olvide mi contrasena", ya validado por token). */
+    void resetPassword(Long userId, String newPassword);
     /** Marca el correo del usuario como verificado (llamado al consumir el token de verificacion). */
     UserDto markEmailVerified(Long userId);
     /** Asigna el local recien creado a un ADMINISTRATOR que aun no tenia uno. Falla si ya tenia storeId. */

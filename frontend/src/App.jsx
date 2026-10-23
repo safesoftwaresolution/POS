@@ -1,5 +1,6 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import useAutoRefresh from './hooks/useAutoRefresh';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { ModalProvider } from './context/ModalContext';
@@ -68,6 +69,13 @@ function RequireActiveStore({ children }) {
       .catch(() => { if (!cancelled) setStore(null); });
     return () => { cancelled = true; };
   }, []);
+
+  // Mientras el local sigue en revisión, consulta su estado cada cierto tiempo: al aprobarse, el POS se
+  // abre solo sin que la persona tenga que recargar.
+  useAutoRefresh(() => {
+    if (store && store.status === 'ACTIVE') return;
+    getOwnStoreApi().then(setStore).catch(() => {});
+  });
 
   if (store === undefined) {
     return null;

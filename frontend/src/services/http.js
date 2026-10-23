@@ -2,7 +2,10 @@
 // y el envio/lectura JSON. Todos los modulos de servicios (`*Api.js`) construyen
 // sus llamadas sobre `fetchApi`; ningun otro modulo debe usar `fetch` directamente.
 
-const API_BASE_URL = '/api/v1';
+// En produccion el backend vive en otro dominio: VITE_API_URL se incrusta al compilar.
+// Sin ella (dev) se usa la ruta relativa y el proxy de Vite.
+const API_ORIGIN = (import.meta.env.VITE_API_URL ?? '').replace(/\/+$/, '');
+export const API_BASE_URL = `${API_ORIGIN}/api/v1`;
 
 // Genera una clave de idempotencia (UUID). Se usa en operaciones no idempotentes
 // (ventas, compras) para que un reenvío no cree registros duplicados en el backend.

@@ -1,6 +1,6 @@
 // Real API client — Zero mockups, strictly real data operations
 
-const API_BASE_URL = '/api/v1';
+import { API_BASE_URL } from './http';
 
 let authToken = localStorage.getItem('jwt_token') || '';
 

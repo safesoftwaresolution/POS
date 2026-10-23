@@ -43,6 +43,21 @@ export async function changeBackofficeStoreStatusApi(id, status) {
   });
 }
 
+export async function getPlansApi() {
+  return await fetchApi('/backoffice/plans');
+}
+
+export async function getStorePlanUsageApi() {
+  return await fetchApi('/backoffice/store-plan-usage');
+}
+
+export async function changeBackofficeStorePlanApi(id, planCode) {
+  return await fetchApi(`/backoffice/stores/${id}/plan`, {
+    method: 'PATCH',
+    body: JSON.stringify({ planCode }),
+  });
+}
+
 export async function deleteBackofficeStoreApi(id) {
   return await fetchApi(`/backoffice/stores/${id}`, { method: 'DELETE' });
 }

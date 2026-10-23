@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { UserPlus, Search, Edit3, KeyRound, Power, PowerOff, Trash2, ShieldCheck, Users } from 'lucide-react';
 import {
-  getUsersApi, createUserApi, updateUserApi, changeUserStatusApi, changeUserPasswordApi, deleteUserApi,
+  getUsersApi, getUserQuotaApi, createUserApi, updateUserApi, changeUserStatusApi, changeUserPasswordApi, deleteUserApi,
 } from '../services/usersApi';
 import { useAuth } from '../context/AuthContext';
 import { useModal } from '../context/ModalContext';
@@ -134,6 +134,7 @@ export default function UsersBento() {
   const { confirm, notify } = useModal();
   const [users, setUsers] = useState([]);
   const [total, setTotal] = useState(0);
+  const [quota, setQuota] = useState(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   // { type: 'form' | 'password', user? }
@@ -141,9 +142,13 @@ export default function UsersBento() {
 
   const fetchUsers = async () => {
     try {
-      const { users: list, total: count } = await getUsersApi();
+      const [{ users: list, total: count }, quotaStatus] = await Promise.all([
+        getUsersApi(),
+        getUserQuotaApi().catch(() => null),
+      ]);
       setUsers(list);
       setTotal(count);
+      setQuota(quotaStatus);
     } catch (e) {
       console.warn('Error cargando usuarios:', e);
       setUsers([]);
@@ -196,8 +201,26 @@ export default function UsersBento() {
       <PageHeader
         title="Usuarios del Local"
         subtitle="Administra quién accede a tu negocio y con qué permisos"
-        actions={<Button icon={UserPlus} onClick={() => setModal({ type: 'form' })}>Nuevo usuario</Button>}
+        actions={
+          <Button icon={UserPlus} disabled={quota && !quota.canCreateMore} onClick={() => setModal({ type: 'form' })}>
+            Nuevo usuario
+          </Button>
+        }
       />
+
+      {quota && (
+        <div className={`px-4 py-3 rounded-2xl border text-xs font-bold flex items-center gap-2 ${
+          quota.canCreateMore
+            ? 'bg-card border-line text-ink-soft'
+            : 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800/40 text-amber-700 dark:text-amber-400'
+        }`}>
+          <Users className="w-4 h-4 shrink-0" />
+          <span>
+            Plan {quota.planName}: {quota.activeUsers} de {quota.maxActiveUsers} usuarios activos (tú incluido).
+            {!quota.canCreateMore && ' Llegaste al límite: desactiva un usuario o pide cambiar de plan para crear más.'}
+          </span>
+        </div>
+      )}
 
       <Card className="space-y-4">
         <div className="flex items-center justify-between gap-3">

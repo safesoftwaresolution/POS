@@ -25,7 +25,10 @@ import {
   verifyBackofficeStoreEmailApi,
   getBackofficeStoreDocumentsApi,
   reviewBackofficeStoreDocumentApi,
-  getBackofficeStoreCategoriesApi
+  getBackofficeStoreCategoriesApi,
+  getPlansApi,
+  getStorePlanUsageApi,
+  changeBackofficeStorePlanApi
 } from '../../services/backoffice/storesApi';
 import { useModal } from '../../context/ModalContext';
 import { DOC_TYPE_LABELS, DOC_STATUS_STYLES } from '../../constants/storeDocuments';
@@ -69,6 +72,8 @@ export default function StoresBento() {
   const [metrics, setMetrics] = useState(null);
   const [stores, setStores] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [plans, setPlans] = useState([]);
+  const [planUsage, setPlanUsage] = useState({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
@@ -114,14 +119,34 @@ export default function StoresBento() {
     }
   }, []);
 
-  useEffect(() => { loadMetrics(); loadCategories(); }, [loadMetrics, loadCategories]);
+  const loadPlans = useCallback(async () => {
+    try {
+      const [planList, usage] = await Promise.all([getPlansApi(), getStorePlanUsageApi()]);
+      setPlans(planList);
+      setPlanUsage(Object.fromEntries(usage.map(u => [u.storeId, u])));
+    } catch (e) {
+      console.warn('Error cargando planes:', e);
+    }
+  }, []);
+
+  useEffect(() => { loadMetrics(); loadCategories(); loadPlans(); }, [loadMetrics, loadCategories, loadPlans]);
   useEffect(() => {
     const t = setTimeout(loadStores, 250);
     return () => clearTimeout(t);
   }, [loadStores]);
 
   const refreshAll = async () => {
-    await Promise.all([loadMetrics(), loadStores(), loadCategories()]);
+    await Promise.all([loadMetrics(), loadStores(), loadCategories(), loadPlans()]);
+  };
+
+  const handleChangePlan = async (store, planCode) => {
+    setErrorMsg('');
+    try {
+      await changeBackofficeStorePlanApi(store.id, planCode);
+      await Promise.all([loadStores(), loadPlans()]);
+    } catch (err) {
+      setErrorMsg(err.message || 'No se pudo cambiar el plan.');
+    }
   };
 
   // ---------- Store CRUD ----------
@@ -304,13 +329,14 @@ export default function StoresBento() {
           </div>
         ) : (
           <div className="overflow-x-auto -mx-2">
-            <table className="w-full text-xs min-w-[820px]">
+            <table className="w-full text-xs min-w-[920px]">
               <thead>
                 <tr className="text-left text-[10px] font-extrabold text-ink-muted uppercase">
                   <th className="px-2 py-2">Local</th>
                   <th className="px-2 py-2">Categoría</th>
                   <th className="px-2 py-2">Contacto</th>
                   <th className="px-2 py-2">Estado</th>
+                  <th className="px-2 py-2">Plan</th>
                   <th className="px-2 py-2 text-right">Acciones</th>
                 </tr>
               </thead>
@@ -340,6 +366,28 @@ export default function StoresBento() {
                           <option key={st} value={st}>{STATUS_LABELS[st]}</option>
                         ))}
                       </select>
+                    </td>
+                    <td className="px-2 py-3">
+                      <select
+                        value={s.planCode || ''}
+                        onChange={(e) => handleChangePlan(s, e.target.value)}
+                        className="text-[10px] font-extrabold px-2 py-1 rounded-full border border-line bg-card text-ink cursor-pointer"
+                      >
+                        {plans.map(p => (
+                          <option key={p.code} value={p.code}>{p.name}</option>
+                        ))}
+                      </select>
+                      {planUsage[s.id] && (
+                        <p className={`mt-1 text-[10px] font-bold tabular-nums ${
+                          planUsage[s.id].activeUsers > planUsage[s.id].maxActiveUsers
+                            ? 'text-red-500'
+                            : planUsage[s.id].activeUsers === planUsage[s.id].maxActiveUsers
+                              ? 'text-amber-600 dark:text-amber-400'
+                              : 'text-ink-muted'
+                        }`}>
+                          {planUsage[s.id].activeUsers}/{planUsage[s.id].maxActiveUsers} usuarios
+                        </p>
+                      )}
                     </td>
                     <td className="px-2 py-3">
                       <div className="flex items-center justify-end gap-1">

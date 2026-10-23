@@ -9,6 +9,7 @@ const STATUS_LABELS = {
   SUSPENDED: 'Suspendido',
   INACTIVE: 'Inactivo',
   DELETED: 'Eliminado',
+  PLAN_CHANGED: 'Plan cambiado',
 };
 
 const STATUS_STYLES = {
@@ -18,6 +19,7 @@ const STATUS_STYLES = {
   SUSPENDED: 'bg-orange-100 dark:bg-orange-500/20 text-orange-700 dark:text-orange-400',
   INACTIVE: 'bg-gray-100 dark:bg-line text-gray-600 dark:text-gray-300',
   DELETED: 'bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-400',
+  PLAN_CHANGED: 'bg-sky-100 dark:bg-sky-500/20 text-sky-700 dark:text-sky-300',
 };
 
 const FILTERS = [
@@ -28,6 +30,7 @@ const FILTERS = [
   { value: 'SUSPENDED', label: 'Suspendidos' },
   { value: 'INACTIVE', label: 'Inactivos' },
   { value: 'DELETED', label: 'Eliminados' },
+  { value: 'PLAN_CHANGED', label: 'Cambios de plan' },
 ];
 
 function StatusBadge({ status }) {

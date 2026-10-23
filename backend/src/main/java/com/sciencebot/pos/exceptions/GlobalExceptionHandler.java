@@ -16,7 +16,10 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.NoHandlerFoundException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import java.util.HashMap;
 import java.util.Map;
@@ -178,6 +181,18 @@ public class GlobalExceptionHandler {
         response.put("error", "Method Not Allowed");
         response.put("message", String.format("El método HTTP '%s' no está soportado para este endpoint", ex.getMethod()));
         return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).body(response);
+    }
+
+    /**
+     * Ruta inexistente: sin este handler el catch-all de abajo la convierte en un 500
+     * ("No static resource ..."), que ensucia los logs y confunde al probar URLs.
+     */
+    @ExceptionHandler({NoResourceFoundException.class, NoHandlerFoundException.class})
+    public ResponseEntity<Map<String, String>> handleNotFoundRoute(Exception ex, HttpServletRequest request) {
+        Map<String, String> response = new HashMap<>();
+        response.put("error", "Not Found");
+        response.put("message", String.format("No existe el recurso %s %s", request.getMethod(), request.getRequestURI()));
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
     }
 
     @ExceptionHandler(Exception.class)

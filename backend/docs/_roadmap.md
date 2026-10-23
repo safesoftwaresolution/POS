@@ -7,7 +7,7 @@ Este documento complementa los `spec.md` de cada módulo (que describen el compo
 
 | Módulo | Estado actual | Deuda técnica / faltante | Próximas ideas |
 |---|---|---|---|
-| auth | JWT access+refresh rotativo, roles SUPER_ADMIN/ADMINISTRATOR/SUPERVISOR/SELLER, auto-registro del dueño + verificación de correo (V7) | — | 2FA opcional para ADMIN |
+| auth | JWT access+refresh rotativo, roles SUPER_ADMIN/ADMINISTRATOR/SUPERVISOR/SELLER, auto-registro del dueño + verificación de correo (V7), reenvío de verificación y recuperación de contraseña por correo (V19) | — | 2FA opcional para ADMIN |
 | users | CRUD + seed de superadmin/admin por defecto (`DatabaseSeeder`). Personal de plataforma gestionado desde `/api/v1/backoffice/staff` | Credenciales sembradas (`superadmin`/`admin`) conocidas: obligar cambio en entornos expuestos | Invitación de usuarios por email en vez de creación directa |
 | categories | Catálogo global (no por tienda), seed base de 11 categorías genéricas (`CategorySeeder`). Subcategorías por tienda (`product_subcategories`), creadas libremente por Administrator/Supervisor bajo una categoría global, sin pedírselo a la plataforma (2026-09-16) | — | Íconos/colores por categoría para la grilla del POS |
 | products | CRUD por tienda (`store_id`), barcode + código interno únicos por tienda, subcategoría opcional por producto, seed demo solo en `dev` (`ProductDemoSeeder`) | Sin variantes de producto (talla/color) — fuera de alcance actual | Carga masiva por CSV/Excel |

@@ -70,6 +70,22 @@
 - **Permisos**: Público
 - **Response 200**: consume el token, marca el correo como verificado y autologuea (mismo formato que login, setea ambas cookies).
 
+### POST /api/v1/auth/resend-verification
+- **Permisos**: Público
+- **Request**: `{ "email": "..." }`
+- **Response**: `204 No Content` siempre, exista o no la cuenta. Solo envía si la cuenta existe y sigue sin verificar; máximo un envío por correo por minuto (en memoria). Si el correo falla en `register`, la cuenta queda creada y el usuario usa este endpoint.
+
+### POST /api/v1/auth/forgot-password
+- **Permisos**: Público
+- **Request**: `{ "email": "..." }`
+- **Response**: `204 No Content` siempre. Envía un enlace `…/reset-password?token=…` (vigencia `SECURITY_PASSWORD_RESET_EXPIRATION_MS`, 1 h) solo si la cuenta está activa y con el correo verificado; máximo un envío por correo por minuto.
+
+### POST /api/v1/auth/reset-password
+- **Permisos**: Público
+- **Request**: `{ "token": "...", "newPassword": "..." }`
+- **Response**: `204 No Content`. Consume el token (un solo uso), cambia la contraseña, revoca todos los refresh tokens del usuario y levanta su bloqueo por intentos fallidos. Es transaccional: si la contraseña no cumple la política, el token no se consume.
+- **Errores**: `400` con el motivo (enlace inválido, usado, expirado o contraseña débil). Se usa 400 y no 401 a propósito: el cliente interpreta cualquier 401 como sesión expirada.
+
 ### POST /api/v1/auth/refresh
 - **Permisos**: Público (el access token puede estar expirado)
 - **Request**: refresh token vía cookie `HttpOnly` o body `{ "refreshToken": "..." }`

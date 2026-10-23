@@ -51,6 +51,24 @@ Relación 1 a 1 con `stores`: la PK **es** el `store_id`. Ver DDL completo en `m
 | updated_by | VARCHAR(100) | Último usuario que modificó la configuración |
 | created_at / updated_at | TIMESTAMP | |
 
+## Tabla `store_status_audit` (módulo stores)
+Historial inmutable de cambios de estado de un local (`V18__Store_Status_Audit.sql`). Solo se inserta.
+
+| Columna | Tipo | Notas |
+|---|---|---|
+| id | BIGSERIAL PK | |
+| store_id | BIGINT | `FK_store_status_audit_store` → `stores(id)` |
+| previous_status | VARCHAR(30) | Nulo en el registro inicial y en el respaldo de V18 |
+| new_status | VARCHAR(30) | `PENDING_VERIFICATION`, `ACTIVE`, `REJECTED`, `SUSPENDED`, `INACTIVE` |
+| reason | VARCHAR(255) | Motivo (rechazos) |
+| performed_by | VARCHAR(100) | Usuario autenticado; nulo en el respaldo de V18 |
+| created_at | TIMESTAMP | |
+
+Índices: `IDX_store_status_audit_store(store_id, created_at)`, `IDX_store_status_audit_status(new_status, created_at)`.
+
+## Tabla `password_reset_tokens` (módulo auth)
+Tokens de recuperación de contraseña (`V19__Password_Reset_Tokens.sql`), mismo esquema que `email_verification_tokens`: `token_hash` (SHA-256, único), `user_id` (FK `users`), `expires_at`, `used_at`, `created_at`. Índice `IDX_prt_user(user_id)`.
+
 ## Tabla `numbering_range_audit` (módulo billing)
 Bitácora de cambios sobre rangos de numeración DIAN (introducida en `V15__Numbering_Range_Audit.sql`).
 

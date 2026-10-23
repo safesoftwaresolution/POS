@@ -12,6 +12,9 @@
   - `POST /api/v1/auth/refresh` — renueva el access token a partir del refresh token (cookie `HttpOnly` o campo `refreshToken` en el body).
   - `POST /api/v1/auth/register` — auto-registro del dueño (crea un `ADMINISTRATOR` pendiente de verificar correo).
   - `GET /api/v1/auth/verify-email?token=...` — verifica el correo y autologuea.
+  - `POST /api/v1/auth/resend-verification` — reenvía el enlace de verificación; responde `204` siempre (no revela qué correos existen) y limita a un envío por correo por minuto.
+  - `POST /api/v1/auth/forgot-password` — envía un enlace de recuperación (un solo uso, 1 h) solo a cuentas activas con correo verificado; mismas garantías (`204` siempre, 1 envío/min).
+  - `POST /api/v1/auth/reset-password` — consume el token, fija la nueva contraseña (misma política de fortaleza), **revoca todas las sesiones** del usuario y limpia su bloqueo por intentos. Tokens: opacos, solo se guarda su SHA-256 (`password_reset_tokens`).
   - `GET /api/v1/legal/{slug}` (lectura pública de políticas y términos)
   - `POST /api/v1/support/tickets` (radicación pública de PQRs y bugs)
   - `GET /api/v1/support/tickets/track/{ticketNumber}` (tracking público)

@@ -2,6 +2,7 @@ package com.sciencebot.pos.auth;
 
 import com.sciencebot.pos.auth.internal.services.AuthService;
 import com.sciencebot.pos.auth.internal.services.EmailVerificationService;
+import com.sciencebot.pos.auth.internal.services.PasswordResetMailer;
 import com.sciencebot.pos.auth.internal.services.RefreshTokenService;
 import com.sciencebot.pos.config.security.JwtService;
 import com.sciencebot.pos.config.security.PosUserDetails;
@@ -39,6 +40,7 @@ class AuthServiceTest {
     @Mock private EmailVerificationService emailVerificationService;
     @Mock private EmailSender emailSender;
     @Mock private com.sciencebot.pos.auth.internal.services.PasswordResetService passwordResetService;
+    @Mock private PasswordResetMailer passwordResetMailer;
     @InjectMocks private AuthService authService;
 
     @BeforeEach
@@ -245,14 +247,13 @@ class AuthServiceTest {
     }
 
     @Test
-    void forgotPassword_VerifiedActiveAccount_SendsResetLinkOnce() {
+    void forgotPassword_VerifiedActiveAccount_HandsOffTheResetLinkOnce() {
         when(userFacade.findByEmail("admin@pos.com")).thenReturn(Optional.of(userDto(true)));
-        when(passwordResetService.issue(7L)).thenReturn("reset-token");
 
         authService.forgotPassword(" Admin@POS.com ");
         authService.forgotPassword("admin@pos.com"); // dentro del enfriamiento: se ignora
 
-        verify(emailSender, times(1)).send(eq("admin@pos.com"), anyString(), contains("/reset-password?token=reset-token"));
+        verify(passwordResetMailer, times(1)).sendResetLink(userDto(true));
     }
 
     @Test
@@ -266,16 +267,80 @@ class AuthServiceTest {
         authService.forgotPassword("off@pos.com");
         authService.forgotPassword("  ");
 
-        verifyNoInteractions(emailSender, passwordResetService);
+        verifyNoInteractions(passwordResetMailer, passwordResetService);
     }
 
     @Test
-    void forgotPassword_EmailFailure_DoesNotThrow() {
-        when(userFacade.findByEmail("admin@pos.com")).thenReturn(Optional.of(userDto(true)));
+    void passwordResetMailer_IssuesTokenAndSendsTheLink() {
+        PasswordResetMailer mailer = new PasswordResetMailer(passwordResetService, emailSender);
+        when(passwordResetService.issue(7L)).thenReturn("reset-token");
+
+        mailer.sendResetLink(userDto(true));
+
+        verify(emailSender).send(eq("admin@pos.com"), anyString(), contains("/reset-password?token=reset-token"));
+    }
+
+    @Test
+    void passwordResetMailer_EmailFailure_DoesNotThrow() {
+        PasswordResetMailer mailer = new PasswordResetMailer(passwordResetService, emailSender);
         when(passwordResetService.issue(7L)).thenReturn("reset-token");
         doThrow(new IllegalStateException("smtp down")).when(emailSender).send(anyString(), anyString(), anyString());
 
-        assertDoesNotThrow(() -> authService.forgotPassword("admin@pos.com"));
+        assertDoesNotThrow(() -> mailer.sendResetLink(userDto(true)));
+    }
+
+    @Test
+    void setAccountActive_Deactivating_RevokesSessions() {
+        when(userFacade.getById(7L)).thenReturn(userDto(true));
+
+        authService.setAccountActive(7L, false);
+
+        verify(userFacade).changeStatus(7L, false);
+        verify(refreshTokenService).revokeAllForUser(7L);
+    }
+
+    @Test
+    void setAccountActive_Reactivating_DoesNotTouchSessions() {
+        when(userFacade.getById(7L)).thenReturn(userDto(false));
+
+        authService.setAccountActive(7L, true);
+
+        verify(userFacade).changeStatus(7L, true);
+        verify(refreshTokenService, never()).revokeAllForUser(anyLong());
+    }
+
+    @Test
+    void setAccountActive_SuperAdmin_IsRefused() {
+        when(userFacade.getById(1L)).thenReturn(
+                new UserDto(1L, "Root", "root", "root@pos.com", "SUPER_ADMIN", true, null, true));
+
+        assertThrows(IllegalArgumentException.class, () -> authService.setAccountActive(1L, false));
+
+        verify(userFacade, never()).changeStatus(anyLong(), anyBoolean());
+    }
+
+    @Test
+    void deleteAccount_DeletesTokensThenTheUser() {
+        when(userFacade.getById(7L)).thenReturn(userDto(true));
+
+        authService.deleteAccount(7L);
+
+        var order = inOrder(refreshTokenService, emailVerificationService, passwordResetService, userFacade);
+        order.verify(refreshTokenService).deleteAllForUser(7L);
+        order.verify(emailVerificationService).deleteForUser(7L);
+        order.verify(passwordResetService).deleteForUser(7L);
+        order.verify(userFacade).deleteUserPermanently(7L);
+    }
+
+    @Test
+    void deleteAccount_SuperAdmin_IsRefusedBeforeTouchingAnything() {
+        when(userFacade.getById(1L)).thenReturn(
+                new UserDto(1L, "Root", "root", "root@pos.com", "SUPER_ADMIN", true, null, true));
+
+        assertThrows(IllegalArgumentException.class, () -> authService.deleteAccount(1L));
+
+        verify(userFacade, never()).deleteUserPermanently(anyLong());
+        verifyNoInteractions(refreshTokenService);
     }
 
     @Test

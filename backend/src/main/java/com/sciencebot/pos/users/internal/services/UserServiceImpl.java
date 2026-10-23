@@ -183,7 +183,8 @@ public class UserServiceImpl implements UserFacade, UserDetailsService {
             throw new IllegalArgumentException("No puedes desactivar a tu propio usuario");
         }
 
-        if (user.getRole().equals("ADMINISTRATOR")) {
+        // Solo al desactivar a un administrador que hoy esta activo; reactivar nunca deja un local sin administrador.
+        if (!active && user.isActive() && user.getRole().equals("ADMINISTRATOR")) {
             long adminCount = countActiveAdmins(user.getStoreId());
             if (adminCount <= 1) {
                 throw new IllegalArgumentException("No se puede desactivar al ultimo administrador activo");
@@ -294,6 +295,32 @@ public class UserServiceImpl implements UserFacade, UserDetailsService {
                     "Solo se puede eliminar a un usuario que no verifico su correo y no tiene un local.");
         }
         userRepository.delete(user);
+    }
+
+    @Override
+    @Transactional
+    public void deleteUserPermanently(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("Usuario no encontrado con ID: " + userId));
+        if ("SUPER_ADMIN".equals(user.getRole())) {
+            throw new IllegalArgumentException("No se puede eliminar a un super administrador.");
+        }
+        if (user.getUsername().equalsIgnoreCase(getCurrentUsername())) {
+            throw new IllegalArgumentException("No puedes eliminar a tu propio usuario");
+        }
+        if (user.isActive() && "ADMINISTRATOR".equals(user.getRole()) && user.getStoreId() != null
+                && countActiveAdmins(user.getStoreId()) <= 1) {
+            throw new IllegalArgumentException(
+                    "Es el unico administrador activo del local. Asigna otro administrador antes de eliminarlo.");
+        }
+        try {
+            userRepository.delete(user);
+            userRepository.flush(); // fuerza las llaves foraneas aqui para traducirlas a un mensaje claro
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            throw new IllegalStateException(
+                    "El usuario tiene ventas, compras, movimientos o devoluciones registrados y no se puede eliminar. "
+                            + "Inactívalo para impedir su acceso.");
+        }
     }
 
     @Override

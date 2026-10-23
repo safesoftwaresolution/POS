@@ -33,6 +33,7 @@ public class AuthService implements AuthFacade {
     private final EmailVerificationService emailVerificationService;
     private final EmailSender emailSender;
     private final PasswordResetService passwordResetService;
+    private final PasswordResetMailer passwordResetMailer;
 
     @Value("${app.frontend-url:http://localhost:3000}")
     private String frontendUrl;
@@ -47,7 +48,7 @@ public class AuthService implements AuthFacade {
     public AuthService(UserDetailsService userDetailsService, PasswordEncoder passwordEncoder,
                        JwtService jwtService, RefreshTokenService refreshTokenService, UserFacade userFacade,
                        EmailVerificationService emailVerificationService, EmailSender emailSender,
-                       PasswordResetService passwordResetService) {
+                       PasswordResetService passwordResetService, PasswordResetMailer passwordResetMailer) {
         this.userDetailsService = userDetailsService;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
@@ -56,6 +57,7 @@ public class AuthService implements AuthFacade {
         this.emailVerificationService = emailVerificationService;
         this.emailSender = emailSender;
         this.passwordResetService = passwordResetService;
+        this.passwordResetMailer = passwordResetMailer;
     }
 
     /** Auto-registro publico: crea al futuro dueno pendiente de verificar su correo y le envia el enlace. */
@@ -120,22 +122,45 @@ public class AuthService implements AuthFacade {
                 .filter(u -> u.active() && u.emailVerified())
                 .ifPresent(u -> {
                     lastForgotAt.put(cleanEmail, now);
-                    try {
-                        String rawToken = passwordResetService.issue(u.id());
-                        String link = frontendUrl + "/reset-password?token=" + rawToken;
-                        emailSender.send(
-                                u.email(),
-                                "Restablece tu contraseña - ProPOS",
-                                "<p>Hola " + u.fullName() + ",</p>"
-                                        + "<p>Recibimos una solicitud para restablecer tu contraseña de ProPOS. "
-                                        + "El enlace vence en 1 hora:</p>"
-                                        + "<p><a href=\"" + link + "\">Restablecer mi contraseña</a></p>"
-                                        + "<p>Si no fuiste tu, ignora este mensaje: tu contraseña no cambiará.</p>"
-                        );
-                    } catch (RuntimeException e) {
-                        log.warn("No se pudo enviar el correo de recuperacion a la cuenta {}", u.username(), e);
-                    }
+                    passwordResetMailer.sendResetLink(u); // asincrono: la respuesta no depende del SMTP
                 });
+    }
+
+    /**
+     * Inactiva o reactiva la cuenta de un usuario (acción del SUPER_ADMIN). Al inactivar cierra sus sesiones
+     * abiertas. No aplica a otro SUPER_ADMIN; las demás reglas (no a sí mismo, ni al último administrador
+     * activo del local, ni pasar el tope del plan al reactivar) las valida el módulo users.
+     */
+    @Override
+    @Transactional
+    public void setAccountActive(Long userId, boolean active) {
+        UserDto user = userFacade.getById(userId);
+        if ("SUPER_ADMIN".equals(user.role())) {
+            throw new IllegalArgumentException("No se puede inactivar a un super administrador.");
+        }
+        userFacade.changeStatus(userId, active);
+        if (!active) {
+            refreshTokenService.revokeAllForUser(userId);
+        }
+    }
+
+    /**
+     * Elimina definitivamente la cuenta de un usuario ya verificado (acción del SUPER_ADMIN) junto con sus
+     * tokens. Rechaza a un SUPER_ADMIN y a quien tenga historial (ventas, compras, movimientos o
+     * devoluciones): a esos solo se les puede inactivar para no romper los registros del local.
+     */
+    @Override
+    @Transactional
+    public void deleteAccount(Long userId) {
+        UserDto user = userFacade.getById(userId);
+        if ("SUPER_ADMIN".equals(user.role())) {
+            throw new IllegalArgumentException("No se puede eliminar a un super administrador.");
+        }
+        refreshTokenService.deleteAllForUser(userId);
+        emailVerificationService.deleteForUser(userId);
+        passwordResetService.deleteForUser(userId);
+        userFacade.deleteUserPermanently(userId); // si tiene historial lanza 409 y todo lo anterior se revierte
+        log.info("Cuenta {} (id {}) eliminada definitivamente por el super administrador", user.username(), userId);
     }
 
     /**

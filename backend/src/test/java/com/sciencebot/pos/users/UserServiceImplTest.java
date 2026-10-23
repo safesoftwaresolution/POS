@@ -171,6 +171,75 @@ class UserServiceImplTest {
     }
 
     @Test
+    void changeStatus_ReactivatingTheOnlyAdmin_IsAllowed() {
+        User inactiveAdmin = new User();
+        inactiveAdmin.setId(4L);
+        inactiveAdmin.setUsername("dueno");
+        inactiveAdmin.setRole("ADMINISTRATOR");
+        inactiveAdmin.setActive(false);
+        inactiveAdmin.setStoreId(1L);
+        when(userRepository.findById(4L)).thenReturn(Optional.of(inactiveAdmin));
+        when(userQuotaPolicy.quotaFor(1L)).thenReturn(Optional.empty());
+
+        userService.changeStatus(4L, true);
+
+        assertTrue(inactiveAdmin.isActive());
+    }
+
+    private static User userWithRole(Long id, String username, String role, boolean active, Long storeId) {
+        User u = new User();
+        u.setId(id);
+        u.setUsername(username);
+        u.setRole(role);
+        u.setActive(active);
+        u.setStoreId(storeId);
+        return u;
+    }
+
+    @Test
+    void deleteUserPermanently_RemovesAUserWithoutHistory() {
+        User seller = userWithRole(5L, "vendedor", "SELLER", true, 1L);
+        when(userRepository.findById(5L)).thenReturn(Optional.of(seller));
+
+        userService.deleteUserPermanently(5L);
+
+        verify(userRepository).delete(seller);
+        verify(userRepository).flush();
+    }
+
+    @Test
+    void deleteUserPermanently_WithBusinessHistory_ThrowsConflictAndKeepsTheUser() {
+        User seller = userWithRole(5L, "vendedor", "SELLER", true, 1L);
+        when(userRepository.findById(5L)).thenReturn(Optional.of(seller));
+        doThrow(new org.springframework.dao.DataIntegrityViolationException("FK_sales_user"))
+                .when(userRepository).flush();
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class, () -> userService.deleteUserPermanently(5L));
+
+        assertTrue(ex.getMessage().contains("Inactívalo"));
+    }
+
+    @Test
+    void deleteUserPermanently_RefusesSuperAdminSelfAndTheOnlyStoreAdmin() {
+        when(userRepository.findById(1L)).thenReturn(Optional.of(userWithRole(1L, "root", "SUPER_ADMIN", true, null)));
+        assertThrows(IllegalArgumentException.class, () -> userService.deleteUserPermanently(1L));
+
+        Authentication auth = mock(Authentication.class);
+        when(auth.getName()).thenReturn("yo");
+        SecurityContext context = mock(SecurityContext.class);
+        when(context.getAuthentication()).thenReturn(auth);
+        SecurityContextHolder.setContext(context);
+        when(userRepository.findById(2L)).thenReturn(Optional.of(userWithRole(2L, "yo", "SELLER", true, 1L)));
+        assertThrows(IllegalArgumentException.class, () -> userService.deleteUserPermanently(2L));
+
+        when(userRepository.findById(3L)).thenReturn(Optional.of(userWithRole(3L, "dueno", "ADMINISTRATOR", true, 1L)));
+        when(userRepository.countByStoreIdAndRoleAndActiveTrue(1L, "ADMINISTRATOR")).thenReturn(1L);
+        assertThrows(IllegalArgumentException.class, () -> userService.deleteUserPermanently(3L));
+
+        verify(userRepository, never()).delete(any(User.class));
+    }
+
+    @Test
     void getQuotaStatus_ReportsUsageForTheCallerStore() {
         TenantContext.setStoreId(1L);
         when(userQuotaPolicy.quotaFor(1L)).thenReturn(Optional.of(BASIC_QUOTA));

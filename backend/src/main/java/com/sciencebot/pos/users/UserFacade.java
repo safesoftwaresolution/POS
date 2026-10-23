@@ -24,6 +24,12 @@ public interface UserFacade {
      * otro usuario. El llamador debe borrar antes los tokens que lo referencian (módulo auth).
      */
     void deleteUnverifiedOwner(Long userId);
+    /**
+     * Borra de la base de datos a un usuario (no es la baja logica de {@link #deleteUser}). Rechaza a un
+     * SUPER_ADMIN, a uno mismo y al último administrador activo del local; lanza {@link IllegalStateException} si
+     * el usuario ya tiene ventas, compras, movimientos o devoluciones. El llamador borra antes sus tokens.
+     */
+    void deleteUserPermanently(Long userId);
     /** Establece una nueva contrasena sin contexto de sesion (flujo "olvide mi contrasena", ya validado por token). */
     void resetPassword(Long userId, String newPassword);
     /** Marca el correo del usuario como verificado (llamado al consumir el token de verificacion). */

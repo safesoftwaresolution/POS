@@ -25,6 +25,8 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 class StoreServiceImplTest {
@@ -38,6 +40,7 @@ class StoreServiceImplTest {
     @Mock private NotificationFacade notificationFacade;
     @Mock private com.sciencebot.pos.stores.internal.repositories.StoreStatusAuditRepository statusAuditRepository;
     @Mock private com.sciencebot.pos.stores.internal.repositories.StoreStatusAuditQueryDao statusAuditQueryDao;
+    @Mock private com.sciencebot.pos.stores.internal.repositories.StorePurgeDao storePurgeDao;
     @InjectMocks private StoreServiceImpl storeService;
 
     @BeforeEach
@@ -163,6 +166,67 @@ class StoreServiceImplTest {
         assertNotNull(result);
         assertEquals("REJECTED", result.status());
         assertEquals("Documentos incompletos", result.rejectionReason());
+    }
+
+    private StoreEntity storeWithStatus(String status) {
+        StoreEntity store = new StoreEntity();
+        store.setId(5L);
+        store.setName("Tienda Rechazada");
+        store.setEmail("rechazada@test.com");
+        store.setTaxId("900555");
+        store.setStatus(status);
+        store.setRejectionReason("Documentos ilegibles");
+        return store;
+    }
+
+    @Test
+    void deleteRejectedStore_Success_AuditsWithSnapshotPurgesAndDeletesFiles() {
+        when(storeRepository.findById(5L)).thenReturn(Optional.of(storeWithStatus("REJECTED")));
+        when(storePurgeDao.findBusinessData(5L)).thenReturn(List.of());
+        when(storePurgeDao.findDocumentUrls(5L)).thenReturn(List.of("https://cdn.test/documentos/abc.pdf", "https://x/otro.png"));
+
+        storeService.deleteRejectedStore(5L);
+
+        var captor = org.mockito.ArgumentCaptor.forClass(com.sciencebot.pos.stores.internal.entities.StoreStatusAuditEntity.class);
+        verify(statusAuditRepository).save(captor.capture());
+        assertEquals("DELETED", captor.getValue().getNewStatus());
+        assertEquals("REJECTED", captor.getValue().getPreviousStatus());
+        assertEquals("Tienda Rechazada", captor.getValue().getStoreName());
+        assertEquals("rechazada@test.com", captor.getValue().getStoreEmail());
+        assertEquals("900555", captor.getValue().getStoreTaxId());
+        assertTrue(captor.getValue().getReason().contains("Documentos ilegibles"));
+        verify(storePurgeDao).purge(5L);
+        verify(storageFacade).deleteFile("documentos/abc.pdf");
+        verify(storageFacade, times(1)).deleteFile(anyString());
+    }
+
+    @Test
+    void deleteRejectedStore_NotRejected_IsRefused() {
+        when(storeRepository.findById(5L)).thenReturn(Optional.of(storeWithStatus("ACTIVE")));
+
+        assertThrows(IllegalArgumentException.class, () -> storeService.deleteRejectedStore(5L));
+
+        verify(storePurgeDao, never()).purge(anyLong());
+        verifyNoInteractions(statusAuditRepository);
+    }
+
+    @Test
+    void deleteRejectedStore_WithBusinessData_IsRefused() {
+        when(storeRepository.findById(5L)).thenReturn(Optional.of(storeWithStatus("REJECTED")));
+        when(storePurgeDao.findBusinessData(5L)).thenReturn(List.of("sales", "products"));
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> storeService.deleteRejectedStore(5L));
+
+        assertTrue(ex.getMessage().contains("sales"));
+        verify(storePurgeDao, never()).purge(anyLong());
+        verifyNoInteractions(storageFacade);
+    }
+
+    @Test
+    void deleteRejectedStore_UnknownStore_ThrowsNotFound() {
+        when(storeRepository.findById(9L)).thenReturn(Optional.empty());
+
+        assertThrows(jakarta.persistence.EntityNotFoundException.class, () -> storeService.deleteRejectedStore(9L));
     }
 
     @Test

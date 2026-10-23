@@ -32,7 +32,9 @@ class V18MigrationSqlTest {
             }
             assertEquals(1L, count(conn, "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS "
                     + "WHERE TABLE_NAME = 'STORE_STATUS_AUDIT' AND CONSTRAINT_TYPE = 'PRIMARY KEY'"));
-            assertEquals(1L, count(conn, "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS "
+            // La FK a stores que creó V18 la elimina V20 a propósito (ver V20MigrationSqlTest): la auditoría
+            // debe sobrevivir al borrado del local.
+            assertEquals(0L, count(conn, "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS "
                     + "WHERE TABLE_NAME = 'STORE_STATUS_AUDIT' AND CONSTRAINT_TYPE = 'FOREIGN KEY'"));
             // El backfill deja una fila por cada local que ya no está pendiente.
             assertEquals(

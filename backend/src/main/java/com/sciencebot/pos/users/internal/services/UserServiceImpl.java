@@ -277,6 +277,18 @@ public class UserServiceImpl implements UserFacade, UserDetailsService {
 
     @Override
     @Transactional
+    public void deleteUnverifiedOwner(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("Usuario no encontrado con ID: " + userId));
+        if (!"ADMINISTRATOR".equals(user.getRole()) || user.isEmailVerified() || user.getStoreId() != null) {
+            throw new IllegalArgumentException(
+                    "Solo se puede eliminar a un usuario que no verifico su correo y no tiene un local.");
+        }
+        userRepository.delete(user);
+    }
+
+    @Override
+    @Transactional
     public void resetPassword(Long userId, String newPassword) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new EntityNotFoundException("Usuario no encontrado con ID: " + userId));

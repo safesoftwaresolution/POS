@@ -14,7 +14,8 @@ import java.util.Map;
 
 /**
  * Lectura del historial de estados de locales con SQL nativo (mismo patrón CQRS que reports):
- * une el registro de auditoría con los datos básicos del local sin cargar entidades.
+ * lee la copia de los datos del local guardada en cada fila, de modo que el historial sigue
+ * completo aunque el local ya haya sido eliminado.
  */
 @Repository
 public class StoreStatusAuditQueryDao {
@@ -33,17 +34,17 @@ public class StoreStatusAuditQueryDao {
             params.put("newStatus", newStatus);
         }
         if (q != null) {
-            filters.add("(LOWER(s.name) LIKE :q OR LOWER(s.email) LIKE :q OR LOWER(s.tax_id) LIKE :q"
+            filters.add("(LOWER(a.store_name) LIKE :q OR LOWER(a.store_email) LIKE :q OR LOWER(a.store_tax_id) LIKE :q"
                     + " OR LOWER(a.performed_by) LIKE :q)");
             params.put("q", "%" + q.toLowerCase() + "%");
         }
         String where = filters.isEmpty() ? "" : " WHERE " + String.join(" AND ", filters);
-        String from = " FROM store_status_audit a JOIN stores s ON s.id = a.store_id" + where;
+        String from = " FROM store_status_audit a" + where;
 
         long total = jdbcClient.sql("SELECT COUNT(*)" + from).params(params).query(Long.class).single();
 
         List<StoreStatusAuditDto> rows = jdbcClient.sql("""
-                SELECT a.id, a.store_id, s.name AS store_name, s.tax_id, s.email AS store_email,
+                SELECT a.id, a.store_id, a.store_name, a.store_tax_id AS tax_id, a.store_email,
                        a.previous_status, a.new_status, a.reason, a.performed_by, a.created_at
                 """ + from + " ORDER BY a.created_at DESC, a.id DESC LIMIT :limit OFFSET :offset")
                 .params(params)

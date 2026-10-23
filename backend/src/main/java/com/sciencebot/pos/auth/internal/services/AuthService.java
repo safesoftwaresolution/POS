@@ -152,6 +152,16 @@ public class AuthService implements AuthFacade {
     }
 
     @Override
+    @Transactional
+    public void deleteUnverifiedAccount(Long userId) {
+        refreshTokenService.deleteAllForUser(userId);
+        emailVerificationService.deleteForUser(userId);
+        passwordResetService.deleteForUser(userId);
+        // Valida (ADMINISTRATOR sin verificar y sin local) y borra; si no cumple, la transaccion revierte lo anterior.
+        userFacade.deleteUnverifiedOwner(userId);
+    }
+
+    @Override
     public void resendVerificationToUser(Long userId) {
         UserDto user = userFacade.getById(userId);
         if (user.emailVerified()) {

@@ -9,6 +9,7 @@ import com.sciencebot.pos.stores.internal.mappers.StoreMapper;
 import com.sciencebot.pos.stores.internal.repositories.StoreCategoryRepository;
 import com.sciencebot.pos.stores.internal.repositories.StoreDocumentRepository;
 import com.sciencebot.pos.stores.internal.repositories.StoreRepository;
+import com.sciencebot.pos.stores.internal.repositories.StorePurgeDao;
 import com.sciencebot.pos.stores.internal.repositories.StoreStatusAuditQueryDao;
 import com.sciencebot.pos.stores.internal.repositories.StoreStatusAuditRepository;
 import com.sciencebot.pos.notifications.CreateNotificationCommand;
@@ -22,8 +23,12 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
@@ -35,6 +40,8 @@ import java.util.Set;
 public class StoreServiceImpl implements StoreFacade {
 
     private static final Set<String> VALID_STATUSES = Set.of("ACTIVE", "INACTIVE", "PENDING_VERIFICATION", "SUSPENDED", "REJECTED");
+    private static final Logger log = LoggerFactory.getLogger(StoreServiceImpl.class);
+    private static final String DOCUMENTS_FOLDER = "documentos";
     private static final Set<String> VALID_DOCUMENT_TYPES = Set.of("RUT", "COMMERCE_CHAMBER", "ID_CARD", "BANK_CERTIFICATE", "OTHER");
 
     private final StoreRepository storeRepository;
@@ -46,6 +53,7 @@ public class StoreServiceImpl implements StoreFacade {
     private final NotificationFacade notificationFacade;
     private final StoreStatusAuditRepository statusAuditRepository;
     private final StoreStatusAuditQueryDao statusAuditQueryDao;
+    private final StorePurgeDao storePurgeDao;
 
     public StoreServiceImpl(StoreRepository storeRepository,
                             StoreCategoryRepository categoryRepository,
@@ -55,7 +63,8 @@ public class StoreServiceImpl implements StoreFacade {
                             StorageFacade storageFacade,
                             NotificationFacade notificationFacade,
                             StoreStatusAuditRepository statusAuditRepository,
-                            StoreStatusAuditQueryDao statusAuditQueryDao) {
+                            StoreStatusAuditQueryDao statusAuditQueryDao,
+                            StorePurgeDao storePurgeDao) {
         this.storeRepository = storeRepository;
         this.categoryRepository = categoryRepository;
         this.documentRepository = documentRepository;
@@ -65,6 +74,7 @@ public class StoreServiceImpl implements StoreFacade {
         this.notificationFacade = notificationFacade;
         this.statusAuditRepository = statusAuditRepository;
         this.statusAuditQueryDao = statusAuditQueryDao;
+        this.storePurgeDao = storePurgeDao;
     }
 
     @Override
@@ -110,7 +120,7 @@ public class StoreServiceImpl implements StoreFacade {
         entity.setStatus("PENDING_VERIFICATION");
         entity.setEmailVerified(false);
         StoreEntity saved = storeRepository.save(entity);
-        recordStatusChange(saved.getId(), null, saved.getStatus(), null);
+        recordStatusChange(saved, null, saved.getStatus(), null);
         return storeMapper.toDto(saved, resolveCategoryName(saved.getStoreCategoryId()));
     }
 
@@ -144,7 +154,7 @@ public class StoreServiceImpl implements StoreFacade {
         entity.setStatus(newStatus.toUpperCase());
         StoreEntity saved = storeRepository.save(entity);
         if (!saved.getStatus().equals(previousStatus)) {
-            recordStatusChange(saved.getId(), previousStatus, saved.getStatus(), null);
+            recordStatusChange(saved, previousStatus, saved.getStatus(), null);
         }
         return storeMapper.toDto(saved, resolveCategoryName(saved.getStoreCategoryId()));
     }
@@ -224,7 +234,7 @@ public class StoreServiceImpl implements StoreFacade {
         }
 
         // "documentos" es el nombre exacto de la carpeta creada en el bucket de Cloudflare R2.
-        StorageUploadResult uploaded = storageFacade.uploadFile(file, "documentos");
+        StorageUploadResult uploaded = storageFacade.uploadFile(file, DOCUMENTS_FOLDER);
 
         StoreDocumentEntity doc = new StoreDocumentEntity();
         doc.setStoreId(storeId);
@@ -256,8 +266,59 @@ public class StoreServiceImpl implements StoreFacade {
         entity.setStatus("REJECTED");
         entity.setRejectionReason(reason);
         StoreEntity saved = storeRepository.save(entity);
-        recordStatusChange(saved.getId(), previousStatus, "REJECTED", reason);
+        recordStatusChange(saved, previousStatus, "REJECTED", reason);
         return storeMapper.toDto(saved, resolveCategoryName(saved.getStoreCategoryId()));
+    }
+
+    /**
+     * Elimina definitivamente un local rechazado, su dueño y sus documentos (también los archivos del
+     * bucket). Solo si nunca operó. Deja un evento DELETED en la auditoría, que conserva los datos del local.
+     */
+    @Override
+    @Transactional
+    public void deleteRejectedStore(Long id) {
+        StoreEntity store = storeRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Local no encontrado con ID: " + id));
+        if (!"REJECTED".equals(store.getStatus())) {
+            throw new IllegalArgumentException("Solo se pueden eliminar locales rechazados.");
+        }
+        List<String> withData = storePurgeDao.findBusinessData(id);
+        if (!withData.isEmpty()) {
+            throw new IllegalArgumentException("El local ya tiene datos de operacion ("
+                    + String.join(", ", withData) + ") y no puede eliminarse.");
+        }
+
+        List<String> documentUrls = storePurgeDao.findDocumentUrls(id);
+        String reason = "Eliminado definitivamente"
+                + (store.getRejectionReason() != null ? " (motivo del rechazo: " + store.getRejectionReason() + ")" : "");
+        recordStatusChange(store, store.getStatus(), "DELETED", reason);
+        storePurgeDao.purge(id);
+
+        // Los archivos se borran solo si la transaccion confirma, para no perderlos si el borrado falla.
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    deleteDocumentFiles(documentUrls);
+                }
+            });
+        } else {
+            deleteDocumentFiles(documentUrls);
+        }
+    }
+
+    private void deleteDocumentFiles(List<String> documentUrls) {
+        for (String url : documentUrls) {
+            int idx = url == null ? -1 : url.indexOf(DOCUMENTS_FOLDER + "/");
+            if (idx < 0) {
+                continue;
+            }
+            try {
+                storageFacade.deleteFile(url.substring(idx));
+            } catch (RuntimeException e) {
+                log.warn("No se pudo borrar el archivo {} del bucket tras eliminar el local", url, e);
+            }
+        }
     }
 
     @Override
@@ -269,10 +330,13 @@ public class StoreServiceImpl implements StoreFacade {
     }
 
     /** Deja constancia inmutable de quién cambió el estado del local y cuándo. */
-    private void recordStatusChange(Long storeId, String previousStatus, String newStatus, String reason) {
+    private void recordStatusChange(StoreEntity store, String previousStatus, String newStatus, String reason) {
         var authentication = SecurityContextHolder.getContext().getAuthentication();
         StoreStatusAuditEntity entry = new StoreStatusAuditEntity();
-        entry.setStoreId(storeId);
+        entry.setStoreId(store.getId());
+        entry.setStoreName(store.getName());
+        entry.setStoreEmail(store.getEmail());
+        entry.setStoreTaxId(store.getTaxId());
         entry.setPreviousStatus(previousStatus);
         entry.setNewStatus(newStatus);
         entry.setReason(reason != null && reason.length() > 255 ? reason.substring(0, 255) : reason);

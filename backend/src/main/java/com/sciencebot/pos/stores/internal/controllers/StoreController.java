@@ -85,6 +85,16 @@ public class StoreController {
         return ResponseEntity.ok(storeFacade.rejectStore(id, body.get("reason")));
     }
 
+    @DeleteMapping("/api/v1/backoffice/stores/{id}")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @Operation(summary = "Eliminar definitivamente un local rechazado",
+            description = "Borra el local, su dueño y sus documentos. Solo locales REJECTED que nunca operaron. "
+                    + "La auditoria conserva un evento DELETED con los datos del local.")
+    public ResponseEntity<Void> deleteRejectedStore(@PathVariable Long id) {
+        storeFacade.deleteRejectedStore(id);
+        return ResponseEntity.noContent().build();
+    }
+
     @PatchMapping("/api/v1/backoffice/stores/{id}/verify-email")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     @Operation(summary = "Marcar correo del local como verificado")

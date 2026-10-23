@@ -11,6 +11,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -51,6 +52,14 @@ public class BackofficeOnboardingController {
                     + "y 409 si el proveedor de correo falla.")
     public ResponseEntity<Void> resendVerification(@PathVariable Long userId) {
         authFacade.resendVerificationToUser(userId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/pending-users/{userId}")
+    @Operation(summary = "Eliminar definitivamente a un usuario pendiente",
+            description = "Solo ADMINISTRATOR sin correo verificado y sin local. Borra la cuenta y sus tokens; no se puede deshacer.")
+    public ResponseEntity<Void> deletePendingUser(@PathVariable Long userId) {
+        authFacade.deleteUnverifiedAccount(userId);
         return ResponseEntity.noContent().build();
     }
 

@@ -8,4 +8,10 @@ public interface AuthFacade {
      * reenvío demasiado reciente o fallo del proveedor de correo.
      */
     void resendVerificationToUser(Long userId);
+
+    /**
+     * Elimina definitivamente la cuenta de un ADMINISTRATOR que no verificó su correo y no tiene local,
+     * junto con sus tokens (acción del SUPER_ADMIN). Falla si la cuenta no cumple esas condiciones.
+     */
+    void deleteUnverifiedAccount(Long userId);
 }

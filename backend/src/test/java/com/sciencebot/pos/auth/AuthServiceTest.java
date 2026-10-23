@@ -227,6 +227,24 @@ class AuthServiceTest {
     }
 
     @Test
+    void deleteUnverifiedAccount_DeletesTokensThenAccount() {
+        authService.deleteUnverifiedAccount(3L);
+
+        var order = inOrder(refreshTokenService, emailVerificationService, passwordResetService, userFacade);
+        order.verify(refreshTokenService).deleteAllForUser(3L);
+        order.verify(emailVerificationService).deleteForUser(3L);
+        order.verify(passwordResetService).deleteForUser(3L);
+        order.verify(userFacade).deleteUnverifiedOwner(3L);
+    }
+
+    @Test
+    void deleteUnverifiedAccount_NotEligible_PropagatesRefusal() {
+        doThrow(new IllegalArgumentException("no elegible")).when(userFacade).deleteUnverifiedOwner(7L);
+
+        assertThrows(IllegalArgumentException.class, () -> authService.deleteUnverifiedAccount(7L));
+    }
+
+    @Test
     void forgotPassword_VerifiedActiveAccount_SendsResetLinkOnce() {
         when(userFacade.findByEmail("admin@pos.com")).thenReturn(Optional.of(userDto(true)));
         when(passwordResetService.issue(7L)).thenReturn("reset-token");

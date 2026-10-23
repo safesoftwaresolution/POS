@@ -23,6 +23,16 @@ public class StoreStatusAuditEntity {
     @Column(name = "store_id", nullable = false, updatable = false)
     private Long storeId;
 
+    /** Copia de los datos del local al momento del evento: sobrevive a la eliminación del local. */
+    @Column(name = "store_name", length = 100, updatable = false)
+    private String storeName;
+
+    @Column(name = "store_email", length = 100, updatable = false)
+    private String storeEmail;
+
+    @Column(name = "store_tax_id", length = 50, updatable = false)
+    private String storeTaxId;
+
     @Column(name = "previous_status", length = 30, updatable = false)
     private String previousStatus;
 

@@ -13,7 +13,8 @@ import {
   Ban,
   Clock,
   Building2,
-  Users
+  Users,
+  Trash2
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import {
@@ -28,7 +29,8 @@ import {
   getBackofficeStoreCategoriesApi,
   getPlansApi,
   getStorePlanUsageApi,
-  changeBackofficeStorePlanApi
+  changeBackofficeStorePlanApi,
+  deleteBackofficeStoreApi
 } from '../../services/backoffice/storesApi';
 import { useModal } from '../../context/ModalContext';
 import useAutoRefresh from '../../hooks/useAutoRefresh';
@@ -91,6 +93,10 @@ export default function StoresBento() {
   const [rejectingDoc, setRejectingDoc] = useState(null);
   const [rejectionReason, setRejectionReason] = useState('');
 
+  const [deletingStore, setDeletingStore] = useState(null);
+  const [deleteConfirm, setDeleteConfirm] = useState('');
+  const [deleteBusy, setDeleteBusy] = useState(false);
+
   const loadMetrics = useCallback(async () => {
     try {
       setMetrics(await getBackofficeMetricsApi());
@@ -149,6 +155,28 @@ export default function StoresBento() {
       await Promise.all([loadStores(), loadPlans()]);
     } catch (err) {
       setErrorMsg(err.message || 'No se pudo cambiar el plan.');
+    }
+  };
+
+  const openDeleteStore = (store) => {
+    setErrorMsg('');
+    setDeleteConfirm('');
+    setDeletingStore(store);
+  };
+
+  const confirmDeleteStore = async () => {
+    if (!deletingStore) return;
+    setDeleteBusy(true);
+    try {
+      await deleteBackofficeStoreApi(deletingStore.id, deleteConfirm.trim());
+      notify(`El local "${deletingStore.name}" fue eliminado. Sus administradores quedaron sin local.`);
+      setDeletingStore(null);
+      await refreshAll();
+    } catch (err) {
+      setDeletingStore(null);
+      setErrorMsg(err.message || 'No se pudo eliminar el local.');
+    } finally {
+      setDeleteBusy(false);
     }
   };
 
@@ -424,6 +452,13 @@ export default function StoresBento() {
                         >
                           <Edit3 className="w-4 h-4" />
                         </button>
+                        <button
+                          onClick={() => openDeleteStore(s)}
+                          title="Eliminar local definitivamente"
+                          className="p-1.5 text-ink-muted hover:text-red-500 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 cursor-pointer"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -435,6 +470,49 @@ export default function StoresBento() {
       </div>
 
       {/* Create/Edit Store Modal */}
+      {deletingStore && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bento-card bg-card p-6 rounded-3xl max-w-md w-full space-y-4">
+            <h3 className="text-sm font-black text-ink flex items-center gap-2">
+              <Trash2 className="w-4 h-4 text-red-500" /> Eliminar "{deletingStore.name}"
+            </h3>
+            <p className="text-xs text-ink-soft leading-relaxed">
+              Se borra el local con todos sus datos: productos, clientes, ventas, compras, inventario, documentos y su
+              personal (supervisores y vendedores). No se puede deshacer. Los administradores <span className="font-bold text-ink">no
+              se eliminan</span>: quedan sin local y podrás reasignarlos o eliminarlos desde Usuarios. Si el local tiene facturas
+              electrónicas validadas ante la DIAN no se podrá eliminar.
+            </p>
+            <div className="space-y-1">
+              <label className="text-[11px] font-bold text-ink-soft block">
+                Escribe el nombre del local para confirmar:
+              </label>
+              <input
+                value={deleteConfirm}
+                onChange={(e) => setDeleteConfirm(e.target.value)}
+                placeholder={deletingStore.name}
+                className="w-full p-3 bg-page border border-line rounded-2xl text-xs font-semibold text-ink focus:outline-none focus:border-red-500"
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setDeletingStore(null)}
+                disabled={deleteBusy}
+                className="px-4 py-2 bg-gray-100 dark:bg-line text-gray-600 dark:text-gray-300 rounded-xl text-xs font-bold cursor-pointer disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmDeleteStore}
+                disabled={deleteBusy || deleteConfirm.trim().toLowerCase() !== (deletingStore.name || '').trim().toLowerCase()}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold cursor-pointer"
+              >
+                {deleteBusy ? 'Eliminando...' : 'Eliminar definitivamente'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showStoreModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
           <form onSubmit={handleSubmitStore} className="bento-card max-w-lg w-full bg-card p-6 rounded-3xl shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">

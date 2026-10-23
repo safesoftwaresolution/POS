@@ -58,8 +58,12 @@ export async function changeBackofficeStorePlanApi(id, planCode) {
   });
 }
 
-export async function deleteBackofficeStoreApi(id) {
-  return await fetchApi(`/backoffice/stores/${id}`, { method: 'DELETE' });
+// confirmName: nombre exacto del local; el backend lo exige salvo para un rechazado que nunca operó.
+export async function deleteBackofficeStoreApi(id, confirmName) {
+  return await fetchApi(`/backoffice/stores/${id}`, {
+    method: 'DELETE',
+    ...(confirmName ? { body: JSON.stringify({ confirmName }) } : {}),
+  });
 }
 
 export async function verifyBackofficeStoreEmailApi(id) {

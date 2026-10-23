@@ -1,12 +1,14 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Search, ChevronLeft, ChevronRight, AlertCircle, CheckCircle2, UserPlus, X, Store } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, AlertCircle, CheckCircle2, UserPlus, X, Store, UserX, UserCheck, Trash2 } from 'lucide-react';
 import {
   getUserDirectoryApi,
   getAssignableOwnersApi,
   getStoresWithoutOwnerApi,
   assignStoreOwnerApi,
   getOwnerAssignmentsApi,
+  setUserActiveApi,
+  deleteUserApi,
 } from '../../services/backoffice/usersDirectoryApi';
 
 const ROLE_LABELS = {
@@ -94,6 +96,8 @@ export default function UsersDirectoryBento() {
   const [assigning, setAssigning] = useState(null); // local al que se asigna
   const [selectedUserId, setSelectedUserId] = useState('');
   const [assignBusy, setAssignBusy] = useState(false);
+  const [deleting, setDeleting] = useState(null); // usuario pendiente de confirmar su eliminación
+  const [actionBusy, setActionBusy] = useState(false);
 
   const [history, setHistory] = useState(EMPTY_PAGE);
   const [historyPage, setHistoryPage] = useState(0);
@@ -169,13 +173,44 @@ export default function UsersDirectoryBento() {
     }
   };
 
+  const toggleActive = async (u) => {
+    setErrorMsg('');
+    setInfoMsg('');
+    setActionBusy(true);
+    try {
+      await setUserActiveApi(u.id, !u.active);
+      setInfoMsg(u.active ? `${u.fullName} fue inactivado y sus sesiones se cerraron.` : `${u.fullName} fue reactivado.`);
+      await Promise.all([loadDirectory(), loadOwnership()]);
+    } catch (e) {
+      setErrorMsg(e.message || 'No se pudo cambiar el estado del usuario.');
+    } finally {
+      setActionBusy(false);
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (!deleting) return;
+    setActionBusy(true);
+    try {
+      await deleteUserApi(deleting.id);
+      setInfoMsg(`${deleting.fullName} fue eliminado definitivamente.`);
+      setDeleting(null);
+      await Promise.all([loadDirectory(), loadOwnership()]);
+    } catch (e) {
+      setDeleting(null);
+      setErrorMsg(e.message || 'No se pudo eliminar el usuario.');
+    } finally {
+      setActionBusy(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-black text-[#17171B] dark:text-white">Usuarios por local</h1>
         <p className="text-xs text-ink-soft font-medium">
-          Consulta de solo lectura de los usuarios de la plataforma, el local al que pertenecen y su rol. Aquí solo puedes
-          asignar un administrador a un local que no tiene ninguno.
+          Usuarios de la plataforma, el local al que pertenecen y su rol. Puedes asignar un administrador a un local sin
+          administrador, inactivar o reactivar usuarios y eliminar a los que no tienen historial.
         </p>
       </div>
 
@@ -291,6 +326,7 @@ export default function UsersDirectoryBento() {
                   <th className="px-2 py-2">Rol</th>
                   <th className="px-2 py-2">Local</th>
                   <th className="px-2 py-2">Estado</th>
+                  <th className="px-2 py-2 text-right">Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -320,6 +356,31 @@ export default function UsersDirectoryBento() {
                       </Pill>
                       {!u.emailVerified && (
                         <Pill className="bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400">Sin verificar</Pill>
+                      )}
+                    </td>
+                    <td className="px-2 py-3 text-right whitespace-nowrap">
+                      {u.role === 'SUPER_ADMIN' ? (
+                        <span className="text-ink-muted font-semibold">—</span>
+                      ) : (
+                        <div className="inline-flex gap-1.5">
+                          <button
+                            onClick={() => toggleActive(u)}
+                            disabled={actionBusy}
+                            title={u.active ? 'Inactivar: impide el acceso y cierra sus sesiones' : 'Reactivar: vuelve a ocupar un cupo del plan'}
+                            className="px-2.5 py-1.5 bg-gray-100 dark:bg-line text-ink rounded-xl text-[11px] font-bold inline-flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                          >
+                            {u.active ? <UserX className="w-3.5 h-3.5" /> : <UserCheck className="w-3.5 h-3.5" />}
+                            {u.active ? 'Inactivar' : 'Reactivar'}
+                          </button>
+                          <button
+                            onClick={() => { setErrorMsg(''); setInfoMsg(''); setDeleting(u); }}
+                            disabled={actionBusy}
+                            title="Eliminar definitivamente"
+                            className="px-2.5 py-1.5 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 rounded-xl text-[11px] font-bold inline-flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" /> Eliminar
+                          </button>
+                        </div>
                       )}
                     </td>
                   </tr>
@@ -365,6 +426,37 @@ export default function UsersDirectoryBento() {
         )}
         <Pager page={historyPage} totalPages={history.totalPages} totalElements={history.totalElements} onChange={setHistoryPage} />
       </div>
+
+      {deleting && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bento-card bg-card p-6 rounded-3xl max-w-md w-full space-y-4">
+            <h3 className="text-sm font-black text-ink flex items-center gap-2">
+              <Trash2 className="w-4 h-4 text-red-500" /> Eliminar a {deleting.fullName}
+            </h3>
+            <p className="text-xs text-ink-soft leading-relaxed">
+              Se borra la cuenta <span className="font-bold text-ink">{deleting.username}</span> ({deleting.email}) y no se
+              puede deshacer. Si ya tiene ventas, compras, movimientos o devoluciones no se podrá eliminar: en ese caso
+              inactívalo para impedir su acceso.
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setDeleting(null)}
+                disabled={actionBusy}
+                className="px-4 py-2 bg-gray-100 dark:bg-line text-gray-600 dark:text-gray-300 rounded-xl text-xs font-bold cursor-pointer disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmDelete}
+                disabled={actionBusy}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold cursor-pointer"
+              >
+                {actionBusy ? 'Eliminando...' : 'Eliminar definitivamente'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {assigning && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">

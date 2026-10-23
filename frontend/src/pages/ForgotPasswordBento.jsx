@@ -45,6 +45,10 @@ export default function ForgotPasswordBento() {
               Si <span className="font-bold text-brand">{email}</span> corresponde a una cuenta verificada, te enviamos un enlace
               que vence en 1 hora. Revisa también la carpeta de spam.
             </p>
+            <p className="text-[11px] text-gray-400 leading-relaxed">
+              ¿No llega? Si nunca confirmaste tu correo, primero debes verificarlo: en el inicio de sesión puedes pedir que
+              te reenviemos el enlace de verificación. Si tu cuenta está inactiva, contacta a tu administrador.
+            </p>
           </div>
         ) : (
           <>

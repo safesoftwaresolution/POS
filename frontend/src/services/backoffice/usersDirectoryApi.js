@@ -28,3 +28,14 @@ export async function getOwnerAssignmentsApi(page = 0, size = 10) {
   const params = new URLSearchParams({ page, size });
   return await fetchApi(`/backoffice/user-assignments?${params.toString()}`);
 }
+
+export async function setUserActiveApi(userId, active) {
+  return await fetchApi(`/backoffice/users/${userId}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ active }),
+  });
+}
+
+export async function deleteUserApi(userId) {
+  return await fetchApi(`/backoffice/users/${userId}`, { method: 'DELETE' });
+}

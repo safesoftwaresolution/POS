@@ -122,8 +122,16 @@ export async function fetchApi(endpoint, options = {}, _retried = false) {
     throw new Error(errorData.message || `Error HTTP ${response.status}`);
   }
 
+  return readSuccessBody(response);
+}
+
+// Lee el cuerpo de una respuesta exitosa. Un 204, o un 200/201 sin cuerpo (p. ej. POST /auth/register,
+// que responde 201 vacio), devuelve true: llamar a response.json() sobre un cuerpo vacio lanza
+// "Unexpected end of JSON input" aunque la operacion haya tenido exito.
+async function readSuccessBody(response) {
   if (response.status === 204) return true;
-  return await response.json();
+  const text = await response.text();
+  return text ? JSON.parse(text) : true;
 }
 
 // Variante de fetchApi para subir archivos (multipart/form-data). No fija 'Content-Type':
@@ -161,6 +169,5 @@ export async function uploadFileApi(endpoint, formData, options = {}, _retried =
     throw new Error(errorData.message || `Error HTTP ${response.status}`);
   }
 
-  if (response.status === 204) return true;
-  return await response.json();
+  return readSuccessBody(response);
 }

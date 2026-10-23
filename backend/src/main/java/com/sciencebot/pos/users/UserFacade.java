@@ -7,6 +7,7 @@ import java.util.Optional;
 
 public interface UserFacade {
     Optional<UserDto> findByUsername(String username);
+    Optional<UserDto> findByEmail(String email);
     UserDto createUser(CreateUserCommand command);
     UserDto updateUser(Long id, UpdateUserCommand command);
     void deleteUser(Long id);

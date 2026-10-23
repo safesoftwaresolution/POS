@@ -96,6 +96,18 @@ public class AuthController {
                 .body(response);
     }
 
+    @PostMapping("/resend-verification")
+    @SecurityRequirements
+    @Operation(
+            summary = "Reenviar verificacion de correo",
+            description = "Reenvia el enlace de verificacion si la cuenta existe y sigue sin verificar. "
+                    + "Responde 204 siempre, exista o no el correo."
+    )
+    public ResponseEntity<Void> resendVerification(@RequestBody Map<String, String> body) {
+        authService.resendVerification(body == null ? null : body.get("email"));
+        return ResponseEntity.noContent().build();
+    }
+
     @PostMapping("/refresh")
     @SecurityRequirements
     @Operation(

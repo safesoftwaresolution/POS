@@ -158,6 +158,43 @@ class AuthServiceTest {
     }
 
     @Test
+    void register_EmailFailure_StillCreatesAccountWithoutThrowing() {
+        RegisterOwnerCommand command = new RegisterOwnerCommand("Carlos Martinez", "carlos.m", "carlos@empresa.com", "Password123");
+        UserDto created = new UserDto(3L, "Carlos Martinez", "carlos.m", "carlos@empresa.com", "ADMINISTRATOR", true, null, false);
+
+        when(userFacade.registerPendingAdmin(command)).thenReturn(created);
+        when(emailVerificationService.issue(3L)).thenReturn("raw-token");
+        doThrow(new IllegalStateException("smtp down")).when(emailSender).send(anyString(), anyString(), anyString());
+
+        assertDoesNotThrow(() -> authService.register(command));
+        verify(userFacade).registerPendingAdmin(command);
+    }
+
+    @Test
+    void resendVerification_UnverifiedAccount_SendsNewLinkOnce() {
+        UserDto pending = new UserDto(3L, "Carlos", "carlos.m", "carlos@empresa.com", "ADMINISTRATOR", true, null, false);
+        when(userFacade.findByEmail("carlos@empresa.com")).thenReturn(Optional.of(pending));
+        when(emailVerificationService.issue(3L)).thenReturn("new-token");
+
+        authService.resendVerification("  Carlos@Empresa.com ");
+        authService.resendVerification("carlos@empresa.com"); // dentro del enfriamiento: se ignora
+
+        verify(emailSender, times(1)).send(eq("carlos@empresa.com"), anyString(), contains("new-token"));
+    }
+
+    @Test
+    void resendVerification_VerifiedOrUnknownAccount_SendsNothing() {
+        when(userFacade.findByEmail("ok@empresa.com")).thenReturn(Optional.of(userDto(true)));
+        when(userFacade.findByEmail("nadie@empresa.com")).thenReturn(Optional.empty());
+
+        authService.resendVerification("ok@empresa.com");
+        authService.resendVerification("nadie@empresa.com");
+        authService.resendVerification(null);
+
+        verifyNoInteractions(emailSender);
+    }
+
+    @Test
     void verifyEmail_Success_MarksVerifiedAndAutoLogsIn() {
         UserDto verified = new UserDto(3L, "Carlos Martinez", "carlos.m", "carlos@empresa.com", "ADMINISTRATOR", true, null, true);
 

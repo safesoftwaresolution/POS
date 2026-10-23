@@ -7,6 +7,8 @@ import com.sciencebot.pos.shared.email.EmailSender;
 import com.sciencebot.pos.users.RegisterOwnerCommand;
 import com.sciencebot.pos.users.UserDto;
 import com.sciencebot.pos.users.UserFacade;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
@@ -32,7 +34,11 @@ public class AuthService {
     @Value("${app.frontend-url:http://localhost:3000}")
     private String frontendUrl;
 
+    private static final Logger log = LoggerFactory.getLogger(AuthService.class);
+    private static final long RESEND_COOLDOWN_MS = 60_000L;
+
     private final ConcurrentHashMap<String, LockoutDetails> lockoutCache = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Long> lastResendAt = new ConcurrentHashMap<>();
 
     public AuthService(UserDetailsService userDetailsService, PasswordEncoder passwordEncoder,
                        JwtService jwtService, RefreshTokenService refreshTokenService, UserFacade userFacade,
@@ -49,12 +55,50 @@ public class AuthService {
     /** Auto-registro publico: crea al futuro dueno pendiente de verificar su correo y le envia el enlace. */
     public void register(RegisterOwnerCommand command) {
         UserDto created = userFacade.registerPendingAdmin(command);
-        String rawToken = emailVerificationService.issue(created.id());
+        try {
+            sendVerificationEmail(created);
+        } catch (RuntimeException e) {
+            // La cuenta ya existe: si el correo falla no se le devuelve un error al usuario (reintentar
+            // chocaria con usuario/correo duplicado); puede pedir el reenvio desde el login.
+            log.warn("Cuenta {} creada pero no se pudo enviar el correo de verificacion", created.username(), e);
+        }
+    }
+
+    /**
+     * Reenvia el enlace de verificacion. Responde siempre igual (exista o no la cuenta) para no revelar
+     * que correos estan registrados, y limita el reenvio a uno por correo cada {@value #RESEND_COOLDOWN_MS} ms.
+     */
+    public void resendVerification(String email) {
+        if (email == null || email.isBlank()) {
+            return;
+        }
+        String cleanEmail = email.trim().toLowerCase();
+
+        long now = System.currentTimeMillis();
+        Long last = lastResendAt.get(cleanEmail);
+        if (last != null && now - last < RESEND_COOLDOWN_MS) {
+            return;
+        }
+
+        userFacade.findByEmail(cleanEmail)
+                .filter(u -> !u.emailVerified())
+                .ifPresent(u -> {
+                    lastResendAt.put(cleanEmail, now);
+                    try {
+                        sendVerificationEmail(u);
+                    } catch (RuntimeException e) {
+                        log.warn("No se pudo reenviar la verificacion a la cuenta {}", u.username(), e);
+                    }
+                });
+    }
+
+    private void sendVerificationEmail(UserDto user) {
+        String rawToken = emailVerificationService.issue(user.id());
         String link = frontendUrl + "/verify-email?token=" + rawToken;
         emailSender.send(
-                created.email(),
+                user.email(),
                 "Verifica tu correo - ProPOS",
-                "<p>Hola " + created.fullName() + ",</p>"
+                "<p>Hola " + user.fullName() + ",</p>"
                         + "<p>Gracias por registrarte en ProPOS. Confirma tu correo para activar tu cuenta:</p>"
                         + "<p><a href=\"" + link + "\">Verificar mi correo</a></p>"
                         + "<p>Si no fuiste tu, ignora este mensaje.</p>"

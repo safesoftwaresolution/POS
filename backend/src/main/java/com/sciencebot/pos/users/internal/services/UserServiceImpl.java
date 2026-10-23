@@ -61,6 +61,11 @@ public class UserServiceImpl implements UserFacade, UserDetailsService {
     }
 
     @Override
+    public Optional<UserDto> findByEmail(String email) {
+        return userRepository.findByEmail(email).map(userMapper::toDto);
+    }
+
+    @Override
     @Transactional
     public UserDto createUser(CreateUserCommand command) {
         validateRole(command.role());

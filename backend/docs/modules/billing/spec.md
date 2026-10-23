@@ -133,8 +133,9 @@ Las operaciones sobre Factus ya **no devuelven listas vacías ni `false` silenci
 | Situación | Excepción | HTTP |
 |---|---|---|
 | Local sin facturación habilitada / sin rango | `BillingNotEnabledException` | 409 Conflict |
-| Factus objetó los datos enviados (4xx, no auth) | `FactusApiException` | 422 Unprocessable Content (`HttpStatus.UNPROCESSABLE_CONTENT`) |
-| Factus rechazó las credenciales (401/403) o no responde (5xx, timeout) | `FactusApiException` | 502 Bad Gateway |
+| Factus objetó los datos enviados (4xx, no auth) | `FactusApiException` (extiende `BillingProviderException`) | 422 Unprocessable Content (`HttpStatus.UNPROCESSABLE_CONTENT`) |
+| Factus rechazó las credenciales (401/403) o no responde (5xx, timeout) | `FactusApiException` (extiende `BillingProviderException`) | 502 Bad Gateway |
+| El proveedor activo no implementa la operación | `UnsupportedOperationException` | 501 Not Implemented |
 
 El mensaje del proveedor se propaga al cliente (truncado a 500 caracteres) para que el usuario sepa qué corregir.
 
@@ -159,8 +160,11 @@ El mensaje del proveedor se propaga al cliente (truncado a 500 caracteres) para 
 - Facturar sin local asociado a la venta falla (`IllegalStateException`); no hay respaldo al local 1.
 
 ### RN-BILL-017 — Proveedor Configurado
-- `billing.provider` (`factus` | `mock`) debe corresponder a un adaptador registrado. Si no existe, **la operación falla** con un mensaje que lista los proveedores disponibles: ya no hay respaldo silencioso a `mock`, que emitiría facturas falsas por una errata de configuración.
+- `billing.provider` (`factus` | `mock`) debe corresponder a un adaptador registrado. Si no existe, **la aplicación no arranca** (`BillingProviderStartupValidator`) y el error lista los proveedores disponibles; si aun así una operación lo resolviera en tiempo de ejecución, también falla con ese listado: no hay respaldo silencioso a `mock`, que emitiría facturas falsas por una errata de configuración.
 - `MockBillingAdapter` solo se registra con `billing.provider=mock` (`@ConditionalOnProperty`).
+- **Puerto de cuenta (`BillingAccountProvider`)**: todo adaptador (`ElectronicInvoicingProvider`) implementa además `isAccountConfigured(storeId, env)`, `verifyConnection(storeId, env)`, `onAccountChanged(storeId)` y `displayName()`. `StoreBillingConfigServiceImpl` y `BillingActivationMapper` obtienen el proveedor activo a través de `ActiveBillingProvider` (activación a `ACTIVE`, cambio de entorno, prueba de conexión, invalidación de caché tras cargar credenciales, flags `sandboxConfigured`/`productionConfigured`) y ya no dependen de clases `Factus*`. El mock da la cuenta siempre por configurada y la prueba de conexión por exitosa.
+- `BillingProviderException` es la base común de los errores de un proveedor (`FactusApiException` la extiende). `GlobalExceptionHandler` aplica el mapeo de RN-BILL-009 a la base y responde **501 Not Implemented** a una `UnsupportedOperationException` (operación no implementada por el proveedor activo).
+- La sincronización del logo de `settings` solo se intenta si `billing.provider=factus`.
 
 ### RN-BILL-018 — Timeouts de Salida
 - Todos los clientes HTTP hacia Factus (`FactusClientHelper`, `FactusTokenManager`) y el sincronizado del logo se crean con `OutboundHttp.restClient()`: conexión 5 s, lectura 45 s. Un proveedor lento ya no deja hilos ni filas bloqueadas indefinidamente.

@@ -167,6 +167,23 @@ class FactusCredentialsResolverTest {
     }
 
     @Test
+    void isConfiguredLooksOnlyAtTheCredentialsOfTheGivenEnvironment() {
+        config(5L, BillingActivationStatus.AWAITING_PROVIDER).getProduction().setPassword(null);
+
+        assertTrue(resolver.isConfigured(5L, BillingEnvironment.SANDBOX), "no exige que el local esté ACTIVE");
+        assertFalse(resolver.isConfigured(5L, BillingEnvironment.PRODUCTION));
+    }
+
+    @Test
+    void isConfiguredIsFalseWithoutRowStoreOrEnvironment() {
+        when(repository.findById(9L)).thenReturn(Optional.empty());
+
+        assertFalse(resolver.isConfigured(9L, BillingEnvironment.SANDBOX));
+        assertFalse(resolver.isConfigured(null, BillingEnvironment.SANDBOX));
+        assertFalse(resolver.isConfigured(5L, null));
+    }
+
+    @Test
     void accessNeverPrintsSecrets() {
         config(5L, BillingActivationStatus.ACTIVE);
 

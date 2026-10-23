@@ -80,7 +80,7 @@ class StoreBillingConfigControllerTest {
 
     @Test
     void testConnection_DelegatesToService() {
-        BillingConnectionTestResult result = BillingConnectionTestResult.success(BillingEnvironment.SANDBOX);
+        BillingConnectionTestResult result = BillingConnectionTestResult.success(BillingEnvironment.SANDBOX, "Factus");
         when(service.testConnection(STORE, BillingEnvironment.SANDBOX)).thenReturn(result);
 
         ResponseEntity<BillingConnectionTestResult> response = controller.testConnection(STORE, BillingEnvironment.SANDBOX);

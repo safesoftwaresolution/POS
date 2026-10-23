@@ -1,5 +1,6 @@
 package com.sciencebot.pos.billing.internal.adapters.factus;
 
+import com.sciencebot.pos.billing.dto.BillingEnvironment;
 import com.sciencebot.pos.billing.dto.CreateNumberingRangeRequest;
 import com.sciencebot.pos.billing.dto.NumberingRangeDto;
 import com.sciencebot.pos.billing.internal.adapters.ElectronicInvoicingProvider;
@@ -26,22 +27,50 @@ public class FactusBillingAdapter implements ElectronicInvoicingProvider {
     private final FactusNumberingRangeClient rangeClient;
     private final FactusCreditNoteClient creditNoteClient;
     private final FactusDebitNoteClient debitNoteClient;
+    private final FactusCredentialsResolver credentialsResolver;
+    private final FactusTokenManager tokenManager;
 
     public FactusBillingAdapter(
             FactusInvoiceClient invoiceClient,
             FactusNumberingRangeClient rangeClient,
             FactusCreditNoteClient creditNoteClient,
-            FactusDebitNoteClient debitNoteClient
+            FactusDebitNoteClient debitNoteClient,
+            FactusCredentialsResolver credentialsResolver,
+            FactusTokenManager tokenManager
     ) {
         this.invoiceClient = invoiceClient;
         this.rangeClient = rangeClient;
         this.creditNoteClient = creditNoteClient;
         this.debitNoteClient = debitNoteClient;
+        this.credentialsResolver = credentialsResolver;
+        this.tokenManager = tokenManager;
     }
 
     @Override
     public String getProviderName() {
         return "factus";
+    }
+
+    // --- Cuenta del local (credenciales y token OAuth2 de Factus) ---
+
+    @Override
+    public boolean isAccountConfigured(Long storeId, BillingEnvironment environment) {
+        return credentialsResolver.isConfigured(storeId, environment);
+    }
+
+    @Override
+    public void verifyConnection(Long storeId, BillingEnvironment environment) {
+        tokenManager.verifyConnection(storeId, environment);
+    }
+
+    @Override
+    public void onAccountChanged(Long storeId) {
+        tokenManager.invalidate(storeId);
+    }
+
+    @Override
+    public String displayName() {
+        return "Factus";
     }
 
     // --- Facturas (delegado a FactusInvoiceClient) ---

@@ -1,5 +1,6 @@
 package com.sciencebot.pos.billing;
 
+import com.sciencebot.pos.billing.dto.BillingEnvironment;
 import com.sciencebot.pos.billing.dto.CreateCreditNoteRequest;
 import com.sciencebot.pos.billing.dto.CreateDebitNoteRequest;
 import com.sciencebot.pos.billing.dto.CreateNumberingRangeRequest;
@@ -8,6 +9,8 @@ import com.sciencebot.pos.billing.internal.adapters.dto.DebitNoteResult;
 import com.sciencebot.pos.billing.internal.adapters.dto.InvoiceRequest;
 import com.sciencebot.pos.billing.internal.adapters.dto.InvoiceResult;
 import com.sciencebot.pos.billing.internal.adapters.factus.FactusBillingAdapter;
+import com.sciencebot.pos.billing.internal.adapters.factus.FactusCredentialsResolver;
+import com.sciencebot.pos.billing.internal.adapters.factus.FactusTokenManager;
 import com.sciencebot.pos.billing.internal.adapters.factus.FactusDebitNoteClient;
 import com.sciencebot.pos.billing.internal.adapters.factus.FactusInvoiceClient;
 import com.sciencebot.pos.billing.internal.adapters.factus.FactusNumberingRangeClient;
@@ -36,12 +39,19 @@ class FactusBillingAdapterTest {
     @Mock
     private FactusDebitNoteClient debitNoteClient;
 
+    @Mock
+    private FactusCredentialsResolver credentialsResolver;
+
+    @Mock
+    private FactusTokenManager tokenManager;
+
     private FactusBillingAdapter adapter;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        adapter = new FactusBillingAdapter(invoiceClient, rangeClient, creditNoteClient, debitNoteClient);
+        adapter = new FactusBillingAdapter(invoiceClient, rangeClient, creditNoteClient, debitNoteClient,
+                credentialsResolver, tokenManager);
     }
 
     @Test
@@ -288,5 +298,47 @@ class FactusBillingAdapterTest {
 
         assertTrue(result);
         verify(debitNoteClient).deleteUnvalidatedDebitNote("ND-001", 1L);
+    }
+
+    // --- Puerto BillingAccountProvider (cuenta del local) ---
+
+    @Test
+    void displayName_ReturnsFactus() {
+        assertEquals("Factus", adapter.displayName());
+    }
+
+    @Test
+    void isAccountConfigured_DelegatesToCredentialsResolver() {
+        when(credentialsResolver.isConfigured(7L, BillingEnvironment.SANDBOX)).thenReturn(true);
+        when(credentialsResolver.isConfigured(7L, BillingEnvironment.PRODUCTION)).thenReturn(false);
+
+        assertTrue(adapter.isAccountConfigured(7L, BillingEnvironment.SANDBOX));
+        assertFalse(adapter.isAccountConfigured(7L, BillingEnvironment.PRODUCTION));
+    }
+
+    @Test
+    void verifyConnection_DelegatesToTokenManagerForTheRequestedEnvironment() {
+        adapter.verifyConnection(7L, BillingEnvironment.PRODUCTION);
+
+        verify(tokenManager).verifyConnection(7L, BillingEnvironment.PRODUCTION);
+    }
+
+    @Test
+    void verifyConnection_PropagatesTheProviderException() {
+        doThrow(new com.sciencebot.pos.billing.exception.FactusApiException(401, "credenciales inválidas", null))
+                .when(tokenManager).verifyConnection(7L, BillingEnvironment.SANDBOX);
+
+        com.sciencebot.pos.billing.exception.BillingProviderException ex = assertThrows(
+                com.sciencebot.pos.billing.exception.BillingProviderException.class,
+                () -> adapter.verifyConnection(7L, BillingEnvironment.SANDBOX));
+
+        assertTrue(ex.isAuthenticationError());
+    }
+
+    @Test
+    void onAccountChanged_InvalidatesTheCachedTokenOfThatStore() {
+        adapter.onAccountChanged(7L);
+
+        verify(tokenManager).invalidate(7L);
     }
 }

@@ -265,8 +265,10 @@
         "Suite verde y Factus se comporta igual",
         "BILLING_PROVIDER desconocido falla al arrancar"
       ],
-      "status": "pending",
-      "assigned_to": null
+      "status": "done",
+      "assigned_to": null,
+      "completed_at": "2026-10-22",
+      "notes": "Revisada: aprobada con observaciones menores (sin bloqueantes). Suite completa 506 tests en verde. Con billing.provider=mock un local puede pasar a ACTIVE sin credenciales (isAccountConfigured siempre true); el handler 501 es global. Sin commitear hasta aprobación del usuario."
     },
     {
       "id": "FEAT-022",

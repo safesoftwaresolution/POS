@@ -1,5 +1,6 @@
 package com.sciencebot.pos.billing.internal.adapters.mock;
 
+import com.sciencebot.pos.billing.dto.BillingEnvironment;
 import com.sciencebot.pos.billing.dto.CreateDebitNoteRequest;
 import com.sciencebot.pos.billing.internal.adapters.ElectronicInvoicingProvider;
 import com.sciencebot.pos.billing.internal.adapters.dto.DebitNoteResult;
@@ -21,6 +22,28 @@ public class MockBillingAdapter implements ElectronicInvoicingProvider {
     @Override
     public String getProviderName() {
         return "mock";
+    }
+
+    // --- Cuenta del local: el mock no necesita credenciales ni hace llamadas de red ---
+
+    @Override
+    public boolean isAccountConfigured(Long storeId, BillingEnvironment environment) {
+        return true;
+    }
+
+    @Override
+    public void verifyConnection(Long storeId, BillingEnvironment environment) {
+        // Nada que verificar: no hay proveedor externo.
+    }
+
+    @Override
+    public void onAccountChanged(Long storeId) {
+        // Sin caché que invalidar.
+    }
+
+    @Override
+    public String displayName() {
+        return "Mock";
     }
 
     @Override

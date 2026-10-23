@@ -13,6 +13,7 @@ import com.sciencebot.pos.storage.StorageUploadResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -36,6 +37,8 @@ public class CompanyLogoServiceImpl implements CompanyLogoService {
 
     private static final Logger log = LoggerFactory.getLogger(CompanyLogoServiceImpl.class);
 
+    private static final String FACTUS_PROVIDER = "factus";
+
     private static final long MAX_FILE_SIZE_BYTES = 200 * 1024; // 200 KB = 204,800 bytes
     private static final int MAX_WIDTH_PX = 300;
     private static final int MAX_HEIGHT_PX = 300;
@@ -54,6 +57,13 @@ public class CompanyLogoServiceImpl implements CompanyLogoService {
     private final RestClient restClient;
 
     private String factusBaseUrl;
+
+    /**
+     * Proveedor de facturación configurado. La sincronización del logo usa la API de Factus, así que
+     * solo se intenta si el proveedor activo es Factus (otro proveedor o el mock no la exponen).
+     */
+    @Value("${billing.provider:factus}")
+    private String billingProvider = FACTUS_PROVIDER;
 
     @Autowired
     public CompanyLogoServiceImpl(SettingsRepository settingsRepository,
@@ -118,7 +128,9 @@ public class CompanyLogoServiceImpl implements CompanyLogoService {
                 synced,
                 synced
                         ? "Logo actualizado en base de datos local y sincronizado exitosamente con Factus."
-                        : "Logo actualizado en base de datos local. No se sincronizó con Factus porque la facturación electrónica del local no está activa."
+                        : isFactusActiveProvider()
+                                ? "Logo actualizado en base de datos local. No se sincronizó con Factus porque la facturación electrónica del local no está activa."
+                                : "Logo actualizado en base de datos local. No se sincronizó con Factus porque el proveedor de facturación configurado no es Factus."
         );
     }
 
@@ -228,6 +240,10 @@ public class CompanyLogoServiceImpl implements CompanyLogoService {
      * Sincroniza la imagen con Factus API enviando un POST multipart/form-data a /v2/companies/logo.
      */
     private boolean syncLogoWithFactus(MultipartFile file, String originalFilename) {
+        if (!isFactusActiveProvider()) {
+            log.info("Logo no sincronizado: el proveedor de facturación configurado es '{}', no Factus", billingProvider);
+            return false;
+        }
         String token;
         String baseUrl;
         try {
@@ -287,6 +303,10 @@ public class CompanyLogoServiceImpl implements CompanyLogoService {
             log.error("Error inesperado al conectar con Factus API: {}", ex.getMessage());
             throw new IllegalStateException("Error de comunicación al sincronizar con Factus API: " + ex.getMessage(), ex);
         }
+    }
+
+    private boolean isFactusActiveProvider() {
+        return billingProvider != null && FACTUS_PROVIDER.equals(billingProvider.trim().toLowerCase());
     }
 
     private String sanitizeFilename(String filename) {

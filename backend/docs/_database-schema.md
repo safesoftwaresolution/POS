@@ -68,6 +68,18 @@ Historial inmutable de cambios de estado de un local (`V18__Store_Status_Audit.s
 
 Índices: `IDX_store_status_audit_store(store_id, created_at)`, `IDX_store_status_audit_status(new_status, created_at)`.
 
+## Tabla `store_user_audit` (módulo stores)
+Historial inmutable de asignaciones de usuarios a locales hechas por el SUPER_ADMIN (`V21__Store_User_Audit.sql`). Solo se inserta. Sin FKs a `stores` ni `users`: guarda copia de los datos (`store_name`, `username`, `full_name`, `role`) para sobrevivir a borrados.
+
+| Columna | Tipo | Notas |
+|---|---|---|
+| id | BIGSERIAL PK | |
+| store_id / user_id | BIGINT | Sin FK (snapshot) |
+| store_name, username, full_name, role | VARCHAR | Copia al momento de la asignación |
+| action | VARCHAR(20) | `OWNER_ASSIGNED` |
+| performed_by | VARCHAR(100) | SUPER_ADMIN que la hizo |
+| created_at | TIMESTAMP | |
+
 ## Tabla `password_reset_tokens` (módulo auth)
 Tokens de recuperación de contraseña (`V19__Password_Reset_Tokens.sql`), mismo esquema que `email_verification_tokens`: `token_hash` (SHA-256, único), `user_id` (FK `users`), `expires_at`, `used_at`, `created_at`. Índice `IDX_prt_user(user_id)`.
 

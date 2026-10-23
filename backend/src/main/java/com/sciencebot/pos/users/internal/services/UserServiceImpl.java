@@ -313,6 +313,12 @@ public class UserServiceImpl implements UserFacade, UserDetailsService {
     }
 
     @Override
+    public Page<UserDto> listVerifiedOwners(Pageable pageable) {
+        return userRepository.findAllByRoleAndEmailVerifiedTrue("ADMINISTRATOR", pageable)
+                .map(userMapper::toDto);
+    }
+
+    @Override
     public List<UserDto> listActiveByStoreAndRoles(Long storeId, List<String> roles) {
         return userRepository.findAllByStoreIdAndRoleInAndActiveTrue(storeId, roles).stream()
                 .map(userMapper::toDto)

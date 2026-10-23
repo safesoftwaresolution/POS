@@ -27,6 +27,8 @@ public interface UserFacade {
     UserDto assignStore(Long userId, Long storeId);
     /** Usuarios ADMINISTRATOR que aun no verifican su correo (para el panel de pendientes del backoffice). */
     Page<UserDto> listPendingVerificationUsers(Pageable pageable);
+    /** Usuarios ADMINISTRATOR que ya verificaron su correo (para el panel de Pendientes del backoffice). */
+    Page<UserDto> listVerifiedOwners(Pageable pageable);
     /** Usuarios activos de un local con alguno de los roles dados (ej. destinatarios de alertas). */
     List<UserDto> listActiveByStoreAndRoles(Long storeId, List<String> roles);
 }

@@ -196,6 +196,37 @@ class AuthServiceTest {
     }
 
     @Test
+    void resendVerificationToUser_UnverifiedAccount_SendsLinkAndBlocksImmediateRepeat() {
+        when(userFacade.getById(3L)).thenReturn(new UserDto(3L, "Carlos", "carlos.m", "carlos@empresa.com", "ADMINISTRATOR", true, null, false));
+        when(emailVerificationService.issue(3L)).thenReturn("admin-token");
+
+        authService.resendVerificationToUser(3L);
+
+        verify(emailSender).send(eq("carlos@empresa.com"), anyString(), contains("admin-token"));
+        assertThrows(IllegalArgumentException.class, () -> authService.resendVerificationToUser(3L));
+        verify(emailSender, times(1)).send(anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void resendVerificationToUser_AlreadyVerified_IsRejected() {
+        when(userFacade.getById(7L)).thenReturn(userDto(true));
+
+        assertThrows(IllegalArgumentException.class, () -> authService.resendVerificationToUser(7L));
+
+        verifyNoInteractions(emailSender);
+    }
+
+    @Test
+    void resendVerificationToUser_MailFailure_IsReportedAndDoesNotStartCooldown() {
+        when(userFacade.getById(3L)).thenReturn(new UserDto(3L, "Carlos", "carlos.m", "carlos@empresa.com", "ADMINISTRATOR", true, null, false));
+        when(emailVerificationService.issue(3L)).thenReturn("admin-token");
+        doThrow(new IllegalStateException("smtp down")).doNothing().when(emailSender).send(anyString(), anyString(), anyString());
+
+        assertThrows(IllegalStateException.class, () -> authService.resendVerificationToUser(3L));
+        assertDoesNotThrow(() -> authService.resendVerificationToUser(3L)); // el fallo no bloquea el reintento
+    }
+
+    @Test
     void forgotPassword_VerifiedActiveAccount_SendsResetLinkOnce() {
         when(userFacade.findByEmail("admin@pos.com")).thenReturn(Optional.of(userDto(true)));
         when(passwordResetService.issue(7L)).thenReturn("reset-token");

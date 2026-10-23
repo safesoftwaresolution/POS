@@ -1,5 +1,6 @@
 package com.sciencebot.pos.auth.internal.services;
 
+import com.sciencebot.pos.auth.AuthFacade;
 import com.sciencebot.pos.auth.LoginResponse;
 import com.sciencebot.pos.config.security.JwtService;
 import com.sciencebot.pos.config.security.PosUserDetails;
@@ -22,7 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Service
-public class AuthService {
+public class AuthService implements AuthFacade {
 
     private final UserDetailsService userDetailsService;
     private final PasswordEncoder passwordEncoder;
@@ -148,6 +149,22 @@ public class AuthService {
         userFacade.resetPassword(userId, newPassword);
         refreshTokenService.revokeAllForUser(userId);
         lockoutCache.remove(userFacade.getById(userId).username().toLowerCase());
+    }
+
+    @Override
+    public void resendVerificationToUser(Long userId) {
+        UserDto user = userFacade.getById(userId);
+        if (user.emailVerified()) {
+            throw new IllegalArgumentException("La cuenta ya tiene el correo verificado.");
+        }
+        String key = user.email().trim().toLowerCase();
+        long now = System.currentTimeMillis();
+        Long last = lastResendAt.get(key);
+        if (last != null && now - last < RESEND_COOLDOWN_MS) {
+            throw new IllegalArgumentException("Ya se envió un correo hace menos de un minuto. Espera antes de reintentar.");
+        }
+        sendVerificationEmail(user);
+        lastResendAt.put(key, now);
     }
 
     private void sendVerificationEmail(UserDto user) {

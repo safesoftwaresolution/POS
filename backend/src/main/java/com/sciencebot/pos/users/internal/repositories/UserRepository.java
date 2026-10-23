@@ -16,6 +16,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Page<User> findAllByActiveTrue(Pageable pageable);
     Page<User> findAllByRole(String role, Pageable pageable);
     Page<User> findAllByRoleAndEmailVerifiedFalse(String role, Pageable pageable);
+
+    Page<User> findAllByRoleAndEmailVerifiedTrue(String role, Pageable pageable);
     List<User> findAllByStoreIdAndRoleInAndActiveTrue(Long storeId, List<String> roles);
     Page<User> findAllByStoreIdAndActiveTrue(Long storeId, Pageable pageable);
     Page<User> findAllByStoreIdAndRole(Long storeId, String role, Pageable pageable);

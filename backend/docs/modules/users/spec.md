@@ -26,7 +26,7 @@ Cada local tiene un plan (módulo `stores`, tabla `plans`) que limita sus usuari
   - Campos: fullName, username (único), email (único), password (temporal), role.
   - Estado inicial: Activo.
   - Contraseña: mínimo 8 caracteres, al menos 1 letra y 1 número.
-  - Validar unicidad de username y email.
+  - Validar unicidad de username y email **sin distinguir mayúsculas** (`AndresV` y `andresv` son el mismo usuario). El login normaliza el usuario a minúsculas, por eso las búsquedas por username y email del repositorio también lo ignoran; antes eran exactas y un usuario registrado con mayúsculas recibía `401` con la contraseña correcta.
 
 ### RF-USER-002 — Editar Usuario
 - **Prioridad**: Alta

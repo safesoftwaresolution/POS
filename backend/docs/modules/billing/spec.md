@@ -1,9 +1,13 @@
-<!-- spec-version: 2.1 | last-updated: 2026-10-02 -->
+<!-- spec-version: 2.1 | last-updated: 2026-10-16 -->
 # Módulo: Facturación Electrónica (Billing)
 
 ## Dependencias
-- **Requiere**: sales, customers, products, stores, notifications
-- **Requerido por**: sales (consumo desacoplado vía Facade)
+- **Requiere**: sales (`SaleFacade`, evento `SaleCompletedEvent`), customers, products, stores, notifications
+- **Requerido por**: `settings` (consulta el token de Factus para sincronizar el logo; pendiente de pasar por una Facade, ver `_roadmap.md`)
+
+> `sales` **no** invoca a billing. Publica `SaleCompletedEvent` y `ElectronicInvoiceEventListener`
+> (`@Async` + `@TransactionalEventListener(AFTER_COMMIT)`) emite la factura cuando `sendToFactus` es verdadero.
+> Una falla de Factus nunca revierte ni retrasa la venta.
 
 > Desde la v2.0 **ya no depende de `settings`**: las credenciales de Factus salen de `store_billing_config`
 > (tabla propia de este módulo), no de la configuración del negocio.
@@ -15,7 +19,9 @@ El módulo está internamente segregado por responsabilidades (Feature Slicing &
 2. **Rangos de Numeración DIAN**: `NumberingRangeService` / `BillingNumberingRangeController` / `NumberingRangeProvider` / `FactusNumberingRangeClient`.
 3. **Habilitación por local**: `StoreBillingConfigService` / `StoreBillingConfigController` (back office) + `BillingActivationController` (local).
 4. **Resolución de credenciales**: `FactusCredentialsResolver` / `FactusTokenManager` / `FactusClientHelper`.
-5. **Fachada Unificada**: `BillingFacade` / `BillingServiceImpl` (punto de integración único para otros módulos).
+5. **Notas Crédito Electrónicas**: `CreditNoteService` / `BillingCreditNoteController` / `CreditNoteProvider` / `FactusCreditNoteClient`.
+6. **Notas Débito Electrónicas**: `DebitNoteService` / `BillingDebitNoteController` / `DebitNoteProvider` / `FactusDebitNoteClient`.
+7. **Fachada Unificada**: `BillingFacade` / `BillingServiceImpl` (punto de integración único para otros módulos).
 
 ---
 
@@ -133,10 +139,55 @@ Las operaciones sobre Factus ya **no devuelven listas vacías ni `false` silenci
 | Situación | Excepción | HTTP |
 |---|---|---|
 | Local sin facturación habilitada / sin rango | `BillingNotEnabledException` | 409 Conflict |
-| Factus objetó los datos enviados (4xx, no auth) | `FactusApiException` | 422 Unprocessable Entity |
-| Factus rechazó las credenciales (401/403) o no responde (5xx, timeout) | `FactusApiException` | 502 Bad Gateway |
+| Factus objetó los datos enviados (4xx, no auth) | `FactusApiException` (extiende `BillingProviderException`) | 422 Unprocessable Content (`HttpStatus.UNPROCESSABLE_CONTENT`) |
+| Factus rechazó las credenciales (401/403) o no responde (5xx, timeout) | `FactusApiException` (extiende `BillingProviderException`) | 502 Bad Gateway |
+| El proveedor activo no implementa la operación | `UnsupportedOperationException` | 501 Not Implemented |
 
 El mensaje del proveedor se propaga al cliente (truncado a 500 caracteres) para que el usuario sepa qué corregir.
+
+### RN-BILL-010 — Idempotencia y Aislamiento de Notas Crédito
+- Si una referencia (`reference_code`) ya cuenta con una nota crédito en estado `VALIDATED`, no se reenvía a Factus ni se duplica ante la DIAN (guard bajo bloqueo pesimista `findByReferenceCodeForUpdate` sobre `electronic_credit_notes`).
+- `reference_code` es `UNIQUE` global: si la referencia pertenece a **otro local** se responde 409 sin llamar a Factus ni exponer la nota existente (mismo criterio que RN-BILL-014).
+- Toda operación (emisión, consulta, descarga, eliminación) exige el `storeId` de la solicitud (`TenantContext`); sin local asociado responde 409. **No hay respaldo al local 1** (antes se asumía).
+
+### RN-BILL-011 — Recuperación Automática de Conflicto 409
+- Cuando Factus rechaza una creación con HTTP 409 ("Se encontró un documento pendiente por enviar a la DIAN"), el sistema elimina el borrador no validado en Factus y reintenta **una sola vez**. Si el borrador no se puede eliminar, se reporta el conflicto. Aplica a:
+  - Notas crédito: `DELETE /v2/credit-notes/reference/{reference_code}`.
+  - Notas débito: `DELETE /v2/debit-notes/reference/{reference_code}`.
+  - Facturas: `DELETE /v1/bills/destroy/reference/{reference_code}` (`FactusInvoiceClient`).
+
+### RN-BILL-012 — Emisión de Nota Crédito a partir de Venta
+- Para emitir nota crédito referenciando una venta (`createFromSale`), la venta debe tener factura electrónica `VALIDATED` **en el local actual**. La nota crédito referencia el número de factura legal (`factus_number`).
+- `reference_code` determinista: `NC-<número de factura de la venta>-C<concepto>`. Un doble clic o un reintento reutiliza la misma nota en vez de emitir otra ante la DIAN.
+- `sale_id` se persiste al crear la nota (antes se asignaba por reflexión y quedaba nulo).
+
+### RN-BILL-016 — Referencia Determinista de Facturas
+- El `reference_code` que se envía a Factus es `<invoiceNumber de la venta>-<saleId>`, **estable entre reintentos** (antes llevaba `System.currentTimeMillis()` y cada reintento tras un timeout podía generar un segundo documento ante la DIAN). Lo mismo para el `code_reference` de ítems sin código.
+- Facturar sin local asociado a la venta falla (`IllegalStateException`); no hay respaldo al local 1.
+
+### RN-BILL-017 — Proveedor Configurado
+- `billing.provider` (`factus` | `mock`) debe corresponder a un adaptador registrado. Si no existe, **la aplicación no arranca** (`BillingProviderStartupValidator`) y el error lista los proveedores disponibles; si aun así una operación lo resolviera en tiempo de ejecución, también falla con ese listado: no hay respaldo silencioso a `mock`, que emitiría facturas falsas por una errata de configuración.
+- `MockBillingAdapter` solo se registra con `billing.provider=mock` (`@ConditionalOnProperty`).
+- **Puerto de cuenta (`BillingAccountProvider`)**: todo adaptador (`ElectronicInvoicingProvider`) implementa además `isAccountConfigured(storeId, env)`, `verifyConnection(storeId, env)`, `onAccountChanged(storeId)` y `displayName()`. `StoreBillingConfigServiceImpl` y `BillingActivationMapper` obtienen el proveedor activo a través de `ActiveBillingProvider` (activación a `ACTIVE`, cambio de entorno, prueba de conexión, invalidación de caché tras cargar credenciales, flags `sandboxConfigured`/`productionConfigured`) y ya no dependen de clases `Factus*`. El mock da la cuenta siempre por configurada y la prueba de conexión por exitosa.
+- `BillingProviderException` es la base común de los errores de un proveedor (`FactusApiException` la extiende). `GlobalExceptionHandler` aplica el mapeo de RN-BILL-009 a la base y responde **501 Not Implemented** a una `UnsupportedOperationException` (operación no implementada por el proveedor activo).
+- La sincronización del logo de `settings` solo se intenta si `billing.provider=factus`.
+
+### RN-BILL-018 — Timeouts de Salida
+- Todos los clientes HTTP hacia Factus (`FactusClientHelper`, `FactusTokenManager`) y el sincronizado del logo se crean con `OutboundHttp.restClient()`: conexión 5 s, lectura 45 s. Un proveedor lento ya no deja hilos ni filas bloqueadas indefinidamente.
+
+### RN-BILL-013 — Notas Débito solo con Referencia a Factura
+- Solo se emiten notas débito con `customization_id=30` (con referencia a una factura electrónica). El tipo `32` (sin referencia) exige `billing_period` en Factus y `electronic_debit_notes.bill_number` es `NOT NULL`, así que se rechaza con 400.
+- Conceptos de corrección DIAN para notas débito (`correction_concept_code`): `1` Intereses, `2` Gastos por cobrar, `3` Cambio del valor, `4` Otros.
+
+### RN-BILL-014 — Idempotencia y Aislamiento de Notas Débito
+- Guard bajo bloqueo pesimista (`findByReferenceCodeForUpdate` sobre `electronic_debit_notes`): una referencia ya `VALIDATED` devuelve la nota existente sin reenviarla a Factus; una en `ERROR`/`REJECTED` se reintenta sobre el mismo registro (`prepareForResend`).
+- `reference_code` es `UNIQUE` global: si la referencia pertenece a **otro local**, o al mismo local pero para **otra factura**, se responde 409 sin llamar a Factus ni exponer la nota existente.
+- Toda operación (emisión, consulta, descarga, eliminación) exige el `storeId` de la solicitud (`TenantContext`); sin local asociado se responde 409. No hay respaldo a un local por defecto.
+- Conflicto 409 de Factus: igual que RN-BILL-011, contra `DELETE /v2/debit-notes/reference/{reference_code}`.
+
+### RN-BILL-015 — Nota Débito sobre la Factura de una Venta
+- `POST /debit-notes/sales/{saleId}` exige que la venta tenga factura electrónica `VALIDATED` **en el local actual** (404 si no existe, 409 si no está validada). El `bill_number` se toma de esa factura (si el cliente lo envía, debe coincidir; si no, 400) y la nota queda vinculada a la venta (`sale_id`).
+- A diferencia de la nota crédito, los ítems los define el cliente: la nota débito cobra un valor adicional (intereses, gastos), no replica la venta.
 
 ---
 
@@ -167,8 +218,8 @@ El mensaje del proveedor se propaga al cliente (truncado a 500 caracteres) para 
 - `GET /api/v1/backoffice/billing?status=DOCUMENTS_SUBMITTED` — cola de revisión por etapa.
 - `GET /api/v1/backoffice/stores/{storeId}/billing` — estado del local (sin secretos).
 - `PUT /api/v1/backoffice/stores/{storeId}/billing/credentials?environment=SANDBOX|PRODUCTION` — cargar
-  credenciales. Un `clientSecret`/`password` vacío **conserva** el valor guardado. `numberingRangeId` es **opcional** y solo se
-  mantiene por compatibilidad/soporte asistido: el rango lo elige el administrador del local.
+  credenciales. Un `clientSecret`/`password` vacío **conserva** el valor guardado. El rango de numeración no se carga aquí:
+  lo elige el administrador del local (`set-default`).
 - `POST /api/v1/backoffice/stores/{storeId}/billing/test-connection?environment=…` — pide un token real a
   Factus sin activar nada. Nunca lanza error por rechazo: devuelve `{success, environment, message}`.
 - `PATCH /api/v1/backoffice/stores/{storeId}/billing/environment?environment=…` — cambiar entorno activo.
@@ -177,6 +228,26 @@ El mensaje del proveedor se propaga al cliente (truncado a 500 caracteres) para 
 ### 4. Habilitación — Local (`BillingActivationController`)
 - `GET /api/v1/billing/activation/status` — estado de facturación del local autenticado (sin credenciales).
 - `POST /api/v1/billing/activation/request` — solicitar activación. Exige al menos un documento ya subido.
+
+### 5. Notas Crédito Electrónicas (`BillingCreditNoteController`)
+- `POST /api/v1/billing/credit-notes/validate` — crear y validar nota crédito ante Factus API v2 y la DIAN.
+- `POST /api/v1/billing/credit-notes/sales/{saleId}?conceptCode=2&observation=` — emitir nota crédito para anular o ajustar una venta facturada (`conceptCode` por defecto `2` = anulación).
+- `GET /api/v1/billing/credit-notes?status=` — historial paginado del local, filtrable por estado.
+- `GET /api/v1/billing/credit-notes/{id}` — consultar nota crédito por ID local.
+- `GET /api/v1/billing/credit-notes/reference/{referenceCode}` — consultar nota crédito por código de referencia POS.
+- `GET /api/v1/billing/credit-notes/{id}/pdf` — descargar PDF legal de la nota crédito (Base64 decodificado como `application/pdf`).
+- `GET /api/v1/billing/credit-notes/{id}/xml` — descargar XML legal de la nota crédito (Base64 decodificado como `application/xml`).
+- `DELETE /api/v1/billing/credit-notes/reference/{referenceCode}` — eliminar nota crédito no validada en Factus (borrador pendiente o rechazado).
+
+### 6. Notas Débito Electrónicas (`BillingDebitNoteController`)
+- `POST /api/v1/billing/debit-notes/validate` — crear y validar nota débito ante Factus API v2 (`POST /v2/debit-notes/validate`). Responde 200 con el `status` resultante (`VALIDATED`, `REJECTED`, `ERROR`).
+- `POST /api/v1/billing/debit-notes/sales/{saleId}` — emitir nota débito sobre la factura de una venta (RN-BILL-015). Body: `CreateDebitNoteRequest`.
+- `GET /api/v1/billing/debit-notes?status=` — historial paginado del local, filtrable por estado.
+- `GET /api/v1/billing/debit-notes/{id}` — consultar nota débito por ID local (404 si no existe en el local).
+- `GET /api/v1/billing/debit-notes/reference/{referenceCode}` — consultar por código de referencia.
+- `GET /api/v1/billing/debit-notes/{id}/pdf` — PDF legal (`application/pdf`). 404 si no existe, 409 si no está validada.
+- `GET /api/v1/billing/debit-notes/{id}/xml` — XML legal (`application/xml`). 404 si no existe, 409 si no está validada.
+- `DELETE /api/v1/billing/debit-notes/reference/{referenceCode}` — eliminar en Factus una nota débito no validada. 204 si se eliminó, 400 si Factus no pudo, 409 si ya está validada.
 
 ---
 
@@ -239,17 +310,67 @@ Una fila por local (relación 1 a 1 con `stores`).
 > secretos **no** se pueden trasladar por SQL porque el cifrado ocurre en la capa Java, así que el local queda
 > en `NOT_REQUESTED` hasta que el SUPER_ADMIN vuelva a cargarlos.
 
+### Tabla: `electronic_credit_notes` (`V18__Credit_Notes.sql`)
+| Campo | Tipo | Restricciones |
+|---|---|---|
+| id | BIGSERIAL | PK, Auto-increment |
+| store_id | BIGINT | NOT NULL, FK → stores(id) |
+| sale_id | BIGINT | NULLABLE, FK → sales(id) (se persiste al emitir desde una venta) |
+| reference_code | VARCHAR(100) | NOT NULL, UNIQUE |
+| bill_number | VARCHAR(50) | NOT NULL (factura electrónica referenciada) |
+| credit_note_number | VARCHAR(50) | NULLABLE |
+| correction_concept_code | VARCHAR(10) | NOT NULL |
+| customization_id | VARCHAR(10) | NOT NULL, DEFAULT '20' |
+| cude | VARCHAR(255) | NULLABLE |
+| qr_code | TEXT | NULLABLE |
+| status | VARCHAR(20) | NOT NULL, DEFAULT 'PENDING' |
+| error_message | TEXT | NULLABLE |
+| pdf_url | VARCHAR(500) | NULLABLE |
+| validated_at | TIMESTAMP | NULLABLE |
+| created_at / updated_at | TIMESTAMP | NOT NULL |
+
+Índices: `IDX_electronic_credit_notes_store`, `IDX_electronic_credit_notes_store_status`, `IDX_electronic_credit_notes_bill`.
+
+### Tabla: `electronic_debit_notes` (`V19__Debit_Notes.sql`)
+| Campo | Tipo | Restricciones |
+|---|---|---|
+| id | BIGSERIAL | PK, Auto-increment |
+| store_id | BIGINT | NOT NULL, FK → stores(id) |
+| sale_id | BIGINT | NULLABLE, FK → sales(id) (solo si se emitió desde una venta) |
+| reference_code | VARCHAR(100) | NOT NULL, UNIQUE |
+| correction_concept_code | VARCHAR(10) | NOT NULL |
+| customization_id | VARCHAR(10) | NOT NULL, DEFAULT '30' |
+| bill_number | VARCHAR(50) | NOT NULL (factura electrónica referenciada) |
+| debit_note_number | VARCHAR(50) | NULLABLE (número legal asignado por Factus/DIAN) |
+| cude | VARCHAR(255) | NULLABLE |
+| qr_code | TEXT | NULLABLE |
+| status | VARCHAR(20) | NOT NULL, DEFAULT 'PENDING' |
+| error_message | TEXT | NULLABLE |
+| pdf_url | VARCHAR(500) | NULLABLE |
+| validated_at | TIMESTAMP | NULLABLE |
+| created_at / updated_at | TIMESTAMP | NOT NULL |
+
+Índices: `IDX_electronic_debit_notes_store`, `IDX_electronic_debit_notes_store_status`, `IDX_electronic_debit_notes_bill`.
+
 ---
 
 ## Permisos
 
-### Facturas y rangos de numeración
+### Facturas, notas crédito/débito y rangos de numeración
 | Operación | SUPER_ADMIN | Admin Local | Supervisor | Vendedor |
 |---|---|---|---|---|
 | Consultar factura de venta | - | ✓ | ✓ | ✓ |
 | Descargar PDF / XML legal | - | ✓ | ✓ | ✓ |
 | Reintentar emisión | - | ✓ | ✓ | - |
 | Enviar factura por email | - | ✓ | ✓ | ✓ |
+| Emitir / validar nota crédito | - | ✓ | ✓ | - |
+| Consultar notas crédito | - | ✓ | ✓ | ✓ |
+| Descargar PDF / XML nota crédito | - | ✓ | ✓ | ✓ |
+| Eliminar nota crédito no validada | - | ✓ | ✓ | - |
+| Emitir / validar nota débito | - | ✓ | ✓ | - |
+| Consultar notas débito | - | ✓ | ✓ | ✓ |
+| Descargar PDF / XML nota débito | - | ✓ | ✓ | ✓ |
+| Eliminar nota débito no validada | - | ✓ | ✓ | - |
 | Consultar rangos DIAN / Factus | - | ✓ | ✓ | - |
 | Crear / eliminar / activar rango | - | ✓ | - | - |
 | Actualizar consecutivo | - | ✓ | - | - |
@@ -271,6 +392,25 @@ Una fila por local (relación 1 a 1 con `stores`).
 
 ## Pendiente / no verificado
 
+- **Llamada a Factus dentro de la transacción con bloqueo**: `InvoiceServiceImpl.processElectronicInvoice` sigue
+  llamando al proveedor mientras sostiene el `SELECT … FOR UPDATE` de la factura. Con los timeouts de RN-BILL-018 la espera
+  está acotada, pero lo correcto es dividirla en reservar (`PENDING`) → llamar → registrar resultado.
+- **Reintento automático**: no hay job que reintente facturas `PENDING`/`ERROR` ni outbox; si el proceso cae tras el commit de
+  la venta y antes de emitir, la factura queda sin emitir hasta un `retry` manual.
+- **Estado `PENDING` por fallo temporal**: los clientes Factus devuelven `InvoiceResult.pending(...)` ante fallos de red o
+  autenticación, pero `InvoiceServiceImpl.applyResultToEntity` solo distingue `VALIDATED`/`REJECTED` y trata el resto como
+  `ERROR`. Decidir si se añade `markAsPending` o se ajusta RN-BILL-002.
+- **Códigos DIAN hardcodeados**: unidad `94`, tributo `01`, municipio `11001` por defecto y el mapeo de medios de pago
+  (`TRANSFER→31`, `NEQUI→42`, `CARD→48`) están repetidos en `FactusSaleMapper`, `BillingCanonicalMapper` y
+  `CreditNoteServiceImpl`; hay que centralizarlos (el catálogo `PAYMENT_METHODS.extra_value` ya existe).
+- **Cifrado de secretos**: la clave se valida de forma perezosa (no al arrancar) y `v1:` no lleva `key id`, así que no hay
+  rotación real de `BILLING_ENCRYPTION_KEY`.
+
+- **Notas débito contra el sandbox real de Factus**: rutas y payload siguen la documentación de Factus
+  (`/v2/debit-notes/validate`, `/v2/debit-notes/{number}/download-pdf|download-xml`,
+  `/v2/debit-notes/reference/{reference_code}`), pero esa documentación **no muestra un JSON de respuesta** de
+  creación; solo menciona `data.number`. `FactusDebitNoteClient` lee el número de `data.debit_note`, `data.bill`
+  o `data` (en ese orden) y el QR/URL pública de `data.links`, sin haberlo confirmado contra una respuesta real.
 - **Contra el sandbox real de Factus no se ha verificado**:
   - El sobre (envelope) exacto de la respuesta de `GET /v2/numbering-ranges/dian`. La documentación de Factus
     para este endpoint ("Rangos Asociados al Software") solo describe los campos de cada rango —`prefix`,

@@ -269,11 +269,8 @@ public class NumberingRangeServiceImpl implements NumberingRangeService {
         String key = (activeProviderName != null) ? activeProviderName.trim().toLowerCase() : "factus";
         NumberingRangeProvider provider = providersMap.get(key);
         if (provider == null) {
-            log.warn("Proveedor de facturación '{}' no encontrado para rangos de numeración. Utilizando 'mock'", key);
-            provider = providersMap.get("mock");
-        }
-        if (provider == null) {
-            throw new IllegalStateException("No hay ningún proveedor de rangos de numeración disponible.");
+            // Sin respaldo silencioso a 'mock': un BILLING_PROVIDER mal escrito emitiria facturas falsas.
+            throw new IllegalStateException("Proveedor de facturación '" + key + "' no registrado (billing.provider). Disponibles: " + providersMap.keySet() + ". " + "No hay ningún proveedor de rangos de numeración disponible.");
         }
         return provider;
     }

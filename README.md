@@ -59,7 +59,7 @@ POS/
 ## ✨ Características Principales
 
 * ⚡ **Procesamiento Ágil de Ventas**: Registro de ventas en mostrador con soporte para lector de código de barras y cálculo automático de cambio.
-* 📦 **Control de Inventario en Tiempo Real**: Deducción automática de stock con bloqueo pesimista (`Pessimistic Locking`) para prevenir condiciones de carrera concurrentes.
+* 📦 **Control de Inventario en Tiempo Real**: Deducción automática de stock con un `UPDATE` atómico y condicionado (la fila queda bloqueada hasta el commit y nunca queda negativa), sin pérdida de actualizaciones ni sobreventa con ventas concurrentes.
 * 🏷️ **Generación de Códigos de Barras (Code 128)**: Visualización e impresión de la etiqueta de código de barras de cada producto directamente desde el catálogo y el inventario.
 * 🏢 **Multi-local (SaaS)**: aislamiento de datos por local (`store_id` en el JWT → `TenantContext`), auto-registro del dueño con verificación de correo, onboarding con documentos KYC y back office para la plataforma.
 * 🧾 **Facturación Electrónica DIAN por local**: integración con **Factus API** mediante adaptador desacoplado; las credenciales de cada local se guardan **cifradas (AES-256-GCM)** en base de datos, con ciclo de habilitación, gestión de rangos de numeración y auditoría. La emisión es asíncrona (evento `SaleCompletedEvent`) y nunca bloquea la venta.
@@ -105,7 +105,7 @@ El backend sigue una arquitectura de **Monolito Modular**:
 * **Eventos de dominio**: flujos secundarios (p. ej. emitir la factura DIAN tras una venta) se desacoplan con eventos in-process.
 * **Read Models (CQRS)**: Para el módulo de reportes (`reports`), se utiliza `JdbcClient` con SQL nativo y agregaciones en base de datos (`SUM`, `COUNT`, `GROUP BY`), desacoplado de las entidades de dominio.
 
-El frontend es un **consumidor puro de la API**: no contiene lógica de negocio, solo llama a los endpoints REST a través del cliente compartido `frontend/src/services/http.js` (que adjunta el JWT y renueva la sesión de forma transparente ante un 401 con el refresh token).
+El frontend es un **consumidor puro de la API**: no contiene lógica de negocio, solo llama a los endpoints REST (`frontend/src/services/http.js` y los `*Api.js`) y mantiene la sesión con las cookies `HttpOnly` que emite `/api/v1/auth/login`.
 
 ---
 
@@ -113,9 +113,10 @@ El frontend es un **consumidor puro de la API**: no contiene lógica de negocio,
 
 ### Backend
 * **Lenguaje**: Java 21 LTS
-* **Framework**: Spring Boot (Spring WebMvc, Spring Data JPA, Spring Security, Spring JDBC)
-* **Base de Datos**: PostgreSQL 16 (Docker / producción) y H2 en archivo (perfil `dev`, por defecto, sin Docker). El esquema lo gestiona **Flyway** en todos los perfiles (`ddl-auto=validate`)
-* **Seguridad**: JWT (HMAC-SHA256) + refresh token rotativo, cookies `HttpOnly`
+* **Framework**: Spring Boot 4.1 (Spring WebMvc, Spring Data JPA, Spring Security, Spring JDBC, Bean Validation, Flyway)
+* **Base de Datos**: PostgreSQL 16 (Docker / producción) y H2 **en archivo** `backend/data/app_db` (perfil `dev`, por defecto)
+* **Seguridad**: JWT HMAC con refresh token rotativo en cookies `HttpOnly`
+* **Almacenamiento**: Cloudflare R2 (API S3)
 * **Facturación**: Factus API (Estándar DIAN) / Mock Adapter
 * **Almacenamiento**: Cloudflare R2 (SDK S3)
 * **Documentación**: SpringDoc OpenAPI 3 / Swagger UI
@@ -124,7 +125,7 @@ El frontend es un **consumidor puro de la API**: no contiene lógica de negocio,
 
 ### Frontend
 * **Librería**: React 19 + React Router 7
-* **Build Tool**: Vite
+* **Build Tool**: Vite 8 (requiere Node 20.19+ o 22.12+)
 * **Estilos**: Tailwind CSS 4 (modo oscuro basado en clase, tema persistido en `localStorage`)
 * **Iconografía**: lucide-react
 * **Códigos de Barras**: JsBarcode (renderizado Code 128 en el navegador)
@@ -136,26 +137,26 @@ El frontend es un **consumidor puro de la API**: no contiene lógica de negocio,
 
 | Módulo | Paquete | Descripción |
 |---|---|---|
-| **Auth** | `com.sciencebot.pos.auth` | Login, logout, refresh token rotativo, auto-registro del dueño y verificación de correo. |
-| **Users** | `com.sciencebot.pos.users` | Usuarios por local, perfiles y estados de actividad. |
-| **Categories** | `com.sciencebot.pos.categories` | Categorías **globales** (solo `SUPER_ADMIN` escribe) y subcategorías propias de cada local. |
-| **Products** | `com.sciencebot.pos.products` | Catálogo por local, códigos internos, códigos de barras y precios. |
-| **Inventory** | `com.sciencebot.pos.inventory` | Movimientos de stock (con bloqueo pesimista), kardex, mínimos y alertas de stock bajo. |
-| **Customers** | `com.sciencebot.pos.customers` | Clientes y datos fiscales para facturación. |
-| **Suppliers** | `com.sciencebot.pos.suppliers` | Directorio de proveedores. |
-| **Purchases** | `com.sciencebot.pos.purchases` | Compras de abastecimiento que aumentan el stock. |
-| **Sales** | `com.sciencebot.pos.sales` | Ventas con múltiples métodos de pago, idempotencia, devoluciones y tickets. |
-| **Billing** | `com.sciencebot.pos.billing` | Facturación electrónica DIAN (Factus/mock): emisión asíncrona, credenciales por local cifradas, habilitación y rangos de numeración. |
-| **Reports** | `com.sciencebot.pos.reports` | Analítica de ventas, más vendidos, bajo stock y rentabilidad (CQRS / `JdbcClient`). |
-| **Settings** | `com.sciencebot.pos.settings` | Datos del negocio por local, logo y catálogos dinámicos de parámetros. |
-| **Stores** | `com.sciencebot.pos.stores` | Locales: onboarding del dueño, KYC, ciclo de vida y métricas SaaS (back office). |
-| **Backoffice** | `com.sciencebot.pos.backoffice` | Personal de plataforma y estadísticas de onboarding (`SUPER_ADMIN`). |
-| **Legal** | `com.sciencebot.pos.legal` | Textos legales de la plataforma (lectura pública, gestión por `SUPER_ADMIN`). |
-| **Support** | `com.sciencebot.pos.support` | PQRs y reportes de bugs (radicación pública, gestión por `SUPER_ADMIN`). |
-| **Notifications** | `com.sciencebot.pos.notifications` | Notificaciones por local para el dashboard. |
-| **Storage** | `com.sciencebot.pos.storage` | Subida y eliminación de archivos en Cloudflare R2. |
+| **Auth** | `com.sciencebot.pos.auth` | Login, logout, refresh rotativo, auto-registro y verificación de correo. |
+| **Users** | `com.sciencebot.pos.users` | Gestión de usuarios, perfiles y estados de actividad. |
+| **Categories** | `com.sciencebot.pos.categories` | Clasificación y categorías del catálogo de productos. |
+| **Products** | `com.sciencebot.pos.products` | Catálogo de productos, códigos internos, códigos de barras y precios. |
+| **Inventory** | `com.sciencebot.pos.inventory` | Ajustes de stock, entradas/salidas y control de mínimos. |
+| **Customers** | `com.sciencebot.pos.customers` | Base de datos de clientes y datos fiscales para facturación. |
+| **Suppliers** | `com.sciencebot.pos.suppliers` | Directorio de proveedores para compras. |
+| **Purchases** | `com.sciencebot.pos.purchases` | Registro de compras de abastecimiento que aumentan el stock. |
+| **Sales** | `com.sciencebot.pos.sales` | Procesamiento de ventas en efectivo y generación de comprobantes. |
+| **Billing** | `com.sciencebot.pos.billing` | Facturas, notas crédito y débito electrónicas (DIAN vía Factus), habilitación y rangos por local. |
+| **Reports** | `com.sciencebot.pos.reports` | Analítica de ventas, productos más vendidos, bajo stock y rentabilidad (CQRS / `JdbcClient`). |
+| **Settings** | `com.sciencebot.pos.settings` | Configuración del negocio (nombre, NIT, logo) y catálogos dinámicos de parámetros. |
+| **Stores** | `com.sciencebot.pos.stores` | Locales (tenants): auto-registro, onboarding y verificación de documentos KYC. |
+| **Legal** | `com.sciencebot.pos.legal` | Textos legales de la plataforma (privacidad, términos). |
+| **Support** | `com.sciencebot.pos.support` | PQRs y reportes de bugs con seguimiento público por radicado. |
+| **Notifications** | `com.sciencebot.pos.notifications` | Bandeja de avisos por local (stock bajo, documentos, facturación). |
+| **Storage** | `com.sciencebot.pos.storage` | Subida y borrado de archivos en Cloudflare R2. |
+| **Backoffice** | `com.sciencebot.pos.backoffice` | Operadores de plataforma (`SUPER_ADMIN`) y métricas del embudo de registro. |
 
-Detalle por módulo: [`backend/docs/modules/`](./backend/docs/modules/). Estado, deuda técnica y plan de trabajo: [`backend/docs/_roadmap.md`](./backend/docs/_roadmap.md).
+La especificación de cada módulo está en [`backend/docs/modules/`](./backend/docs/modules/). Estado, deuda técnica y plan de trabajo: [`backend/docs/_roadmap.md`](./backend/docs/_roadmap.md).
 
 ---
 
@@ -214,7 +215,7 @@ Todos los roles excepto `SUPER_ADMIN` están acotados a su propio local. Matriz 
 ## 📦 Requisitos Previos
 
 * **Java 21 JDK** (si ejecutas el backend de forma nativa).
-* **Node.js 20+** y **npm** (para el frontend).
+* **Node.js 20.19+ (o 22.12+)** y **npm** (para el frontend).
 * **Docker** y **Docker Compose** (opcional, para PostgreSQL y despliegue contenedorizado).
 * **Git**.
 
@@ -239,11 +240,11 @@ docker compose logs -f app
 ```
 
 La aplicación quedará disponible en: `http://localhost:8080`
-Base de datos PostgreSQL expuesta en el puerto: `5434` (usuario: `postgres`, contraseña: `postgres`, bd: `app_db`).
+Base de datos PostgreSQL expuesta en el puerto: `5434` (usuario: `postgres`, contraseña: `postgres`, bd: `app_db`; solo para desarrollo).
 
 ### Opción 2: Ejecución Local con Maven
 
-Por defecto el perfil activo es `dev`, que usa una base de datos **H2 en memoria** — no necesitas Docker ni PostgreSQL para levantar el backend localmente:
+Por defecto el perfil activo es `dev`, que usa una base de datos **H2 en archivo** (`backend/data/app_db`, persiste entre reinicios; bórrala para empezar de cero) — no necesitas Docker ni PostgreSQL para levantar el backend localmente:
 
 * **Linux / macOS**:
   ```bash
@@ -263,12 +264,7 @@ cd backend
 docker compose up -d db
 ```
 
-Usuarios sembrados al arrancar (**cámbialos en cualquier entorno expuesto**):
-
-| Usuario | Contraseña | Rol |
-|---|---|---|
-| `admin` | `Password123` | `ADMINISTRATOR` del local 1 |
-| `superadmin` | `SuperAdmin123!` | `SUPER_ADMIN` (back office en `/backoffice`) |
+Usuarios de desarrollo (solo perfil `dev`): `admin` / `Password123` (local 1) y `superadmin` (clave en `SEED_SUPERADMIN_PASSWORD`, o `SuperAdmin123!` si no la defines). **Fuera de `dev` no se siembra ningún `admin`**: los locales se crean por el auto-registro y el `SUPER_ADMIN` solo se crea si defines `SEED_SUPERADMIN_PASSWORD`.
 
 > Copia `backend/.env.example` a `backend/.env` y ajústalo (se carga automáticamente con `mvnw spring-boot:run`). En `dev` solo hace falta definirlo si quieres cambiar los valores por defecto.
 
@@ -304,6 +300,7 @@ npm run lint      # Linter (oxlint)
 * **Colecciones de Postman** (importar en Postman):
   * [`POS_Completo.postman_collection.json`](./POS_Completo.postman_collection.json) — API completa.
   * [`POS_Flujo_Registro_Facturacion.postman_collection.json`](./POS_Flujo_Registro_Facturacion.postman_collection.json) — flujo de registro, habilitación y facturación.
+  * Aún no cubren notas crédito/débito, storage ni gran parte del back office.
 
 ---
 
@@ -313,18 +310,21 @@ Puedes personalizar la configuración del backend mediante variables de entorno 
 
 | Variable | Valor por Defecto | Descripción |
 |---|---|---|
-| `SPRING_PROFILES_ACTIVE` | `dev` | Perfil activo (`dev` usa H2 en archivo `./data/app_db`; para PostgreSQL usa otro perfil junto con Docker). |
+| `SPRING_PROFILES_ACTIVE` | `dev` | Perfil activo (`dev` usa H2 en archivo, consola H2 y un secreto JWT público; **en producción usa `prod`**). |
 | `SPRING_DATASOURCE_URL` | `jdbc:postgresql://localhost:5432/app_db` | URL de conexión a la base de datos PostgreSQL. |
 | `SPRING_DATASOURCE_USERNAME` | `postgres` | Usuario de la base de datos. |
-| `SPRING_DATASOURCE_PASSWORD` | `postgres` | Contraseña de la base de datos. |
-| `JWT_SECRET` | *Clave de 256 bits por defecto* | Clave secreta para firmar tokens JWT. |
+| `SPRING_DATASOURCE_PASSWORD` | *(vacío)* | Contraseña de la base de datos. |
+| `JWT_SECRET` | *(solo `dev` tiene un valor por defecto)* | Clave secreta (≥ 32 bytes) para firmar tokens JWT. **Obligatoria fuera de `dev`.** |
+| `JWT_REFRESH_REUSE_GRACE_MS` | `15000` | Ventana de gracia ante reuso del refresh token. |
+| `JWT_COOKIE_SECURE` | `false` | Atributo `Secure` de las cookies de sesión. **Ponlo en `true` en producción (HTTPS).** |
+| `APP_FRONTEND_URL` | `http://localhost:3000` | URL pública del SPA: enlaces de los correos y origen CORS permitido. |
+| `APP_CORS_ALLOWED_ORIGINS` | *(= `APP_FRONTEND_URL`)* | Orígenes CORS permitidos, separados por coma. |
+| `EMAIL_PROVIDER` | `log` | `log` solo escribe el correo en el log; usa `smtp` en producción. |
+| `EMAIL_FROM`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD` | *(vacío)* | Envío por SMTP (verificación de correo y alertas). |
+| `SEED_SUPERADMIN_PASSWORD` | *(vacío; `dev` tiene un valor)* | Contraseña del `SUPER_ADMIN` inicial. Sin ella no se siembra la cuenta. |
 | `JWT_EXPIRATION_MS` | `900000` (15 minutos) | Tiempo de vida del access token en milisegundos. |
 | `JWT_REFRESH_EXPIRATION_MS` | `604800000` (7 días) | Tiempo de vida del refresh token en milisegundos. |
-| `JWT_REFRESH_REUSE_GRACE_MS` | `15000` | Ventana de gracia ante reuso del refresh token por carreras de red. |
-| `JWT_COOKIE_SECURE` / `JWT_COOKIE_SAME_SITE` | `false` / `Strict` | Atributos de las cookies de sesión (usa `true` en producción con HTTPS). |
-| `EMAIL_PROVIDER` / `EMAIL_FROM` | `log` / `no-reply@propos.app` | Envío del correo de verificación (`log` solo lo escribe en el log; SMTP requiere `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`). |
-| `APP_FRONTEND_URL` | `http://localhost:3000` | URL del frontend usada en los enlaces de los correos. |
-| `BILLING_PROVIDER` | `factus` | Proveedor de facturación (`factus` o `mock`). |
+| `BILLING_PROVIDER` | `factus` | Proveedor de facturación (`factus` o `mock`). Un valor desconocido hace fallar la facturación (no cae a `mock`). |
 | `BILLING_ENCRYPTION_KEY` | *(vacío)* | Clave AES-256 (32 bytes en Base64) que cifra en la base de datos las credenciales de Factus de cada local. **Sin ella no se pueden guardar credenciales**; si se pierde o cambia, los secretos ya guardados dejan de poder leerse. |
 | `FACTUS_URL_SANDBOX` | `https://api-sandbox.factus.com.co` | URL del entorno de pruebas de Factus. |
 | `FACTUS_URL_PRODUCTION` | `https://api.factus.com.co` | URL del entorno de producción de Factus. |
@@ -339,7 +339,7 @@ Puedes personalizar la configuración del backend mediante variables de entorno 
 > `store_billing_config`. Un local sin credenciales propias no factura: no hay respaldo a una cuenta global.
 > Ver `backend/docs/modules/billing/spec.md`.
 
-> Sin las 5 variables `R2_*`, `POST /api/v1/storage/upload` sigue respondiendo pero falla al intentar conectarse a R2 (no hay fallback silencioso). Los archivos subidos (documentos KYC, logo) usan esta configuración. Corriendo con `mvnw spring-boot:run`, `backend/.env` se carga automáticamente (vía `spring-dotenv`); con Docker Compose, `docker-compose.yml` toma todo `backend/.env`, mientras que `docker-compose.prod.yml` solo reenvía las variables listadas en su sección `environment` (ver `backend/docs/_deployment.md`).
+> Sin las 5 variables `R2_*`, `POST /api/v1/storage/upload` sigue respondiendo pero falla al intentar conectarse a R2 (no hay fallback silencioso). Corriendo con `mvnw spring-boot:run`, `backend/.env` se carga automáticamente (la propia aplicación lo importa con `spring.config.import`); con Docker Compose, `docker-compose.yml`/`docker-compose.prod.yml` ya las reenvían al contenedor.
 
 El frontend no requiere variables de entorno propias: las llamadas a `/api` se redirigen al backend mediante el proxy de Vite (`frontend/vite.config.js`).
 

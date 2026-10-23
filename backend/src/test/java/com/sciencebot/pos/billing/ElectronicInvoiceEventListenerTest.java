@@ -2,7 +2,6 @@ package com.sciencebot.pos.billing;
 
 import com.sciencebot.pos.billing.internal.listeners.ElectronicInvoiceEventListener;
 import com.sciencebot.pos.billing.internal.services.InvoiceService;
-import com.sciencebot.pos.config.tenant.TenantContext;
 import com.sciencebot.pos.sales.SaleCompletedEvent;
 import com.sciencebot.pos.sales.SaleDto;
 import com.sciencebot.pos.sales.SaleFacade;

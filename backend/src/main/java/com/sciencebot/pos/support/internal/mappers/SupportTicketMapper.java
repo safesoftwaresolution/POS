@@ -1,6 +1,7 @@
 package com.sciencebot.pos.support.internal.mappers;
 
 import com.sciencebot.pos.support.SupportTicketDto;
+import com.sciencebot.pos.support.TicketTrackingDto;
 import com.sciencebot.pos.support.internal.entities.SupportTicketEntity;
 import org.springframework.stereotype.Component;
 
@@ -13,6 +14,15 @@ public class SupportTicketMapper {
                 e.getTitle(), e.getDescription(), e.getContactName(), e.getContactEmail(),
                 e.getContactPhone(), e.getStoreId(), e.getSystemInfo(), e.getResolutionNotes(),
                 e.getCreatedAt(), e.getUpdatedAt(), e.getResolvedAt()
+        );
+    }
+
+    /** Vista publica (sin datos de contacto ni descripcion) para el seguimiento sin autenticar. */
+    public TicketTrackingDto toTrackingDto(SupportTicketEntity e) {
+        if (e == null) return null;
+        return new TicketTrackingDto(
+                e.getTicketNumber(), e.getType(), e.getPriority(), e.getStatus(), e.getTitle(),
+                e.getResolutionNotes(), e.getCreatedAt(), e.getResolvedAt()
         );
     }
 }

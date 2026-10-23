@@ -1,8 +1,8 @@
 package com.sciencebot.pos.billing;
 
-import com.sciencebot.pos.billing.api.*;
-import com.sciencebot.pos.billing.dto.*;
-import com.sciencebot.pos.billing.exception.*;
+import com.sciencebot.pos.billing.dto.BillingActivationStatus;
+import com.sciencebot.pos.billing.dto.BillingEnvironment;
+import com.sciencebot.pos.billing.exception.BillingNotEnabledException;
 import com.sciencebot.pos.billing.internal.adapters.factus.FactusAccess;
 import com.sciencebot.pos.billing.internal.adapters.factus.FactusCredentialsResolver;
 import com.sciencebot.pos.billing.internal.entities.StoreBillingConfig;
@@ -164,6 +164,23 @@ class FactusCredentialsResolverTest {
 
         assertThrows(BillingNotEnabledException.class,
                 () -> resolver.resolveIgnoringStatus(5L, BillingEnvironment.PRODUCTION));
+    }
+
+    @Test
+    void isConfiguredLooksOnlyAtTheCredentialsOfTheGivenEnvironment() {
+        config(5L, BillingActivationStatus.AWAITING_PROVIDER).getProduction().setPassword(null);
+
+        assertTrue(resolver.isConfigured(5L, BillingEnvironment.SANDBOX), "no exige que el local esté ACTIVE");
+        assertFalse(resolver.isConfigured(5L, BillingEnvironment.PRODUCTION));
+    }
+
+    @Test
+    void isConfiguredIsFalseWithoutRowStoreOrEnvironment() {
+        when(repository.findById(9L)).thenReturn(Optional.empty());
+
+        assertFalse(resolver.isConfigured(9L, BillingEnvironment.SANDBOX));
+        assertFalse(resolver.isConfigured(null, BillingEnvironment.SANDBOX));
+        assertFalse(resolver.isConfigured(5L, null));
     }
 
     @Test

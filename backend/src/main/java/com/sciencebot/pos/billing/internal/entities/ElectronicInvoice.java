@@ -65,7 +65,7 @@ public class ElectronicInvoice {
         Objects.requireNonNull(saleId, "El saleId es obligatorio para inicializar la factura");
         ElectronicInvoice invoice = new ElectronicInvoice();
         invoice.saleId = saleId;
-        invoice.storeId = storeId != null ? storeId : 1L;
+        invoice.storeId = Objects.requireNonNull(storeId, "El storeId es obligatorio para inicializar la factura");
         invoice.status = ElectronicInvoiceStatus.PENDING;
         return invoice;
     }
@@ -185,8 +185,7 @@ public class ElectronicInvoice {
     public String getFactusNumber() { return factusNumber; }
     public String getCufe() { return cufe; }
     public String getQrCode() { return qrCode; }
-    public String getStatus() { return status != null ? status.name() : null; }
-    public ElectronicInvoiceStatus getDomainStatus() { return status; }
+    public ElectronicInvoiceStatus getStatus() { return status; }
     public String getErrorMessage() { return errorMessage; }
     public String getPdfUrl() { return pdfUrl; }
     public LocalDateTime getValidatedAt() { return validatedAt; }

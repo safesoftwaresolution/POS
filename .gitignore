@@ -42,7 +42,10 @@ build/
 
 ### AI & Assistant Metadata ###
 .gemini/
-.claude
+# .claude: se versionan los agentes y skills del proyecto; el resto (settings.local.json, etc.) no
+.claude/*
+!.claude/agents/
+!.claude/skills/
 
 ### Environment & Secrets ###
 .env
@@ -53,3 +56,6 @@ build/
 *.log
 .DS_Store
 Thumbs.db
+
+# Copias de la base H2 de desarrollo (contienen usuarios y hashes)
+backend/data_backup_*/

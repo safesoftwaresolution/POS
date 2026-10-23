@@ -3,28 +3,12 @@ package com.sciencebot.pos.billing.exception;
 /**
  * Factus rechazó una llamada o no se pudo llegar a Factus. Lleva el mensaje del proveedor para
  * que el usuario sepa qué pasó (credenciales inválidas, resolución inexistente, servicio caído...).
+ * Su comportamiento (código upstream, error de autenticación, error temporal) lo hereda de
+ * {@link BillingProviderException}.
  */
-public class FactusApiException extends RuntimeException {
-
-    /** Código HTTP que devolvió Factus, o 0 si ni siquiera hubo respuesta (red caída, timeout). */
-    private final int upstreamStatus;
+public class FactusApiException extends BillingProviderException {
 
     public FactusApiException(int upstreamStatus, String message, Throwable cause) {
-        super(message, cause);
-        this.upstreamStatus = upstreamStatus;
-    }
-
-    public int getUpstreamStatus() {
-        return upstreamStatus;
-    }
-
-    /** Factus rechazó las credenciales del local. */
-    public boolean isAuthenticationError() {
-        return upstreamStatus == 401 || upstreamStatus == 403;
-    }
-
-    /** No hubo respuesta o Factus falló por su lado: tiene sentido reintentar más tarde. */
-    public boolean isTemporary() {
-        return upstreamStatus == 0 || upstreamStatus >= 500;
+        super(upstreamStatus, message, cause);
     }
 }

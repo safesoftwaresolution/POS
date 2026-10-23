@@ -1,6 +1,7 @@
 package com.sciencebot.pos.billing.internal.adapters.factus;
 
 import com.sciencebot.pos.billing.exception.FactusApiException;
+import com.sciencebot.pos.config.http.OutboundHttp;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.ResourceAccessException;
@@ -23,13 +24,13 @@ public class FactusClientHelper {
 
     @Autowired
     public FactusClientHelper(FactusTokenManager tokenManager, FactusCredentialsResolver resolver) {
-        this(tokenManager, resolver, RestClient.create());
+        this(tokenManager, resolver, OutboundHttp.restClient());
     }
 
     public FactusClientHelper(FactusTokenManager tokenManager, FactusCredentialsResolver resolver, RestClient restClient) {
         this.tokenManager = tokenManager;
         this.resolver = resolver;
-        this.restClient = restClient != null ? restClient : RestClient.create();
+        this.restClient = restClient != null ? restClient : OutboundHttp.restClient();
     }
 
     /** Credenciales, URL y rango del local (nulo = el de la solicitud en curso). Exige facturación activa. */

@@ -1,8 +1,11 @@
 package com.sciencebot.pos.billing;
 
-import com.sciencebot.pos.billing.api.*;
-import com.sciencebot.pos.billing.dto.*;
-import com.sciencebot.pos.billing.exception.*;
+import com.sciencebot.pos.billing.dto.BillingActivationDto;
+import com.sciencebot.pos.billing.dto.BillingActivationStatus;
+import com.sciencebot.pos.billing.dto.BillingConnectionTestResult;
+import com.sciencebot.pos.billing.dto.BillingEnvironment;
+import com.sciencebot.pos.billing.dto.TransitionBillingStatusRequest;
+import com.sciencebot.pos.billing.dto.UpdateBillingCredentialsCommand;
 import com.sciencebot.pos.billing.internal.controllers.StoreBillingConfigController;
 import com.sciencebot.pos.billing.internal.services.StoreBillingConfigService;
 import org.junit.jupiter.api.BeforeEach;
@@ -77,7 +80,7 @@ class StoreBillingConfigControllerTest {
 
     @Test
     void testConnection_DelegatesToService() {
-        BillingConnectionTestResult result = BillingConnectionTestResult.success(BillingEnvironment.SANDBOX);
+        BillingConnectionTestResult result = BillingConnectionTestResult.success(BillingEnvironment.SANDBOX, "Factus");
         when(service.testConnection(STORE, BillingEnvironment.SANDBOX)).thenReturn(result);
 
         ResponseEntity<BillingConnectionTestResult> response = controller.testConnection(STORE, BillingEnvironment.SANDBOX);

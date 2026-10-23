@@ -1,26 +1,40 @@
-<!-- spec-version: 1.0 | last-updated: 2026-10-02 -->
-# Módulo: Storage (Almacenamiento de Archivos — Cloudflare R2)
-
-## Bounded Context
-Subida y eliminación de archivos binarios (documentos KYC, logos y otros archivos) en un bucket **Cloudflare R2** (compatible con S3). Otros módulos lo consumen vía `StorageFacade`.
+<!-- spec-version: 1.0 | last-updated: 2026-10-16 -->
+# Módulo: Storage (Almacenamiento en Cloudflare R2)
 
 ## Dependencias
-- **Requiere**: configuración `cloudflare.r2.*` (variables `R2_*`, ver `_deployment.md`).
-- **Requerido por**: `stores` (documentos KYC) y `settings` (logo del negocio).
+- **Requiere**: ninguno (usa el SDK S3 de AWS contra el endpoint compatible de Cloudflare R2).
+- **Requerido por**: `stores` (documentos KYC, carpeta `documentos`), `settings` (logo del negocio, carpeta `logos`) y el frontend (imágenes de productos y logos vía `POST /api/v1/storage/upload`).
 
-## Roles y Permisos
-- Cualquier usuario autenticado (`/api/v1/**` exige autenticación); el controlador no aplica `@PreAuthorize` ni valida que la clave pertenezca al local (deuda registrada en `_roadmap.md`).
+## Bounded Context
+Subida y borrado de archivos en un bucket R2. No guarda metadatos en base de datos: quien sube un archivo guarda la `url` y la `key` que devuelve.
 
-## Reglas de Negocio
-- **RN-STOR-001 (Clave generada)**: la clave del objeto es `<carpeta>/<UUID><extensión>`; el nombre original nunca forma parte de la clave.
-- **RN-STOR-002 (Carpeta saneada)**: el parámetro `folder` se sanea antes de usarse (`sanitizeFolder`). Carpeta por defecto: `products`.
-- **RN-STOR-003 (Sin fallback)**: sin las variables `R2_*` el endpoint responde pero falla al conectar con R2; no hay almacenamiento local alterno.
-- **RN-STOR-004 (Límite)**: tamaño máximo por archivo y por request: 10 MB (`spring.servlet.multipart.*`).
-
-## API Pública (`StorageFacade`)
-- `uploadFile(MultipartFile, folder)` y `uploadBytes(data, filename, contentType, folder)` → `StorageUploadResult` (`key`, `url` pública, `originalFilename`, `sizeBytes`, `contentType`).
+## API pública del módulo (`StorageFacade`)
+- `uploadFile(MultipartFile, folder)` → `StorageUploadResult(key, url, originalFilename, sizeBytes, contentType)`.
+- `uploadBytes(byte[], filename, contentType, folder)` → igual que el anterior (para contenido generado, ej. PDF).
 - `deleteFile(key)`.
 
-## Endpoints
-- `POST /api/v1/storage/upload` — multipart: `file`, `folder` (opcional).
-- `DELETE /api/v1/storage/files?key=...` — elimina un objeto por su clave.
+## Reglas de Negocio
+- **RN-STO-001 (Solo tipos permitidos)**: `uploadFile` acepta únicamente `.jpg/.jpeg`, `.png`, `.webp`, `.gif` y `.pdf`, y el `Content-Type` debe corresponder a la extensión. Se rechaza `.html`, `.svg`, `.exe`, etc. con 400: el bucket se sirve desde un dominio público, así que permitirlos habilitaría XSS almacenado.
+- **RN-STO-002 (Carpeta saneada)**: `folder` solo admite segmentos `[A-Za-z0-9_-]` separados por `/`; `..` y caracteres especiales se rechazan.
+- **RN-STO-003 (Aislamiento por local en el endpoint HTTP)**: `POST /api/v1/storage/upload` solo acepta las carpetas `imagenes-productos` e `imagenes-logos` y las prefija con `tienda-{storeId}/`. `DELETE /api/v1/storage/files` solo borra claves que empiecen por `tienda-{storeId}/` del local de la sesión (y sin `..`); otra clave responde 403. Sin local en la sesión responde 403.
+- **RN-STO-004 (Nombre no controlado por el cliente)**: la clave final es `{folder}/{UUID}{extensión}`; el nombre original solo se devuelve como metadato.
+- **RN-STO-005 (Tamaño)**: el límite lo impone `spring.servlet.multipart` (10 MB por archivo/solicitud). Cada caso de uso puede ser más estricto (el logo, 200 KB y 300×300 px).
+
+## Roles y Permisos
+| Operación | SUPER_ADMIN | ADMINISTRATOR | SUPERVISOR | SELLER |
+|---|---|---|---|---|
+| Subir archivo (`POST /api/v1/storage/upload`) | - | ✓ | ✓ | - |
+| Borrar archivo (`DELETE /api/v1/storage/files?key=`) | - | ✓ (solo claves del local) | ✓ (solo claves del local) | - |
+
+## API Endpoints
+- `POST /api/v1/storage/upload` — multipart: `file` y `folder` (`imagenes-productos` por defecto). Respuesta 200 con `StorageUploadResult`.
+- `DELETE /api/v1/storage/files?key=` — 200 con `{message}`; 403 si la clave no pertenece al local.
+
+## Configuración
+`cloudflare.r2.account-id`, `access-key-id`, `secret-access-key`, `bucket-name`, `public-url` (variables `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, `R2_PUBLIC_URL`).
+
+## Pendiente
+- Sin credenciales R2 el cliente se construye con valores falsos y el fallo aparece al subir; debería fallar al arrancar en producción.
+- Los documentos KYC (`documentos`) quedan en una URL pública; evaluar bucket privado con URLs prefirmadas.
+- El cliente S3 no tiene timeouts propios configurados.
+- Los servicios internos (`stores`, `settings`) llaman a `uploadFile` con carpetas fijas y **sin** prefijo de local; solo el endpoint HTTP aplica RN-STO-003.

@@ -1,6 +1,10 @@
 package com.sciencebot.pos.billing.api;
 
+import com.sciencebot.pos.billing.dto.CreateCreditNoteRequest;
+import com.sciencebot.pos.billing.dto.CreateDebitNoteRequest;
 import com.sciencebot.pos.billing.dto.CreateNumberingRangeRequest;
+import com.sciencebot.pos.billing.dto.CreditNoteDTO;
+import com.sciencebot.pos.billing.dto.DebitNoteDTO;
 import com.sciencebot.pos.billing.dto.ElectronicInvoiceDto;
 import com.sciencebot.pos.billing.dto.NumberingRangeDto;
 
@@ -23,5 +27,9 @@ public interface BillingFacade {
     NumberingRangeDto toggleNumberingRangeStatus(Long numberingRangeId);
 
     NumberingRangeDto updateNumberingRangeCurrent(Long numberingRangeId, Long current);
+
+    CreditNoteDTO createCreditNote(CreateCreditNoteRequest request);
+
+    DebitNoteDTO createDebitNote(CreateDebitNoteRequest request);
 }
 

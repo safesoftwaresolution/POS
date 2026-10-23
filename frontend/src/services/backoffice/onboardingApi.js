@@ -16,6 +16,10 @@ export async function resendUserVerificationApi(userId) {
   });
 }
 
+export async function deletePendingUserApi(userId) {
+  return await fetchApi(`/backoffice/onboarding/pending-users/${userId}`, { method: 'DELETE' });
+}
+
 export async function getOnboardingStatsApi() {
   return await fetchApi('/backoffice/onboarding/stats');
 }

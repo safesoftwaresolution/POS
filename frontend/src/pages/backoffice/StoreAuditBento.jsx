@@ -8,6 +8,7 @@ const STATUS_LABELS = {
   REJECTED: 'Rechazado',
   SUSPENDED: 'Suspendido',
   INACTIVE: 'Inactivo',
+  DELETED: 'Eliminado',
 };
 
 const STATUS_STYLES = {
@@ -16,6 +17,7 @@ const STATUS_STYLES = {
   REJECTED: 'bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400',
   SUSPENDED: 'bg-orange-100 dark:bg-orange-500/20 text-orange-700 dark:text-orange-400',
   INACTIVE: 'bg-gray-100 dark:bg-line text-gray-600 dark:text-gray-300',
+  DELETED: 'bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-400',
 };
 
 const FILTERS = [
@@ -25,6 +27,7 @@ const FILTERS = [
   { value: 'PENDING_VERIFICATION', label: 'Registros' },
   { value: 'SUSPENDED', label: 'Suspendidos' },
   { value: 'INACTIVE', label: 'Inactivos' },
+  { value: 'DELETED', label: 'Eliminados' },
 ];
 
 function StatusBadge({ status }) {

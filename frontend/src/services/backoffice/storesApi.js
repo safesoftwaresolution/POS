@@ -43,6 +43,10 @@ export async function changeBackofficeStoreStatusApi(id, status) {
   });
 }
 
+export async function deleteBackofficeStoreApi(id) {
+  return await fetchApi(`/backoffice/stores/${id}`, { method: 'DELETE' });
+}
+
 export async function verifyBackofficeStoreEmailApi(id) {
   return await fetchApi(`/backoffice/stores/${id}/verify-email`, {
     method: 'PATCH',

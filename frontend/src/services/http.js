@@ -77,6 +77,14 @@ async function refreshAccessToken() {
 }
 
 // Core HTTP Fetch Wrapper
+// Respuestas exitosas sin cuerpo (204, o 201 de /auth/register): response.json() fallaria con
+// "Unexpected end of JSON input" aunque la operacion haya funcionado.
+async function parseSuccessBody(response) {
+  if (response.status === 204) return true;
+  const text = await response.text();
+  return text ? JSON.parse(text) : true;
+}
+
 export async function fetchApi(endpoint, options = {}, _retried = false) {
   const headers = {
     'Content-Type': 'application/json',
@@ -108,8 +116,7 @@ export async function fetchApi(endpoint, options = {}, _retried = false) {
     throw new Error(errorData.message || `Error HTTP ${response.status}`);
   }
 
-  if (response.status === 204) return true;
-  return await response.json();
+  return await parseSuccessBody(response);
 }
 
 // Variante de fetchApi para subir archivos (multipart/form-data). No fija 'Content-Type':
@@ -146,6 +153,5 @@ export async function uploadFileApi(endpoint, formData, options = {}, _retried =
     throw new Error(errorData.message || `Error HTTP ${response.status}`);
   }
 
-  if (response.status === 204) return true;
-  return await response.json();
+  return await parseSuccessBody(response);
 }

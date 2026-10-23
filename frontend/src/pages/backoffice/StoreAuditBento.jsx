@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Search, ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react';
 import { getStoreStatusAuditApi } from '../../services/backoffice/storesApi';
+import useAutoRefresh from '../../hooks/useAutoRefresh';
 
 const STATUS_LABELS = {
   PENDING_VERIFICATION: 'Pendiente',
@@ -53,19 +54,22 @@ export default function StoreAuditBento() {
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setErrorMsg('');
+  const load = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) {
+      setLoading(true);
+      setErrorMsg('');
+    }
     try {
       setData(await getStoreStatusAuditApi(status, query, page));
     } catch (e) {
-      setErrorMsg(e.message || 'No se pudo cargar la auditoría.');
+      if (!silent) setErrorMsg(e.message || 'No se pudo cargar la auditoría.');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [status, query, page]);
 
   useEffect(() => { load(); }, [load]);
+  useAutoRefresh(() => load({ silent: true }));
 
   const submitSearch = (e) => {
     e.preventDefault();

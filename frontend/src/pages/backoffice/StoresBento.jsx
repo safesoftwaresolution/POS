@@ -31,6 +31,7 @@ import {
   changeBackofficeStorePlanApi
 } from '../../services/backoffice/storesApi';
 import { useModal } from '../../context/ModalContext';
+import useAutoRefresh from '../../hooks/useAutoRefresh';
 import { DOC_TYPE_LABELS, DOC_STATUS_STYLES } from '../../constants/storeDocuments';
 
 const STATUSES = ['ACTIVE', 'INACTIVE', 'PENDING_VERIFICATION', 'SUSPENDED'];
@@ -98,16 +99,16 @@ export default function StoresBento() {
     }
   }, []);
 
-  const loadStores = useCallback(async () => {
-    setLoading(true);
+  const loadStores = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) setLoading(true);
     try {
       const data = await getBackofficeStoresApi(statusFilter, search);
       setStores(data.content || []);
     } catch (e) {
       console.warn('Error cargando locales:', e);
-      setStores([]);
+      if (!silent) setStores([]);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [statusFilter, search]);
 
@@ -134,6 +135,8 @@ export default function StoresBento() {
     const t = setTimeout(loadStores, 250);
     return () => clearTimeout(t);
   }, [loadStores]);
+
+  useAutoRefresh(() => Promise.all([loadMetrics(), loadStores({ silent: true }), loadPlans()]));
 
   const refreshAll = async () => {
     await Promise.all([loadMetrics(), loadStores(), loadCategories(), loadPlans()]);

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Clock, Users, Store, Check, X, AlertCircle, Mail, CheckCircle2, Send, UserCheck, Trash2 } from 'lucide-react';
+import useAutoRefresh from '../../hooks/useAutoRefresh';
 import {
   getPendingUsersApi,
   getVerifiedUsersApi,
@@ -43,8 +44,8 @@ export default function OnboardingBento() {
   const [rejectingStore, setRejectingStore] = useState(null);
   const [rejectionReason, setRejectionReason] = useState('');
 
-  const loadAll = useCallback(async () => {
-    setLoading(true);
+  const loadAll = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) setLoading(true);
     try {
       const [statsData, usersData, verifiedData, storesData, rejectedData] = await Promise.all([
         getOnboardingStatsApi(),
@@ -66,6 +67,7 @@ export default function OnboardingBento() {
   }, []);
 
   useEffect(() => { loadAll(); }, [loadAll]);
+  useAutoRefresh(() => loadAll({ silent: true }));
 
   const handleResend = async (user) => {
     setErrorMsg('');

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Search, ChevronLeft, ChevronRight, AlertCircle, CheckCircle2, UserPlus, X, Store, UserX, UserCheck, Trash2 } from 'lucide-react';
+import useAutoRefresh from '../../hooks/useAutoRefresh';
 import {
   getUserDirectoryApi,
   getAssignableOwnersApi,
@@ -105,38 +106,42 @@ export default function UsersDirectoryBento() {
   const [errorMsg, setErrorMsg] = useState('');
   const [infoMsg, setInfoMsg] = useState('');
 
-  const loadDirectory = useCallback(async () => {
-    setLoading(true);
+  // `silent` = refresco automático: sin "Cargando..." y sin mostrar errores transitorios.
+  const loadDirectory = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) setLoading(true);
     try {
       setDirectory(await getUserDirectoryApi({ role, storeId: storeIdFilter, q: query, unassigned, page }));
     } catch (e) {
-      setErrorMsg(e.message || 'No se pudo cargar el directorio de usuarios.');
+      if (!silent) setErrorMsg(e.message || 'No se pudo cargar el directorio de usuarios.');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [role, storeIdFilter, query, unassigned, page]);
 
-  const loadOwnership = useCallback(async () => {
+  const loadOwnership = useCallback(async ({ silent = false } = {}) => {
     try {
       const [stores, owners] = await Promise.all([getStoresWithoutOwnerApi(), getAssignableOwnersApi()]);
       setOwnerless(stores);
       setCandidates(owners);
     } catch (e) {
-      setErrorMsg(e.message || 'No se pudieron cargar los locales sin administrador.');
+      if (!silent) setErrorMsg(e.message || 'No se pudieron cargar los locales sin administrador.');
     }
   }, []);
 
-  const loadHistory = useCallback(async () => {
+  const loadHistory = useCallback(async ({ silent = false } = {}) => {
     try {
       setHistory(await getOwnerAssignmentsApi(historyPage));
     } catch (e) {
-      setErrorMsg(e.message || 'No se pudo cargar el historial de asignaciones.');
+      if (!silent) setErrorMsg(e.message || 'No se pudo cargar el historial de asignaciones.');
     }
   }, [historyPage]);
 
   useEffect(() => { loadDirectory(); }, [loadDirectory]);
   useEffect(() => { loadOwnership(); }, [loadOwnership]);
   useEffect(() => { loadHistory(); }, [loadHistory]);
+  useAutoRefresh(() => Promise.all([
+    loadDirectory({ silent: true }), loadOwnership({ silent: true }), loadHistory({ silent: true }),
+  ]));
 
   const submitSearch = (e) => {
     e.preventDefault();

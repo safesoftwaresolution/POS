@@ -10,6 +10,7 @@ import {
   UserCog,
   Clock,
   History,
+  Users,
   Receipt,
   LogOut,
   ChevronLeft,
@@ -33,6 +34,7 @@ export default function BackofficeSidebar({ isOpen, onClose, isCollapsed, onTogg
       items: [
         { path: '/backoffice', label: 'Locales', icon: Store, end: true },
         { path: '/backoffice/onboarding', label: 'Pendientes', icon: Clock },
+        { path: '/backoffice/users', label: 'Usuarios', icon: Users },
         { path: '/backoffice/audit', label: 'Auditoría', icon: History },
         { path: '/backoffice/billing', label: 'Facturación DIAN', icon: Receipt },
       ],

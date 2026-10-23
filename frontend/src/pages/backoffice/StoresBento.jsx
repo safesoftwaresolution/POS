@@ -12,8 +12,10 @@ import {
   Check,
   Ban,
   Clock,
-  Building2
+  Building2,
+  Users
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import {
   getBackofficeMetricsApi,
   getBackofficeStoresApi,
@@ -350,6 +352,13 @@ export default function StoresBento() {
                             <MailCheck className="w-4 h-4" />
                           </button>
                         )}
+                        <Link
+                          to={`/backoffice/users?storeId=${s.id}`}
+                          title="Ver usuarios del local"
+                          className="p-1.5 text-ink-muted hover:text-brand dark:hover:text-brand rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer"
+                        >
+                          <Users className="w-4 h-4" />
+                        </Link>
                         <button
                           onClick={() => openDocuments(s)}
                           title="Documentos KYC"

@@ -40,6 +40,16 @@ public class StoreController {
         return ResponseEntity.ok(storeFacade.searchStores(status, q, pageable));
     }
 
+    @GetMapping("/api/v1/backoffice/store-status-audit")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @Operation(summary = "Historial de auditoría (solo lectura) de cambios de estado de locales: registro, aprobación, rechazo...")
+    public ResponseEntity<Page<StoreStatusAuditDto>> getStatusAudit(
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String q,
+            Pageable pageable) {
+        return ResponseEntity.ok(storeFacade.getStatusAudit(status, q, pageable));
+    }
+
     @GetMapping("/api/v1/backoffice/stores/{id}")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     @Operation(summary = "Obtener un local por ID")

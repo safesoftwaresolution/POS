@@ -26,6 +26,8 @@ public interface StoreFacade {
     StoreDocumentDto uploadOwnDocument(String ownerUsername, String documentType, MultipartFile file);
     /** Rechaza un local pendiente con un motivo obligatorio. */
     StoreDto rejectStore(Long id, String reason);
+    /** Historial de solo lectura de cambios de estado de locales (registro, aprobación, rechazo...). */
+    Page<StoreStatusAuditDto> getStatusAudit(String newStatus, String q, Pageable pageable);
     List<StoreDocumentDto> getDocuments(Long storeId);
     StoreDocumentDto reviewDocument(Long storeId, Long docId, ReviewDocumentCommand command);
     List<StoreCategoryDto> listCategories();

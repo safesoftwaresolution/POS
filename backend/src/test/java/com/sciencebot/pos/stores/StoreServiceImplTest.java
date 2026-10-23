@@ -36,6 +36,8 @@ class StoreServiceImplTest {
     @Mock private UserFacade userFacade;
     @Mock private StorageFacade storageFacade;
     @Mock private NotificationFacade notificationFacade;
+    @Mock private com.sciencebot.pos.stores.internal.repositories.StoreStatusAuditRepository statusAuditRepository;
+    @Mock private com.sciencebot.pos.stores.internal.repositories.StoreStatusAuditQueryDao statusAuditQueryDao;
     @InjectMocks private StoreServiceImpl storeService;
 
     @BeforeEach

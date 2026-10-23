@@ -4,10 +4,13 @@ import com.sciencebot.pos.stores.*;
 import com.sciencebot.pos.stores.internal.entities.StoreCategoryEntity;
 import com.sciencebot.pos.stores.internal.entities.StoreDocumentEntity;
 import com.sciencebot.pos.stores.internal.entities.StoreEntity;
+import com.sciencebot.pos.stores.internal.entities.StoreStatusAuditEntity;
 import com.sciencebot.pos.stores.internal.mappers.StoreMapper;
 import com.sciencebot.pos.stores.internal.repositories.StoreCategoryRepository;
 import com.sciencebot.pos.stores.internal.repositories.StoreDocumentRepository;
 import com.sciencebot.pos.stores.internal.repositories.StoreRepository;
+import com.sciencebot.pos.stores.internal.repositories.StoreStatusAuditQueryDao;
+import com.sciencebot.pos.stores.internal.repositories.StoreStatusAuditRepository;
 import com.sciencebot.pos.notifications.CreateNotificationCommand;
 import com.sciencebot.pos.notifications.NotificationFacade;
 import com.sciencebot.pos.storage.StorageFacade;
@@ -18,6 +21,7 @@ import jakarta.persistence.EntityNotFoundException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -40,6 +44,8 @@ public class StoreServiceImpl implements StoreFacade {
     private final UserFacade userFacade;
     private final StorageFacade storageFacade;
     private final NotificationFacade notificationFacade;
+    private final StoreStatusAuditRepository statusAuditRepository;
+    private final StoreStatusAuditQueryDao statusAuditQueryDao;
 
     public StoreServiceImpl(StoreRepository storeRepository,
                             StoreCategoryRepository categoryRepository,
@@ -47,7 +53,9 @@ public class StoreServiceImpl implements StoreFacade {
                             StoreMapper storeMapper,
                             UserFacade userFacade,
                             StorageFacade storageFacade,
-                            NotificationFacade notificationFacade) {
+                            NotificationFacade notificationFacade,
+                            StoreStatusAuditRepository statusAuditRepository,
+                            StoreStatusAuditQueryDao statusAuditQueryDao) {
         this.storeRepository = storeRepository;
         this.categoryRepository = categoryRepository;
         this.documentRepository = documentRepository;
@@ -55,6 +63,8 @@ public class StoreServiceImpl implements StoreFacade {
         this.userFacade = userFacade;
         this.storageFacade = storageFacade;
         this.notificationFacade = notificationFacade;
+        this.statusAuditRepository = statusAuditRepository;
+        this.statusAuditQueryDao = statusAuditQueryDao;
     }
 
     @Override
@@ -100,6 +110,7 @@ public class StoreServiceImpl implements StoreFacade {
         entity.setStatus("PENDING_VERIFICATION");
         entity.setEmailVerified(false);
         StoreEntity saved = storeRepository.save(entity);
+        recordStatusChange(saved.getId(), null, saved.getStatus(), null);
         return storeMapper.toDto(saved, resolveCategoryName(saved.getStoreCategoryId()));
     }
 
@@ -129,8 +140,13 @@ public class StoreServiceImpl implements StoreFacade {
         }
         StoreEntity entity = storeRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Local no encontrado con ID: " + id));
+        String previousStatus = entity.getStatus();
         entity.setStatus(newStatus.toUpperCase());
-        return storeMapper.toDto(storeRepository.save(entity), resolveCategoryName(entity.getStoreCategoryId()));
+        StoreEntity saved = storeRepository.save(entity);
+        if (!saved.getStatus().equals(previousStatus)) {
+            recordStatusChange(saved.getId(), previousStatus, saved.getStatus(), null);
+        }
+        return storeMapper.toDto(saved, resolveCategoryName(saved.getStoreCategoryId()));
     }
 
     @Override
@@ -236,9 +252,32 @@ public class StoreServiceImpl implements StoreFacade {
         }
         StoreEntity entity = storeRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Local no encontrado con ID: " + id));
+        String previousStatus = entity.getStatus();
         entity.setStatus("REJECTED");
         entity.setRejectionReason(reason);
-        return storeMapper.toDto(storeRepository.save(entity), resolveCategoryName(entity.getStoreCategoryId()));
+        StoreEntity saved = storeRepository.save(entity);
+        recordStatusChange(saved.getId(), previousStatus, "REJECTED", reason);
+        return storeMapper.toDto(saved, resolveCategoryName(saved.getStoreCategoryId()));
+    }
+
+    @Override
+    public Page<StoreStatusAuditDto> getStatusAudit(String newStatus, String q, Pageable pageable) {
+        String statusParam = (newStatus == null || newStatus.isBlank() || newStatus.equalsIgnoreCase("ALL"))
+                ? null : newStatus.toUpperCase();
+        String qParam = (q == null || q.isBlank()) ? null : q.trim();
+        return statusAuditQueryDao.search(statusParam, qParam, pageable);
+    }
+
+    /** Deja constancia inmutable de quién cambió el estado del local y cuándo. */
+    private void recordStatusChange(Long storeId, String previousStatus, String newStatus, String reason) {
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        StoreStatusAuditEntity entry = new StoreStatusAuditEntity();
+        entry.setStoreId(storeId);
+        entry.setPreviousStatus(previousStatus);
+        entry.setNewStatus(newStatus);
+        entry.setReason(reason != null && reason.length() > 255 ? reason.substring(0, 255) : reason);
+        entry.setPerformedBy(authentication != null ? authentication.getName() : "system");
+        statusAuditRepository.save(entry);
     }
 
     @Override

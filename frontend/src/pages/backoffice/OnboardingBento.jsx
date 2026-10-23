@@ -1,6 +1,11 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Clock, Users, Store, Check, X, AlertCircle, Mail, CheckCircle2 } from 'lucide-react';
-import { getPendingUsersApi, getOnboardingStatsApi } from '../../services/backoffice/onboardingApi';
+import { Clock, Users, Store, Check, X, AlertCircle, Mail, CheckCircle2, Send, UserCheck } from 'lucide-react';
+import {
+  getPendingUsersApi,
+  getVerifiedUsersApi,
+  getOnboardingStatsApi,
+  resendUserVerificationApi,
+} from '../../services/backoffice/onboardingApi';
 import { getBackofficeStoresApi, changeBackofficeStoreStatusApi, rejectBackofficeStoreApi } from '../../services/backoffice/storesApi';
 
 function MetricCard({ label, value, icon: Icon, accent }) {
@@ -20,22 +25,27 @@ function MetricCard({ label, value, icon: Icon, accent }) {
 export default function OnboardingBento() {
   const [stats, setStats] = useState(null);
   const [pendingUsers, setPendingUsers] = useState([]);
+  const [verifiedUsers, setVerifiedUsers] = useState([]);
   const [pendingStores, setPendingStores] = useState([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
+  const [infoMsg, setInfoMsg] = useState('');
+  const [resendingId, setResendingId] = useState(null);
   const [rejectingStore, setRejectingStore] = useState(null);
   const [rejectionReason, setRejectionReason] = useState('');
 
   const loadAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [statsData, usersData, storesData] = await Promise.all([
+      const [statsData, usersData, verifiedData, storesData] = await Promise.all([
         getOnboardingStatsApi(),
         getPendingUsersApi(),
+        getVerifiedUsersApi(),
         getBackofficeStoresApi('PENDING_VERIFICATION'),
       ]);
       setStats(statsData);
       setPendingUsers(usersData.content || []);
+      setVerifiedUsers(verifiedData.content || []);
       setPendingStores(storesData.content || []);
     } catch (e) {
       console.warn('Error cargando pendientes de onboarding:', e);
@@ -45,6 +55,20 @@ export default function OnboardingBento() {
   }, []);
 
   useEffect(() => { loadAll(); }, [loadAll]);
+
+  const handleResend = async (user) => {
+    setErrorMsg('');
+    setInfoMsg('');
+    setResendingId(user.id);
+    try {
+      await resendUserVerificationApi(user.id);
+      setInfoMsg(`Correo de verificación reenviado a ${user.email}.`);
+    } catch (err) {
+      setErrorMsg(err.message || 'No se pudo reenviar el correo.');
+    } finally {
+      setResendingId(null);
+    }
+  };
 
   const handleApprove = async (store) => {
     setErrorMsg('');
@@ -83,6 +107,13 @@ export default function OnboardingBento() {
         </div>
       )}
 
+      {infoMsg && (
+        <div className="p-3 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/40 rounded-xl text-xs font-bold flex items-center gap-2">
+          <CheckCircle2 className="w-4 h-4 shrink-0" />
+          <span>{infoMsg}</span>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <MetricCard label="Usuarios sin verificar" value={stats?.pendingUsers ?? '—'} icon={Users} accent="bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400" />
         <MetricCard label="Locales pendientes" value={stats?.pendingStores ?? '—'} icon={Clock} accent="bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400" />
@@ -107,6 +138,7 @@ export default function OnboardingBento() {
                   <th className="px-2 py-2">Nombre</th>
                   <th className="px-2 py-2">Usuario</th>
                   <th className="px-2 py-2">Correo</th>
+                  <th className="px-2 py-2 text-right">Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -118,6 +150,60 @@ export default function OnboardingBento() {
                       <span className="flex items-center gap-1.5 font-semibold text-gray-600 dark:text-gray-300">
                         <Mail className="w-3.5 h-3.5 text-ink-muted" /> {u.email}
                       </span>
+                    </td>
+                    <td className="px-2 py-3 text-right">
+                      <button
+                        onClick={() => handleResend(u)}
+                        disabled={resendingId === u.id}
+                        className="px-3 py-1.5 bg-solid hover:bg-solid-hover disabled:opacity-50 text-white rounded-xl text-[11px] font-bold inline-flex items-center gap-1 cursor-pointer"
+                      >
+                        <Send className="w-3.5 h-3.5" /> {resendingId === u.id ? 'Enviando...' : 'Reenviar correo'}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Usuarios que ya verificaron su correo */}
+      <div className="bento-card p-6 space-y-4">
+        <h2 className="text-sm font-black text-ink flex items-center gap-2">
+          <UserCheck className="w-4 h-4 text-emerald-500" /> Usuarios verificados
+        </h2>
+        {loading ? (
+          <div className="py-8 text-center text-xs font-bold text-ink-muted">Cargando...</div>
+        ) : verifiedUsers.length === 0 ? (
+          <div className="py-8 text-center text-xs font-bold text-ink-muted">Aún no hay usuarios verificados</div>
+        ) : (
+          <div className="overflow-x-auto -mx-2">
+            <table className="w-full text-xs min-w-[560px]">
+              <thead>
+                <tr className="text-left text-[10px] font-extrabold text-ink-muted uppercase">
+                  <th className="px-2 py-2">Nombre</th>
+                  <th className="px-2 py-2">Usuario</th>
+                  <th className="px-2 py-2">Correo</th>
+                  <th className="px-2 py-2">Local</th>
+                </tr>
+              </thead>
+              <tbody>
+                {verifiedUsers.map(u => (
+                  <tr key={u.id} className="border-t border-line">
+                    <td className="px-2 py-3 font-extrabold text-ink">{u.fullName}</td>
+                    <td className="px-2 py-3 text-ink-soft font-semibold">{u.username}</td>
+                    <td className="px-2 py-3">
+                      <span className="flex items-center gap-1.5 font-semibold text-gray-600 dark:text-gray-300">
+                        <Mail className="w-3.5 h-3.5 text-ink-muted" /> {u.email}
+                      </span>
+                    </td>
+                    <td className="px-2 py-3">
+                      {u.storeId ? (
+                        <span className="text-emerald-600 dark:text-emerald-400 font-bold">Con local registrado</span>
+                      ) : (
+                        <span className="text-amber-600 dark:text-amber-400 font-bold">Aún sin local</span>
+                      )}
                     </td>
                   </tr>
                 ))}

@@ -26,6 +26,7 @@ Gestión centralizada de los comercios/locales que utilizan la plataforma POS co
 - `PATCH /api/v1/backoffice/stores/{id}/reject`: Rechazo del local (motivo).
 - `PATCH /api/v1/backoffice/stores/{id}/verify-email`: Verificación de correo.
 - `GET /api/v1/backoffice/store-status-audit`: Historial de solo lectura de cambios de estado de locales (registro, aprobación, rechazo, suspensión…) con quién y cuándo. Filtros `status` (estado nuevo) y `q` (local, NIT, correo o responsable), paginado. Se alimenta de `store_status_audit` (V18), que solo se inserta; los locales anteriores a V18 tienen una fila de respaldo con `performed_by` nulo.
+- `GET /api/v1/backoffice/onboarding/verified-users`: Usuarios `ADMINISTRATOR` que ya verificaron su correo (contraparte de `pending-users`); indica si ya registraron local (`storeId`).
 - `GET /api/v1/backoffice/stores/{id}/documents`: Listado de documentos KYC.
 - `PATCH /api/v1/backoffice/stores/{id}/documents/{docId}`: Aprobación/Rechazo de documento.
 - `GET /api/v1/backoffice/store-categories`: Listado de categorías de comercios.

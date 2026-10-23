@@ -75,6 +75,10 @@
 - **Request**: `{ "email": "..." }`
 - **Response**: `204 No Content` siempre, exista o no la cuenta. Solo envía si la cuenta existe y sigue sin verificar; máximo un envío por correo por minuto (en memoria). Si el correo falla en `register`, la cuenta queda creada y el usuario usa este endpoint.
 
+### POST /api/v1/backoffice/onboarding/pending-users/{userId}/resend-verification
+- **Permisos**: `SUPER_ADMIN` (controlador en el módulo `backoffice`, que llega a `auth` solo por `AuthFacade.resendVerificationToUser`).
+- **Response**: `204 No Content`. A diferencia del reenvío público, informa de los problemas: `400` si la cuenta ya está verificada o se envió otro correo hace menos de un minuto (el enfriamiento se comparte con el reenvío público), `409` si el proveedor de correo falla (un fallo no inicia el enfriamiento, así que se puede reintentar).
+
 ### POST /api/v1/auth/forgot-password
 - **Permisos**: Público
 - **Request**: `{ "email": "..." }`

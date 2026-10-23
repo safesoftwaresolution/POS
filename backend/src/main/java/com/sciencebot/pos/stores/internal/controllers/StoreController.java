@@ -121,11 +121,14 @@ public class StoreController {
 
     @DeleteMapping("/api/v1/backoffice/stores/{id}")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
-    @Operation(summary = "Eliminar definitivamente un local rechazado",
-            description = "Borra el local, su dueño y sus documentos. Solo locales REJECTED que nunca operaron. "
+    @Operation(summary = "Eliminar definitivamente un local",
+            description = "Borra el local con todos sus datos y documentos; sus administradores quedan sin local (no se eliminan). "
+                    + "Body opcional {\"confirmName\": \"...\"}: obligatorio salvo para un rechazado que nunca operó. "
+                    + "400 si el nombre no coincide o el local tiene facturas electronicas validadas. "
                     + "La auditoria conserva un evento DELETED con los datos del local.")
-    public ResponseEntity<Void> deleteRejectedStore(@PathVariable Long id) {
-        storeFacade.deleteRejectedStore(id);
+    public ResponseEntity<Void> deleteStore(@PathVariable Long id,
+                                            @RequestBody(required = false) Map<String, String> body) {
+        storeFacade.deleteStore(id, body == null ? null : body.get("confirmName"));
         return ResponseEntity.noContent().build();
     }
 

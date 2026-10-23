@@ -281,26 +281,32 @@ public class StoreServiceImpl implements StoreFacade {
     }
 
     /**
-     * Elimina definitivamente un local rechazado, su dueño y sus documentos (también los archivos del
-     * bucket). Solo si nunca operó. Deja un evento DELETED en la auditoría, que conserva los datos del local.
+     * Elimina definitivamente un local de cualquier estado con todos sus datos (también los archivos del
+     * bucket). Los administradores del local no se borran: quedan sin local y se pueden reasignar o eliminar
+     * desde el directorio de usuarios. Se rechaza si tiene facturas electrónicas validadas (documentos
+     * fiscales). Si el local no es un rechazado sin operación, exige escribir su nombre exacto. Deja un evento
+     * DELETED en la auditoría, que conserva los datos del local.
      */
     @Override
     @Transactional
-    public void deleteRejectedStore(Long id) {
+    public void deleteStore(Long id, String confirmName) {
         StoreEntity store = storeRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Local no encontrado con ID: " + id));
-        if (!"REJECTED".equals(store.getStatus())) {
-            throw new IllegalArgumentException("Solo se pueden eliminar locales rechazados.");
+        if (storePurgeDao.countValidatedInvoices(id) > 0) {
+            throw new IllegalArgumentException("El local tiene facturas electronicas validadas ante la DIAN, que son "
+                    + "documentos fiscales y deben conservarse. Suspende o inactiva el local en lugar de eliminarlo.");
         }
         List<String> withData = storePurgeDao.findBusinessData(id);
-        if (!withData.isEmpty()) {
-            throw new IllegalArgumentException("El local ya tiene datos de operacion ("
-                    + String.join(", ", withData) + ") y no puede eliminarse.");
+        boolean needsConfirmation = !"REJECTED".equals(store.getStatus()) || !withData.isEmpty();
+        String storeName = store.getName() == null ? "" : store.getName().trim();
+        if (needsConfirmation && (confirmName == null || !confirmName.trim().equalsIgnoreCase(storeName))) {
+            throw new IllegalArgumentException("Para eliminar este local escribe su nombre exacto: " + store.getName());
         }
 
         List<String> documentUrls = storePurgeDao.findDocumentUrls(id);
         String reason = "Eliminado definitivamente"
-                + (store.getRejectionReason() != null ? " (motivo del rechazo: " + store.getRejectionReason() + ")" : "");
+                + (store.getRejectionReason() != null ? " (motivo del rechazo: " + store.getRejectionReason() + ")" : "")
+                + (withData.isEmpty() ? "" : " con datos de operacion: " + String.join(", ", withData));
         recordStatusChange(store, store.getStatus(), "DELETED", reason);
         storePurgeDao.purge(id);
 

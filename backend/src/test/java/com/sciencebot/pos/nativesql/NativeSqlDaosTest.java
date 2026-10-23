@@ -142,36 +142,101 @@ class NativeSqlDaosTest {
         long victim = store("Purge Victim", "purge-victim@test.com", "REJECTED");
         long keepUser = user("purge_keep_user", "ADMINISTRATOR", keep, true, true);
         long victimUser = user("purge_victim_user", "ADMINISTRATOR", victim, true, true);
+        long victimSeller = user("purge_victim_seller", "SELLER", victim, true, true);
 
-        for (long uid : new long[]{keepUser, victimUser}) {
+        for (long uid : new long[]{keepUser, victimUser, victimSeller}) {
             jdbc.sql("INSERT INTO email_verification_tokens (token_hash, user_id, expires_at, created_at) "
                     + "VALUES (:h, :u, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
                     .param("h", "evt-" + uid).param("u", uid).update();
             jdbc.sql("INSERT INTO password_reset_tokens (token_hash, user_id, expires_at, created_at) "
                     + "VALUES (:h, :u, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
                     .param("h", "prt-" + uid).param("u", uid).update();
+        }
+        for (long[] pair : new long[][]{{keepUser, keep}, {victimUser, victim}}) {
             jdbc.sql("INSERT INTO store_documents (store_id, document_type, document_url, status, uploaded_at) "
                     + "VALUES (:s, 'RUT', :url, 'PENDING', CURRENT_TIMESTAMP)")
-                    .param("s", uid == keepUser ? keep : victim)
-                    .param("url", "https://cdn.test/documentos/" + uid + ".pdf").update();
+                    .param("s", pair[1]).param("url", "https://cdn.test/documentos/" + pair[0] + ".pdf").update();
         }
 
         StorePurgeDao dao = new StorePurgeDao(jdbc);
         assertTrue(dao.findBusinessData(victim).isEmpty(), "una tienda sin operaciones no tiene datos de negocio");
+        assertEquals(0L, dao.countValidatedInvoices(victim));
         assertEquals(List.of("https://cdn.test/documentos/" + victimUser + ".pdf"), dao.findDocumentUrls(victim));
 
         dao.purge(victim);
 
         assertEquals(0L, count("SELECT COUNT(*) FROM stores WHERE id = " + victim));
         assertEquals(0L, count("SELECT COUNT(*) FROM users WHERE store_id = " + victim));
-        assertEquals(0L, count("SELECT COUNT(*) FROM email_verification_tokens WHERE user_id = " + victimUser));
+        assertEquals(0L, count("SELECT COUNT(*) FROM users WHERE id = " + victimSeller), "el personal se elimina");
+        assertEquals(0L, count("SELECT COUNT(*) FROM email_verification_tokens WHERE user_id = " + victimSeller));
         assertEquals(0L, count("SELECT COUNT(*) FROM password_reset_tokens WHERE user_id = " + victimUser));
         assertEquals(0L, count("SELECT COUNT(*) FROM store_documents WHERE store_id = " + victim));
+
+        // El administrador del local no se elimina: queda sin local y sigue siendo un candidato a asignar.
+        assertEquals(1L, count("SELECT COUNT(*) FROM users WHERE id = " + victimUser + " AND store_id IS NULL AND active = TRUE"));
+        assertEquals(1L, count("SELECT COUNT(*) FROM email_verification_tokens WHERE user_id = " + victimUser));
+        assertTrue(new UserDirectoryDao(jdbc).findAssignableOwners().stream()
+                .anyMatch(u -> u.username().equals("purge_victim_user")));
 
         assertEquals(1L, count("SELECT COUNT(*) FROM stores WHERE id = " + keep));
         assertEquals(1L, count("SELECT COUNT(*) FROM users WHERE id = " + keepUser));
         assertEquals(1L, count("SELECT COUNT(*) FROM email_verification_tokens WHERE user_id = " + keepUser));
         assertEquals(1L, count("SELECT COUNT(*) FROM store_documents WHERE store_id = " + keep));
+    }
+
+    @Test
+    void storePurge_alsoRemovesTheOperationOfAStoreThatSold_andCountsValidatedInvoices() {
+        long keep = store("Op Keep", "op-keep@test.com", "ACTIVE");
+        long victim = store("Op Victim", "op-victim@test.com", "ACTIVE");
+        long keepAdmin = user("op_keep_admin", "ADMINISTRATOR", keep, true, true);
+        long victimAdmin = user("op_victim_admin", "ADMINISTRATOR", victim, true, true);
+        long victimSeller = user("op_victim_seller", "SELLER", victim, true, true);
+        long keepSale = operate(keep, keepAdmin, "OP-KEEP");
+        long victimSale = operate(victim, victimSeller, "OP-VICTIM");
+        jdbc.sql("INSERT INTO electronic_invoices (sale_id, status, store_id, created_at, updated_at) "
+                + "VALUES (:sale, 'VALIDATED', :store, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+                .param("sale", victimSale).param("store", victim).update();
+
+        StorePurgeDao dao = new StorePurgeDao(jdbc);
+        assertTrue(dao.findBusinessData(victim).containsAll(List.of("products", "customers", "sales")));
+        assertEquals(1L, dao.countValidatedInvoices(victim));
+        assertEquals(0L, dao.countValidatedInvoices(keep));
+
+        dao.purge(victim);
+
+        for (String table : List.of("products", "customers", "sales", "electronic_invoices")) {
+            assertEquals(0L, count("SELECT COUNT(*) FROM " + table + " WHERE store_id = " + victim), table);
+        }
+        assertEquals(0L, count("SELECT COUNT(*) FROM sale_items WHERE sale_id = " + victimSale));
+        assertEquals(0L, count("SELECT COUNT(*) FROM users WHERE id = " + victimSeller));
+        assertEquals(1L, count("SELECT COUNT(*) FROM users WHERE id = " + victimAdmin + " AND store_id IS NULL"));
+
+        assertEquals(1L, count("SELECT COUNT(*) FROM sales WHERE id = " + keepSale));
+        assertEquals(1L, count("SELECT COUNT(*) FROM sale_items WHERE sale_id = " + keepSale));
+        assertEquals(1L, count("SELECT COUNT(*) FROM products WHERE store_id = " + keep));
+    }
+
+    /** Un producto, un cliente y una venta con un renglón, más una compra y un movimiento de inventario. */
+    private static long operate(long storeId, long userId, String tag) {
+        jdbc.sql("INSERT INTO categories (name, created_at, updated_at) "
+                + "SELECT :c, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP WHERE NOT EXISTS (SELECT 1 FROM categories WHERE name = :c)")
+                .param("c", "Cat Purge").update();
+        jdbc.sql("INSERT INTO products (internal_code, name, category_id, purchase_price, sale_price, quantity_available, "
+                + "store_id, created_at, updated_at) VALUES (:c, :c, (SELECT id FROM categories WHERE name = 'Cat Purge'), "
+                + "5, 10, 5, :s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+                .param("c", tag + "-P").param("s", storeId).update();
+        long product = jdbc.sql("SELECT id FROM products WHERE internal_code = :c").param("c", tag + "-P").query(Long.class).single();
+        jdbc.sql("INSERT INTO customers (full_name, identification, store_id, active, created_at, updated_at) "
+                + "VALUES (:c, :c, :s, TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+                .param("c", tag + "-C").param("s", storeId).update();
+        long customer = jdbc.sql("SELECT id FROM customers WHERE identification = :c").param("c", tag + "-C").query(Long.class).single();
+        jdbc.sql("INSERT INTO sales (invoice_number, customer_id, total_amount, cash_received, cash_change, user_id, "
+                + "store_id, created_at) VALUES (:n, :c, 10, 10, 0, :u, :s, CURRENT_TIMESTAMP)")
+                .param("n", tag).param("c", customer).param("u", userId).param("s", storeId).update();
+        long sale = jdbc.sql("SELECT id FROM sales WHERE invoice_number = :n").param("n", tag).query(Long.class).single();
+        jdbc.sql("INSERT INTO sale_items (sale_id, product_id, quantity, unit_price, subtotal) "
+                + "VALUES (:sale, :p, 1, 10, 10)").param("sale", sale).param("p", product).update();
+        return sale;
     }
 
     @Test

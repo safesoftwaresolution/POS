@@ -309,12 +309,12 @@ class StoreServiceImplTest {
     }
 
     @Test
-    void deleteRejectedStore_Success_AuditsWithSnapshotPurgesAndDeletesFiles() {
+    void deleteStore_RejectedWithoutOperation_NeedsNoConfirmation_AuditsPurgesAndDeletesFiles() {
         when(storeRepository.findById(5L)).thenReturn(Optional.of(storeWithStatus("REJECTED")));
         when(storePurgeDao.findBusinessData(5L)).thenReturn(List.of());
         when(storePurgeDao.findDocumentUrls(5L)).thenReturn(List.of("https://cdn.test/documentos/abc.pdf", "https://x/otro.png"));
 
-        storeService.deleteRejectedStore(5L);
+        storeService.deleteStore(5L, null);
 
         var captor = org.mockito.ArgumentCaptor.forClass(com.sciencebot.pos.stores.internal.entities.StoreStatusAuditEntity.class);
         verify(statusAuditRepository).save(captor.capture());
@@ -330,32 +330,42 @@ class StoreServiceImplTest {
     }
 
     @Test
-    void deleteRejectedStore_NotRejected_IsRefused() {
+    void deleteStore_ActiveStoreWithOperation_RequiresTheExactName() {
         when(storeRepository.findById(5L)).thenReturn(Optional.of(storeWithStatus("ACTIVE")));
-
-        assertThrows(IllegalArgumentException.class, () -> storeService.deleteRejectedStore(5L));
-
-        verify(storePurgeDao, never()).purge(anyLong());
-        verifyNoInteractions(statusAuditRepository);
-    }
-
-    @Test
-    void deleteRejectedStore_WithBusinessData_IsRefused() {
-        when(storeRepository.findById(5L)).thenReturn(Optional.of(storeWithStatus("REJECTED")));
         when(storePurgeDao.findBusinessData(5L)).thenReturn(List.of("sales", "products"));
 
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> storeService.deleteRejectedStore(5L));
-
-        assertTrue(ex.getMessage().contains("sales"));
+        assertThrows(IllegalArgumentException.class, () -> storeService.deleteStore(5L, null));
+        assertThrows(IllegalArgumentException.class, () -> storeService.deleteStore(5L, "otro nombre"));
         verify(storePurgeDao, never()).purge(anyLong());
-        verifyNoInteractions(storageFacade);
+        verifyNoInteractions(statusAuditRepository, storageFacade);
+
+        storeService.deleteStore(5L, "  tienda rechazada ");
+
+        var captor = org.mockito.ArgumentCaptor.forClass(com.sciencebot.pos.stores.internal.entities.StoreStatusAuditEntity.class);
+        verify(statusAuditRepository).save(captor.capture());
+        assertEquals("ACTIVE", captor.getValue().getPreviousStatus());
+        assertTrue(captor.getValue().getReason().contains("sales, products"));
+        verify(storePurgeDao).purge(5L);
     }
 
     @Test
-    void deleteRejectedStore_UnknownStore_ThrowsNotFound() {
+    void deleteStore_WithValidatedElectronicInvoices_IsRefusedEvenWithConfirmation() {
+        when(storeRepository.findById(5L)).thenReturn(Optional.of(storeWithStatus("ACTIVE")));
+        when(storePurgeDao.countValidatedInvoices(5L)).thenReturn(3L);
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> storeService.deleteStore(5L, "Tienda Rechazada"));
+
+        assertTrue(ex.getMessage().contains("DIAN"));
+        verify(storePurgeDao, never()).purge(anyLong());
+        verifyNoInteractions(statusAuditRepository, storageFacade);
+    }
+
+    @Test
+    void deleteStore_UnknownStore_ThrowsNotFound() {
         when(storeRepository.findById(9L)).thenReturn(Optional.empty());
 
-        assertThrows(jakarta.persistence.EntityNotFoundException.class, () -> storeService.deleteRejectedStore(9L));
+        assertThrows(jakarta.persistence.EntityNotFoundException.class, () -> storeService.deleteStore(9L, null));
     }
 
     @Test

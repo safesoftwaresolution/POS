@@ -34,6 +34,9 @@ Gestión centralizada de los comercios/locales que utilizan la plataforma POS co
 - `GET /api/v1/backoffice/stores-without-owner`: Locales no rechazados sin ningún ADMINISTRATOR activo.
 - `POST /api/v1/backoffice/stores/{storeId}/assign-owner` (`{ "userId": n }`): Asigna un ADMINISTRATOR verificado y sin local a un local sin administrador activo. Rechaza (`400`) locales rechazados, usuarios que ya tienen local o no son ADMINISTRATOR, usuarios sin verificar y locales que ya tienen administrador: **no mueve usuarios ya asignados**. Queda en `store_user_audit` (V21).
 - `GET /api/v1/backoffice/user-assignments`: Historial de solo lectura de esas asignaciones (más recientes primero).
+- `GET /api/v1/backoffice/plans`: Planes (`code`, `name`, `maxAdditionalUsers`, `maxActiveUsers`) del más básico al más alto. Sembrados en `V22`: `BASIC` (1 adicional), `STANDARD` (4), `PRO` (10); los límites se ajustan en la tabla `plans` sin desplegar.
+- `PATCH /api/v1/backoffice/stores/{id}/plan` (`{ "planCode": "PRO" }`): Cambia el plan de un local. Los locales existentes pasaron a `PRO` en `V22` y los nuevos empiezan en `BASIC`. Bajar de plan no desactiva usuarios (ver RN-USER-003 en el módulo users). Queda en `store_status_audit` como evento `PLAN_CHANGED` con el motivo `Plan: X -> Y`.
+- `GET /api/v1/backoffice/store-plan-usage`: Plan de cada local y usuarios activos que usa frente a su tope (lectura nativa en `UserDirectoryDao`).
 - `GET /api/v1/backoffice/stores/{id}/documents`: Listado de documentos KYC.
 - `PATCH /api/v1/backoffice/stores/{id}/documents/{docId}`: Aprobación/Rechazo de documento.
 - `GET /api/v1/backoffice/store-categories`: Listado de categorías de comercios.

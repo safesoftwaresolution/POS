@@ -68,6 +68,9 @@ Historial inmutable de cambios de estado de un local (`V18__Store_Status_Audit.s
 
 Índices: `IDX_store_status_audit_store(store_id, created_at)`, `IDX_store_status_audit_status(new_status, created_at)`.
 
+## Tabla `plans` y columna `stores.plan_code` (módulo stores)
+`V22__Store_Plans.sql`. `plans`: `code` PK (`BASIC`, `STANDARD`, `PRO`), `name`, `max_additional_users` (usuarios activos permitidos además del administrador) y `sort_order`. `stores.plan_code` VARCHAR(20) NOT NULL, `DEFAULT 'BASIC'`, `FK_stores_plan` → `plans(code)`; los locales que ya existían pasaron a `PRO`. En `store_status_audit`, `new_status` admite también `PLAN_CHANGED`.
+
 ## Tabla `store_user_audit` (módulo stores)
 Historial inmutable de asignaciones de usuarios a locales hechas por el SUPER_ADMIN (`V21__Store_User_Audit.sql`). Solo se inserta. Sin FKs a `stores` ni `users`: guarda copia de los datos (`store_name`, `username`, `full_name`, `role`) para sobrevivir a borrados.
 

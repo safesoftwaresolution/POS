@@ -10,6 +10,11 @@
 ### RN-USER-001 — Roles Estáticos y Fijos
 - Solo existen: `SUPER_ADMIN` (plataforma, sin `store_id`, gestionado desde `/api/v1/backoffice/staff`), `ADMINISTRATOR`, `SUPERVISOR`, `SELLER` (estos tres con `store_id`). No hay CRUD de roles.
 
+### RN-USER-003 — Tope de usuarios por plan
+Cada local tiene un plan (módulo `stores`, tabla `plans`) que limita sus usuarios **activos**: el administrador cuenta como uno y el plan añade `max_additional_users` más (Básico 1, Estándar 4, Pro 10 → 2, 5 y 11 usuarios activos). El tope se aplica al **crear** un usuario y al **reactivarlo**; desactivar o eliminar (borrado lógico) libera el cupo. Bajar de plan no desactiva a nadie: el local conserva sus usuarios pero no puede crear ni reactivar más hasta quedar dentro del tope. El plan limita solo la cantidad, no el rol. `SUPER_ADMIN` no cuenta ni está limitado.
+
+`users` no depende de `stores`: define el puerto `UserQuotaPolicy` (con `UserQuota`) y `stores` lo implementa (`PlanUserQuotaPolicy`), evitando un ciclo entre módulos.
+
 ### RN-USER-002 — Autoconservación del Administrador
 - No se puede eliminar ni desactivar al último usuario con rol Administrador.
 
@@ -83,6 +88,11 @@
 ### DELETE /api/v1/users/{id}
 - **Permisos**: Administrador
 - Borrado lógico
+
+### GET /api/v1/users/quota
+- **Permisos**: ADMINISTRATOR
+- **Response 200**: `{ "planName": "Básico", "activeUsers": 2, "maxActiveUsers": 2, "canCreateMore": false }` del local del llamador. `204` si el local no tiene tope aplicable.
+- La UI lo usa para mostrar el uso del plan y deshabilitar «Nuevo usuario» al llegar al tope. Crear o reactivar por encima del tope devuelve `400` con el motivo.
 
 ### PATCH /api/v1/users/{id}/password
 - **Permisos**: Administrador, Supervisor (para otros) / Usuario propio

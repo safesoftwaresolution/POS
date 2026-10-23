@@ -64,6 +64,8 @@ Historial inmutable de cambios de estado de un local (`V18__Store_Status_Audit.s
 | performed_by | VARCHAR(100) | Usuario autenticado; nulo en el respaldo de V18 |
 | created_at | TIMESTAMP | |
 
+`V20__Store_Status_Audit_Snapshot.sql` elimina la FK a `stores` y añade `store_name`, `store_email` y `store_tax_id` (copia de los datos del local en cada evento, rellenada para las filas previas). Así la auditoría sobrevive a la eliminación definitiva de un local; `new_status` admite también `DELETED`.
+
 Índices: `IDX_store_status_audit_store(store_id, created_at)`, `IDX_store_status_audit_status(new_status, created_at)`.
 
 ## Tabla `password_reset_tokens` (módulo auth)

@@ -44,7 +44,7 @@ java -jar target/app.pos-0.0.1-SNAPSHOT.jar
 ```
 
 ## Inicialización de BD
-- Esquema: gestionado exclusivamente por **Flyway** (`db/migration/V1…V19`); `ddl-auto=validate` en `dev` y `prod`. Solo el perfil `test` deja que Hibernate cree el esquema.
+- Esquema: gestionado exclusivamente por **Flyway** (`db/migration/V1…V20`); `ddl-auto=validate` en `dev` y `prod`. Solo el perfil `test` deja que Hibernate cree el esquema.
 - Datos semilla (`DatabaseSeeder` y otros seeders): `superadmin` / `SuperAdmin123!` (SUPER_ADMIN), `admin` / `Password123` (ADMINISTRATOR del local 1), "Cliente General" (RN-CUST-001), categorías base. **Cambiar estas credenciales en cualquier entorno expuesto.** `ProductDemoSeeder` solo corre en `dev`.
 
 ---

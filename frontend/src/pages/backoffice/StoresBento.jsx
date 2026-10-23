@@ -169,7 +169,8 @@ export default function StoresBento() {
     setDeleteBusy(true);
     try {
       await deleteBackofficeStoreApi(deletingStore.id, deleteConfirm.trim());
-      notify(`El local "${deletingStore.name}" fue eliminado. Sus administradores quedaron sin local.`);
+      notify(`El local "${deletingStore.name}" fue eliminado. Sus administradores quedaron sin local.`,
+        { title: 'Local eliminado', danger: false });
       setDeletingStore(null);
       await refreshAll();
     } catch (err) {

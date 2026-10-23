@@ -1,6 +1,7 @@
 package com.sciencebot.pos.auth.internal.services;
 
 import com.sciencebot.pos.shared.email.EmailSender;
+import com.sciencebot.pos.shared.email.EmailTemplate;
 import com.sciencebot.pos.users.UserDto;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,13 +37,16 @@ public class PasswordResetMailer {
             String link = frontendUrl + "/reset-password?token=" + rawToken;
             emailSender.send(
                     user.email(),
-                    "Restablece tu contraseña - ProPOS",
-                    "<p>Hola " + user.fullName() + ",</p>"
-                            + "<p>Recibimos una solicitud para restablecer tu contraseña de ProPOS. "
-                            + "El enlace vence en 1 hora:</p>"
-                            + "<p><a href=\"" + link + "\">Restablecer mi contraseña</a></p>"
-                            + "<p>Si no fuiste tu, ignora este mensaje: tu contraseña no cambiará.</p>"
-            );
+                    "Restablece tu contraseña - BentoPOS",
+                    EmailTemplate.render(
+                            "Crea una nueva contraseña para tu cuenta de BentoPOS.",
+                            "Restablece tu contraseña",
+                            "<p style=\"margin:0 0 14px;\">Hola <strong>" + EmailTemplate.escape(user.fullName()) + "</strong>,</p>"
+                                    + "<p style=\"margin:0;\">Recibimos una solicitud para restablecer la contraseña de tu cuenta de "
+                                    + "BentoPOS. El enlace vence en <strong>1 hora</strong> y solo se puede usar una vez.</p>",
+                            "Restablecer mi contraseña",
+                            link,
+                            "Si no fuiste tú, ignora este mensaje: tu contraseña no cambiará."));
         } catch (RuntimeException e) {
             log.warn("No se pudo enviar el correo de recuperacion a la cuenta {}", user.username(), e);
         }

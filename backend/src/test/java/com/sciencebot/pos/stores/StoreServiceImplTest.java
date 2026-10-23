@@ -43,6 +43,7 @@ class StoreServiceImplTest {
     @Mock private com.sciencebot.pos.stores.internal.repositories.StorePurgeDao storePurgeDao;
     @Mock private com.sciencebot.pos.stores.internal.repositories.StoreUserAuditRepository storeUserAuditRepository;
     @Mock private com.sciencebot.pos.stores.internal.repositories.PlanRepository planRepository;
+    @Mock private com.sciencebot.pos.stores.internal.services.StoreApprovalMailer approvalMailer;
     @InjectMocks private StoreServiceImpl storeService;
 
     @BeforeEach
@@ -104,6 +105,50 @@ class StoreServiceImplTest {
         StoreDto result = storeService.changeStatus(1L, "ACTIVE");
         assertNotNull(result);
         assertEquals("ACTIVE", result.status());
+    }
+
+    private StoreEntity storeInStatus(String status) {
+        StoreEntity entity = new StoreEntity();
+        entity.setId(1L);
+        entity.setName("Arqueo");
+        entity.setEmail("local@test.com");
+        entity.setStatus(status);
+        when(storeRepository.findById(1L)).thenReturn(Optional.of(entity));
+        when(storeRepository.save(any())).thenReturn(entity);
+        when(storeMapper.toDto(any(), any())).thenReturn(new StoreDto(1L, "Arqueo", null, null, null, "local@test.com", null, null, null, "ACTIVE", false, null, null, "BASIC"));
+        return entity;
+    }
+
+    @Test
+    void changeStatus_ApprovingAPendingStore_EmailsItsAdministrators() {
+        storeInStatus("PENDING_VERIFICATION");
+        when(userFacade.listActiveByStoreAndRoles(1L, List.of("ADMINISTRATOR"))).thenReturn(List.of(
+                new UserDto(7L, "Dueno", "dueno", "dueno@test.com", "ADMINISTRATOR", true, 1L, true)));
+
+        storeService.changeStatus(1L, "ACTIVE");
+
+        verify(approvalMailer).sendApproved("Arqueo", List.of("dueno@test.com"));
+    }
+
+    @Test
+    void changeStatus_ApprovingAStoreWithoutAdministrators_FallsBackToTheStoreEmail() {
+        storeInStatus("PENDING_VERIFICATION");
+        when(userFacade.listActiveByStoreAndRoles(1L, List.of("ADMINISTRATOR"))).thenReturn(List.of());
+
+        storeService.changeStatus(1L, "ACTIVE");
+
+        verify(approvalMailer).sendApproved("Arqueo", List.of("local@test.com"));
+    }
+
+    @Test
+    void changeStatus_ReactivatingASuspendedStoreOrSuspendingOne_SendsNoApprovalEmail() {
+        storeInStatus("SUSPENDED");
+        storeService.changeStatus(1L, "ACTIVE");
+
+        storeInStatus("ACTIVE");
+        storeService.changeStatus(1L, "SUSPENDED");
+
+        verifyNoInteractions(approvalMailer);
     }
 
     @Test

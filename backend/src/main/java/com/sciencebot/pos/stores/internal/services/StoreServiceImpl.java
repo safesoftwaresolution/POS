@@ -60,6 +60,7 @@ public class StoreServiceImpl implements StoreFacade {
     private final StorePurgeDao storePurgeDao;
     private final StoreUserAuditRepository storeUserAuditRepository;
     private final PlanRepository planRepository;
+    private final StoreApprovalMailer approvalMailer;
 
     public StoreServiceImpl(StoreRepository storeRepository,
                             StoreCategoryRepository categoryRepository,
@@ -72,7 +73,8 @@ public class StoreServiceImpl implements StoreFacade {
                             StoreStatusAuditQueryDao statusAuditQueryDao,
                             StorePurgeDao storePurgeDao,
                             StoreUserAuditRepository storeUserAuditRepository,
-                            PlanRepository planRepository) {
+                            PlanRepository planRepository,
+                            StoreApprovalMailer approvalMailer) {
         this.storeRepository = storeRepository;
         this.categoryRepository = categoryRepository;
         this.documentRepository = documentRepository;
@@ -85,6 +87,7 @@ public class StoreServiceImpl implements StoreFacade {
         this.storePurgeDao = storePurgeDao;
         this.storeUserAuditRepository = storeUserAuditRepository;
         this.planRepository = planRepository;
+        this.approvalMailer = approvalMailer;
     }
 
     @Override
@@ -165,8 +168,43 @@ public class StoreServiceImpl implements StoreFacade {
         StoreEntity saved = storeRepository.save(entity);
         if (!saved.getStatus().equals(previousStatus)) {
             recordStatusChange(saved, previousStatus, saved.getStatus(), null);
+            if ("PENDING_VERIFICATION".equals(previousStatus) && "ACTIVE".equals(saved.getStatus())) {
+                notifyStoreApproved(saved);
+            }
         }
         return storeMapper.toDto(saved, resolveCategoryName(saved.getStoreCategoryId()));
+    }
+
+    /**
+     * Avisa por correo a los administradores del local (o, si aún no tiene, al correo del local) que fue aprobado.
+     * Solo se envía al aprobar un local pendiente, no al reactivar uno suspendido, y únicamente si la
+     * transacción confirma, para no avisar de una aprobación que luego se revierte.
+     */
+    private void notifyStoreApproved(StoreEntity store) {
+        List<String> recipients = userFacade.listActiveByStoreAndRoles(store.getId(), List.of("ADMINISTRATOR"))
+                .stream().map(UserDto::email).filter(e -> e != null && !e.isBlank()).distinct().toList();
+        if (recipients.isEmpty() && store.getEmail() != null && !store.getEmail().isBlank()) {
+            recipients = List.of(store.getEmail());
+        }
+        if (recipients.isEmpty()) {
+            return;
+        }
+        List<String> to = recipients;
+        String name = store.getName();
+        runAfterCommit(() -> approvalMailer.sendApproved(name, to));
+    }
+
+    private void runAfterCommit(Runnable action) {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    action.run();
+                }
+            });
+        } else {
+            action.run();
+        }
     }
 
     @Override
@@ -311,16 +349,7 @@ public class StoreServiceImpl implements StoreFacade {
         storePurgeDao.purge(id);
 
         // Los archivos se borran solo si la transaccion confirma, para no perderlos si el borrado falla.
-        if (TransactionSynchronizationManager.isSynchronizationActive()) {
-            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                @Override
-                public void afterCommit() {
-                    deleteDocumentFiles(documentUrls);
-                }
-            });
-        } else {
-            deleteDocumentFiles(documentUrls);
-        }
+        runAfterCommit(() -> deleteDocumentFiles(documentUrls));
     }
 
     private void deleteDocumentFiles(List<String> documentUrls) {

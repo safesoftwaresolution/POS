@@ -5,6 +5,7 @@ import com.sciencebot.pos.auth.LoginResponse;
 import com.sciencebot.pos.config.security.JwtService;
 import com.sciencebot.pos.config.security.PosUserDetails;
 import com.sciencebot.pos.shared.email.EmailSender;
+import com.sciencebot.pos.shared.email.EmailTemplate;
 import com.sciencebot.pos.users.RegisterOwnerCommand;
 import com.sciencebot.pos.users.UserDto;
 import com.sciencebot.pos.users.UserFacade;
@@ -207,12 +208,16 @@ public class AuthService implements AuthFacade {
         String link = frontendUrl + "/verify-email?token=" + rawToken;
         emailSender.send(
                 user.email(),
-                "Verifica tu correo - ProPOS",
-                "<p>Hola " + user.fullName() + ",</p>"
-                        + "<p>Gracias por registrarte en ProPOS. Confirma tu correo para activar tu cuenta:</p>"
-                        + "<p><a href=\"" + link + "\">Verificar mi correo</a></p>"
-                        + "<p>Si no fuiste tu, ignora este mensaje.</p>"
-        );
+                "Verifica tu correo - BentoPOS",
+                EmailTemplate.render(
+                        "Confirma tu correo para activar tu cuenta de BentoPOS.",
+                        "Confirma tu correo",
+                        "<p style=\"margin:0 0 14px;\">Hola <strong>" + EmailTemplate.escape(user.fullName()) + "</strong>,</p>"
+                                + "<p style=\"margin:0;\">Gracias por registrarte en BentoPOS. Confirma tu correo para activar tu cuenta "
+                                + "y continuar con el registro de tu local.</p>",
+                        "Verificar mi correo",
+                        link,
+                        "Si no creaste esta cuenta, puedes ignorar este mensaje."));
     }
 
     /** Consume el token de verificacion, activa el correo del usuario y lo autologuea. */

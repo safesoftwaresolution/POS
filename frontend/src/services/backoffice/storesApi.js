@@ -11,6 +11,13 @@ export async function getBackofficeStoresApi(status = '', q = '', page = 0, size
   return await fetchApi(`/backoffice/stores?${params.toString()}`);
 }
 
+export async function getStoreStatusAuditApi(status = '', q = '', page = 0, size = 20) {
+  const params = new URLSearchParams({ page, size });
+  if (status && status !== 'ALL') params.append('status', status);
+  if (q) params.append('q', q);
+  return await fetchApi(`/backoffice/store-status-audit?${params.toString()}`);
+}
+
 export async function getBackofficeStoreApi(id) {
   return await fetchApi(`/backoffice/stores/${id}`);
 }

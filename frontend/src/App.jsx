@@ -37,6 +37,7 @@ const LegalDocumentsBento = lazy(() => import('./pages/backoffice/LegalDocuments
 const SupportTicketsBento = lazy(() => import('./pages/backoffice/SupportTicketsBento'));
 const StaffBento = lazy(() => import('./pages/backoffice/StaffBento'));
 const OnboardingBento = lazy(() => import('./pages/backoffice/OnboardingBento'));
+const StoreAuditBento = lazy(() => import('./pages/backoffice/StoreAuditBento'));
 
 // Las páginas se cargan bajo demanda: el bundle inicial solo trae login, registro y los layouts.
 function PageFallback() {
@@ -218,6 +219,7 @@ function BackofficeProtectedLayout() {
             <Route path="/support" element={<SupportTicketsBento />} />
             <Route path="/staff" element={<StaffBento />} />
             <Route path="/onboarding" element={<OnboardingBento />} />
+            <Route path="/audit" element={<StoreAuditBento />} />
             <Route path="*" element={<Navigate to="/backoffice" replace />} />
           </Routes>
           </Suspense>

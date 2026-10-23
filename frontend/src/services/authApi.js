@@ -28,6 +28,20 @@ export async function resendVerificationApi(email) {
   });
 }
 
+export async function forgotPasswordApi(email) {
+  return fetchApi('/auth/forgot-password', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  });
+}
+
+export async function resetPasswordApi(token, newPassword) {
+  return fetchApi('/auth/reset-password', {
+    method: 'POST',
+    body: JSON.stringify({ token, newPassword }),
+  });
+}
+
 export async function verifyEmailApi(token) {
   const data = await fetchApi(`/auth/verify-email?token=${encodeURIComponent(token)}`);
   if (data && data.token) {

@@ -13,6 +13,8 @@ import BackofficeHeader from './components/backoffice/Header';
 import LoginBento from './pages/LoginBento';
 import RegisterBento from './pages/RegisterBento';
 import VerifyEmailBento from './pages/VerifyEmailBento';
+import ForgotPasswordBento from './pages/ForgotPasswordBento';
+import ResetPasswordBento from './pages/ResetPasswordBento';
 import PendingStoreReviewBento from './pages/PendingStoreReviewBento';
 
 const StoreOnboardingBento = lazy(() => import('./pages/onboarding/StoreOnboardingBento'));
@@ -240,6 +242,8 @@ export default function App() {
               <Route path="/login" element={<LoginBento />} />
               <Route path="/register" element={<RegisterBento />} />
               <Route path="/verify-email" element={<VerifyEmailBento />} />
+              <Route path="/forgot-password" element={<ForgotPasswordBento />} />
+              <Route path="/reset-password" element={<ResetPasswordBento />} />
               <Route path="/legal/:slug" element={<LegalPage />} />
               <Route path="/support" element={<SupportPage />} />
               <Route path="/onboarding/store" element={<StoreOnboardingBento />} />

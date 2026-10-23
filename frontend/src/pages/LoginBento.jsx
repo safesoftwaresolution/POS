@@ -127,6 +127,12 @@ export default function LoginBento() {
             </div>
           </div>
 
+          <div className="text-right -mt-1">
+            <Link to="/forgot-password" className="text-[11px] font-bold text-gray-400 hover:text-white hover:underline">
+              ¿Olvidaste tu contraseña?
+            </Link>
+          </div>
+
           <button
             type="submit"
             disabled={loading}

@@ -78,6 +78,25 @@ public class StoreController {
         return ResponseEntity.ok(storeFacade.changeStatus(id, body.get("status")));
     }
 
+    @PostMapping("/api/v1/backoffice/stores/{storeId}/assign-owner")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @Operation(summary = "Asignar un ADMINISTRATOR sin local a un local sin administrador",
+            description = "Solo locales sin administrador activo y usuarios ADMINISTRATOR verificados que aun no tienen local. No mueve usuarios ya asignados; queda en la auditoria.")
+    public ResponseEntity<StoreDto> assignOwner(@PathVariable Long storeId, @RequestBody Map<String, Long> body) {
+        Long userId = body == null ? null : body.get("userId");
+        if (userId == null) {
+            throw new IllegalArgumentException("userId es obligatorio.");
+        }
+        return ResponseEntity.ok(storeFacade.assignOwner(storeId, userId));
+    }
+
+    @GetMapping("/api/v1/backoffice/user-assignments")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @Operation(summary = "Historial (solo lectura) de asignaciones de usuarios a locales")
+    public ResponseEntity<Page<StoreUserAuditDto>> getOwnerAssignments(Pageable pageable) {
+        return ResponseEntity.ok(storeFacade.getOwnerAssignments(pageable));
+    }
+
     @PatchMapping("/api/v1/backoffice/stores/{id}/reject")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     @Operation(summary = "Rechazar un local pendiente (requiere motivo)")

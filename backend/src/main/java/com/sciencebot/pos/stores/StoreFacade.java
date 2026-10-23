@@ -28,6 +28,10 @@ public interface StoreFacade {
     StoreDto rejectStore(Long id, String reason);
     /** Elimina definitivamente un local RECHAZADO que nunca operó, junto con su dueño y documentos. */
     void deleteRejectedStore(Long id);
+    /** Asigna un ADMINISTRATOR sin local a un local sin administrador activo (solo SUPER_ADMIN; auditado). */
+    StoreDto assignOwner(Long storeId, Long userId);
+    /** Historial de solo lectura de las asignaciones de usuarios a locales, de la más reciente a la más antigua. */
+    Page<StoreUserAuditDto> getOwnerAssignments(Pageable pageable);
     /** Historial de solo lectura de cambios de estado de locales (registro, aprobación, rechazo...). */
     Page<StoreStatusAuditDto> getStatusAudit(String newStatus, String q, Pageable pageable);
     List<StoreDocumentDto> getDocuments(Long storeId);

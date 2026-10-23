@@ -5,6 +5,7 @@ import com.sciencebot.pos.stores.internal.entities.StoreCategoryEntity;
 import com.sciencebot.pos.stores.internal.entities.StoreDocumentEntity;
 import com.sciencebot.pos.stores.internal.entities.StoreEntity;
 import com.sciencebot.pos.stores.internal.entities.StoreStatusAuditEntity;
+import com.sciencebot.pos.stores.internal.entities.StoreUserAuditEntity;
 import com.sciencebot.pos.stores.internal.mappers.StoreMapper;
 import com.sciencebot.pos.stores.internal.repositories.StoreCategoryRepository;
 import com.sciencebot.pos.stores.internal.repositories.StoreDocumentRepository;
@@ -12,6 +13,7 @@ import com.sciencebot.pos.stores.internal.repositories.StoreRepository;
 import com.sciencebot.pos.stores.internal.repositories.StorePurgeDao;
 import com.sciencebot.pos.stores.internal.repositories.StoreStatusAuditQueryDao;
 import com.sciencebot.pos.stores.internal.repositories.StoreStatusAuditRepository;
+import com.sciencebot.pos.stores.internal.repositories.StoreUserAuditRepository;
 import com.sciencebot.pos.notifications.CreateNotificationCommand;
 import com.sciencebot.pos.notifications.NotificationFacade;
 import com.sciencebot.pos.storage.StorageFacade;
@@ -54,6 +56,7 @@ public class StoreServiceImpl implements StoreFacade {
     private final StoreStatusAuditRepository statusAuditRepository;
     private final StoreStatusAuditQueryDao statusAuditQueryDao;
     private final StorePurgeDao storePurgeDao;
+    private final StoreUserAuditRepository storeUserAuditRepository;
 
     public StoreServiceImpl(StoreRepository storeRepository,
                             StoreCategoryRepository categoryRepository,
@@ -64,7 +67,8 @@ public class StoreServiceImpl implements StoreFacade {
                             NotificationFacade notificationFacade,
                             StoreStatusAuditRepository statusAuditRepository,
                             StoreStatusAuditQueryDao statusAuditQueryDao,
-                            StorePurgeDao storePurgeDao) {
+                            StorePurgeDao storePurgeDao,
+                            StoreUserAuditRepository storeUserAuditRepository) {
         this.storeRepository = storeRepository;
         this.categoryRepository = categoryRepository;
         this.documentRepository = documentRepository;
@@ -75,6 +79,7 @@ public class StoreServiceImpl implements StoreFacade {
         this.statusAuditRepository = statusAuditRepository;
         this.statusAuditQueryDao = statusAuditQueryDao;
         this.storePurgeDao = storePurgeDao;
+        this.storeUserAuditRepository = storeUserAuditRepository;
     }
 
     @Override
@@ -319,6 +324,56 @@ public class StoreServiceImpl implements StoreFacade {
                 log.warn("No se pudo borrar el archivo {} del bucket tras eliminar el local", url, e);
             }
         }
+    }
+
+    /**
+     * Asigna un ADMINISTRATOR sin local (ya con el correo verificado) a un local que no tiene ningún
+     * administrador activo. No mueve usuarios ya asignados. Queda registrado en la auditoría.
+     */
+    @Override
+    @Transactional
+    public StoreDto assignOwner(Long storeId, Long userId) {
+        StoreEntity store = storeRepository.findById(storeId)
+                .orElseThrow(() -> new EntityNotFoundException("Local no encontrado con ID: " + storeId));
+        if ("REJECTED".equals(store.getStatus())) {
+            throw new IllegalArgumentException("No se puede asignar un usuario a un local rechazado.");
+        }
+        UserDto user = userFacade.getById(userId);
+        if (!"ADMINISTRATOR".equals(user.role()) || user.storeId() != null) {
+            throw new IllegalArgumentException("Solo se puede asignar un ADMINISTRATOR que aun no tiene local.");
+        }
+        if (!user.emailVerified()) {
+            throw new IllegalArgumentException("El usuario debe verificar su correo antes de asignarlo a un local.");
+        }
+        if (!userFacade.listActiveByStoreAndRoles(storeId, List.of("ADMINISTRATOR")).isEmpty()) {
+            throw new IllegalArgumentException("El local ya tiene un administrador asignado.");
+        }
+
+        userFacade.assignStore(userId, storeId);
+
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        StoreUserAuditEntity entry = new StoreUserAuditEntity();
+        entry.setStoreId(store.getId());
+        entry.setStoreName(store.getName());
+        entry.setUserId(user.id());
+        entry.setUsername(user.username());
+        entry.setFullName(user.fullName());
+        entry.setRole(user.role());
+        entry.setAction("OWNER_ASSIGNED");
+        entry.setPerformedBy(authentication != null ? authentication.getName() : "system");
+        storeUserAuditRepository.save(entry);
+
+        return storeMapper.toDto(store, resolveCategoryName(store.getStoreCategoryId()));
+    }
+
+    @Override
+    public Page<StoreUserAuditDto> getOwnerAssignments(Pageable pageable) {
+        Pageable newestFirst = org.springframework.data.domain.PageRequest.of(
+                pageable.getPageNumber(), pageable.getPageSize(),
+                org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt", "id"));
+        return storeUserAuditRepository.findAll(newestFirst).map(a -> new StoreUserAuditDto(
+                a.getId(), a.getStoreId(), a.getStoreName(), a.getUserId(), a.getUsername(), a.getFullName(),
+                a.getRole(), a.getAction(), a.getPerformedBy(), a.getCreatedAt()));
     }
 
     @Override

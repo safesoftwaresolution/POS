@@ -41,6 +41,7 @@ class StoreServiceImplTest {
     @Mock private com.sciencebot.pos.stores.internal.repositories.StoreStatusAuditRepository statusAuditRepository;
     @Mock private com.sciencebot.pos.stores.internal.repositories.StoreStatusAuditQueryDao statusAuditQueryDao;
     @Mock private com.sciencebot.pos.stores.internal.repositories.StorePurgeDao storePurgeDao;
+    @Mock private com.sciencebot.pos.stores.internal.repositories.StoreUserAuditRepository storeUserAuditRepository;
     @InjectMocks private StoreServiceImpl storeService;
 
     @BeforeEach
@@ -177,6 +178,67 @@ class StoreServiceImplTest {
         store.setStatus(status);
         store.setRejectionReason("Documentos ilegibles");
         return store;
+    }
+
+    private UserDto candidateOwner(boolean verified, Long storeId, String role) {
+        return new UserDto(21L, "Dueno Libre", "dueno.libre", "libre@test.com", role, true, storeId, verified);
+    }
+
+    @Test
+    void assignOwner_Success_AssignsAndAuditsWithSnapshot() {
+        when(storeRepository.findById(5L)).thenReturn(Optional.of(storeWithStatus("ACTIVE")));
+        when(userFacade.getById(21L)).thenReturn(candidateOwner(true, null, "ADMINISTRATOR"));
+        when(userFacade.listActiveByStoreAndRoles(5L, List.of("ADMINISTRATOR"))).thenReturn(List.of());
+
+        storeService.assignOwner(5L, 21L);
+
+        verify(userFacade).assignStore(21L, 5L);
+        var captor = org.mockito.ArgumentCaptor.forClass(com.sciencebot.pos.stores.internal.entities.StoreUserAuditEntity.class);
+        verify(storeUserAuditRepository).save(captor.capture());
+        assertEquals("OWNER_ASSIGNED", captor.getValue().getAction());
+        assertEquals(5L, captor.getValue().getStoreId());
+        assertEquals("Tienda Rechazada", captor.getValue().getStoreName());
+        assertEquals(21L, captor.getValue().getUserId());
+        assertEquals("dueno.libre", captor.getValue().getUsername());
+        assertEquals("ADMINISTRATOR", captor.getValue().getRole());
+    }
+
+    @Test
+    void assignOwner_StoreAlreadyHasAnAdministrator_IsRefused() {
+        when(storeRepository.findById(5L)).thenReturn(Optional.of(storeWithStatus("ACTIVE")));
+        when(userFacade.getById(21L)).thenReturn(candidateOwner(true, null, "ADMINISTRATOR"));
+        when(userFacade.listActiveByStoreAndRoles(5L, List.of("ADMINISTRATOR")))
+                .thenReturn(List.of(candidateOwner(true, 5L, "ADMINISTRATOR")));
+
+        assertThrows(IllegalArgumentException.class, () -> storeService.assignOwner(5L, 21L));
+
+        verify(userFacade, never()).assignStore(anyLong(), anyLong());
+        verifyNoInteractions(storeUserAuditRepository);
+    }
+
+    @Test
+    void assignOwner_UserAlreadyHasStoreOrIsNotAdministratorOrUnverified_IsRefused() {
+        when(storeRepository.findById(5L)).thenReturn(Optional.of(storeWithStatus("ACTIVE")));
+
+        when(userFacade.getById(21L)).thenReturn(candidateOwner(true, 9L, "ADMINISTRATOR"));
+        assertThrows(IllegalArgumentException.class, () -> storeService.assignOwner(5L, 21L));
+
+        when(userFacade.getById(21L)).thenReturn(candidateOwner(true, null, "SELLER"));
+        assertThrows(IllegalArgumentException.class, () -> storeService.assignOwner(5L, 21L));
+
+        when(userFacade.getById(21L)).thenReturn(candidateOwner(false, null, "ADMINISTRATOR"));
+        assertThrows(IllegalArgumentException.class, () -> storeService.assignOwner(5L, 21L));
+
+        verify(userFacade, never()).assignStore(anyLong(), anyLong());
+    }
+
+    @Test
+    void assignOwner_RejectedStoreOrUnknownStore_IsRefused() {
+        when(storeRepository.findById(5L)).thenReturn(Optional.of(storeWithStatus("REJECTED")));
+        assertThrows(IllegalArgumentException.class, () -> storeService.assignOwner(5L, 21L));
+
+        when(storeRepository.findById(9L)).thenReturn(Optional.empty());
+        assertThrows(jakarta.persistence.EntityNotFoundException.class, () -> storeService.assignOwner(9L, 21L));
     }
 
     @Test

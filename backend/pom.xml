@@ -20,7 +20,7 @@
 		<!-- springdoc 3.1.x se construye contra Spring Boot 4.1; la serie 2.8.x es para Boot 3. -->
 		<springdoc.version>3.1.1</springdoc.version>
 		<awssdk.version>2.56.0</awssdk.version>
-		<poi.version>5.5.1</poi.version>
+		<poi.version>6.0.0</poi.version>
 		<sonar.coverage.jacoco.xmlReportPaths>${project.basedir}/target/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
 	</properties>
 	<dependencies>

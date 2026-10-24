@@ -1,13 +1,24 @@
 # ============================================================================
 # init.ps1 — Script de validacion del entorno para el arnes de agentes IA
 # ============================================================================
-# USO: powershell -ExecutionPolicy Bypass -File .ai/init.ps1
+# USO: powershell -ExecutionPolicy Bypass -File .ai/init.ps1 [-SkipTests] [-Frontend]
+#   -SkipTests  no ejecuta la suite de Maven (validacion rapida del arnes y los docs)
+#   -Frontend   ejecuta ademas "npm run lint" en frontend/
+# Paridad con init.sh: ambos scripts hacen las mismas fases y devuelven el mismo veredicto.
 # EXIT CODES:
 #   0  — Entorno sano, listo para trabajar
 #   1  — Error critico, el agente DEBE detenerse
 # ============================================================================
 
+param(
+    [switch]$SkipTests,
+    [switch]$Frontend
+)
+
 $ErrorActionPreference = "Continue"
+
+# Funciona desde cualquier directorio: se ancla a la raiz del repo (padre de .ai/)
+Set-Location (Split-Path -Parent $PSScriptRoot)
 
 $script:Errors = 0
 $script:Warnings = 0
@@ -67,7 +78,8 @@ $docFiles = @(
     "$docBase/_security.md",
     "$docBase/_database-schema.md",
     "$docBase/_deployment.md",
-    "$docBase/_glossary.md"
+    "$docBase/_glossary.md",
+    "$docBase/_roadmap.md"
 )
 
 foreach ($doc in $docFiles) {
@@ -78,13 +90,29 @@ foreach ($doc in $docFiles) {
     }
 }
 
-$modules = @("auth", "users", "products", "categories", "inventory", "purchases", "sales", "customers", "suppliers", "reports", "settings", "billing", "stores", "legal", "support")
+# La lista de modulos se DERIVA del codigo: un modulo es un directorio de com/sciencebot/pos con subcarpeta internal/.
+# Asi un modulo nuevo sin spec (o un spec huerfano) rompe la validacion en vez de pasar inadvertido.
+$srcBase = "$backendDir/src/main/java/com/sciencebot/pos"
+$modules = @()
+if (Test-Path $srcBase) {
+    $modules = @(Get-ChildItem $srcBase -Directory | Where-Object { Test-Path (Join-Path $_.FullName "internal") } | ForEach-Object { $_.Name })
+}
+if ($modules.Count -eq 0) {
+    Log-Fail "No se detectaron modulos en $srcBase"
+}
 foreach ($mod in $modules) {
     $specPath = "$docBase/modules/$mod/spec.md"
     if (Test-Path $specPath) {
         Log-Ok "Especificacion de modulo verificada: $specPath"
     } else {
         Log-Fail "Falta especificacion del modulo: $specPath"
+    }
+}
+if (Test-Path "$docBase/modules") {
+    foreach ($dir in (Get-ChildItem "$docBase/modules" -Directory)) {
+        if (-not (Test-Path "$srcBase/$($dir.Name)/internal")) {
+            Log-Warn "Spec huerfano (no hay modulo en el codigo): $docBase/modules/$($dir.Name)"
+        }
     }
 }
 
@@ -136,7 +164,7 @@ try {
 $mvnCmd = $null
 if (Test-Path "$backendDir/mvnw.cmd") {
     Log-Ok "Maven Wrapper disponible ($backendDir/mvnw.cmd)"
-    $mvnCmd = "$backendDir\mvnw.cmd"
+    $mvnCmd = (Resolve-Path "$backendDir/mvnw.cmd").Path
 } elseif (Get-Command mvn -ErrorAction SilentlyContinue) {
     $mvnVersion = & mvn --version 2>&1 | Select-Object -First 1
     Log-Ok "Maven global disponible: $mvnVersion"
@@ -188,18 +216,22 @@ Write-Host ""
 # ─────────────────────────────────────────────
 Log-Info "Fase 6: Ejecutando tests del proyecto..."
 
-if ($mvnCmd) {
+if ($SkipTests) {
+    Log-Warn "Tests omitidos (-SkipTests)"
+} elseif ($mvnCmd) {
     try {
         Push-Location $backendDir
-        $testOutput = & ".\mvnw.cmd" test -q 2>&1
+        $testOutput = & $mvnCmd test -q 2>&1
         $exitCode = $LASTEXITCODE
         Pop-Location
         if ($exitCode -eq 0) {
             Log-Ok "Todos los tests pasaron"
         } else {
-            Log-Fail "Fallaron tests en la suite"
+            Log-Fail "Fallaron tests en la suite (ultimas lineas de la salida):"
+            $testOutput | Select-Object -Last 40 | ForEach-Object { Write-Host "      $_" }
         }
     } catch {
+        Pop-Location -ErrorAction SilentlyContinue
         Log-Warn "Error ejecutando Maven: $_"
     }
 } else {
@@ -207,6 +239,23 @@ if ($mvnCmd) {
 }
 
 Write-Host ""
+
+# ─────────────────────────────────────────────
+# FASE 7 (opcional): lint del frontend
+# ─────────────────────────────────────────────
+if ($Frontend) {
+    Log-Info "Fase 7: Lint del frontend..."
+    if ((Test-Path "frontend/node_modules") -and (Get-Command npm -ErrorAction SilentlyContinue)) {
+        Push-Location "frontend"
+        & npm run lint --silent *> $null
+        $lintExit = $LASTEXITCODE
+        Pop-Location
+        if ($lintExit -eq 0) { Log-Ok "npm run lint sin errores" } else { Log-Fail "npm run lint fallo" }
+    } else {
+        Log-Warn "frontend/node_modules o npm no disponibles: lint omitido"
+    }
+    Write-Host ""
+}
 
 # ─────────────────────────────────────────────
 # RESULTADO FINAL

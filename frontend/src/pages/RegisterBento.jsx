@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { User, Mail, KeyRound, IdCard, ArrowRight, AlertCircle, MailCheck } from 'lucide-react';
-import { registerApi } from '../services/authApi';
+import { registerApi, resendVerificationApi } from '../services/authApi';
 import BentoIcon from '../components/BentoIcon';
 
 const EMPTY_FORM = { fullName: '', username: '', email: '', password: '' };
@@ -12,6 +12,7 @@ export default function RegisterBento() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [submittedEmail, setSubmittedEmail] = useState(null);
+  const [resendState, setResendState] = useState('idle');
 
   const handleChange = (field) => (e) => setForm(prev => ({ ...prev, [field]: e.target.value }));
 
@@ -26,6 +27,16 @@ export default function RegisterBento() {
       setError(err.message || 'No se pudo completar el registro.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResend = async () => {
+    setResendState('sending');
+    try {
+      await resendVerificationApi(submittedEmail);
+      setResendState('sent');
+    } catch {
+      setResendState('error');
     }
   };
 
@@ -52,6 +63,22 @@ export default function RegisterBento() {
               Enviamos un enlace de verificación a <span className="font-bold text-brand">{submittedEmail}</span>.
               Ábrelo para activar tu cuenta y continuar con el registro de tu local.
             </p>
+            <div>
+              <button
+                type="button"
+                onClick={handleResend}
+                disabled={resendState === 'sending'}
+                className="text-xs font-extrabold text-gray-300 hover:text-white hover:underline cursor-pointer disabled:opacity-50"
+              >
+                {resendState === 'sending' ? 'Reenviando...' : '¿No te llegó? Reenviar correo'}
+              </button>
+              {resendState === 'sent' && (
+                <p className="text-[11px] text-gray-400 mt-1">Listo. Si el correo no aparece, revisa spam y espera un minuto antes de reintentar.</p>
+              )}
+              {resendState === 'error' && (
+                <p className="text-[11px] text-red-300 mt-1">No se pudo reenviar. Inténtalo de nuevo en un momento.</p>
+              )}
+            </div>
             <button
               type="button"
               onClick={() => navigate('/login')}

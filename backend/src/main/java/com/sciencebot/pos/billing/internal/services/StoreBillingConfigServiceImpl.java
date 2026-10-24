@@ -4,9 +4,10 @@ import com.sciencebot.pos.billing.dto.BillingActivationDto;
 import com.sciencebot.pos.billing.dto.BillingActivationStatus;
 import com.sciencebot.pos.billing.dto.BillingConnectionTestResult;
 import com.sciencebot.pos.billing.dto.BillingEnvironment;
-import com.sciencebot.pos.billing.exception.FactusApiException;
+import com.sciencebot.pos.billing.exception.BillingProviderException;
 import com.sciencebot.pos.billing.dto.UpdateBillingCredentialsCommand;
-import com.sciencebot.pos.billing.internal.adapters.factus.FactusTokenManager;
+import com.sciencebot.pos.billing.internal.adapters.ActiveBillingProvider;
+import com.sciencebot.pos.billing.internal.adapters.BillingAccountProvider;
 import com.sciencebot.pos.billing.internal.entities.FactusCredentials;
 import com.sciencebot.pos.billing.internal.entities.StoreBillingConfig;
 import com.sciencebot.pos.billing.internal.mappers.BillingActivationMapper;
@@ -26,19 +27,19 @@ public class StoreBillingConfigServiceImpl implements StoreBillingConfigService 
 
     private final StoreBillingConfigRepository repository;
     private final BillingActivationMapper mapper;
-    private final FactusTokenManager tokenManager;
+    private final ActiveBillingProvider activeBillingProvider;
     private final NotificationFacade notificationFacade;
     private final StoreFacade storeFacade;
 
     public StoreBillingConfigServiceImpl(
             StoreBillingConfigRepository repository,
             BillingActivationMapper mapper,
-            FactusTokenManager tokenManager,
+            ActiveBillingProvider activeBillingProvider,
             @Lazy NotificationFacade notificationFacade,
             @Lazy StoreFacade storeFacade) {
         this.repository = repository;
         this.mapper = mapper;
-        this.tokenManager = tokenManager;
+        this.activeBillingProvider = activeBillingProvider;
         this.notificationFacade = notificationFacade;
         this.storeFacade = storeFacade;
     }
@@ -93,7 +94,7 @@ public class StoreBillingConfigServiceImpl implements StoreBillingConfigService 
             throw new IllegalArgumentException("El motivo es obligatorio para pasar a " + target);
         }
         if (target == BillingActivationStatus.ACTIVE
-                && !config.credentialsFor(config.getEnvironment()).isComplete()) {
+                && !activeBillingProvider.get().isAccountConfigured(storeId, config.getEnvironment())) {
             throw new IllegalStateException(
                     "Faltan credenciales del entorno " + config.getEnvironment() + " para activar la facturación");
         }
@@ -135,7 +136,7 @@ public class StoreBillingConfigServiceImpl implements StoreBillingConfigService 
         config.setUpdatedBy(actor);
         StoreBillingConfig saved = repository.save(config);
         // Las credenciales cambiaron: cualquier token en caché de ese local queda obsoleto.
-        tokenManager.invalidate(saved.getStoreId());
+        activeBillingProvider.get().onAccountChanged(saved.getStoreId());
         return mapper.toDto(saved);
     }
 
@@ -146,7 +147,7 @@ public class StoreBillingConfigServiceImpl implements StoreBillingConfigService 
         StoreBillingConfig config = getOrCreate(storeId);
 
         if (config.getStatus() == BillingActivationStatus.ACTIVE
-                && !config.credentialsFor(environment).isComplete()) {
+                && !activeBillingProvider.get().isAccountConfigured(storeId, environment)) {
             throw new IllegalStateException(
                     "Faltan credenciales del entorno " + environment + " para cambiar a ese entorno");
         }
@@ -161,10 +162,11 @@ public class StoreBillingConfigServiceImpl implements StoreBillingConfigService 
     public BillingConnectionTestResult testConnection(Long storeId, BillingEnvironment environment) {
         Objects.requireNonNull(storeId, "El ID del local es obligatorio");
         Objects.requireNonNull(environment, "El entorno es obligatorio");
+        BillingAccountProvider provider = activeBillingProvider.get();
         try {
-            tokenManager.verifyConnection(storeId, environment);
-            return BillingConnectionTestResult.success(environment);
-        } catch (FactusApiException ex) {
+            provider.verifyConnection(storeId, environment);
+            return BillingConnectionTestResult.success(environment, provider.displayName());
+        } catch (BillingProviderException ex) {
             return BillingConnectionTestResult.failure(environment, ex.getMessage());
         }
     }
@@ -175,7 +177,8 @@ public class StoreBillingConfigServiceImpl implements StoreBillingConfigService 
         switch (status) {
             case AWAITING_PROVIDER -> {
                 title = "Documentos de facturación aprobados";
-                message = "Tus documentos fueron aprobados. Estamos a la espera de que Factus emita tus credenciales.";
+                message = "Tus documentos fueron aprobados. Estamos a la espera de que "
+                        + activeBillingProvider.get().displayName() + " emita tus credenciales.";
             }
             case ACTIVE -> {
                 title = "Facturación electrónica activa";

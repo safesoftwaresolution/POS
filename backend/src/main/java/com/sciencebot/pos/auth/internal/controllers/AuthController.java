@@ -96,6 +96,43 @@ public class AuthController {
                 .body(response);
     }
 
+    @PostMapping("/resend-verification")
+    @SecurityRequirements
+    @Operation(
+            summary = "Reenviar verificacion de correo",
+            description = "Reenvia el enlace de verificacion si la cuenta existe y sigue sin verificar. "
+                    + "Responde 204 siempre, exista o no el correo."
+    )
+    public ResponseEntity<Void> resendVerification(@RequestBody Map<String, String> body) {
+        authService.resendVerification(body == null ? null : body.get("email"));
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/forgot-password")
+    @SecurityRequirements
+    @Operation(
+            summary = "Solicitar recuperacion de contrasena",
+            description = "Envia un enlace de un solo uso (vigencia 1 hora) si la cuenta existe y esta verificada. "
+                    + "Responde 204 siempre, exista o no el correo."
+    )
+    public ResponseEntity<Void> forgotPassword(@RequestBody Map<String, String> body) {
+        authService.forgotPassword(body == null ? null : body.get("email"));
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/reset-password")
+    @SecurityRequirements
+    @Operation(
+            summary = "Restablecer contrasena",
+            description = "Consume el token del enlace de recuperacion, fija la nueva contrasena y cierra todas las sesiones del usuario."
+    )
+    public ResponseEntity<Void> resetPassword(@RequestBody Map<String, String> body) {
+        authService.resetPassword(
+                body == null ? null : body.get("token"),
+                body == null ? null : body.get("newPassword"));
+        return ResponseEntity.noContent().build();
+    }
+
     @PostMapping("/refresh")
     @SecurityRequirements
     @Operation(

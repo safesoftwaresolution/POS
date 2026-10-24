@@ -17,7 +17,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -107,20 +106,25 @@ public class InvoiceServiceImpl implements InvoiceService {
         return invoiceMapper.toDto(saved);
     }
 
+    // No es readOnly: si la venta aún no tiene registro de factura, se crea en PENDING. Antes la
+    // lectura era readOnly y el INSERT interno (REQUIRES_NEW por auto-invocación, que nunca aplicó)
+    // podía fallar en PostgreSQL con "cannot execute INSERT in a read-only transaction".
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public Optional<ElectronicInvoiceDto> getBySaleId(Long saleId) {
-        if (saleId == null) {
+        Long storeId = TenantContext.getStoreId();
+        if (saleId == null || storeId == null) {
             return Optional.empty();
         }
         if (saleFacade.getById(saleId).isEmpty()) {
             return Optional.empty();
         }
-        ElectronicInvoice einvoice = getOrCreateInitialInvoice(saleId);
+        ElectronicInvoice einvoice = getOrCreateInitialInvoice(saleId, storeId);
         return Optional.ofNullable(invoiceMapper.toDto(einvoice));
     }
 
     @Override
+    @Transactional
     public ElectronicInvoiceDto retryInvoice(Long saleId) {
         if (saleId == null) {
             throw new IllegalArgumentException("El ID de la venta es obligatorio");
@@ -129,7 +133,7 @@ public class InvoiceServiceImpl implements InvoiceService {
         SaleDto sale = saleFacade.getById(saleId)
                 .orElseThrow(() -> new IllegalArgumentException("Venta no encontrada con ID: " + saleId));
 
-        Optional<ElectronicInvoice> existingOpt = repository.findBySaleId(saleId);
+        Optional<ElectronicInvoice> existingOpt = repository.findBySaleIdAndStoreId(saleId, requireStoreId());
         if (existingOpt.isPresent()) {
             existingOpt.get().prepareForRetry(); // La entidad valida invariante y estado
         }
@@ -143,7 +147,7 @@ public class InvoiceServiceImpl implements InvoiceService {
         Objects.requireNonNull(saleId, "El ID de la venta es obligatorio");
         Objects.requireNonNull(email, "El correo electrónico es obligatorio");
 
-        ElectronicInvoice einvoice = repository.findBySaleId(saleId)
+        ElectronicInvoice einvoice = repository.findBySaleIdAndStoreId(saleId, requireStoreId())
                 .orElseThrow(() -> new IllegalArgumentException("No existe factura electrónica registrada para la venta ID: " + saleId));
 
         einvoice.assertCanSendEmail(); // Delegación de invariante a la entidad
@@ -179,9 +183,7 @@ public class InvoiceServiceImpl implements InvoiceService {
     @Override
     @Transactional(readOnly = true)
     public byte[] downloadInvoicePDF(Long saleId) {
-        Long storeId = TenantContext.getStoreId();
-        ElectronicInvoice einvoice = repository.findBySaleId(saleId)
-                .filter(inv -> storeId == null || storeId.equals(inv.getStoreId()))
+        ElectronicInvoice einvoice = repository.findBySaleIdAndStoreId(saleId, requireStoreId())
                 .orElseThrow(() -> new IllegalArgumentException("Factura no encontrada para la venta: " + saleId));
 
         einvoice.assertCanDownloadLegalDocument();
@@ -193,9 +195,7 @@ public class InvoiceServiceImpl implements InvoiceService {
     @Override
     @Transactional(readOnly = true)
     public byte[] downloadInvoiceXML(Long saleId) {
-        Long storeId = TenantContext.getStoreId();
-        ElectronicInvoice einvoice = repository.findBySaleId(saleId)
-                .filter(inv -> storeId == null || storeId.equals(inv.getStoreId()))
+        ElectronicInvoice einvoice = repository.findBySaleIdAndStoreId(saleId, requireStoreId())
                 .orElseThrow(() -> new IllegalArgumentException("Factura no encontrada para la venta: " + saleId));
 
         einvoice.assertCanDownloadLegalDocument();
@@ -205,28 +205,33 @@ public class InvoiceServiceImpl implements InvoiceService {
     }
 
     private ElectronicInvoice lockOrCreateInvoice(Long saleId, Long storeId) {
+        // Sin local no se factura: antes se asumía el local 1 y se podía emitir con el equivocado.
+        if (storeId == null) {
+            throw new IllegalStateException("No se puede facturar la venta " + saleId + " sin un local asociado");
+        }
         return repository.findBySaleIdForUpdate(saleId)
-                .orElseGet(() -> repository.saveAndFlush(ElectronicInvoice.initialize(saleId, storeId != null ? storeId : 1L)));
+                .orElseGet(() -> repository.saveAndFlush(ElectronicInvoice.initialize(saleId, storeId)));
     }
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public ElectronicInvoice getOrCreateInitialInvoice(Long saleId) {
-        return repository.findBySaleId(saleId)
-                .orElseGet(() -> {
-                    Long storeId = saleFacade.getById(saleId).map(SaleDto::storeId).orElse(TenantContext.getStoreId());
-                    return repository.save(ElectronicInvoice.initialize(saleId, storeId != null ? storeId : 1L));
-                });
+    private ElectronicInvoice getOrCreateInitialInvoice(Long saleId, Long storeId) {
+        return repository.findBySaleIdAndStoreId(saleId, storeId)
+                .orElseGet(() -> repository.save(ElectronicInvoice.initialize(saleId, storeId)));
+    }
+
+    private Long requireStoreId() {
+        Long storeId = TenantContext.getStoreId();
+        if (storeId == null) {
+            throw new IllegalStateException("La operación de factura electrónica requiere un local asociado a la sesión");
+        }
+        return storeId;
     }
 
     private InvoiceProvider resolveProvider() {
         String key = (activeProviderName != null) ? activeProviderName.trim().toLowerCase() : "factus";
         InvoiceProvider provider = providersMap.get(key);
         if (provider == null) {
-            log.warn("Proveedor de facturación '{}' no encontrado. Utilizando proveedor por defecto 'mock'", key);
-            provider = providersMap.get("mock");
-        }
-        if (provider == null) {
-            throw new IllegalStateException("No hay ningún proveedor de facturación configurado o disponible.");
+            // Sin respaldo silencioso a 'mock': un BILLING_PROVIDER mal escrito emitiria facturas falsas.
+            throw new IllegalStateException("Proveedor de facturación '" + key + "' no registrado (billing.provider). Disponibles: " + providersMap.keySet() + ". " + "No hay ningún proveedor de facturación configurado o disponible.");
         }
         return provider;
     }

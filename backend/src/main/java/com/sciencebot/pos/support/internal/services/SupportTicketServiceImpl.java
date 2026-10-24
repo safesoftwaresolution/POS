@@ -10,11 +10,11 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.security.SecureRandom;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicLong;
 
 @Service
 @Transactional(readOnly = true)
@@ -26,8 +26,9 @@ public class SupportTicketServiceImpl implements SupportTicketFacade {
 
     private final SupportTicketRepository repository;
     private final SupportTicketMapper mapper;
-    private final AtomicLong dailyCounter = new AtomicLong(0);
-    private volatile String lastDate = "";
+    private static final String TICKET_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    private static final int TICKET_SUFFIX_LENGTH = 6;
+    private static final SecureRandom RANDOM = new SecureRandom();
 
     public SupportTicketServiceImpl(SupportTicketRepository repository, SupportTicketMapper mapper) {
         this.repository = repository;
@@ -56,9 +57,9 @@ public class SupportTicketServiceImpl implements SupportTicketFacade {
     }
 
     @Override
-    public SupportTicketDto trackByNumber(String ticketNumber) {
+    public TicketTrackingDto trackByNumber(String ticketNumber) {
         return repository.findByTicketNumber(ticketNumber)
-                .map(mapper::toDto)
+                .map(mapper::toTrackingDto)
                 .orElseThrow(() -> new EntityNotFoundException("Ticket no encontrado: " + ticketNumber));
     }
 
@@ -115,13 +116,21 @@ public class SupportTicketServiceImpl implements SupportTicketFacade {
         );
     }
 
-    private synchronized String generateTicketNumber(String type) {
+    /**
+     * Radicado no adivinable: el seguimiento es publico y se consulta solo por este numero, asi
+     * que un contador secuencial (y en memoria: colisionaba tras reiniciar) permitia enumerarlos.
+     */
+    private String generateTicketNumber(String type) {
         String today = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-        if (!today.equals(lastDate)) {
-            dailyCounter.set(0);
-            lastDate = today;
-        }
         String prefix = "BUG_REPORT".equals(type.toUpperCase()) ? "BUG" : "PQR";
-        return String.format("%s-%s-%04d", prefix, today, dailyCounter.incrementAndGet());
+        String candidate;
+        do {
+            StringBuilder suffix = new StringBuilder(TICKET_SUFFIX_LENGTH);
+            for (int i = 0; i < TICKET_SUFFIX_LENGTH; i++) {
+                suffix.append(TICKET_ALPHABET.charAt(RANDOM.nextInt(TICKET_ALPHABET.length())));
+            }
+            candidate = prefix + "-" + today + "-" + suffix;
+        } while (repository.findByTicketNumber(candidate).isPresent());
+        return candidate;
     }
 }

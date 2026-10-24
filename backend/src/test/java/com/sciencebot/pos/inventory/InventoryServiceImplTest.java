@@ -70,11 +70,13 @@ class InventoryServiceImplTest {
         InventoryMovementDto expectedDto = new InventoryMovementDto(100L, 1L, "Product 1", "ENTRADA", 5, 10, 15, "Ajuste", "admin", null);
         when(inventoryMapper.toDto(any(InventoryMovement.class))).thenReturn(expectedDto);
 
+        when(productFacade.adjustStock(1L, 5)).thenReturn(15);
+
         InventoryMovementDto result = inventoryService.registerMovement(1L, "ENTRADA", 5, "Ajuste");
 
         assertNotNull(result);
         assertEquals(15, result.newStock());
-        verify(productFacade, times(1)).updateStock(1L, 5);
+        verify(productFacade, times(1)).adjustStock(1L, 5);
         verify(movementRepository, times(1)).save(any(InventoryMovement.class));
     }
 
@@ -98,6 +100,8 @@ class InventoryServiceImplTest {
         when(inventoryMapper.toDto(any(InventoryMovement.class)))
                 .thenReturn(new InventoryMovementDto(1L, 1L, "Product 1", "SALIDA", 4, 8, 4, "Venta", "admin", null));
 
+        when(productFacade.adjustStock(1L, -4)).thenReturn(4);
+
         inventoryService.registerMovement(1L, "SALIDA", 4, "Venta");
 
         verify(lowStockAlertNotifier, times(1)).notifyLowStock(1L, product, 4);
@@ -112,6 +116,8 @@ class InventoryServiceImplTest {
         when(movementRepository.save(any(InventoryMovement.class))).thenReturn(new InventoryMovement());
         when(inventoryMapper.toDto(any(InventoryMovement.class)))
                 .thenReturn(new InventoryMovementDto(1L, 1L, "Product 1", "SALIDA", 1, 4, 3, "Venta", "admin", null));
+
+        when(productFacade.adjustStock(1L, -1)).thenReturn(3);
 
         inventoryService.registerMovement(1L, "SALIDA", 1, "Venta");
 

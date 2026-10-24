@@ -2,7 +2,10 @@
 // y el envio/lectura JSON. Todos los modulos de servicios (`*Api.js`) construyen
 // sus llamadas sobre `fetchApi`; ningun otro modulo debe usar `fetch` directamente.
 
-const API_BASE_URL = '/api/v1';
+// En produccion el backend vive en otro dominio: VITE_API_URL se incrusta al compilar.
+// Sin ella (dev) se usa la ruta relativa y el proxy de Vite.
+const API_ORIGIN = (import.meta.env.VITE_API_URL ?? '').replace(/\/+$/, '');
+export const API_BASE_URL = `${API_ORIGIN}/api/v1`;
 
 // Genera una clave de idempotencia (UUID). Se usa en operaciones no idempotentes
 // (ventas, compras) para que un reenvío no cree registros duplicados en el backend.
@@ -13,8 +16,29 @@ export function newIdempotencyKey() {
   return `idem-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-let authToken = localStorage.getItem('jwt_token') || '';
-let refreshToken = localStorage.getItem('refresh_token') || '';
+// Los tokens viven SOLO en memoria. La sesion real viaja en cookies HttpOnly (jwt_token y refresh_token) que el
+// navegador envia con credentials: 'include' y que el JavaScript no puede leer: un XSS ya no puede robar una
+// sesion de 7 dias guardada en localStorage. Tras recargar la pagina no hay token en memoria y la cookie
+// autentica (y el 401 dispara el refresh por cookie).
+let authToken = '';
+let refreshToken = '';
+
+// Limpia los tokens que versiones anteriores dejaban en localStorage.
+try {
+  localStorage.removeItem('jwt_token');
+  localStorage.removeItem('refresh_token');
+} catch {
+  // localStorage no disponible (modo privado): nada que limpiar.
+}
+
+// Aviso para que AuthContext cierre la sesion de la UI cuando el backend ya no la acepta.
+export const SESSION_EXPIRED_EVENT = 'auth:session-expired';
+
+function notifySessionExpired() {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT));
+  }
+}
 
 export function getAuthToken() {
   return authToken;
@@ -22,11 +46,6 @@ export function getAuthToken() {
 
 export function setAuthToken(token) {
   authToken = token || '';
-  if (token) {
-    localStorage.setItem('jwt_token', token);
-  } else {
-    localStorage.removeItem('jwt_token');
-  }
 }
 
 export function getRefreshToken() {
@@ -35,11 +54,6 @@ export function getRefreshToken() {
 
 export function setRefreshToken(token) {
   refreshToken = token || '';
-  if (token) {
-    localStorage.setItem('refresh_token', token);
-  } else {
-    localStorage.removeItem('refresh_token');
-  }
 }
 
 // Deduplica renovaciones concurrentes: varias peticiones que reciben 401 a la vez
@@ -74,6 +88,14 @@ async function refreshAccessToken() {
 }
 
 // Core HTTP Fetch Wrapper
+// Respuestas exitosas sin cuerpo (204, o 201 de /auth/register): response.json() fallaria con
+// "Unexpected end of JSON input" aunque la operacion haya funcionado.
+async function parseSuccessBody(response) {
+  if (response.status === 204) return true;
+  const text = await response.text();
+  return text ? JSON.parse(text) : true;
+}
+
 export async function fetchApi(endpoint, options = {}, _retried = false) {
   const headers = {
     'Content-Type': 'application/json',
@@ -88,7 +110,12 @@ export async function fetchApi(endpoint, options = {}, _retried = false) {
   });
 
   if (response.status === 401) {
-    // Evita bucles: no intentar renovar el propio endpoint de refresh.
+    // Un 401 de /auth/login es 'credenciales incorrectas': se muestra el mensaje del backend, sin intentar
+    // renovar ni cerrar una sesion que no existe. Tampoco se renueva el propio endpoint de refresh.
+    if (endpoint === '/auth/login') {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Usuario o contraseña incorrectos');
+    }
     if (!_retried && endpoint !== '/auth/refresh') {
       const refreshed = await refreshAccessToken();
       if (refreshed) {
@@ -97,6 +124,7 @@ export async function fetchApi(endpoint, options = {}, _retried = false) {
     }
     setAuthToken('');
     setRefreshToken('');
+    notifySessionExpired();
     throw new Error('Sesión expirada o credenciales no válidas.');
   }
 
@@ -105,8 +133,7 @@ export async function fetchApi(endpoint, options = {}, _retried = false) {
     throw new Error(errorData.message || `Error HTTP ${response.status}`);
   }
 
-  if (response.status === 204) return true;
-  return await response.json();
+  return await parseSuccessBody(response);
 }
 
 // Variante de fetchApi para subir archivos (multipart/form-data). No fija 'Content-Type':
@@ -135,6 +162,7 @@ export async function uploadFileApi(endpoint, formData, options = {}, _retried =
     }
     setAuthToken('');
     setRefreshToken('');
+    notifySessionExpired();
     throw new Error('Sesión expirada o credenciales no válidas.');
   }
 
@@ -143,6 +171,5 @@ export async function uploadFileApi(endpoint, formData, options = {}, _retried =
     throw new Error(errorData.message || `Error HTTP ${response.status}`);
   }
 
-  if (response.status === 204) return true;
-  return await response.json();
+  return await parseSuccessBody(response);
 }

@@ -66,7 +66,7 @@ public class SaleController {
     public ResponseEntity<SaleDto> registerSale(
             @Parameter(description = "Clave de idempotencia (UUID) para evitar ventas duplicadas por reenvío")
             @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
-            @RequestBody CreateSaleCommand command) {
+            @jakarta.validation.Valid @RequestBody CreateSaleCommand command) {
         try {
             SaleDto created = saleFacade.registerSale(command, idempotencyKey);
             return ResponseEntity.status(HttpStatus.CREATED).body(created);

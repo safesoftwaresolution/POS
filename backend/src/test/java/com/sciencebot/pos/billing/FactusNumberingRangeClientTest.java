@@ -1,8 +1,10 @@
 package com.sciencebot.pos.billing;
 
-import com.sciencebot.pos.billing.api.*;
-import com.sciencebot.pos.billing.dto.*;
-import com.sciencebot.pos.billing.exception.*;
+import com.sciencebot.pos.billing.dto.BillingEnvironment;
+import com.sciencebot.pos.billing.dto.CreateNumberingRangeRequest;
+import com.sciencebot.pos.billing.dto.NumberingRangeDto;
+import com.sciencebot.pos.billing.exception.BillingNotEnabledException;
+import com.sciencebot.pos.billing.exception.FactusApiException;
 import com.sciencebot.pos.billing.internal.adapters.factus.FactusAccess;
 import com.sciencebot.pos.billing.internal.adapters.factus.FactusClientHelper;
 import com.sciencebot.pos.billing.internal.adapters.factus.FactusCredentialsResolver;
@@ -180,7 +182,7 @@ class FactusNumberingRangeClientTest {
     @Test
     void create_FactusValidationErrorKeepsItsMessage() {
         server.expect(requestTo(RANGES))
-                .andRespond(withStatus(HttpStatus.UNPROCESSABLE_ENTITY)
+                .andRespond(withStatus(HttpStatus.UNPROCESSABLE_CONTENT)
                         .body("{\"message\":\"La resolución no existe en la DIAN\"}")
                         .contentType(MediaType.APPLICATION_JSON));
 

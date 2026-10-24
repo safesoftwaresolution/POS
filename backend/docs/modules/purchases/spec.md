@@ -1,4 +1,4 @@
-<!-- spec-version: 1.0 | last-updated: 2026-07-08 -->
+<!-- spec-version: 1.1 | last-updated: 2026-10-16 -->
 # Módulo: Compras (Purchases)
 
 ## Dependencias
@@ -12,6 +12,8 @@
 
 ### RN-PUR-002 — Actualización Automática de Precio de Compra
 - Al registrar una compra, el `unit_cost` ingresado se convierte en el nuevo `purchase_price` del producto.
+- **Excepción**: `ProductFacade.updatePurchasePrice` rechaza (400) un costo **mayor al precio de venta actual** del producto (para no vender con pérdida). Una compra legítima a un costo superior obliga a subir antes el precio de venta; la compra completa se revierte.
+- **Idempotencia**: el header opcional `Idempotency-Key` (`purchases.idempotency_key`, `V5`) evita registrar dos veces la misma compra; la restricción `UNIQUE(supplier_id, invoice_number)` rechaza una factura de proveedor repetida con 409.
 
 ### RN-SUPP-001 (ref: suppliers/spec.md)
 - Solo se asocian compras a proveedores con estado Activo.
@@ -45,7 +47,7 @@
   }
   ```
 - **Response 201**: Compra registrada con detalle
-- **Errores**: 400 (proveedor inactivo, datos inválidos)
+- **Errores**: 400 (proveedor inactivo, datos inválidos, costo mayor al precio de venta), 409 (factura de proveedor duplicada)
 
 ### GET /api/v1/purchases
 - **Permisos**: Admin, Supervisor

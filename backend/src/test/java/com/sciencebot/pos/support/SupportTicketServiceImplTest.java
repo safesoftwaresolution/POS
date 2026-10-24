@@ -58,11 +58,41 @@ class SupportTicketServiceImplTest {
         entity.setTicketNumber("PQR-20260819-0001");
 
         when(repository.findByTicketNumber("PQR-20260819-0001")).thenReturn(Optional.of(entity));
-        when(mapper.toDto(entity)).thenReturn(new SupportTicketDto(1L, "PQR-20260819-0001", "PETITION", "MEDIUM", "OPEN", "Titulo", "Desc", "Name", "email@test.com", null, null, null, null, null, null, null));
+        when(mapper.toTrackingDto(entity)).thenReturn(new TicketTrackingDto("PQR-20260819-0001", "PETITION", "MEDIUM", "OPEN", "Titulo", null, null, null));
 
-        SupportTicketDto result = service.trackByNumber("PQR-20260819-0001");
+        TicketTrackingDto result = service.trackByNumber("PQR-20260819-0001");
         assertNotNull(result);
         assertEquals("PQR-20260819-0001", result.ticketNumber());
+    }
+
+    @Test
+    void trackingDto_DoesNotExposeContactData() {
+        SupportTicketEntity entity = new SupportTicketEntity();
+        entity.setTicketNumber("PQR-20260819-AB3K9X");
+        entity.setContactEmail("privado@tienda.com");
+        entity.setContactPhone("3001234567");
+        entity.setDescription("detalle interno");
+
+        TicketTrackingDto dto = new com.sciencebot.pos.support.internal.mappers.SupportTicketMapper().toTrackingDto(entity);
+
+        assertEquals("PQR-20260819-AB3K9X", dto.ticketNumber());
+        assertFalse(java.util.Arrays.stream(TicketTrackingDto.class.getRecordComponents())
+                .anyMatch(c -> c.getName().toLowerCase().contains("contact") || c.getName().equals("description")));
+    }
+
+    @Test
+    void create_TicketNumberIsRandomSuffixed() {
+        CreateTicketCommand command = new CreateTicketCommand(
+                "PETITION", null, "Consulta", "Detalle", "Ana", "ana@tienda.com", null, 1L, null);
+        when(repository.save(any(SupportTicketEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(mapper.toDto(any())).thenAnswer(inv -> {
+            SupportTicketEntity e = inv.getArgument(0);
+            return new SupportTicketDto(1L, e.getTicketNumber(), e.getType(), e.getPriority(), e.getStatus(), e.getTitle(), e.getDescription(), e.getContactName(), e.getContactEmail(), e.getContactPhone(), e.getStoreId(), e.getSystemInfo(), e.getResolutionNotes(), e.getCreatedAt(), e.getUpdatedAt(), e.getResolvedAt());
+        });
+
+        SupportTicketDto first = service.create(command);
+
+        assertTrue(first.ticketNumber().matches("PQR-\\d{8}-[A-Z2-9]{6}"));
     }
 
     @Test

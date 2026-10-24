@@ -52,12 +52,27 @@ public class FactusInvoiceClient implements InvoiceProvider {
                     : rangeOf(access);
             Map<String, Object> payload = saleMapper.toFactusRequestPayload(request, targetRangeId);
 
-            @SuppressWarnings("unchecked")
-            Map<String, Object> response = httpHelper.authorizedPost("/v2/bills/validate", access)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(payload)
-                    .retrieve()
-                    .body(Map.class);
+            Map<String, Object> response;
+            try {
+                response = postBill(access, payload);
+            } catch (HttpClientErrorException ex) {
+                if (ex.getStatusCode() != HttpStatus.CONFLICT) {
+                    throw ex;
+                }
+                // 409: el reference_code (determinista por venta) ya existe en Factus sin validar, típico de un
+                // intento anterior que expiró o fue rechazado. Se elimina ese borrador y se reenvía una vez.
+                String reference = String.valueOf(payload.get("reference_code"));
+                log.warn("Factus respondió 409 para la referencia {}; se elimina el borrador sin validar y se reintenta", reference);
+                try {
+                    httpHelper.authorizedDelete("/v1/bills/destroy/reference/" + reference, access)
+                            .retrieve()
+                            .toBodilessEntity();
+                } catch (Exception deleteEx) {
+                    log.error("No se pudo eliminar el borrador {} en Factus: {}", reference, deleteEx.getMessage());
+                    throw ex;
+                }
+                response = postBill(access, payload);
+            }
 
             if (isBillResponseValid(response)) {
                 @SuppressWarnings("unchecked")
@@ -103,6 +118,15 @@ public class FactusInvoiceClient implements InvoiceProvider {
             log.error("Error imprevisto al emitir factura electrónica en Factus para venta ID: {}", request.saleId(), ex);
             return InvoiceResult.error(httpHelper.truncateError("Error interno: " + ex.getMessage()));
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> postBill(FactusAccess access, Map<String, Object> payload) {
+        return httpHelper.authorizedPost("/v2/bills/validate", access)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(payload)
+                .retrieve()
+                .body(Map.class);
     }
 
     @Override

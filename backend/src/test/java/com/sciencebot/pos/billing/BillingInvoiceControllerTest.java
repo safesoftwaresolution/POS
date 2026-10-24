@@ -1,8 +1,7 @@
 package com.sciencebot.pos.billing;
 
-import com.sciencebot.pos.billing.api.*;
-import com.sciencebot.pos.billing.dto.*;
-import com.sciencebot.pos.billing.exception.*;
+import com.sciencebot.pos.billing.dto.ElectronicInvoiceDto;
+import com.sciencebot.pos.billing.dto.SendInvoiceEmailRequest;
 import com.sciencebot.pos.billing.internal.controllers.BillingInvoiceController;
 import com.sciencebot.pos.billing.internal.services.InvoiceService;
 import org.junit.jupiter.api.BeforeEach;

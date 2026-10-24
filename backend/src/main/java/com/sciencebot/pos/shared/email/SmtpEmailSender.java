@@ -1,6 +1,8 @@
 package com.sciencebot.pos.shared.email;
 
 import jakarta.mail.internet.MimeMessage;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -10,6 +12,8 @@ import org.springframework.stereotype.Service;
 @Service
 @ConditionalOnProperty(prefix = "email", name = "provider", havingValue = "smtp")
 public class SmtpEmailSender implements EmailSender {
+
+    private static final Logger log = LoggerFactory.getLogger(SmtpEmailSender.class);
 
     private final JavaMailSender mailSender;
 
@@ -31,7 +35,16 @@ public class SmtpEmailSender implements EmailSender {
             helper.setText(htmlBody, true);
             mailSender.send(message);
         } catch (Exception e) {
+            log.error("Fallo SMTP enviando correo a {} (from={}): {}", to, from, rootMessage(e), e);
             throw new IllegalStateException("No se pudo enviar el correo a " + to, e);
         }
+    }
+
+    private static String rootMessage(Throwable e) {
+        Throwable root = e;
+        while (root.getCause() != null) {
+            root = root.getCause();
+        }
+        return root.getClass().getSimpleName() + ": " + root.getMessage();
     }
 }

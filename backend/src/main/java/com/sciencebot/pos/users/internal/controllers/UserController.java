@@ -49,7 +49,7 @@ public class UserController {
             @ApiResponse(responseCode = "401", description = "No autenticado", content = @Content),
             @ApiResponse(responseCode = "403", description = "Solo ADMINISTRATOR puede crear usuarios", content = @Content)
     })
-    public ResponseEntity<UserDto> createUser(@RequestBody CreateUserCommand command) {
+    public ResponseEntity<UserDto> createUser(@jakarta.validation.Valid @RequestBody CreateUserCommand command) {
         UserDto created = userFacade.createUser(command);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
@@ -70,6 +70,16 @@ public class UserController {
     public ResponseEntity<Page<UserDto>> listUsers(Pageable pageable) {
         Page<UserDto> users = userFacade.listUsers(pageable);
         return ResponseEntity.ok(users);
+    }
+
+    @GetMapping("/quota")
+    @PreAuthorize("hasRole('ADMINISTRATOR')")
+    @Operation(
+            summary = "Cupo de usuarios del plan",
+            description = "Usuarios activos del local frente al tope de su plan. 204 si el local no tiene tope aplicable."
+    )
+    public ResponseEntity<UserQuotaStatusDto> getQuota() {
+        return userFacade.getQuotaStatus().map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.noContent().build());
     }
 
     @GetMapping("/{id}")
@@ -110,7 +120,7 @@ public class UserController {
     public ResponseEntity<UserDto> updateUser(
             @Parameter(description = "ID del usuario a actualizar", example = "1", required = true)
             @PathVariable Long id,
-            @RequestBody UpdateUserCommand command) {
+            @jakarta.validation.Valid @RequestBody UpdateUserCommand command) {
         UserDto updated = userFacade.updateUser(id, command);
         return ResponseEntity.ok(updated);
     }

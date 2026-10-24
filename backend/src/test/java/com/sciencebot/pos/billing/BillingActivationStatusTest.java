@@ -1,8 +1,6 @@
 package com.sciencebot.pos.billing;
 
-import com.sciencebot.pos.billing.api.*;
-import com.sciencebot.pos.billing.dto.*;
-import com.sciencebot.pos.billing.exception.*;
+import com.sciencebot.pos.billing.dto.BillingActivationStatus;
 import org.junit.jupiter.api.Test;
 
 import java.util.EnumSet;

@@ -12,6 +12,8 @@ public class ElectronicInvoiceMapper {
             return null;
         }
 
+        String status = entity.getStatus() != null ? entity.getStatus().name() : null;
+
         return new ElectronicInvoiceDto(
                 entity.getId(),
                 entity.getStoreId(),
@@ -19,7 +21,7 @@ public class ElectronicInvoiceMapper {
                 entity.getFactusNumber(),
                 entity.getCufe(),
                 entity.getQrCode(),
-                entity.getStatus(),
+                status,
                 entity.getErrorMessage(),
                 entity.getPdfUrl(),
                 entity.getValidatedAt()

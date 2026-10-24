@@ -39,7 +39,7 @@ public class FactusTokenManager {
 
     @Autowired
     public FactusTokenManager(FactusCredentialsResolver resolver) {
-        this(RestClient.create(), resolver, System::currentTimeMillis);
+        this(com.sciencebot.pos.config.http.OutboundHttp.restClient(), resolver, System::currentTimeMillis);
     }
 
     public FactusTokenManager(RestClient restClient, FactusCredentialsResolver resolver, LongSupplier clock) {

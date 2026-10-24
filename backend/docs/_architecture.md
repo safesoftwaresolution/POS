@@ -1,7 +1,7 @@
-<!-- doc-version: 1.1 | last-updated: 2026-10-02 -->
+<!-- doc-version: 1.1 | last-updated: 2026-10-16 -->
 # Arquitectura del Backend: Monolito Modular
 
-El sistema está diseñado bajo el estilo arquitectónico de **Monolito Modular (Modular Monolith)** con **División Vertical (Vertical Split)**. Toda la aplicación se ejecuta dentro de un único proceso JVM, pero está dividida internamente en módulos acotados y aislados que representan contextos delimitados (Bounded Contexts) del negocio.
+El sistema es un **Monolito Modular** con **división vertical**: un único proceso JVM dividido internamente en módulos acotados (Bounded Contexts). Los 18 módulos están en `com.sciencebot.pos`: `auth`, `users`, `categories`, `products`, `inventory`, `customers`, `suppliers`, `purchases`, `sales`, `billing`, `reports`, `settings`, `stores`, `legal`, `support`, `notifications`, `storage` y `backoffice`.
 
 ```
                   ┌────────────────────────────────────────────────┐
@@ -12,60 +12,55 @@ El sistema está diseñado bajo el estilo arquitectónico de **Monolito Modular 
               ┌──────────────────────┐          ┌──────────────────────┐
               │  MÓDULO: sales       │          │  MÓDULO: inventory   │
               │  (Vertical Slice)    │          │  (Vertical Slice)    │
-              │                      │          │                      │
               │  + API Pública       │          │  + API Pública       │
               │  + Lógica Interna    │          │  + Lógica Interna    │
               └───────────┬──────────┘          └───────────┬──────────┘
-                          │                                │
                           └────────────────┬───────────────┘
-                                           │ JPA / Hibernate
+                                           │ JPA / Hibernate (JdbcClient en reports)
                                            ▼
                   ┌────────────────────────────────────────────────┐
-                  │          Base de Datos Relacional SQL          │
+                  │   PostgreSQL 16 (prod) / H2 (dev, tests)       │
                   └────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 🧱 Estructura Modular y Aislamiento
+## Estructura Modular y Aislamiento
 
-El proyecto sigue una división vertical estricta. Cada módulo encapsula sus controladores, servicios, repositorios y entidades en un subpaquete dedicado:
+1. **API Pública del Módulo**: raíz del paquete del módulo (ej. `com.sciencebot.pos.sales.*`). Contiene la interfaz `Facade`, los DTOs/Commands de entrada y salida y los eventos de dominio que expone a otros módulos. **Excepción**: `billing` agrupa su API pública en subpaquetes `billing/api` (`BillingFacade`), `billing/dto` y `billing/exception` por tamaño. Es la única; está pendiente decidir si se generaliza o se devuelve a la raíz (`_roadmap.md`).
+2. **Lógica Interna**: subpaquete `internal/` (`controllers/`, `services/`, `repositories/`, `entities/`, `mappers/` y, según el módulo, `adapters/`, `listeners/`, `config/`). Ningún otro módulo debe importarla.
 
-1. **API Pública del Módulo**: Ubicada en la raíz del paquete del módulo (ej. `com.sciencebot.pos.catalog.*`). Contiene la interfaz `Facade` (puerta de entrada), los DTOs de entrada/salida y los Eventos de Dominio que expone a otros módulos.
-2. **Lógica Interna (Privada)**: Ubicada en el subpaquete `internal/` (ej. `com.sciencebot.pos.catalog.internal.*`). Todas sus clases de implementación, entidades JPA y repositorios son invisibles (`package-private`) para el resto de la aplicación.
+> **Estado de la regla**: hoy no hay ArchUnit ni Spring Modulith en el proyecto que la haga cumplir, y casi todas las clases de `internal/` son `public`. La regla se respeta por convención y revisión. Violación conocida: `settings` importa `billing.internal.adapters.factus.FactusTokenManager`.
+
+### Excepciones declaradas al aislamiento de datos
+- `reports` usa SQL de solo lectura (`JdbcClient`, parámetros nombrados) sobre tablas de otros módulos (CQRS).
+- `backoffice` (`OnboardingStatsDao`) consulta `users` y `stores` con SQL de solo lectura.
 
 ---
 
-## 🔄 Comunicación entre Módulos
-
-La comunicación entre los módulos del sistema se realiza exclusivamente de dos formas para evitar dependencias circulares y alto acoplamiento:
+## Comunicación entre Módulos
 
 ### 1. Llamada Síncrona Directa (Vía Facade)
-Un módulo puede invocar a otro de forma síncrona **únicamente** inyectando la interfaz `Facade` del módulo proveedor.
-- *Ejemplo*: `sales` inyecta `InventoryFacade` para verificar si un producto tiene stock disponible antes de crear la transacción de venta.
+Un módulo invoca a otro **únicamente** inyectando su interfaz `Facade`.
+- *Ejemplo*: `sales` inyecta `ProductFacade` e `InventoryFacade` para validar y descontar stock.
 
-### 2. Comunicación Asíncrona (Eventos de Dominio)
-Para desacoplar flujos de negocio secundarios, los módulos emiten eventos de dominio in-process mediante `ApplicationEventPublisher`. Los módulos receptores escuchan estos eventos de manera asíncrona.
-- *Ejemplo*: al confirmarse una venta, `sales` publica `SaleCompletedEvent` y `billing` lo atiende en `ElectronicInvoiceEventListener` (`@Async` + `@TransactionalEventListener(AFTER_COMMIT)`) para emitir la factura DIAN sin bloquear la venta. El descuento de stock, en cambio, es síncrono (vía `InventoryFacade`, con bloqueo pesimista).
-
----
-
-## 📈 Concurrencia y Transacciones
-
-- **Consistencia Transaccional**: Cada transacción de negocio síncrona debe ocurrir dentro de los límites de un único módulo. Si un flujo involucra múltiples módulos y requiere consistencia eventual, se debe preferir la publicación de eventos asíncronos.
-- **Bloqueos Concurrentes**: Al descontar existencias físicas en el inventario, se utiliza **Pessimistic Locking** (`@Lock(LockModeType.PESSIMISTIC_WRITE)`) en la base de datos para prevenir race conditions concurrentes (múltiples ventas del mismo producto al mismo tiempo).
-- **Aislamiento de Datos**: Aunque se comparte un esquema relacional SQL único, los módulos no deben realizar consultas `JOIN` entre tablas que pertenezcan a distintos bounded contexts. Cada módulo es dueño exclusivo de sus tablas asociadas.
+### 2. Eventos de Dominio (in-process)
+Se usan para desacoplar flujos secundarios que no deben afectar la transacción principal.
+- *Ejemplo real*: al confirmarse una venta, `sales` publica `SaleCompletedEvent` con `ApplicationEventPublisher`. `billing` lo escucha en `ElectronicInvoiceEventListener` con `@Async` + `@TransactionalEventListener(AFTER_COMMIT)` y emite la factura electrónica. Una falla de Factus nunca revierte ni retrasa la venta.
+- El descuento de stock **no** es por evento: es síncrono, dentro de la transacción de la venta, con un `UPDATE` atómico y condicionado.
 
 ---
 
-## 🏢 Multi-tenencia
+## Multi-tenancy (alcance por local)
+`JwtAuthenticationFilter` extrae `storeId` del JWT y lo guarda en `TenantContext` (`ThreadLocal`, `config/tenant`) durante la solicitud; se limpia en `finally`. Todo servicio con datos de un local filtra por `TenantContext.getStoreId()`. El aislamiento es **manual** (cada consulta/servicio), no hay `@Filter` de Hibernate ni RLS: un servicio que olvide filtrar expone datos de otros locales. Las operaciones de facturación **exigen** local (sin respaldo al local 1). `categories` es global; `SUPER_ADMIN` no tiene local.
 
-Toda petición queda acotada a un local (`store`): `JwtAuthenticationFilter` extrae `storeId` del JWT y lo guarda en `TenantContext` (`config/tenant/`, un `ThreadLocal` que se limpia al terminar la petición). Las consultas por local leen `TenantContext.getStoreId()`; los listeners asíncronos deben fijarlo y restaurarlo explícitamente (ver `ElectronicInvoiceEventListener`). `categories` es el único catálogo deliberadamente global. Ver `_security.md`.
+---
 
-## 📖 Modelo de lectura (CQRS)
+## Concurrencia y Transacciones
 
-`reports` usa `JdbcClient` con SQL nativo (sin entidades JPA) para agregaciones de solo lectura.
-
-## ⚙️ Paquete `config/`
-
-Subpaquetes funcionales: `config/security` (JWT, filtros, CORS), `config/tenant` (`TenantContext`), `config/async` (ejecutores `@Async`) y `config/openapi` (Swagger/OpenAPI).
+- **Consistencia transaccional**: una transacción de negocio síncrona ocurre dentro de un módulo; los flujos que cruzan módulos y toleran consistencia eventual usan eventos.
+- **Stock atómico**: `ProductFacade.adjustStock` ejecuta un solo `UPDATE … SET quantity_available = quantity_available + :delta WHERE … AND quantity_available + :delta >= 0` (`ProductRepository.adjustStockInStore`); la fila queda bloqueada hasta el commit, así que ventas, compras y ajustes concurrentes del mismo producto se serializan y nunca queda negativo. **No** vale un `SELECT … FOR UPDATE` seguido de modificar la entidad: dentro de la venta el producto ya está cargado y Hibernate devuelve la instancia vieja, perdiendo actualizaciones (`StockConcurrencyTest` lo cubre). El kardex toma el stock resultante de la BD, no de la lectura inicial. Hay bloqueo pesimista de lectura en `refresh_tokens` y en las tablas de documentos electrónicos (por `reference_code` / venta), donde la fila no estaba cargada antes.
+- **Idempotencia**: `Idempotency-Key` en ventas y compras (`UNIQUE` en BD), `reference_code` determinista en documentos electrónicos. Ver la memoria del proyecto.
+- **Llamadas externas**: toda llamada saliente (Factus) usa `OutboundHttp.restClient()` con timeouts de conexión (5 s) y lectura (45 s).
+- **Zona horaria**: el código usa `LocalDateTime.now()` (zona de la JVM) con columnas `TIMESTAMP` sin zona; los contenedores están en UTC. Pendiente fijar `America/Bogota` (`_roadmap.md`).
+- **Aislamiento de datos**: un esquema SQL único; cada módulo es dueño exclusivo de sus tablas y no hace `JOIN` con las de otro bounded context (salvo las excepciones declaradas).

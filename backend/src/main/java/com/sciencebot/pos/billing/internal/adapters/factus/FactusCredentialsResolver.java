@@ -60,6 +60,19 @@ public class FactusCredentialsResolver {
         return resolve(storeId, environment, false);
     }
 
+    /**
+     * El local tiene credenciales completas de Factus para el entorno indicado, sin importar el
+     * estado de su facturación. No lanza error si el local no tiene fila: devuelve {@code false}.
+     */
+    public boolean isConfigured(Long storeId, BillingEnvironment environment) {
+        if (storeId == null || environment == null) {
+            return false;
+        }
+        return repository.findById(storeId)
+                .map(config -> config.credentialsFor(environment).isComplete())
+                .orElse(false);
+    }
+
     private FactusAccess resolve(Long storeId, boolean requireActive) {
         return resolve(storeId, null, requireActive);
     }

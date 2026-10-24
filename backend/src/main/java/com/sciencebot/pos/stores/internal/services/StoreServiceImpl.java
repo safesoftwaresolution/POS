@@ -3,11 +3,19 @@ package com.sciencebot.pos.stores.internal.services;
 import com.sciencebot.pos.stores.*;
 import com.sciencebot.pos.stores.internal.entities.StoreCategoryEntity;
 import com.sciencebot.pos.stores.internal.entities.StoreDocumentEntity;
+import com.sciencebot.pos.stores.internal.entities.PlanEntity;
 import com.sciencebot.pos.stores.internal.entities.StoreEntity;
+import com.sciencebot.pos.stores.internal.entities.StoreStatusAuditEntity;
+import com.sciencebot.pos.stores.internal.entities.StoreUserAuditEntity;
 import com.sciencebot.pos.stores.internal.mappers.StoreMapper;
+import com.sciencebot.pos.stores.internal.repositories.PlanRepository;
 import com.sciencebot.pos.stores.internal.repositories.StoreCategoryRepository;
 import com.sciencebot.pos.stores.internal.repositories.StoreDocumentRepository;
 import com.sciencebot.pos.stores.internal.repositories.StoreRepository;
+import com.sciencebot.pos.stores.internal.repositories.StorePurgeDao;
+import com.sciencebot.pos.stores.internal.repositories.StoreStatusAuditQueryDao;
+import com.sciencebot.pos.stores.internal.repositories.StoreStatusAuditRepository;
+import com.sciencebot.pos.stores.internal.repositories.StoreUserAuditRepository;
 import com.sciencebot.pos.notifications.CreateNotificationCommand;
 import com.sciencebot.pos.notifications.NotificationFacade;
 import com.sciencebot.pos.storage.StorageFacade;
@@ -18,8 +26,13 @@ import jakarta.persistence.EntityNotFoundException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
@@ -31,6 +44,8 @@ import java.util.Set;
 public class StoreServiceImpl implements StoreFacade {
 
     private static final Set<String> VALID_STATUSES = Set.of("ACTIVE", "INACTIVE", "PENDING_VERIFICATION", "SUSPENDED", "REJECTED");
+    private static final Logger log = LoggerFactory.getLogger(StoreServiceImpl.class);
+    private static final String DOCUMENTS_FOLDER = "documentos";
     private static final Set<String> VALID_DOCUMENT_TYPES = Set.of("RUT", "COMMERCE_CHAMBER", "ID_CARD", "BANK_CERTIFICATE", "OTHER");
 
     private final StoreRepository storeRepository;
@@ -40,6 +55,12 @@ public class StoreServiceImpl implements StoreFacade {
     private final UserFacade userFacade;
     private final StorageFacade storageFacade;
     private final NotificationFacade notificationFacade;
+    private final StoreStatusAuditRepository statusAuditRepository;
+    private final StoreStatusAuditQueryDao statusAuditQueryDao;
+    private final StorePurgeDao storePurgeDao;
+    private final StoreUserAuditRepository storeUserAuditRepository;
+    private final PlanRepository planRepository;
+    private final StoreApprovalMailer approvalMailer;
 
     public StoreServiceImpl(StoreRepository storeRepository,
                             StoreCategoryRepository categoryRepository,
@@ -47,7 +68,13 @@ public class StoreServiceImpl implements StoreFacade {
                             StoreMapper storeMapper,
                             UserFacade userFacade,
                             StorageFacade storageFacade,
-                            NotificationFacade notificationFacade) {
+                            NotificationFacade notificationFacade,
+                            StoreStatusAuditRepository statusAuditRepository,
+                            StoreStatusAuditQueryDao statusAuditQueryDao,
+                            StorePurgeDao storePurgeDao,
+                            StoreUserAuditRepository storeUserAuditRepository,
+                            PlanRepository planRepository,
+                            StoreApprovalMailer approvalMailer) {
         this.storeRepository = storeRepository;
         this.categoryRepository = categoryRepository;
         this.documentRepository = documentRepository;
@@ -55,6 +82,12 @@ public class StoreServiceImpl implements StoreFacade {
         this.userFacade = userFacade;
         this.storageFacade = storageFacade;
         this.notificationFacade = notificationFacade;
+        this.statusAuditRepository = statusAuditRepository;
+        this.statusAuditQueryDao = statusAuditQueryDao;
+        this.storePurgeDao = storePurgeDao;
+        this.storeUserAuditRepository = storeUserAuditRepository;
+        this.planRepository = planRepository;
+        this.approvalMailer = approvalMailer;
     }
 
     @Override
@@ -100,6 +133,7 @@ public class StoreServiceImpl implements StoreFacade {
         entity.setStatus("PENDING_VERIFICATION");
         entity.setEmailVerified(false);
         StoreEntity saved = storeRepository.save(entity);
+        recordStatusChange(saved, null, saved.getStatus(), null);
         return storeMapper.toDto(saved, resolveCategoryName(saved.getStoreCategoryId()));
     }
 
@@ -129,8 +163,48 @@ public class StoreServiceImpl implements StoreFacade {
         }
         StoreEntity entity = storeRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Local no encontrado con ID: " + id));
+        String previousStatus = entity.getStatus();
         entity.setStatus(newStatus.toUpperCase());
-        return storeMapper.toDto(storeRepository.save(entity), resolveCategoryName(entity.getStoreCategoryId()));
+        StoreEntity saved = storeRepository.save(entity);
+        if (!saved.getStatus().equals(previousStatus)) {
+            recordStatusChange(saved, previousStatus, saved.getStatus(), null);
+            if ("PENDING_VERIFICATION".equals(previousStatus) && "ACTIVE".equals(saved.getStatus())) {
+                notifyStoreApproved(saved);
+            }
+        }
+        return storeMapper.toDto(saved, resolveCategoryName(saved.getStoreCategoryId()));
+    }
+
+    /**
+     * Avisa por correo a los administradores del local (o, si aún no tiene, al correo del local) que fue aprobado.
+     * Solo se envía al aprobar un local pendiente, no al reactivar uno suspendido, y únicamente si la
+     * transacción confirma, para no avisar de una aprobación que luego se revierte.
+     */
+    private void notifyStoreApproved(StoreEntity store) {
+        List<String> recipients = userFacade.listActiveByStoreAndRoles(store.getId(), List.of("ADMINISTRATOR"))
+                .stream().map(UserDto::email).filter(e -> e != null && !e.isBlank()).distinct().toList();
+        if (recipients.isEmpty() && store.getEmail() != null && !store.getEmail().isBlank()) {
+            recipients = List.of(store.getEmail());
+        }
+        if (recipients.isEmpty()) {
+            return;
+        }
+        List<String> to = recipients;
+        String name = store.getName();
+        runAfterCommit(() -> approvalMailer.sendApproved(name, to));
+    }
+
+    private void runAfterCommit(Runnable action) {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    action.run();
+                }
+            });
+        } else {
+            action.run();
+        }
     }
 
     @Override
@@ -208,7 +282,7 @@ public class StoreServiceImpl implements StoreFacade {
         }
 
         // "documentos" es el nombre exacto de la carpeta creada en el bucket de Cloudflare R2.
-        StorageUploadResult uploaded = storageFacade.uploadFile(file, "documentos");
+        StorageUploadResult uploaded = storageFacade.uploadFile(file, DOCUMENTS_FOLDER);
 
         StoreDocumentEntity doc = new StoreDocumentEntity();
         doc.setStoreId(storeId);
@@ -236,9 +310,164 @@ public class StoreServiceImpl implements StoreFacade {
         }
         StoreEntity entity = storeRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Local no encontrado con ID: " + id));
+        String previousStatus = entity.getStatus();
         entity.setStatus("REJECTED");
         entity.setRejectionReason(reason);
-        return storeMapper.toDto(storeRepository.save(entity), resolveCategoryName(entity.getStoreCategoryId()));
+        StoreEntity saved = storeRepository.save(entity);
+        recordStatusChange(saved, previousStatus, "REJECTED", reason);
+        return storeMapper.toDto(saved, resolveCategoryName(saved.getStoreCategoryId()));
+    }
+
+    /**
+     * Elimina definitivamente un local de cualquier estado con todos sus datos (también los archivos del
+     * bucket). Los administradores del local no se borran: quedan sin local y se pueden reasignar o eliminar
+     * desde el directorio de usuarios. Se rechaza si tiene facturas electrónicas validadas (documentos
+     * fiscales). Si el local no es un rechazado sin operación, exige escribir su nombre exacto. Deja un evento
+     * DELETED en la auditoría, que conserva los datos del local.
+     */
+    @Override
+    @Transactional
+    public void deleteStore(Long id, String confirmName) {
+        StoreEntity store = storeRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Local no encontrado con ID: " + id));
+        if (storePurgeDao.countValidatedInvoices(id) > 0) {
+            throw new IllegalArgumentException("El local tiene facturas electronicas validadas ante la DIAN, que son "
+                    + "documentos fiscales y deben conservarse. Suspende o inactiva el local en lugar de eliminarlo.");
+        }
+        List<String> withData = storePurgeDao.findBusinessData(id);
+        boolean needsConfirmation = !"REJECTED".equals(store.getStatus()) || !withData.isEmpty();
+        String storeName = store.getName() == null ? "" : store.getName().trim();
+        if (needsConfirmation && (confirmName == null || !confirmName.trim().equalsIgnoreCase(storeName))) {
+            throw new IllegalArgumentException("Para eliminar este local escribe su nombre exacto: " + store.getName());
+        }
+
+        List<String> documentUrls = storePurgeDao.findDocumentUrls(id);
+        String reason = "Eliminado definitivamente"
+                + (store.getRejectionReason() != null ? " (motivo del rechazo: " + store.getRejectionReason() + ")" : "")
+                + (withData.isEmpty() ? "" : " con datos de operacion: " + String.join(", ", withData));
+        recordStatusChange(store, store.getStatus(), "DELETED", reason);
+        storePurgeDao.purge(id);
+
+        // Los archivos se borran solo si la transaccion confirma, para no perderlos si el borrado falla.
+        runAfterCommit(() -> deleteDocumentFiles(documentUrls));
+    }
+
+    private void deleteDocumentFiles(List<String> documentUrls) {
+        for (String url : documentUrls) {
+            int idx = url == null ? -1 : url.indexOf(DOCUMENTS_FOLDER + "/");
+            if (idx < 0) {
+                continue;
+            }
+            try {
+                storageFacade.deleteFile(url.substring(idx));
+            } catch (RuntimeException e) {
+                log.warn("No se pudo borrar el archivo {} del bucket tras eliminar el local", url, e);
+            }
+        }
+    }
+
+    /**
+     * Asigna un ADMINISTRATOR sin local (ya con el correo verificado) a un local que no tiene ningún
+     * administrador activo. No mueve usuarios ya asignados. Queda registrado en la auditoría.
+     */
+    @Override
+    @Transactional
+    public StoreDto assignOwner(Long storeId, Long userId) {
+        StoreEntity store = storeRepository.findById(storeId)
+                .orElseThrow(() -> new EntityNotFoundException("Local no encontrado con ID: " + storeId));
+        if ("REJECTED".equals(store.getStatus())) {
+            throw new IllegalArgumentException("No se puede asignar un usuario a un local rechazado.");
+        }
+        UserDto user = userFacade.getById(userId);
+        if (!"ADMINISTRATOR".equals(user.role()) || user.storeId() != null) {
+            throw new IllegalArgumentException("Solo se puede asignar un ADMINISTRATOR que aun no tiene local.");
+        }
+        if (!user.emailVerified()) {
+            throw new IllegalArgumentException("El usuario debe verificar su correo antes de asignarlo a un local.");
+        }
+        if (!userFacade.listActiveByStoreAndRoles(storeId, List.of("ADMINISTRATOR")).isEmpty()) {
+            throw new IllegalArgumentException("El local ya tiene un administrador asignado.");
+        }
+
+        userFacade.assignStore(userId, storeId);
+
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        StoreUserAuditEntity entry = new StoreUserAuditEntity();
+        entry.setStoreId(store.getId());
+        entry.setStoreName(store.getName());
+        entry.setUserId(user.id());
+        entry.setUsername(user.username());
+        entry.setFullName(user.fullName());
+        entry.setRole(user.role());
+        entry.setAction("OWNER_ASSIGNED");
+        entry.setPerformedBy(authentication != null ? authentication.getName() : "system");
+        storeUserAuditRepository.save(entry);
+
+        return storeMapper.toDto(store, resolveCategoryName(store.getStoreCategoryId()));
+    }
+
+    @Override
+    public List<PlanDto> listPlans() {
+        return planRepository.findAllByOrderBySortOrderAsc().stream()
+                .map(p -> new PlanDto(p.getCode(), p.getName(), p.getMaxAdditionalUsers(), 1 + p.getMaxAdditionalUsers()))
+                .toList();
+    }
+
+    /**
+     * Cambia el plan del local. Bajar de plan no desactiva a nadie: si el local ya excede el nuevo tope,
+     * conserva sus usuarios pero no podrá crear ni reactivar más hasta estar dentro del límite.
+     */
+    @Override
+    @Transactional
+    public StoreDto changePlan(Long storeId, String planCode) {
+        if (planCode == null || planCode.isBlank()) {
+            throw new IllegalArgumentException("planCode es obligatorio.");
+        }
+        PlanEntity plan = planRepository.findById(planCode.trim().toUpperCase())
+                .orElseThrow(() -> new IllegalArgumentException("Plan invalido: " + planCode));
+        StoreEntity store = storeRepository.findById(storeId)
+                .orElseThrow(() -> new EntityNotFoundException("Local no encontrado con ID: " + storeId));
+        String previousCode = store.getPlanCode();
+        if (!plan.getCode().equals(previousCode)) {
+            String previousName = planRepository.findById(previousCode).map(PlanEntity::getName).orElse(previousCode);
+            store.setPlanCode(plan.getCode());
+            store = storeRepository.save(store);
+            recordStatusChange(store, null, "PLAN_CHANGED", "Plan: " + previousName + " -> " + plan.getName());
+        }
+        return storeMapper.toDto(store, resolveCategoryName(store.getStoreCategoryId()));
+    }
+
+    @Override
+    public Page<StoreUserAuditDto> getOwnerAssignments(Pageable pageable) {
+        Pageable newestFirst = org.springframework.data.domain.PageRequest.of(
+                pageable.getPageNumber(), pageable.getPageSize(),
+                org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt", "id"));
+        return storeUserAuditRepository.findAll(newestFirst).map(a -> new StoreUserAuditDto(
+                a.getId(), a.getStoreId(), a.getStoreName(), a.getUserId(), a.getUsername(), a.getFullName(),
+                a.getRole(), a.getAction(), a.getPerformedBy(), a.getCreatedAt()));
+    }
+
+    @Override
+    public Page<StoreStatusAuditDto> getStatusAudit(String newStatus, String q, Pageable pageable) {
+        String statusParam = (newStatus == null || newStatus.isBlank() || newStatus.equalsIgnoreCase("ALL"))
+                ? null : newStatus.toUpperCase();
+        String qParam = (q == null || q.isBlank()) ? null : q.trim();
+        return statusAuditQueryDao.search(statusParam, qParam, pageable);
+    }
+
+    /** Deja constancia inmutable de quién cambió el estado del local y cuándo. */
+    private void recordStatusChange(StoreEntity store, String previousStatus, String newStatus, String reason) {
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        StoreStatusAuditEntity entry = new StoreStatusAuditEntity();
+        entry.setStoreId(store.getId());
+        entry.setStoreName(store.getName());
+        entry.setStoreEmail(store.getEmail());
+        entry.setStoreTaxId(store.getTaxId());
+        entry.setPreviousStatus(previousStatus);
+        entry.setNewStatus(newStatus);
+        entry.setReason(reason != null && reason.length() > 255 ? reason.substring(0, 255) : reason);
+        entry.setPerformedBy(authentication != null ? authentication.getName() : "system");
+        statusAuditRepository.save(entry);
     }
 
     @Override

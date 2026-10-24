@@ -26,7 +26,8 @@ public class StoreMapper {
                 entity.getStatus(),
                 entity.isEmailVerified(),
                 entity.getRejectionReason(),
-                entity.getCreatedAt()
+                entity.getCreatedAt(),
+                entity.getPlanCode()
         );
     }
 

@@ -29,6 +29,8 @@ public class StoreEntity {
     private String status = "PENDING_VERIFICATION";
     @Column(name = "email_verified", nullable = false)
     private boolean emailVerified = false;
+    @Column(name = "plan_code", nullable = false, length = 20)
+    private String planCode = "BASIC";
     @Column(name = "rejection_reason")
     private String rejectionReason;
     @Column(name = "created_at", nullable = false, updatable = false)

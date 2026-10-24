@@ -3,10 +3,39 @@ package com.sciencebot.pos.products.internal.repositories;
 import com.sciencebot.pos.products.internal.entities.Product;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.Optional;
 
 public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpecificationExecutor<Product> {
+
+    /**
+     * Ajuste de stock ATOMICO: una sola sentencia UPDATE que suma el delta y solo se aplica si el
+     * resultado no queda negativo. La fila queda bloqueada hasta el commit, asi que ventas/compras
+     * concurrentes del mismo producto se serializan sin lost-update ni sobreventa.
+     *
+     * <p>Un {@code SELECT ... FOR UPDATE} + modificar la entidad NO sirve aqui: dentro de la misma
+     * transaccion el producto ya suele estar cargado (la venta lo lee antes) y Hibernate devuelve esa
+     * instancia con el valor viejo en vez de releerlo, con lo que se pisaban las actualizaciones.
+     *
+     * @return filas afectadas: 0 si el producto no existe en el local o el stock quedaria negativo
+     */
+    @Modifying(flushAutomatically = true)
+    @Query("update Product p set p.quantityAvailable = p.quantityAvailable + :delta "
+            + "where p.id = :id and p.storeId = :storeId and p.quantityAvailable + :delta >= 0")
+    int adjustStockInStore(@Param("id") Long id, @Param("storeId") Long storeId, @Param("delta") int delta);
+
+    /** Igual que {@link #adjustStockInStore} para llamadas sin local en contexto (seeders, tareas internas). */
+    @Modifying(flushAutomatically = true)
+    @Query("update Product p set p.quantityAvailable = p.quantityAvailable + :delta "
+            + "where p.id = :id and p.quantityAvailable + :delta >= 0")
+    int adjustStock(@Param("id") Long id, @Param("delta") int delta);
+
+    /** Stock actual leido de la BD (proyeccion escalar: no pasa por el contexto de persistencia). */
+    @Query("select p.quantityAvailable from Product p where p.id = :id")
+    Integer findStockById(@Param("id") Long id);
 
     Optional<Product> findByStoreIdAndInternalCode(Long storeId, String internalCode);
     Optional<Product> findByStoreIdAndBarcode(Long storeId, String barcode);

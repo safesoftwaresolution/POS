@@ -2,6 +2,7 @@ package com.sciencebot.pos.auth;
 
 import com.sciencebot.pos.auth.internal.services.AuthService;
 import com.sciencebot.pos.auth.internal.services.EmailVerificationService;
+import com.sciencebot.pos.auth.internal.services.PasswordResetMailer;
 import com.sciencebot.pos.auth.internal.services.RefreshTokenService;
 import com.sciencebot.pos.config.security.JwtService;
 import com.sciencebot.pos.config.security.PosUserDetails;
@@ -38,6 +39,8 @@ class AuthServiceTest {
     @Mock private UserFacade userFacade;
     @Mock private EmailVerificationService emailVerificationService;
     @Mock private EmailSender emailSender;
+    @Mock private com.sciencebot.pos.auth.internal.services.PasswordResetService passwordResetService;
+    @Mock private PasswordResetMailer passwordResetMailer;
     @InjectMocks private AuthService authService;
 
     @BeforeEach
@@ -155,6 +158,210 @@ class AuthServiceTest {
         verify(userFacade).registerPendingAdmin(command);
         verify(emailVerificationService).issue(3L);
         verify(emailSender).send(eq("carlos@empresa.com"), anyString(), contains("raw-token"));
+    }
+
+    @Test
+    void register_EmailFailure_StillCreatesAccountWithoutThrowing() {
+        RegisterOwnerCommand command = new RegisterOwnerCommand("Carlos Martinez", "carlos.m", "carlos@empresa.com", "Password123");
+        UserDto created = new UserDto(3L, "Carlos Martinez", "carlos.m", "carlos@empresa.com", "ADMINISTRATOR", true, null, false);
+
+        when(userFacade.registerPendingAdmin(command)).thenReturn(created);
+        when(emailVerificationService.issue(3L)).thenReturn("raw-token");
+        doThrow(new IllegalStateException("smtp down")).when(emailSender).send(anyString(), anyString(), anyString());
+
+        assertDoesNotThrow(() -> authService.register(command));
+        verify(userFacade).registerPendingAdmin(command);
+    }
+
+    @Test
+    void resendVerification_UnverifiedAccount_SendsNewLinkOnce() {
+        UserDto pending = new UserDto(3L, "Carlos", "carlos.m", "carlos@empresa.com", "ADMINISTRATOR", true, null, false);
+        when(userFacade.findByEmail("carlos@empresa.com")).thenReturn(Optional.of(pending));
+        when(emailVerificationService.issue(3L)).thenReturn("new-token");
+
+        authService.resendVerification("  Carlos@Empresa.com ");
+        authService.resendVerification("carlos@empresa.com"); // dentro del enfriamiento: se ignora
+
+        verify(emailSender, times(1)).send(eq("carlos@empresa.com"), anyString(), contains("new-token"));
+    }
+
+    @Test
+    void resendVerification_VerifiedOrUnknownAccount_SendsNothing() {
+        when(userFacade.findByEmail("ok@empresa.com")).thenReturn(Optional.of(userDto(true)));
+        when(userFacade.findByEmail("nadie@empresa.com")).thenReturn(Optional.empty());
+
+        authService.resendVerification("ok@empresa.com");
+        authService.resendVerification("nadie@empresa.com");
+        authService.resendVerification(null);
+
+        verifyNoInteractions(emailSender);
+    }
+
+    @Test
+    void resendVerificationToUser_UnverifiedAccount_SendsLinkAndBlocksImmediateRepeat() {
+        when(userFacade.getById(3L)).thenReturn(new UserDto(3L, "Carlos", "carlos.m", "carlos@empresa.com", "ADMINISTRATOR", true, null, false));
+        when(emailVerificationService.issue(3L)).thenReturn("admin-token");
+
+        authService.resendVerificationToUser(3L);
+
+        verify(emailSender).send(eq("carlos@empresa.com"), anyString(), contains("admin-token"));
+        assertThrows(IllegalArgumentException.class, () -> authService.resendVerificationToUser(3L));
+        verify(emailSender, times(1)).send(anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void resendVerificationToUser_AlreadyVerified_IsRejected() {
+        when(userFacade.getById(7L)).thenReturn(userDto(true));
+
+        assertThrows(IllegalArgumentException.class, () -> authService.resendVerificationToUser(7L));
+
+        verifyNoInteractions(emailSender);
+    }
+
+    @Test
+    void resendVerificationToUser_MailFailure_IsReportedAndDoesNotStartCooldown() {
+        when(userFacade.getById(3L)).thenReturn(new UserDto(3L, "Carlos", "carlos.m", "carlos@empresa.com", "ADMINISTRATOR", true, null, false));
+        when(emailVerificationService.issue(3L)).thenReturn("admin-token");
+        doThrow(new IllegalStateException("smtp down")).doNothing().when(emailSender).send(anyString(), anyString(), anyString());
+
+        assertThrows(IllegalStateException.class, () -> authService.resendVerificationToUser(3L));
+        assertDoesNotThrow(() -> authService.resendVerificationToUser(3L)); // el fallo no bloquea el reintento
+    }
+
+    @Test
+    void deleteUnverifiedAccount_DeletesTokensThenAccount() {
+        authService.deleteUnverifiedAccount(3L);
+
+        var order = inOrder(refreshTokenService, emailVerificationService, passwordResetService, userFacade);
+        order.verify(refreshTokenService).deleteAllForUser(3L);
+        order.verify(emailVerificationService).deleteForUser(3L);
+        order.verify(passwordResetService).deleteForUser(3L);
+        order.verify(userFacade).deleteUnverifiedOwner(3L);
+    }
+
+    @Test
+    void deleteUnverifiedAccount_NotEligible_PropagatesRefusal() {
+        doThrow(new IllegalArgumentException("no elegible")).when(userFacade).deleteUnverifiedOwner(7L);
+
+        assertThrows(IllegalArgumentException.class, () -> authService.deleteUnverifiedAccount(7L));
+    }
+
+    @Test
+    void forgotPassword_VerifiedActiveAccount_HandsOffTheResetLinkOnce() {
+        when(userFacade.findByEmail("admin@pos.com")).thenReturn(Optional.of(userDto(true)));
+
+        authService.forgotPassword(" Admin@POS.com ");
+        authService.forgotPassword("admin@pos.com"); // dentro del enfriamiento: se ignora
+
+        verify(passwordResetMailer, times(1)).sendResetLink(userDto(true));
+    }
+
+    @Test
+    void forgotPassword_UnknownUnverifiedOrInactiveAccount_SendsNothing() {
+        when(userFacade.findByEmail("nadie@pos.com")).thenReturn(Optional.empty());
+        when(userFacade.findByEmail("nuevo@pos.com")).thenReturn(Optional.of(unverifiedUserDto()));
+        when(userFacade.findByEmail("off@pos.com")).thenReturn(Optional.of(userDto(false)));
+
+        authService.forgotPassword("nadie@pos.com");
+        authService.forgotPassword("nuevo@pos.com");
+        authService.forgotPassword("off@pos.com");
+        authService.forgotPassword("  ");
+
+        verifyNoInteractions(passwordResetMailer, passwordResetService);
+    }
+
+    @Test
+    void passwordResetMailer_IssuesTokenAndSendsTheLink() {
+        PasswordResetMailer mailer = new PasswordResetMailer(passwordResetService, emailSender);
+        when(passwordResetService.issue(7L)).thenReturn("reset-token");
+
+        mailer.sendResetLink(userDto(true));
+
+        verify(emailSender).send(eq("admin@pos.com"), anyString(), contains("/reset-password?token=reset-token"));
+    }
+
+    @Test
+    void passwordResetMailer_EmailFailure_DoesNotThrow() {
+        PasswordResetMailer mailer = new PasswordResetMailer(passwordResetService, emailSender);
+        when(passwordResetService.issue(7L)).thenReturn("reset-token");
+        doThrow(new IllegalStateException("smtp down")).when(emailSender).send(anyString(), anyString(), anyString());
+
+        assertDoesNotThrow(() -> mailer.sendResetLink(userDto(true)));
+    }
+
+    @Test
+    void setAccountActive_Deactivating_RevokesSessions() {
+        when(userFacade.getById(7L)).thenReturn(userDto(true));
+
+        authService.setAccountActive(7L, false);
+
+        verify(userFacade).changeStatus(7L, false);
+        verify(refreshTokenService).revokeAllForUser(7L);
+    }
+
+    @Test
+    void setAccountActive_Reactivating_DoesNotTouchSessions() {
+        when(userFacade.getById(7L)).thenReturn(userDto(false));
+
+        authService.setAccountActive(7L, true);
+
+        verify(userFacade).changeStatus(7L, true);
+        verify(refreshTokenService, never()).revokeAllForUser(anyLong());
+    }
+
+    @Test
+    void setAccountActive_SuperAdmin_IsRefused() {
+        when(userFacade.getById(1L)).thenReturn(
+                new UserDto(1L, "Root", "root", "root@pos.com", "SUPER_ADMIN", true, null, true));
+
+        assertThrows(IllegalArgumentException.class, () -> authService.setAccountActive(1L, false));
+
+        verify(userFacade, never()).changeStatus(anyLong(), anyBoolean());
+    }
+
+    @Test
+    void deleteAccount_DeletesTokensThenTheUser() {
+        when(userFacade.getById(7L)).thenReturn(userDto(true));
+
+        authService.deleteAccount(7L);
+
+        var order = inOrder(refreshTokenService, emailVerificationService, passwordResetService, userFacade);
+        order.verify(refreshTokenService).deleteAllForUser(7L);
+        order.verify(emailVerificationService).deleteForUser(7L);
+        order.verify(passwordResetService).deleteForUser(7L);
+        order.verify(userFacade).deleteUserPermanently(7L);
+    }
+
+    @Test
+    void deleteAccount_SuperAdmin_IsRefusedBeforeTouchingAnything() {
+        when(userFacade.getById(1L)).thenReturn(
+                new UserDto(1L, "Root", "root", "root@pos.com", "SUPER_ADMIN", true, null, true));
+
+        assertThrows(IllegalArgumentException.class, () -> authService.deleteAccount(1L));
+
+        verify(userFacade, never()).deleteUserPermanently(anyLong());
+        verifyNoInteractions(refreshTokenService);
+    }
+
+    @Test
+    void resetPassword_Success_SetsPasswordAndRevokesAllSessions() {
+        when(passwordResetService.consume("reset-token")).thenReturn(7L);
+        when(userFacade.getById(7L)).thenReturn(userDto(true));
+
+        authService.resetPassword("reset-token", "NuevaClave123");
+
+        verify(userFacade).resetPassword(7L, "NuevaClave123");
+        verify(refreshTokenService).revokeAllForUser(7L);
+    }
+
+    @Test
+    void resetPassword_InvalidToken_ChangesNothing() {
+        when(passwordResetService.consume("bad")).thenThrow(new IllegalArgumentException("El enlace de recuperacion no es valido"));
+
+        assertThrows(IllegalArgumentException.class, () -> authService.resetPassword("bad", "NuevaClave123"));
+
+        verify(userFacade, never()).resetPassword(anyLong(), anyString());
+        verify(refreshTokenService, never()).revokeAllForUser(anyLong());
     }
 
     @Test

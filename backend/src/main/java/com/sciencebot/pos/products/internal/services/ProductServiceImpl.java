@@ -73,7 +73,12 @@ public class ProductServiceImpl implements ProductFacade, CategoryDeleteValidato
         categoryFacade.getById(command.categoryId())
                 .orElseThrow(() -> new IllegalArgumentException("La categoría especificada no existe"));
 
+        if (command.quantityAvailable() < 0) {
+            throw new IllegalArgumentException("El stock inicial no puede ser negativo");
+        }
+
         validateSubcategory(command.subcategoryId(), command.categoryId());
+
         Product product = new Product();
         product.setStoreId(storeId);
         product.setInternalCode(command.internalCode().trim());
@@ -88,7 +93,7 @@ public class ProductServiceImpl implements ProductFacade, CategoryDeleteValidato
         product.setImageUrl(command.imageUrl() != null ? command.imageUrl().trim() : null);
         product.setTaxRate(command.taxRate() != null ? command.taxRate() : BigDecimal.ZERO);
         product.setUnspscCode(command.unspscCode() != null ? command.unspscCode().trim() : null);
-        product.setQuantityAvailable(0);
+        product.setQuantityAvailable(command.quantityAvailable());
         product.setActive(true);
 
         Product saved = productRepository.save(product);
@@ -172,8 +177,6 @@ public class ProductServiceImpl implements ProductFacade, CategoryDeleteValidato
         if (active != null) {
             spec = spec.and(ProductSpecifications.hasActive(active));
         }
-        // Se agrega al final: and() envuelve TODO lo acumulado como una unidad, asi que esto
-        // aplica el filtro de local sin importar el arbol OR construido arriba para 'search'.
         spec = spec.and(ProductSpecifications.hasStoreId(requireCurrentStoreId()));
 
         Page<Product> page = productRepository.findAll(spec, pageable);
@@ -255,14 +258,24 @@ public class ProductServiceImpl implements ProductFacade, CategoryDeleteValidato
     @Override
     @Transactional
     public void updateStock(Long id, int quantityDelta) {
-        Product product = productRepository.findById(id)
-                .orElseThrow(() -> new jakarta.persistence.EntityNotFoundException("Producto no encontrado con ID: " + id));
-        int newStock = product.getQuantityAvailable() + quantityDelta;
-        if (newStock < 0) {
+        adjustStock(id, quantityDelta);
+    }
+
+    @Override
+    @Transactional
+    public int adjustStock(Long id, int quantityDelta) {
+        Long storeId = TenantContext.getStoreId();
+        int updated = storeId != null
+                ? productRepository.adjustStockInStore(id, storeId, quantityDelta)
+                : productRepository.adjustStock(id, quantityDelta);
+        if (updated == 0) {
+            // O no existe en el local, o el UPDATE condicionado rechazo dejar el stock negativo.
+            Product product = productRepository.findById(id)
+                    .filter(p -> storeId == null || p.getStoreId().equals(storeId))
+                    .orElseThrow(() -> new jakarta.persistence.EntityNotFoundException("Producto no encontrado con ID: " + id));
             throw new IllegalArgumentException("No hay suficiente stock para el producto: " + product.getName());
         }
-        product.setQuantityAvailable(newStock);
-        productRepository.save(product);
+        return productRepository.findStockById(id);
     }
 
     @Override

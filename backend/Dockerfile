@@ -50,8 +50,15 @@ COPY --from=builder /app/target/*.jar app.jar
 RUN chown -R spring:spring /app
 USER spring:spring
 
+# Los reportes y el cierre de caja agrupan por dia: el contenedor (UTC por defecto) debe usar la hora de Colombia.
+ENV TZ=America/Bogota
+
 # Expose production port
 EXPOSE 8080
 
-# Run the packaged JAR
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# Comprueba que el puerto HTTP acepta conexiones (la imagen no trae curl ni actuator).
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+  CMD bash -c 'exec 3<>/dev/tcp/127.0.0.1/8080' || exit 1
+
+# Run the packaged JAR. MaxRAMPercentage: la JVM respeta el limite de memoria del contenedor.
+ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75", "-Duser.timezone=America/Bogota", "-jar", "app.jar"]

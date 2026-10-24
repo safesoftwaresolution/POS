@@ -106,6 +106,22 @@ public class RefreshTokenService {
                 .ifPresent(token -> repository.revokeFamily(token.getFamilyId()));
     }
 
+    /** Borra todos los refresh tokens del usuario (previo a eliminar su cuenta). */
+    @Transactional
+    public void deleteAllForUser(Long userId) {
+        if (userId != null) {
+            repository.deleteAllByUserId(userId);
+        }
+    }
+
+    /** Cierra todas las sesiones del usuario (p. ej. tras restablecer su contrasena). */
+    @Transactional
+    public void revokeAllForUser(Long userId) {
+        if (userId != null) {
+            repository.revokeAllByUserId(userId);
+        }
+    }
+
     /** Revoca todos los tokens activos de una familia (sesion). */
     @Transactional
     public void revokeFamily(String familyId) {

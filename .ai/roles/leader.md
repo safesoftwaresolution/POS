@@ -9,8 +9,8 @@
 
 1. Leer `.ai/agents.md` completo.
 2. Ejecutar el script de validación (`init.sh` / `init.ps1`) y verificar que pasa en verde.
-3. Leer `docs/_index.md` para localizar módulos y rutas.
-4. Leer `.ai/features.json` e identificar la primera tarea con `"status": "pending"`.
+3. Leer `backend/docs/_index.md` para localizar módulos y rutas (`docs/` en este arnés = `backend/docs/`).
+4. Leer `.ai/features.json` e identificar la primera tarea con `"status": "pending"`. Si no hay ninguna, la tarea la define el usuario: **regístrala primero en `features.json` como `pending`** (con ID nuevo y único) antes de delegarla.
 5. Leer las últimas 20 líneas de `.ai/progress/history.md` para contexto reciente.
 
 ---
@@ -22,7 +22,7 @@ Dado el tipo de tarea, construye el Context Pack con estos archivos:
 | Tipo de Tarea | Archivos a Cargar |
 |---|---|
 | **Funcionalidad en módulo existente** | `spec.md` del módulo + `_conventions.md` |
-| **Crear módulo nuevo** | `_architecture.md` + `_conventions.md` + `_database-schema.md` + `_security.md` |
+| **Crear módulo nuevo** | `_architecture.md` + `_conventions.md` + `_database-schema.md` + `_security.md` (4 documentos: es el máximo permitido por R1) |
 | **Corregir bug** | `spec.md` del módulo afectado + código fuente relevante |
 | **Refactorizar** | `_architecture.md` + `_conventions.md` + `spec.md` del módulo |
 | **Modificar API endpoint** | `spec.md` del módulo (sección API) + `_security.md` |
@@ -63,7 +63,7 @@ Antes de delegar, responde:
 | Fallo en validación (`init`) | Delegar al **Implementer** para fix |
 | Implementer terminó | Delegar al **Reviewer** |
 | Reviewer rechazó | Reenviar al **Implementer** con notas |
-| Reviewer aprobó | Marcar tarea como `"done"` en features.json |
+| Reviewer aprobó | Marcar tarea como `"done"` en features.json y delegar al **Committer** (plan de commits + OK humano) |
 
 ### 3. Actualizar el estado
 Al completar una tarea (aprobada por Reviewer):
@@ -82,9 +82,9 @@ Registrar en `progress/history.md`:
 - **Tarea:** FEAT-XXX — Título
 - **Delegado a:** Implementer / Reviewer
 - **Context Pack:**
-  1. docs/modules/<modulo>/spec.md (completo)
-  2. docs/_conventions.md (completo)
-  3. docs/modules/<otro>/spec.md (solo sección "Reglas de Negocio")
+  1. backend/docs/modules/<modulo>/spec.md (completo)
+  2. backend/docs/_conventions.md (completo)
+  3. backend/docs/modules/<otro>/spec.md (solo sección "Reglas de Negocio")
 - **Instrucciones:** Qué debe hacer exactamente
 ```
 
@@ -98,4 +98,5 @@ Registrar en `progress/history.md`:
 - ❌ No delegar sin un Context Pack explícito.
 - ✅ Sí puedes leer cualquier archivo del proyecto para entender contexto.
 - ✅ Sí puedes modificar `features.json` para actualizar estados.
-- ✅ Sí puedes escribir en `progress/history.md`.
+- ✅ Sí puedes escribir (solo añadir) en `progress/history.md`.
+- ✅ Los IDs de `features.json` son únicos y nunca se reutilizan; no los renumeres.

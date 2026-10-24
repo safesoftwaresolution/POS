@@ -1,7 +1,9 @@
 package com.sciencebot.pos.config.security;
 
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
+import org.springframework.security.config.Customizer;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -31,6 +33,10 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthFilter;
 
+    /** Lista separada por comas; por defecto sigue a APP_FRONTEND_URL (el SPA es el unico origen legitimo). */
+    @Value("${app.cors.allowed-origins:${app.frontend-url:http://localhost:3000}}")
+    private String allowedOrigins = "http://localhost:3000";
+
     public SecurityConfig(JwtAuthenticationFilter jwtAuthFilter) {
         this.jwtAuthFilter = jwtAuthFilter;
     }
@@ -38,13 +44,15 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .cors(Customizer.withDefaults())
                 .csrf(abstractHttpConfigurer -> abstractHttpConfigurer.disable())
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/auth/login").permitAll()
                         .requestMatchers("/api/v1/auth/refresh").permitAll()
                         .requestMatchers("/api/v1/auth/register").permitAll()
                         .requestMatchers("/api/v1/auth/verify-email").permitAll()
+                        .requestMatchers("/api/v1/auth/resend-verification").permitAll()
+                        .requestMatchers("/api/v1/auth/forgot-password", "/api/v1/auth/reset-password").permitAll()
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/api/v1/legal/**").permitAll()
                         .requestMatchers("/api/v1/support/tickets").permitAll()
@@ -100,7 +108,13 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(List.of("*"));
+        // Origenes explicitos: con allowCredentials(true) un "*" reflejaria cualquier Origin y
+        // dejaria a un sitio ajeno hacer peticiones autenticadas con las cookies de la sesion.
+        configuration.setAllowedOrigins(
+                java.util.Arrays.stream(allowedOrigins.split(","))
+                        .map(String::trim)
+                        .filter(origin -> !origin.isEmpty())
+                        .toList());
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(
                 List.of("Authorization", "Content-Type", "X-Requested-With", "Accept", "Origin", "Idempotency-Key"));

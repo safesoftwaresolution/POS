@@ -22,13 +22,13 @@ public class SupportTicketController {
 
     @PostMapping("/api/v1/support/tickets")
     @Operation(summary = "Radicar PQR o reporte de bug (publico)")
-    public ResponseEntity<SupportTicketDto> create(@RequestBody CreateTicketCommand command) {
+    public ResponseEntity<SupportTicketDto> create(@jakarta.validation.Valid @RequestBody CreateTicketCommand command) {
         return ResponseEntity.status(HttpStatus.CREATED).body(facade.create(command));
     }
 
     @GetMapping("/api/v1/support/tickets/track/{ticketNumber}")
     @Operation(summary = "Consultar estado del ticket por numero de radicado (publico)")
-    public ResponseEntity<SupportTicketDto> track(@PathVariable String ticketNumber) {
+    public ResponseEntity<TicketTrackingDto> track(@PathVariable String ticketNumber) {
         return ResponseEntity.ok(facade.trackByNumber(ticketNumber));
     }
 

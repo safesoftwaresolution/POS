@@ -11,7 +11,9 @@ Recepción, radicación, seguimiento y resolución de Peticiones, Quejas, Reclam
 - **RN-SUPP-001 (Tipos)**: `PETITION`, `COMPLAINT`, `CLAIM`, `SUGGESTION`, `BUG_REPORT`.
 - **RN-SUPP-002 (Prioridades)**: `LOW`, `MEDIUM`, `HIGH`, `CRITICAL`.
 - **RN-SUPP-003 (Estados)**: `OPEN`, `IN_PROGRESS`, `RESOLVED`, `CLOSED`.
-- **RN-SUPP-004 (Número de Radicado)**: Formato automático secuencial por fecha: `PQR-YYYYMMDD-NNNN` o `BUG-YYYYMMDD-NNNN`.
+- **RN-SUPP-004 (Número de Radicado)**: formato `PQR-YYYYMMDD-XXXXXX` o `BUG-YYYYMMDD-XXXXXX`, con 6 caracteres aleatorios (alfabeto sin `0/O/1/I`, `SecureRandom`), único en BD. **No es secuencial**: el seguimiento es público y se consulta solo por este número, y un contador secuencial (que además vivía en memoria y colisionaba tras reiniciar) permitía enumerar tickets ajenos.
+- **RN-SUPP-005 (Seguimiento público mínimo)**: `GET …/track/{ticketNumber}` devuelve `TicketTrackingDto` (radicado, tipo, prioridad, estado, título, notas de resolución y fechas). **No** devuelve correo, teléfono, descripción ni `systemInfo`; esos datos solo los ve `SUPER_ADMIN` en el back office.
+- **RN-SUPP-006 (Radicación pública acotada)**: el `POST` valida con `@Valid`: `type`, `title` y `description` obligatorios, correo con formato válido y longitudes máximas (título 200, descripción 4000, `systemInfo` 2000). Pendiente: rate limiting y no aceptar `storeId` del cliente sin verificarlo.
 
 ## Endpoints
 - `POST /api/v1/support/tickets`: Radicar ticket (público).

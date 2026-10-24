@@ -11,6 +11,13 @@ export async function getBackofficeStoresApi(status = '', q = '', page = 0, size
   return await fetchApi(`/backoffice/stores?${params.toString()}`);
 }
 
+export async function getStoreStatusAuditApi(status = '', q = '', page = 0, size = 20) {
+  const params = new URLSearchParams({ page, size });
+  if (status && status !== 'ALL') params.append('status', status);
+  if (q) params.append('q', q);
+  return await fetchApi(`/backoffice/store-status-audit?${params.toString()}`);
+}
+
 export async function getBackofficeStoreApi(id) {
   return await fetchApi(`/backoffice/stores/${id}`);
 }
@@ -33,6 +40,29 @@ export async function changeBackofficeStoreStatusApi(id, status) {
   return await fetchApi(`/backoffice/stores/${id}/status`, {
     method: 'PATCH',
     body: JSON.stringify({ status }),
+  });
+}
+
+export async function getPlansApi() {
+  return await fetchApi('/backoffice/plans');
+}
+
+export async function getStorePlanUsageApi() {
+  return await fetchApi('/backoffice/store-plan-usage');
+}
+
+export async function changeBackofficeStorePlanApi(id, planCode) {
+  return await fetchApi(`/backoffice/stores/${id}/plan`, {
+    method: 'PATCH',
+    body: JSON.stringify({ planCode }),
+  });
+}
+
+// confirmName: nombre exacto del local; el backend lo exige salvo para un rechazado que nunca operó.
+export async function deleteBackofficeStoreApi(id, confirmName) {
+  return await fetchApi(`/backoffice/stores/${id}`, {
+    method: 'DELETE',
+    ...(confirmName ? { body: JSON.stringify({ confirmName }) } : {}),
   });
 }
 

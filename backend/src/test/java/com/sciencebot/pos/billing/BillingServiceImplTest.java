@@ -1,9 +1,14 @@
 package com.sciencebot.pos.billing;
 
-import com.sciencebot.pos.billing.api.*;
-import com.sciencebot.pos.billing.dto.*;
-import com.sciencebot.pos.billing.exception.*;
+import com.sciencebot.pos.billing.dto.CreateCreditNoteRequest;
+import com.sciencebot.pos.billing.dto.CreateDebitNoteRequest;
+import com.sciencebot.pos.billing.dto.CreateNumberingRangeRequest;
+import com.sciencebot.pos.billing.dto.CreditNoteDTO;
+import com.sciencebot.pos.billing.dto.DebitNoteDTO;
+import com.sciencebot.pos.billing.dto.ElectronicInvoiceDto;
+import com.sciencebot.pos.billing.dto.NumberingRangeDto;
 import com.sciencebot.pos.billing.internal.services.BillingServiceImpl;
+import com.sciencebot.pos.billing.internal.services.DebitNoteService;
 import com.sciencebot.pos.billing.internal.services.InvoiceService;
 import com.sciencebot.pos.billing.internal.services.NumberingRangeService;
 import com.sciencebot.pos.sales.SaleDto;
@@ -28,12 +33,18 @@ class BillingServiceImplTest {
     @Mock
     private NumberingRangeService numberingRangeService;
 
+    @Mock
+    private com.sciencebot.pos.billing.internal.services.CreditNoteService creditNoteService;
+
+    @Mock
+    private DebitNoteService debitNoteService;
+
     private BillingServiceImpl billingService;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        billingService = new BillingServiceImpl(invoiceService, numberingRangeService);
+        billingService = new BillingServiceImpl(invoiceService, numberingRangeService, creditNoteService, debitNoteService);
     }
 
     @Test
@@ -112,5 +123,33 @@ class BillingServiceImplTest {
         verify(numberingRangeService).deleteNumberingRange(1L);
         verify(numberingRangeService).toggleNumberingRangeStatus(1L);
         verify(numberingRangeService).updateNumberingRangeCurrent(1L, 150L);
+    }
+
+    @Test
+    void createCreditNote_DelegatesToCreditNoteService() {
+        CreateCreditNoteRequest request = new CreateCreditNoteRequest("NC-001", "2", "20", "SETP-001", 1776, "obs", List.of(), null, List.of());
+        CreditNoteDTO expected = new CreditNoteDTO(1L, 1L, null, "NC-001", "SETP-001", "NC-999", "2", "20", "cude", "qr", "VALIDATED", null, "pdf", LocalDateTime.now(), LocalDateTime.now());
+
+        when(creditNoteService.createAndValidateCreditNote(request)).thenReturn(expected);
+
+        CreditNoteDTO result = billingService.createCreditNote(request);
+
+        assertNotNull(result);
+        assertEquals("NC-001", result.referenceCode());
+        verify(creditNoteService).createAndValidateCreditNote(request);
+    }
+
+    @Test
+    void createDebitNote_DelegatesToDebitNoteService() {
+        CreateDebitNoteRequest request = new CreateDebitNoteRequest("ND-001", "1", "30", "SETP-001", 1776, "obs", List.of(), null, List.of());
+        DebitNoteDTO expected = new DebitNoteDTO(1L, 1L, null, "ND-001", "SETP-001", "ND-999", "1", "30", "cude", "qr", "VALIDATED", null, "pdf", LocalDateTime.now(), LocalDateTime.now());
+
+        when(debitNoteService.createAndValidateDebitNote(request)).thenReturn(expected);
+
+        DebitNoteDTO result = billingService.createDebitNote(request);
+
+        assertNotNull(result);
+        assertEquals("ND-999", result.debitNoteNumber());
+        verify(debitNoteService).createAndValidateDebitNote(request);
     }
 }

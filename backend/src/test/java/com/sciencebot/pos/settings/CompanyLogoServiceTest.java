@@ -134,6 +134,39 @@ class CompanyLogoServiceTest {
     }
 
     @Test
+    void updateLogo_doesNotSyncWithFactus_whenTheConfiguredProviderIsNotFactus() throws Exception {
+        org.springframework.test.util.ReflectionTestUtils.setField(companyLogoService, "billingProvider", "mock");
+        MockMultipartFile file = new MockMultipartFile("file", "logo.png", "image/png", createImageBytes(100, 100, "png"));
+        when(storageFacade.uploadFile(eq(file), eq("logos"))).thenReturn(
+                new StorageUploadResult("logos/l.png", "https://pub.r2.dev/logos/l.png", "logo.png", file.getSize(), "image/png"));
+
+        CompanyLogoResponseDto response = companyLogoService.updateLogo(file);
+
+        assertFalse(response.factusSynced());
+        assertTrue(response.message().contains("proveedor de facturación configurado no es Factus"));
+        assertEquals("https://pub.r2.dev/logos/l.png", mockSetting.getLogoUrl(), "el logo se guarda igual en local");
+        verify(settingsRepository).save(mockSetting);
+        verify(factusTokenManager, never()).getAccessToken();
+        verify(factusTokenManager, never()).getBaseUrl();
+        mockServer.verify(); // sin expectativas: falla si se llamó a Factus
+    }
+
+    @Test
+    void updateLogo_syncsWithFactus_whenTheConfiguredProviderIsFactusIgnoringCaseAndSpaces() throws Exception {
+        org.springframework.test.util.ReflectionTestUtils.setField(companyLogoService, "billingProvider", " Factus ");
+        MockMultipartFile file = new MockMultipartFile("file", "logo.png", "image/png", createImageBytes(100, 100, "png"));
+        when(storageFacade.uploadFile(eq(file), eq("logos"))).thenReturn(
+                new StorageUploadResult("logos/l.png", "https://pub.r2.dev/logos/l.png", "logo.png", file.getSize(), "image/png"));
+        mockServer.expect(requestTo(FACTUS_URL + "/v2/companies/logo"))
+                .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
+
+        CompanyLogoResponseDto response = companyLogoService.updateLogo(file);
+
+        assertTrue(response.factusSynced());
+        mockServer.verify();
+    }
+
+    @Test
     void updateLogo_usesTheFactusUrlOfTheStoreEnvironment() throws Exception {
         when(factusTokenManager.getBaseUrl()).thenReturn("https://api.factus.com.co/");
         MockMultipartFile file = new MockMultipartFile("file", "logo.png", "image/png", createImageBytes(100, 100, "png"));

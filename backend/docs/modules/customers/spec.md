@@ -1,4 +1,4 @@
-<!-- spec-version: 1.0 | last-updated: 2026-07-08 -->
+<!-- spec-version: 1.1 | last-updated: 2026-10-16 -->
 # Módulo: Clientes (Customers)
 
 ## Dependencias
@@ -8,7 +8,8 @@
 ## Reglas de Negocio
 
 ### RN-CUST-001 — Cliente por Defecto
-- El sistema posee un registro inicial "Cliente General" (identification: "9999999999") que no puede editarse ni eliminarse.
+- Cada **local** posee un registro "Cliente General" (identification: "9999999999") que no puede editarse ni eliminarse (editarlo o borrarlo responde 400). Se crea al sembrar el local de desarrollo y, en producción, al vender sin cliente.
+- **Datos para la DIAN** (`V2`): `customers` guarda además `dv`, `legal_organization_id` (13 = persona natural, 1 = jurídica), `tribute_id` (21 = consumidor final) y `municipality_id`; `store_id` desde `V3`. La unicidad de `identification` es por local.
 
 ## Requerimientos Funcionales
 

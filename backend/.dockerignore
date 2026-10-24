@@ -22,3 +22,10 @@ target/
 *.log
 .DS_Store
 Thumbs.db
+
+# Secretos y datos locales: nunca al contexto de build
+.env
+.env.*
+data/
+data_backup_*/
+backup/

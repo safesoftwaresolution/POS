@@ -85,8 +85,10 @@
 | Campo | Tipo | Restricciones |
 |---|---|---|
 | id | BIGINT | PK, Auto-increment |
-| internal_code | VARCHAR(50) | UNIQUE, NOT NULL |
-| barcode | VARCHAR(50) | UNIQUE, NULLABLE |
+| internal_code | VARCHAR(50) | NOT NULL, único **por local** (`UK_products_store_internal_code`) |
+| barcode | VARCHAR(50) | NULLABLE, único **por local** (`UK_products_store_barcode`) |
+| tax_rate | DECIMAL(5,2) | NOT NULL, DEFAULT 0.00 (porcentaje de IVA, `V2`) |
+| unspsc_code | VARCHAR(50) | NULLABLE (clasificación UNSPSC para la DIAN, `V2`) |
 | name | VARCHAR(100) | NOT NULL |
 | description | VARCHAR(255) | NULLABLE |
 | store_id | BIGINT | FK → stores(id), NOT NULL |

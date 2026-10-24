@@ -1,5 +1,6 @@
 package com.sciencebot.pos.exceptions;
 
+import com.sciencebot.pos.billing.exception.BillingProviderException;
 import com.sciencebot.pos.billing.exception.FactusApiException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -15,7 +16,10 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.NoHandlerFoundException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import java.util.HashMap;
 import java.util.Map;
@@ -58,17 +62,41 @@ public class GlobalExceptionHandler {
     /**
      * Factus rechazó la llamada o no respondió. Se devuelve el motivo real: 422 si Factus objetó
      * los datos enviados y 502 si rechazó las credenciales del local o no hay conexión.
+     * Mismo mapeo que {@link #handleBillingProvider(BillingProviderException)}.
      */
     @ExceptionHandler(FactusApiException.class)
     public ResponseEntity<Map<String, String>> handleFactusApi(FactusApiException ex) {
+        return handleBillingProvider(ex);
+    }
+
+    /**
+     * Cualquier proveedor de facturación rechazó la llamada o no respondió: 422 si objetó los datos
+     * enviados y 502 si rechazó las credenciales del local o no hay conexión.
+     */
+    @ExceptionHandler(BillingProviderException.class)
+    public ResponseEntity<Map<String, String>> handleBillingProvider(BillingProviderException ex) {
         int upstream = ex.getUpstreamStatus();
         boolean badData = upstream >= 400 && upstream < 500 && !ex.isAuthenticationError();
-        HttpStatus status = badData ? HttpStatus.UNPROCESSABLE_ENTITY : HttpStatus.BAD_GATEWAY;
+        HttpStatus status = badData ? HttpStatus.UNPROCESSABLE_CONTENT : HttpStatus.BAD_GATEWAY;
 
         Map<String, String> response = new HashMap<>();
         response.put("error", status.getReasonPhrase());
         response.put("message", ex.getMessage());
         return ResponseEntity.status(status).body(response);
+    }
+
+    /**
+     * Una operación que el proveedor de facturación activo todavía no implementa (p. ej. un adaptador
+     * parcial): 501 con un mensaje claro en lugar de un 500 genérico.
+     */
+    @ExceptionHandler(UnsupportedOperationException.class)
+    public ResponseEntity<Map<String, String>> handleUnsupportedOperation(UnsupportedOperationException ex) {
+        Map<String, String> response = new HashMap<>();
+        response.put("error", HttpStatus.NOT_IMPLEMENTED.getReasonPhrase());
+        response.put("message", ex.getMessage() != null && !ex.getMessage().isBlank()
+                ? ex.getMessage()
+                : "Esta operación no está disponible con el proveedor de facturación configurado");
+        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).body(response);
     }
 
     @ExceptionHandler(IllegalStateException.class)
@@ -153,6 +181,18 @@ public class GlobalExceptionHandler {
         response.put("error", "Method Not Allowed");
         response.put("message", String.format("El método HTTP '%s' no está soportado para este endpoint", ex.getMethod()));
         return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).body(response);
+    }
+
+    /**
+     * Ruta inexistente: sin este handler el catch-all de abajo la convierte en un 500
+     * ("No static resource ..."), que ensucia los logs y confunde al probar URLs.
+     */
+    @ExceptionHandler({NoResourceFoundException.class, NoHandlerFoundException.class})
+    public ResponseEntity<Map<String, String>> handleNotFoundRoute(Exception ex, HttpServletRequest request) {
+        Map<String, String> response = new HashMap<>();
+        response.put("error", "Not Found");
+        response.put("message", String.format("No existe el recurso %s %s", request.getMethod(), request.getRequestURI()));
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
     }
 
     @ExceptionHandler(Exception.class)

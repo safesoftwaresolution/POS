@@ -159,7 +159,8 @@ export default function SettingsBento() {
 
             <div className="bento-card p-6 space-y-4">
               <p className="text-[11px] text-ink-muted font-semibold">
-                Estos son los datos con los que tu local quedó registrado. El correo y el estado de verificación solo puede cambiarlos nuestro equipo.
+                Son los datos con los que registraste tu local en la plataforma (verificación y trámites). No aparecen en tus facturas:
+                lo que ven tus clientes se configura más abajo, en «Datos de facturas y tickets». El correo y el estado de verificación solo puede cambiarlos nuestro equipo.
               </p>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
@@ -231,7 +232,7 @@ export default function SettingsBento() {
           {/* Ajustes operativos / de facturación */}
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="flex items-center justify-between">
-              <h2 className="font-black text-sm text-ink uppercase tracking-wide">Ajustes de Facturación</h2>
+              <h2 className="font-black text-sm text-ink uppercase tracking-wide">Datos de Facturas y Tickets</h2>
               {saved && (
                 <span className="px-3.5 py-1.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-2xl text-xs font-extrabold border border-emerald-500/20 animate-in fade-in">
                   ¡Configuración guardada!
@@ -245,6 +246,10 @@ export default function SettingsBento() {
                 <span>{errorMsg}</span>
               </div>
             )}
+
+            <p className="text-[11px] text-ink-muted font-semibold">
+              Estos datos son los que ven tus clientes en facturas, tickets y reportes.
+            </p>
 
             {/* Identidad del negocio */}
             <div className="bento-card p-6 space-y-4">
@@ -366,7 +371,7 @@ export default function SettingsBento() {
               type="submit"
               className="w-full py-3.5 bg-solid hover:bg-solid-hover text-white font-extrabold text-xs rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-[#0A0A0A]/10 cursor-pointer transition-all active:scale-[0.99]"
             >
-              <Save className="w-4 h-4" /> Guardar Ajustes de Facturación
+              <Save className="w-4 h-4" /> Guardar Datos de Facturas y Tickets
             </button>
           </form>
         </div>

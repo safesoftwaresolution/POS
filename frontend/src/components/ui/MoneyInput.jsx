@@ -30,7 +30,7 @@ export default function MoneyInput({ label, hint, error, className, value, onCha
       inputMode="numeric"
       autoComplete="off"
       value={formatCop(value)}
-      onChange={(e) => onChange(toDigits(e.target.value))}
+      onChange={(e) => onChange(e.target.value.replace(/\D/g, ''))}
       className={cx(inputClass, error && 'border-red-400', className)}
     />
   );

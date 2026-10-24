@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import useAutoRefresh from '../../hooks/useAutoRefresh';
 import {
   LifeBuoy,
   Search,
@@ -90,8 +91,8 @@ export default function SupportTicketsBento() {
   const [priorityDraft, setPriorityDraft] = useState('NORMAL');
   const [notesDraft, setNotesDraft] = useState('');
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
+  const loadData = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) setLoading(true);
     try {
       const [m, t] = await Promise.all([
         getBackofficeSupportMetricsApi().catch(() => null),
@@ -105,13 +106,14 @@ export default function SupportTicketsBento() {
       setMetrics(m);
       setTickets(Array.isArray(t?.content) ? t.content : Array.isArray(t) ? t : []);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [typeFilter, statusFilter, priorityFilter, search]);
 
   useEffect(() => {
     loadData();
   }, [loadData]);
+  useAutoRefresh(() => loadData({ silent: true }));
 
   const openDetail = async (ticket) => {
     setDetailTicket(ticket);
@@ -230,8 +232,8 @@ export default function SupportTicketsBento() {
             </div>
           </div>
         ) : (
-          <div className="overflow-x-auto -mx-2">
-            <table className="w-full text-xs min-w-[820px]">
+          <div className="md:overflow-x-auto md:-mx-2">
+            <table className="table-cards w-full text-xs min-w-[820px]">
               <thead>
                 <tr className="text-left text-[10px] font-extrabold text-ink-muted uppercase">
                   <th className="px-2 py-2">Radicado</th>
@@ -250,25 +252,25 @@ export default function SupportTicketsBento() {
                       onClick={() => openDetail(t)}
                       className="border-t border-gray-100 dark:border-gray-800 hover:bg-gray-50/60 dark:hover:bg-white/5 cursor-pointer"
                     >
-                      <td className="px-2 py-3">
+                      <td data-label="" className="px-2 py-3">
                         <p className="font-extrabold text-[#17171B] dark:text-white font-mono">{t.ticketNumber}</p>
                         <p className="text-[10px] text-ink-muted truncate max-w-[220px]">{t.title}</p>
                       </td>
-                      <td className="px-2 py-3">
+                      <td data-label="Tipo" className="px-2 py-3">
                         <span className="inline-flex items-center gap-1.5 font-semibold text-gray-600 dark:text-gray-300">
                           <Icon className="w-3.5 h-3.5 text-ink-muted" /> {TYPE_LABELS[t.type] || t.type}
                         </span>
                       </td>
-                      <td className="px-2 py-3">
+                      <td data-label="Contacto" className="px-2 py-3">
                         <p className="font-semibold text-gray-600 dark:text-gray-300">{t.contactName}</p>
                         <p className="text-[10px] text-ink-muted">{t.contactEmail}</p>
                       </td>
-                      <td className="px-2 py-3">
+                      <td data-label="Prioridad" className="px-2 py-3">
                         <span className={`text-[10px] px-2 py-0.5 rounded-full font-extrabold ${PRIORITY_STYLES[t.priority] || ''}`}>
                           {PRIORITY_LABELS[t.priority] || t.priority}
                         </span>
                       </td>
-                      <td className="px-2 py-3">
+                      <td data-label="Estado" className="px-2 py-3">
                         <span className={`text-[10px] px-2 py-0.5 rounded-full font-extrabold ${STATUS_STYLES[t.status] || ''}`}>
                           {STATUS_LABELS[t.status] || t.status}
                         </span>

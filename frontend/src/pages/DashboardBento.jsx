@@ -16,6 +16,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getProductsApi } from '../services/productsApi';
 import { getSalesApi } from '../services/salesApi';
+import useAutoRefresh from '../hooks/useAutoRefresh';
 
 export default function DashboardBento() {
   const navigate = useNavigate();
@@ -24,8 +25,8 @@ export default function DashboardBento() {
   const [sales, setSales] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const loadData = async () => {
-    setLoading(true);
+  const loadData = async ({ silent = false } = {}) => {
+    if (!silent) setLoading(true);
     try {
       const prodData = await getProductsApi();
       setProducts(Array.isArray(prodData) ? prodData : []);
@@ -42,6 +43,7 @@ export default function DashboardBento() {
   useEffect(() => {
     loadData();
   }, []);
+  useAutoRefresh(() => loadData({ silent: true }));
 
   // 100% Dynamic Metrics calculated strictly from real API data
   const totalSalesAmount = sales.reduce((sum, s) => sum + parseFloat(s.totalAmount || s.total || 0), 0);
@@ -363,7 +365,7 @@ export default function DashboardBento() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
+              <table className="table-cards w-full text-left text-xs">
                 <thead>
                   <tr className="border-b border-gray-100 dark:border-gray-800 text-ink-soft font-bold text-[11px]">
                     <th className="py-2.5 px-3">Comprobante</th>
@@ -376,20 +378,20 @@ export default function DashboardBento() {
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-800 font-medium text-gray-700 dark:text-gray-300">
                   {sales.slice(0, 5).map((s, idx) => (
                     <tr key={s.id || idx} className="hover:bg-gray-50 dark:hover:bg-line/40 transition-colors">
-                      <td className="py-3 px-3 font-bold text-brand dark:text-brand flex items-center gap-2">
+                      <td data-label="" className="py-3 px-3 font-bold text-brand dark:text-brand flex items-center gap-2">
                         <div className="w-7 h-7 rounded-lg bg-brand/10 dark:bg-brand/20 text-brand dark:text-brand flex items-center justify-center">
                           <Package className="w-3.5 h-3.5" />
                         </div>
                         <span>#{s.invoiceNumber || `FAC-${s.id || idx + 1}`}</span>
                       </td>
-                      <td className="py-3 px-3 text-ink-soft">{s.createdAt || s.date || 'Reciente'}</td>
-                      <td className="py-3 px-3 font-semibold text-ink">{s.customerName || s.customer || 'Cliente General'}</td>
-                      <td className="py-3 px-3">
+                      <td data-label="Fecha / Hora" className="py-3 px-3 text-ink-soft">{s.createdAt || s.date || 'Reciente'}</td>
+                      <td data-label="Cliente" className="py-3 px-3 font-semibold text-ink">{s.customerName || s.customer || 'Cliente General'}</td>
+                      <td data-label="Estado" className="py-3 px-3">
                         <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400">
                           <span className="w-2 h-2 rounded-full bg-emerald-500"></span> Completada
                         </span>
                       </td>
-                      <td className="py-3 px-3 text-right font-black text-ink tabular-nums">
+                      <td data-label="Total" className="py-3 px-3 text-right font-black text-ink tabular-nums">
                         ${(s.totalAmount || s.total || 0).toLocaleString('es-CO')} COP
                       </td>
                     </tr>

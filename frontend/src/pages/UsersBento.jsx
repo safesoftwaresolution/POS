@@ -6,6 +6,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { useModal } from '../context/ModalContext';
 import { Button, Badge, Card, EmptyState, Input, Modal, PageHeader, Select } from '../components/ui';
+import useAutoRefresh from '../hooks/useAutoRefresh';
 
 const ROLES = [
   { value: 'ADMINISTRATOR', label: 'Administrador', hint: 'Control total del local' },
@@ -140,7 +141,7 @@ export default function UsersBento() {
   // { type: 'form' | 'password', user? }
   const [modal, setModal] = useState(null);
 
-  const fetchUsers = async () => {
+  const fetchUsers = async ({ silent = false } = {}) => {
     try {
       const [{ users: list, total: count }, quotaStatus] = await Promise.all([
         getUsersApi(),
@@ -151,7 +152,7 @@ export default function UsersBento() {
       setQuota(quotaStatus);
     } catch (e) {
       console.warn('Error cargando usuarios:', e);
-      setUsers([]);
+      if (!silent) setUsers([]);
     } finally {
       setLoading(false);
     }
@@ -160,6 +161,7 @@ export default function UsersBento() {
   useEffect(() => {
     fetchUsers();
   }, []);
+  useAutoRefresh(() => fetchUsers({ silent: true }));
 
   const run = async (action, errorPrefix) => {
     try {
@@ -244,8 +246,8 @@ export default function UsersBento() {
         ) : filtered.length === 0 ? (
           <EmptyState icon={Users} title="No se encontraron usuarios" description="Ajusta la búsqueda o crea un nuevo usuario" />
         ) : (
-          <div className="overflow-x-auto -mx-6">
-            <table className="w-full text-left text-xs">
+          <div className="md:overflow-x-auto md:-mx-6">
+            <table className="table-cards w-full text-left text-xs">
               <thead>
                 <tr className="text-[10px] uppercase tracking-wider text-ink-muted border-b border-line">
                   <th className="py-3 px-6 font-extrabold">Usuario</th>
@@ -259,7 +261,7 @@ export default function UsersBento() {
                   const isMe = u.username === me?.username;
                   return (
                     <tr key={u.id} className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
-                      <td className="py-3 px-6">
+                      <td data-label="" className="py-3 px-6">
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-full bg-solid text-white flex items-center justify-center font-bold text-[11px] shrink-0">
                             {(u.fullName || u.username || '?').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
@@ -272,16 +274,16 @@ export default function UsersBento() {
                           </div>
                         </div>
                       </td>
-                      <td className="py-3 px-3">
+                      <td data-label="Rol" className="py-3 px-3">
                         <Badge tone={ROLE_TONE[u.role] || 'neutral'}>
                           {u.role === 'ADMINISTRATOR' && <ShieldCheck className="w-3 h-3" />}
                           {ROLE_LABEL[u.role] || u.role}
                         </Badge>
                       </td>
-                      <td className="py-3 px-3">
+                      <td data-label="Estado" className="py-3 px-3">
                         <Badge tone={u.active ? 'success' : 'neutral'}>{u.active ? 'Activo' : 'Inactivo'}</Badge>
                       </td>
-                      <td className="py-3 px-6">
+                      <td data-label="Acciones" className="py-3 px-6">
                         <div className="flex items-center justify-end gap-1">
                           <IconAction title="Editar" onClick={() => setModal({ type: 'form', user: u })}><Edit3 className="w-4 h-4" /></IconAction>
                           <IconAction title="Cambiar contraseña" onClick={() => setModal({ type: 'password', user: u })}><KeyRound className="w-4 h-4" /></IconAction>

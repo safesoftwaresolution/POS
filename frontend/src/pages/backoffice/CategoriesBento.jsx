@@ -7,6 +7,7 @@ import {
   deleteBackofficeStoreCategoryApi
 } from '../../services/backoffice/storesApi';
 import { useModal } from '../../context/ModalContext';
+import useAutoRefresh from '../../hooks/useAutoRefresh';
 
 const EMPTY_FORM = { id: null, name: '', description: '' };
 
@@ -18,19 +19,20 @@ export default function CategoriesBento() {
   const [error, setError] = useState('');
   const [showForm, setShowForm] = useState(false);
 
-  const loadCategories = useCallback(async () => {
-    setLoading(true);
+  const loadCategories = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) setLoading(true);
     try {
       setCategories(await getBackofficeStoreCategoriesApi());
     } catch (e) {
       console.warn('Error cargando categorías de locales:', e);
-      setCategories([]);
+      if (!silent) setCategories([]);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, []);
 
   useEffect(() => { loadCategories(); }, [loadCategories]);
+  useAutoRefresh(() => loadCategories({ silent: true }));
 
   const openCreate = () => {
     setForm(EMPTY_FORM);

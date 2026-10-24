@@ -3,6 +3,7 @@ import { FileCheck2, Upload, AlertCircle, CheckCircle2, Clock, XCircle, External
 import { getOwnStoreDocumentsApi, uploadOwnStoreDocumentApi } from '../services/storesApi';
 import { DOCUMENT_TYPES, DOC_TYPE_LABELS, DOC_STATUS_LABELS, DOC_STATUS_STYLES } from '../constants/storeDocuments';
 import { useModal } from '../context/ModalContext';
+import useAutoRefresh from '../hooks/useAutoRefresh';
 
 const DOC_STATUS_ICONS = {
   PENDING: Clock,
@@ -85,19 +86,19 @@ export default function DocumentsBento() {
   const [errorMsg, setErrorMsg] = useState('');
   const [uploadingType, setUploadingType] = useState(null);
 
-  const loadDocuments = useCallback(async () => {
-    setLoading(true);
-    setErrorMsg('');
+  const loadDocuments = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) { setLoading(true); setErrorMsg(''); }
     try {
       setDocuments(await getOwnStoreDocumentsApi());
     } catch (e) {
-      setErrorMsg(e.message || 'Error cargando los documentos del local.');
+      if (!silent) setErrorMsg(e.message || 'Error cargando los documentos del local.');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, []);
 
   useEffect(() => { loadDocuments(); }, [loadDocuments]);
+  useAutoRefresh(() => loadDocuments({ silent: true }));
 
   // Documento más reciente por tipo (un tipo puede tener varias versiones subidas en el tiempo).
   const latestByType = (type) => {

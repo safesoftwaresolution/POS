@@ -5,6 +5,7 @@ import CreateDianCustomerModal from '../components/customers/CreateDianCustomerM
 import { useAuth } from '../context/AuthContext';
 import { useModal } from '../context/ModalContext';
 import { Button, Badge, Card, EmptyState, PageHeader } from '../components/ui';
+import useAutoRefresh from '../hooks/useAutoRefresh';
 
 export default function CustomersBento() {
   const { user } = useAuth();
@@ -17,13 +18,13 @@ export default function CustomersBento() {
   // null = cerrado, {} = alta, {customer} = edición
   const [modal, setModal] = useState(null);
 
-  const fetchCustomers = async () => {
+  const fetchCustomers = async ({ silent = false } = {}) => {
     try {
       const data = await getCustomersApi();
       setCustomers(Array.isArray(data) ? data : []);
     } catch (e) {
       console.warn('Error cargando clientes:', e);
-      setCustomers([]);
+      if (!silent) setCustomers([]);
     } finally {
       setLoading(false);
     }
@@ -32,6 +33,7 @@ export default function CustomersBento() {
   useEffect(() => {
     fetchCustomers();
   }, []);
+  useAutoRefresh(() => fetchCustomers({ silent: true }));
 
   const handleDelete = async (c) => {
     const ok = await confirm(

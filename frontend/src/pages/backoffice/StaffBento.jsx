@@ -10,6 +10,7 @@ import {
 } from '../../services/backoffice/staffApi';
 import { useAuth } from '../../context/AuthContext';
 import { useModal } from '../../context/ModalContext';
+import useAutoRefresh from '../../hooks/useAutoRefresh';
 
 const EMPTY_STAFF_FORM = { fullName: '', username: '', email: '', password: '' };
 
@@ -32,20 +33,21 @@ export default function StaffBento() {
   const [newPassword, setNewPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
 
-  const loadStaff = useCallback(async () => {
-    setLoading(true);
+  const loadStaff = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) setLoading(true);
     try {
       const data = await getBackofficeStaffApi();
       setStaff(data.content || []);
     } catch (e) {
       console.warn('Error cargando operadores del backoffice:', e);
-      setStaff([]);
+      if (!silent) setStaff([]);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, []);
 
   useEffect(() => { loadStaff(); }, [loadStaff]);
+  useAutoRefresh(() => loadStaff({ silent: true }));
 
   const isSelf = (member) => member.username?.toLowerCase() === user?.username?.toLowerCase();
 
@@ -167,8 +169,8 @@ export default function StaffBento() {
             </div>
           </div>
         ) : (
-          <div className="overflow-x-auto -mx-2">
-            <table className="w-full text-xs min-w-[680px]">
+          <div className="md:overflow-x-auto md:-mx-2">
+            <table className="table-cards w-full text-xs min-w-[680px]">
               <thead>
                 <tr className="text-left text-[10px] font-extrabold text-ink-muted uppercase">
                   <th className="px-2 py-2">Operador</th>
@@ -183,16 +185,16 @@ export default function StaffBento() {
                   const self = isSelf(member);
                   return (
                     <tr key={member.id} className="border-t border-line hover:bg-gray-50/60 dark:hover:bg-white/5">
-                      <td className="px-2 py-3">
+                      <td data-label="" className="px-2 py-3">
                         <p className="font-extrabold text-ink flex items-center gap-1.5">
                           <ShieldCheck className="w-3.5 h-3.5 text-brand dark:text-brand" />
                           {member.fullName}
                           {self && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-400 font-extrabold">Tú</span>}
                         </p>
                       </td>
-                      <td className="px-2 py-3 text-ink-soft font-mono">{member.username}</td>
-                      <td className="px-2 py-3 text-ink-soft">{member.email}</td>
-                      <td className="px-2 py-3">
+                      <td data-label="Usuario" className="px-2 py-3 text-ink-soft font-mono">{member.username}</td>
+                      <td data-label="Correo" className="px-2 py-3 text-ink-soft">{member.email}</td>
+                      <td data-label="Estado" className="px-2 py-3">
                         <span className={`text-[10px] px-2 py-0.5 rounded-full font-extrabold ${
                           member.active
                             ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
@@ -201,7 +203,7 @@ export default function StaffBento() {
                           {member.active ? 'Activo' : 'Inactivo'}
                         </span>
                       </td>
-                      <td className="px-2 py-3">
+                      <td data-label="Acciones" className="px-2 py-3">
                         <div className="flex items-center justify-end gap-1">
                           <button
                             onClick={() => openPasswordReset(member)}

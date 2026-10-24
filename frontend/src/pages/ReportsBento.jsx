@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import useAutoRefresh from '../hooks/useAutoRefresh';
 import {
   BarChart3,
   TrendingUp,
@@ -107,9 +108,8 @@ export default function ReportsBento() {
     [dateFrom, dateTo]
   );
 
-  const load = async () => {
-    setLoading(true);
-    setError('');
+  const load = async ({ silent = false } = {}) => {
+    if (!silent) { setLoading(true); setError(''); }
     const [from, to] = rangeParams;
     try {
       const requests = [getStockReportApi(belowMinStock)];
@@ -132,11 +132,13 @@ export default function ReportsBento() {
         setCashClosing(results[5] || null);
       }
     } catch (e) {
-      setError(e.message || 'No se pudieron cargar los reportes.');
+      if (!silent) setError(e.message || 'No se pudieron cargar los reportes.');
     } finally {
       setLoading(false);
     }
   };
+
+  useAutoRefresh(() => load({ silent: true }), 30000);
 
   useEffect(() => {
     load();
@@ -348,7 +350,7 @@ export default function ReportsBento() {
             </p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
+              <table className="table-cards w-full text-left text-xs">
                 <thead>
                   <tr className="border-b border-line text-ink-muted uppercase tracking-wider font-extrabold text-[10px]">
                     <th className="py-2 px-2">Producto</th>
@@ -360,10 +362,10 @@ export default function ReportsBento() {
                 <tbody className="divide-y divide-[#EAEAEA] dark:divide-line font-medium">
                   {stock.map((p) => (
                     <tr key={p.productId}>
-                      <td className="py-2.5 px-2 font-bold text-ink">{p.productName}</td>
-                      <td className="py-2.5 px-2 text-center font-black tabular-nums text-ink">{p.quantityAvailable}</td>
-                      <td className="py-2.5 px-2 text-center font-semibold text-ink-muted tabular-nums">{p.minStock}</td>
-                      <td className="py-2.5 px-2 text-center">
+                      <td data-label="" className="py-2.5 px-2 font-bold text-ink">{p.productName}</td>
+                      <td data-label="Stock" className="py-2.5 px-2 text-center font-black tabular-nums text-ink">{p.quantityAvailable}</td>
+                      <td data-label="Mínimo" className="py-2.5 px-2 text-center font-semibold text-ink-muted tabular-nums">{p.minStock}</td>
+                      <td data-label="Estado" className="py-2.5 px-2 text-center">
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
                           p.status === 'OK'
                             ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'

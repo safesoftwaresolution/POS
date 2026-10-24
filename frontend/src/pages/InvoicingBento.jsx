@@ -11,6 +11,7 @@ import { TabButton, KpiCard } from '../components/invoicing/parts';
 
 import InvoicesTab from '../components/invoicing/InvoicesTab';
 import ActivationTab from '../components/invoicing/ActivationTab';
+import useAutoRefresh from '../hooks/useAutoRefresh';
 
 export default function InvoicingBento() {
   const { user } = useAuth();
@@ -38,9 +39,9 @@ export default function InvoicingBento() {
     setTotals(Object.fromEntries(entries));
   }, []);
 
-  const loadBillingState = useCallback(async () => {
+  const loadBillingState = useCallback(async ({ silent = false } = {}) => {
     if (!canSeeActivation) return;
-    setRangesLoading(true);
+    if (!silent) setRangesLoading(true);
     try {
       const [act, rgs] = await Promise.all([
         getBillingActivationStatusApi().catch(() => null),
@@ -49,11 +50,12 @@ export default function InvoicingBento() {
       setActivation(act);
       setRanges(Array.isArray(rgs) ? rgs : []);
     } finally {
-      setRangesLoading(false);
+      if (!silent) setRangesLoading(false);
     }
   }, [canSeeActivation]);
 
   useEffect(() => { loadTotals(); loadBillingState(); }, [loadTotals, loadBillingState, refreshKey]);
+  useAutoRefresh(() => Promise.all([loadTotals(), loadBillingState({ silent: true })]));
 
   const activeRangeId = activation?.environment === 'PRODUCTION' ? activation?.productionNumberingRangeId : activation?.sandboxNumberingRangeId;
   const activeRange = ranges.find(r => r.id === activeRangeId);

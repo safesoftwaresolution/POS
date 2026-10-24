@@ -241,8 +241,8 @@ export default function UsersDirectoryBento() {
         {ownerless.length === 0 ? (
           <div className="py-6 text-center text-xs font-bold text-ink-muted">Todos los locales tienen un administrador asignado</div>
         ) : (
-          <div className="overflow-x-auto -mx-2">
-            <table className="w-full text-xs min-w-[640px]">
+          <div className="md:overflow-x-auto md:-mx-2">
+            <table className="table-cards w-full text-xs min-w-[640px]">
               <thead>
                 <tr className="text-left text-[10px] font-extrabold text-ink-muted uppercase">
                   <th className="px-2 py-2">Local</th>
@@ -254,13 +254,13 @@ export default function UsersDirectoryBento() {
               <tbody>
                 {ownerless.map(s => (
                   <tr key={s.id} className="border-t border-line">
-                    <td className="px-2 py-3">
+                    <td data-label="" className="px-2 py-3">
                       <p className="font-extrabold text-ink">{s.name}</p>
                       <p className="text-[10px] text-ink-muted font-mono">NIT: {s.taxId || '—'}</p>
                     </td>
-                    <td className="px-2 py-3 text-ink-soft font-semibold">{s.email}</td>
-                    <td className="px-2 py-3 text-ink-soft font-semibold">{STORE_STATUS_LABELS[s.status] || s.status}</td>
-                    <td className="px-2 py-3 text-right">
+                    <td data-label="Correo" className="px-2 py-3 text-ink-soft font-semibold">{s.email}</td>
+                    <td data-label="Estado" className="px-2 py-3 text-ink-soft font-semibold">{STORE_STATUS_LABELS[s.status] || s.status}</td>
+                    <td data-label="Acciones" className="px-2 py-3 text-right">
                       <button
                         onClick={() => openAssign(s)}
                         className="px-3 py-1.5 bg-solid hover:bg-solid-hover text-white rounded-xl text-[11px] font-bold inline-flex items-center gap-1 cursor-pointer"
@@ -322,8 +322,8 @@ export default function UsersDirectoryBento() {
         ) : directory.content.length === 0 ? (
           <div className="py-8 text-center text-xs font-bold text-ink-muted">No hay usuarios con esos filtros</div>
         ) : (
-          <div className="overflow-x-auto -mx-2">
-            <table className="w-full text-xs min-w-[760px]">
+          <div className="md:overflow-x-auto md:-mx-2">
+            <table className="table-cards w-full text-xs min-w-[760px]">
               <thead>
                 <tr className="text-left text-[10px] font-extrabold text-ink-muted uppercase">
                   <th className="px-2 py-2">Usuario</th>
@@ -337,13 +337,13 @@ export default function UsersDirectoryBento() {
               <tbody>
                 {directory.content.map(u => (
                   <tr key={u.id} className="border-t border-line">
-                    <td className="px-2 py-3">
+                    <td data-label="" className="px-2 py-3">
                       <p className="font-extrabold text-ink">{u.fullName}</p>
                       <p className="text-[10px] text-ink-muted font-mono">{u.username}</p>
                     </td>
-                    <td className="px-2 py-3 text-ink-soft font-semibold">{u.email}</td>
-                    <td className="px-2 py-3"><Pill className={ROLE_STYLES[u.role] || ROLE_STYLES.SELLER}>{ROLE_LABELS[u.role] || u.role}</Pill></td>
-                    <td className="px-2 py-3">
+                    <td data-label="Correo" className="px-2 py-3 text-ink-soft font-semibold">{u.email}</td>
+                    <td data-label="Rol" className="px-2 py-3"><Pill className={ROLE_STYLES[u.role] || ROLE_STYLES.SELLER}>{ROLE_LABELS[u.role] || u.role}</Pill></td>
+                    <td data-label="Local" className="px-2 py-3">
                       {u.storeId ? (
                         <>
                           <p className="font-extrabold text-ink">{u.storeName}</p>
@@ -355,7 +355,7 @@ export default function UsersDirectoryBento() {
                         <span className="text-amber-600 dark:text-amber-400 font-bold">Sin local</span>
                       )}
                     </td>
-                    <td className="px-2 py-3 space-x-1">
+                    <td data-label="Estado" className="px-2 py-3 space-x-1">
                       <Pill className={u.active ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400'}>
                         {u.active ? 'Activo' : 'Inactivo'}
                       </Pill>
@@ -363,7 +363,7 @@ export default function UsersDirectoryBento() {
                         <Pill className="bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400">Sin verificar</Pill>
                       )}
                     </td>
-                    <td className="px-2 py-3 text-right whitespace-nowrap">
+                    <td data-label="Acciones" className="px-2 py-3 text-right whitespace-nowrap">
                       {u.role === 'SUPER_ADMIN' ? (
                         <span className="text-ink-muted font-semibold">—</span>
                       ) : (
@@ -403,8 +403,8 @@ export default function UsersDirectoryBento() {
         {history.content.length === 0 ? (
           <div className="py-6 text-center text-xs font-bold text-ink-muted">Aún no se han asignado usuarios a locales desde aquí</div>
         ) : (
-          <div className="overflow-x-auto -mx-2">
-            <table className="w-full text-xs min-w-[640px]">
+          <div className="md:overflow-x-auto md:-mx-2">
+            <table className="table-cards w-full text-xs min-w-[640px]">
               <thead>
                 <tr className="text-left text-[10px] font-extrabold text-ink-muted uppercase">
                   <th className="px-2 py-2">Fecha</th>
@@ -416,13 +416,13 @@ export default function UsersDirectoryBento() {
               <tbody>
                 {history.content.map(h => (
                   <tr key={h.id} className="border-t border-line">
-                    <td className="px-2 py-3 text-ink-soft font-semibold whitespace-nowrap">{formatDate(h.createdAt)}</td>
-                    <td className="px-2 py-3 font-extrabold text-ink">{h.storeName}</td>
-                    <td className="px-2 py-3">
+                    <td data-label="" className="px-2 py-3 text-ink-soft font-semibold whitespace-nowrap">{formatDate(h.createdAt)}</td>
+                    <td data-label="Local" className="px-2 py-3 font-extrabold text-ink">{h.storeName}</td>
+                    <td data-label="Usuario asignado" className="px-2 py-3">
                       <p className="font-semibold text-ink">{h.fullName}</p>
                       <p className="text-[10px] text-ink-muted font-mono">{h.username} · {ROLE_LABELS[h.role] || h.role}</p>
                     </td>
-                    <td className="px-2 py-3 text-ink-soft font-semibold">{h.performedBy || 'No registrado'}</td>
+                    <td data-label="Realizado por" className="px-2 py-3 text-ink-soft font-semibold">{h.performedBy || 'No registrado'}</td>
                   </tr>
                 ))}
               </tbody>

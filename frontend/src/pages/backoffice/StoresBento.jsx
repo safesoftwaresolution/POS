@@ -360,8 +360,8 @@ export default function StoresBento() {
             </div>
           </div>
         ) : (
-          <div className="overflow-x-auto -mx-2">
-            <table className="w-full text-xs min-w-[920px]">
+          <div className="md:overflow-x-auto md:-mx-2">
+            <table className="table-cards w-full text-xs min-w-[920px]">
               <thead>
                 <tr className="text-left text-[10px] font-extrabold text-ink-muted uppercase">
                   <th className="px-2 py-2">Local</th>
@@ -375,12 +375,12 @@ export default function StoresBento() {
               <tbody>
                 {stores.map(s => (
                   <tr key={s.id} className="border-t border-line hover:bg-gray-50/60 dark:hover:bg-white/5">
-                    <td className="px-2 py-3">
+                    <td data-label="" className="px-2 py-3">
                       <p className="font-extrabold text-ink">{s.name}</p>
                       <p className="text-[10px] text-ink-muted font-mono">NIT: {s.taxId || '—'}</p>
                     </td>
-                    <td className="px-2 py-3 text-ink-soft font-semibold">{s.categoryName || 'Sin categoría'}</td>
-                    <td className="px-2 py-3">
+                    <td data-label="Categoría" className="px-2 py-3 text-ink-soft font-semibold">{s.categoryName || 'Sin categoría'}</td>
+                    <td data-label="Contacto" className="px-2 py-3">
                       <p className="flex items-center gap-1.5 font-semibold text-gray-600 dark:text-gray-300">
                         <Mail className="w-3.5 h-3.5 text-ink-muted" /> {s.email}
                       </p>
@@ -388,7 +388,7 @@ export default function StoresBento() {
                         <MailCheck className="w-3 h-3" /> {s.emailVerified ? 'Verificado' : 'Sin verificar'}
                       </span>
                     </td>
-                    <td className="px-2 py-3">
+                    <td data-label="Estado" className="px-2 py-3">
                       <select
                         value={s.status}
                         onChange={(e) => handleChangeStatus(s, e.target.value)}
@@ -399,7 +399,7 @@ export default function StoresBento() {
                         ))}
                       </select>
                     </td>
-                    <td className="px-2 py-3">
+                    <td data-label="Plan" className="px-2 py-3">
                       <select
                         value={s.planCode || ''}
                         onChange={(e) => handleChangePlan(s, e.target.value)}
@@ -421,7 +421,7 @@ export default function StoresBento() {
                         </p>
                       )}
                     </td>
-                    <td className="px-2 py-3">
+                    <td data-label="Acciones" className="px-2 py-3">
                       <div className="flex items-center justify-end gap-1">
                         {!s.emailVerified && (
                           <button

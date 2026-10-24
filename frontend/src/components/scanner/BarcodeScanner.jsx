@@ -37,7 +37,7 @@ function vibrate(pattern) {
  * Usa `BarcodeDetector` nativo cuando existe (Chrome/Android) y, si no (iOS Safari,
  * Firefox), carga ZXing bajo demanda para no engordar el bundle principal.
  */
-export default function BarcodeScanner({ onDetect, onClose }) {
+export default function BarcodeScanner({ onDetect, onClose, inline = false }) {
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const stopRef = useRef(() => {});
@@ -150,11 +150,11 @@ export default function BarcodeScanner({ onDetect, onClose }) {
   // Evita que la página de atrás haga scroll mientras el escáner cubre la pantalla.
   useEffect(() => {
     const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    if (!inline) document.body.style.overflow = 'hidden';
     const onKey = (e) => e.key === 'Escape' && onClose?.();
     document.addEventListener('keydown', onKey);
     return () => { document.body.style.overflow = prev; document.removeEventListener('keydown', onKey); };
-  }, [onClose]);
+  }, [onClose, inline]);
 
   const toggleTorch = async () => {
     const track = streamRef.current?.getVideoTracks()[0];
@@ -163,6 +163,60 @@ export default function BarcodeScanner({ onDetect, onClose }) {
       setTorchOn(v => !v);
     } catch { setTorchSupported(false); }
   };
+
+  // Modo incrustado: franja fija arriba de la pantalla (el catálogo sigue visible y usable debajo).
+  if (inline) {
+    return (
+      <div className="sticky top-0 z-40 h-44 overflow-hidden rounded-2xl bg-black text-white shadow-lg" role="region" aria-label="Escáner de códigos de barras">
+        <video ref={videoRef} className="absolute inset-0 w-full h-full object-cover" playsInline muted />
+
+        <div className="absolute top-2 right-2 z-10 flex items-center gap-2">
+          {torchSupported && (
+            <button
+              type="button"
+              onClick={toggleTorch}
+              aria-label="Linterna"
+              aria-pressed={torchOn}
+              className={`w-9 h-9 rounded-full flex items-center justify-center cursor-pointer ${torchOn ? 'bg-brand' : 'bg-black/50'}`}
+            >
+              {torchOn ? <Zap className="w-4 h-4" /> : <ZapOff className="w-4 h-4" />}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Cerrar escáner"
+            className="w-9 h-9 rounded-full bg-black/50 flex items-center justify-center cursor-pointer"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          {error ? (
+            <div className="mx-6 px-4 py-3 rounded-2xl bg-black/70 text-center space-y-1 pointer-events-auto">
+              <CameraOff className="w-6 h-6 mx-auto text-white/70" />
+              <p className="text-xs font-bold">{error}</p>
+            </div>
+          ) : (
+            <div className="relative w-[70%] h-[60%] rounded-2xl shadow-[0_0_0_9999px_rgba(0,0,0,0.45)]">
+              {CORNERS.map(c => <span key={c} className={`absolute w-5 h-5 border-white ${c.replace('border-t-4', 'border-t-2').replace('border-b-4', 'border-b-2').replace('border-l-4', 'border-l-2').replace('border-r-4', 'border-r-2')}`} />)}
+              {ready && <span className="absolute left-2 right-2 top-1/2 h-0.5 bg-brand/90 shadow-[0_0_10px_var(--color-brand)] animate-pulse" />}
+            </div>
+          )}
+        </div>
+
+        {feedback && (
+          <div className="absolute bottom-2 left-2 right-2 z-10 flex justify-center">
+            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-[11px] font-bold shadow-xl max-w-full ${feedback.ok ? 'bg-emerald-600' : 'bg-red-600'}`}>
+              {feedback.ok ? <CheckCircle className="w-3.5 h-3.5 shrink-0" /> : <XCircle className="w-3.5 h-3.5 shrink-0" />}
+              <span className="truncate">{feedback.message}</span>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-110 bg-black text-white flex flex-col" role="dialog" aria-modal="true" aria-label="Escáner de códigos de barras">

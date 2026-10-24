@@ -270,6 +270,17 @@ export default function POSBento() {
     <div className="relative">
       <ScanToasts toasts={scanToasts} />
 
+      {/* Escáner incrustado arriba: queda fijo mientras se desplaza el catálogo y se cierra con la X. */}
+      {showScanner && (
+        <div className="lg:hidden pb-3">
+          <BarcodeScanner
+            inline
+            onDetect={handleBarcodeScan}
+            onClose={() => { setShowScanner(false); focusBarcodeInput(); }}
+          />
+        </div>
+      )}
+
       {/* En desktop, este bloque cancela el padding de <main> (lg:-m-8) y se ancla a la
           altura exacta bajo el header (lg:h-[calc(100vh-5rem)]) para que la columna
           izquierda scrollee sola y el panel del ticket, a la derecha, quede fijo a pantalla
@@ -305,26 +316,22 @@ export default function POSBento() {
         />
       </div>
 
-      {/* Botón flotante (mobile) para abrir el ticket */}
-      <div className="fixed bottom-4 left-4 right-4 z-30 lg:hidden">
-        <button
-          onClick={() => setShowMobileCart(true)}
-          className="w-full py-3.5 px-5 bg-solid text-white rounded-2xl font-black text-xs flex items-center justify-between shadow-2xl shadow-[#0A0A0A]/10 active:scale-95 transition-all cursor-pointer"
-        >
-          <div className="flex items-center gap-2">
-            <ShoppingCart className="w-4.5 h-4.5" />
-            <span>Ver Ticket ({cart.length} ítems)</span>
-          </div>
-          <span className="text-sm font-extrabold tabular-nums">${total.toLocaleString('es-CO')} COP</span>
-        </button>
-      </div>
-
-      {showScanner && (
-        <BarcodeScanner
-          onDetect={handleBarcodeScan}
-          onClose={() => { setShowScanner(false); focusBarcodeInput(); }}
-        />
-      )}
+      {/* Botón flotante circular (mobile) para abrir el ticket; el contador muestra cuántos ítems hay */}
+      <button
+        onClick={() => setShowMobileCart(true)}
+        aria-label={`Ver ticket, ${cart.length} ítems, total $${total.toLocaleString('es-CO')}`}
+        className="fixed bottom-5 right-5 z-30 lg:hidden w-16 h-16 rounded-full bg-brand text-white flex items-center justify-center shadow-xl shadow-brand/40 ring-4 ring-white dark:ring-page active:scale-90 transition-all cursor-pointer"
+      >
+        <ShoppingCart className="w-7 h-7" />
+        {cart.length > 0 && (
+          <span
+            key={cart.length}
+            className="absolute -top-1 -right-1 min-w-6 h-6 px-1.5 rounded-full bg-solid text-white text-xs font-black tabular-nums flex items-center justify-center ring-2 ring-white dark:ring-page animate-bounce-once"
+          >
+            {cart.length}
+          </span>
+        )}
+      </button>
 
       {showCheckoutModal && (
         <CheckoutModal

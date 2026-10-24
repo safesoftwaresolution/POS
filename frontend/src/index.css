@@ -20,6 +20,14 @@
   --color-solid-ink: var(--solid-text);
 }
 
+/* Rebote corto del contador del carrito al cambiar la cantidad de ítems. */
+@keyframes bounce-once {
+  0% { transform: scale(0.6); }
+  60% { transform: scale(1.25); }
+  100% { transform: scale(1); }
+}
+.animate-bounce-once { animation: bounce-once 0.3s ease-out; }
+
 @layer base {
   :root {
     --bg-page: #F7F7F5;

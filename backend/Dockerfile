@@ -3,7 +3,7 @@
 # ==========================================================
 # 1. Base Development & Dependency Cache Stage
 # ==========================================================
-FROM eclipse-temurin:21-jdk AS dev
+FROM eclipse-temurin:25-jdk AS dev
 WORKDIR /app
 
 # Copy Maven wrapper configuration and dependency descriptor
@@ -37,7 +37,7 @@ RUN ./mvnw package -DskipTests
 # ==========================================================
 # 3. Production Stage
 # ==========================================================
-FROM eclipse-temurin:21-jre-jammy AS prod
+FROM eclipse-temurin:25-jre-jammy AS prod
 WORKDIR /app
 
 # Create a secure, non-privileged system user/group to run the application

@@ -32,14 +32,14 @@ jobs:
         run: ./mvnw -B -ntp verify
       - name: Reportes de test
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: surefire-reports
           path: backend/target/surefire-reports
           retention-days: 7
       - name: Cobertura (jacoco)
         if: success()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: jacoco-report
           path: backend/target/site/jacoco

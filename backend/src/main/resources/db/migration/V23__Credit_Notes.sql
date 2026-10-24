@@ -1,4 +1,4 @@
--- V18__Credit_Notes.sql
+-- V23__Credit_Notes.sql
 -- Tabla para trazabilidad y gestión fiscal de Notas Crédito electrónicas DIAN (Factus v2)
 
 CREATE TABLE IF NOT EXISTS electronic_credit_notes (

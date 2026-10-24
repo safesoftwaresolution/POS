@@ -40,6 +40,16 @@ public class StoreController {
         return ResponseEntity.ok(storeFacade.searchStores(status, q, pageable));
     }
 
+    @GetMapping("/api/v1/backoffice/store-status-audit")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @Operation(summary = "Historial de auditoría (solo lectura) de cambios de estado de locales: registro, aprobación, rechazo...")
+    public ResponseEntity<Page<StoreStatusAuditDto>> getStatusAudit(
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String q,
+            Pageable pageable) {
+        return ResponseEntity.ok(storeFacade.getStatusAudit(status, q, pageable));
+    }
+
     @GetMapping("/api/v1/backoffice/stores/{id}")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     @Operation(summary = "Obtener un local por ID")
@@ -68,11 +78,58 @@ public class StoreController {
         return ResponseEntity.ok(storeFacade.changeStatus(id, body.get("status")));
     }
 
+    @GetMapping("/api/v1/backoffice/plans")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @Operation(summary = "Planes disponibles y su tope de usuarios")
+    public ResponseEntity<List<PlanDto>> listPlans() {
+        return ResponseEntity.ok(storeFacade.listPlans());
+    }
+
+    @PatchMapping("/api/v1/backoffice/stores/{id}/plan")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @Operation(summary = "Cambiar el plan de un local",
+            description = "Bajar de plan no desactiva usuarios: el local conserva los que ya tiene pero no puede crear ni reactivar mas hasta estar dentro del limite.")
+    public ResponseEntity<StoreDto> changePlan(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        return ResponseEntity.ok(storeFacade.changePlan(id, body == null ? null : body.get("planCode")));
+    }
+
+    @PostMapping("/api/v1/backoffice/stores/{storeId}/assign-owner")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @Operation(summary = "Asignar un ADMINISTRATOR sin local a un local sin administrador",
+            description = "Solo locales sin administrador activo y usuarios ADMINISTRATOR verificados que aun no tienen local. No mueve usuarios ya asignados; queda en la auditoria.")
+    public ResponseEntity<StoreDto> assignOwner(@PathVariable Long storeId, @RequestBody Map<String, Long> body) {
+        Long userId = body == null ? null : body.get("userId");
+        if (userId == null) {
+            throw new IllegalArgumentException("userId es obligatorio.");
+        }
+        return ResponseEntity.ok(storeFacade.assignOwner(storeId, userId));
+    }
+
+    @GetMapping("/api/v1/backoffice/user-assignments")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @Operation(summary = "Historial (solo lectura) de asignaciones de usuarios a locales")
+    public ResponseEntity<Page<StoreUserAuditDto>> getOwnerAssignments(Pageable pageable) {
+        return ResponseEntity.ok(storeFacade.getOwnerAssignments(pageable));
+    }
+
     @PatchMapping("/api/v1/backoffice/stores/{id}/reject")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     @Operation(summary = "Rechazar un local pendiente (requiere motivo)")
     public ResponseEntity<StoreDto> rejectStore(@PathVariable Long id, @RequestBody Map<String, String> body) {
         return ResponseEntity.ok(storeFacade.rejectStore(id, body.get("reason")));
+    }
+
+    @DeleteMapping("/api/v1/backoffice/stores/{id}")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @Operation(summary = "Eliminar definitivamente un local",
+            description = "Borra el local con todos sus datos y documentos; sus administradores quedan sin local (no se eliminan). "
+                    + "Body opcional {\"confirmName\": \"...\"}: obligatorio salvo para un rechazado que nunca operó. "
+                    + "400 si el nombre no coincide o el local tiene facturas electronicas validadas. "
+                    + "La auditoria conserva un evento DELETED con los datos del local.")
+    public ResponseEntity<Void> deleteStore(@PathVariable Long id,
+                                            @RequestBody(required = false) Map<String, String> body) {
+        storeFacade.deleteStore(id, body == null ? null : body.get("confirmName"));
+        return ResponseEntity.noContent().build();
     }
 
     @PatchMapping("/api/v1/backoffice/stores/{id}/verify-email")

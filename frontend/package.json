@@ -1,6 +1,9 @@
 {
   "name": "frontend",
   "private": true,
+  "engines": {
+    "node": ">=22"
+  },
   "version": "0.0.0",
   "type": "module",
   "scripts": {
@@ -11,6 +14,8 @@
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",
+    "@zxing/browser": "^0.2.1",
+    "@zxing/library": "^0.23.0",
     "clsx": "^2.1.1",
     "jsbarcode": "^3.12.3",
     "lucide-react": "^1.31.0",

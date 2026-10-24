@@ -159,10 +159,10 @@
     },
     {
       "id": "FEAT-013",
-      "title": "Notas crédito y débito electrónicas (V18/V19)",
+      "title": "Notas crédito y débito electrónicas (V23/V24)",
       "description": "Emisión, consulta, descarga y eliminación de notas crédito y débito sobre facturas validadas, con aislamiento por local.",
       "acceptance_criteria": [
-        "Migraciones V18 y V19 con sus tests de migración (falta V18MigrationSqlTest)",
+        "Migraciones V23 y V24 (eran V18/V19; renumeradas al integrar main, que ya usaba V18–V22) con sus tests de migración (falta V23MigrationSqlTest)",
         "Endpoints /api/v1/billing/credit-notes y /debit-notes",
         "Commiteado el 2026-10-16 (1229c7b)"
       ],
@@ -239,7 +239,7 @@
       "title": "Índices, zona horaria y reportes con devoluciones",
       "description": "Crear los índices sales(store_id, created_at) e inventory_movements(product_id, created_at); fijar America/Bogota; descontar devoluciones en reportes; guardar el costo en sale_items.",
       "acceptance_criteria": [
-        "Migración V20",
+        "Migración V<N> (siguiente libre al implementar; V20 ya la usa main)",
         "Cierre de caja correcto en un contenedor UTC"
       ],
       "status": "pending",
@@ -280,7 +280,7 @@
       ],
       "status": "pending",
       "assigned_to": null,
-      "notes": "FEAT-019 reserva V20: usar la siguiente versión libre al implementar (comprobar el directorio de migraciones)."
+      "notes": "Usar la siguiente versión libre al implementar (hoy V25; comprobar el directorio de migraciones). Migraciones una a la vez con FEAT-018/019."
     },
     {
       "id": "FEAT-023",

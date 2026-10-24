@@ -7,8 +7,8 @@ Este documento complementa los `spec.md` de cada módulo (que describen el compo
 
 | Módulo | Estado actual | Deuda técnica / faltante | Próximas ideas |
 |---|---|---|---|
-| auth | JWT access+refresh con rotación y ventana de gracia, auto-registro con verificación de correo (V7) | Lockout en memoria; sin rate limiting; logout exige token válido; sin caducidad absoluta de sesión; sin `SecurityConfig` test por rol | 2FA opcional para ADMIN |
-| users | CRUD por local, `SUPER_ADMIN` no asignable por el local, seed de superadmin solo con `SEED_SUPERADMIN_PASSWORD` | Listado solo de activos (no se puede reactivar); sin protección del último `SUPER_ADMIN`; no se revocan sesiones al cambiar clave; `PATCH …/password` sin `@PreAuthorize` | Invitación de usuarios por correo |
+| auth | JWT access+refresh con rotación y ventana de gracia, auto-registro con verificación de correo (V7), reenvío de verificación y recuperación de contraseña por correo (V19) | Lockout en memoria; sin rate limiting; logout exige token válido; sin caducidad absoluta de sesión; sin `SecurityConfig` test por rol | 2FA opcional para ADMIN |
+| users | CRUD por local, `SUPER_ADMIN` no asignable por el local, seed de superadmin solo con `SEED_SUPERADMIN_PASSWORD`, tope de usuarios activos por plan (V22, RN-USER-005) | Listado solo de activos (no se puede reactivar); sin protección del último `SUPER_ADMIN`; no se revocan sesiones al cambiar clave; `PATCH …/password` sin `@PreAuthorize` | Invitación de usuarios por correo |
 | categories | Catálogo global + subcategorías por local (V12) | — | Íconos/colores por categoría |
 | products | CRUD por local, barcode/código únicos por local, stock con `UPDATE` atómico (`adjustStock`) | `updatePurchasePrice` rechaza costo > precio de venta | Carga masiva por CSV/Excel |
 | inventory | Kardex, alerta de stock bajo (notificación + correo) | Tipos de movimiento sin enum (`ENTRY`/`ENTRADA`); `AJUSTE` solo suma; alerta antes del commit | Conteo físico con motivo |
@@ -18,8 +18,8 @@ Este documento complementa los `spec.md` de cada módulo (que describen el compo
 | suppliers | CRUD por local | — | — |
 | reports | CQRS con `JdbcClient`; incluye cierre de caja (`/cash-closing`) | No descuenta devoluciones; rentabilidad usa precios actuales; sin índices (ver abajo) | Rentabilidad por categoría |
 | settings | Datos del negocio + catálogos de parámetros + logo | Importa `billing.internal` (`FactusTokenManager`); creación de la fila por defecto a verificar | Impuesto configurable (hoy 19% fijo en frontend) |
-| billing | Facturas, notas crédito (V18) y débito (V19), habilitación por local (V14), eventos de dominio, timeouts, referencias deterministas | Factus dentro de la transacción con lock; sin reintento automático/outbox; `PENDING` por fallo temporal se trata como `ERROR`; códigos DIAN hardcodeados; cifrado sin rotación; frontend parcial (`InvoicingBento`: activación y facturas del local; `BillingBento` en back office); sin verificación contra el sandbox real | Alertas de rango por agotarse |
-| stores | Onboarding del dueño, KYC, back office; spec actualizado | Estados como `String`; documentos KYC con URL pública; `StoreFacade` expone `MultipartFile` | — |
+| billing | Facturas, notas crédito (V23) y débito (V24), habilitación por local (V14), eventos de dominio, timeouts, referencias deterministas | Factus dentro de la transacción con lock; sin reintento automático/outbox; `PENDING` por fallo temporal se trata como `ERROR`; códigos DIAN hardcodeados; cifrado sin rotación; frontend parcial (`InvoicingBento`: activación y facturas del local; `BillingBento` en back office); sin verificación contra el sandbox real | Alertas de rango por agotarse |
+| stores | Onboarding del dueño, KYC, back office, auditoría de estados (V18/V20) y de asignación de dueños (V21), planes por local (V22); spec actualizado | Estados como `String`; documentos KYC con URL pública; `StoreFacade` expone `MultipartFile` | — |
 | legal | Documentos legales de plataforma | Spec sin `spec-version` | — |
 | support | Tickets PQR/bugs con radicado aleatorio y seguimiento público mínimo | Sin rate limiting; acepta `storeId` del cliente | — |
 | notifications | Bandeja por local (V11) | Listado sin paginar | — |
@@ -71,7 +71,7 @@ Una revisión del arnés, los specs y el código encontró desajustes. **Ya corr
 16. ~~CI y Dependabot~~ — añadidos (`.github/workflows/ci.yml`: backend `mvnw verify`, frontend lint + build, `init.sh --skip-tests`; `.github/dependabot.yml`), **sin ejecutarse aún en GitHub**. Pendiente: dependency-check y Testcontainers con PostgreSQL (los tests y la concurrencia corren solo sobre H2).
 17. ~~springdoc 2.8.x (Boot 3)~~ — resuelto: springdoc 3.1.1 (Boot 4.1), AWS SDK 2.56, jjwt 0.13, jacoco 0.8.15 y `spring-boot-starter-flyway`; `/v3/api-docs` y Swagger UI verificados. Sigue pendiente el análisis de vulnerabilidades (dependency-check) además de Dependabot.
 18. ~~IVA fijo 19% y CUFE inventado en `POSBento.jsx`~~ — resuelto: el total es la suma de precios (IVA incluido), se envía `sendToFactus` y no se muestra un CUFE falso. Sigue pendiente completar la UI de facturación (hoy `InvoicingBento` cubre activación y facturas).
-19. Tests de seguridad por rol con `MockMvc`; `V18MigrationSqlTest`; test concurrente del stock.
+19. Tests de seguridad por rol con `MockMvc`; `V23MigrationSqlTest` (notas crédito); test concurrente del stock.
 
 - **`docker-compose.prod.yml` no reenvía variables nuevas** (`BILLING_PROVIDER`, `EMAIL_*`/`SMTP_*`, `APP_FRONTEND_URL`, `JWT_COOKIE_SECURE`): en producción por compose el correo de verificación quedaría en modo `log` y las cookies sin `Secure`. Decidir y agregarlas. (2026-10-02)
 - **README raíz y `frontend/README.md` desactualizados — corregidos 2026-10-02** (roles, módulos, páginas, `.env`, seeds).

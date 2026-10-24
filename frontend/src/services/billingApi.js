@@ -1,4 +1,4 @@
-import { fetchApi, getAuthToken } from './http';
+import { fetchApi, getAuthToken, API_BASE_URL } from './http';
 
 // ---------- Habilitación (estado del local) ----------
 
@@ -76,7 +76,7 @@ export async function sendInvoiceEmailApi(saleId, email) {
 // Descarga binaria (PDF/XML): fetchApi asume JSON, así que estas van directo contra fetch
 // para poder adjuntar el Bearer token y devolver un Blob que el navegador pueda abrir/guardar.
 async function downloadBinary(endpoint) {
-  const response = await fetch(`/api/v1${endpoint}`, {
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     headers: { Authorization: `Bearer ${getAuthToken()}` },
     credentials: 'include',
   });

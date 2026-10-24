@@ -26,6 +26,22 @@ public interface StoreFacade {
     StoreDocumentDto uploadOwnDocument(String ownerUsername, String documentType, MultipartFile file);
     /** Rechaza un local pendiente con un motivo obligatorio. */
     StoreDto rejectStore(Long id, String reason);
+    /**
+     * Elimina definitivamente un local con todos sus datos; sus administradores quedan sin local (no se borran).
+     * Rechaza locales con facturas electrónicas validadas. Salvo un rechazado sin operación, exige el nombre exacto
+     * del local en {@code confirmName}.
+     */
+    void deleteStore(Long id, String confirmName);
+    /** Asigna un ADMINISTRATOR sin local a un local sin administrador activo (solo SUPER_ADMIN; auditado). */
+    StoreDto assignOwner(Long storeId, Long userId);
+    /** Historial de solo lectura de las asignaciones de usuarios a locales, de la más reciente a la más antigua. */
+    Page<StoreUserAuditDto> getOwnerAssignments(Pageable pageable);
+    /** Planes disponibles, del más básico al más alto. */
+    List<PlanDto> listPlans();
+    /** Cambia el plan de un local (SUPER_ADMIN; auditado). No borra usuarios si el nuevo tope es menor. */
+    StoreDto changePlan(Long storeId, String planCode);
+    /** Historial de solo lectura de cambios de estado de locales (registro, aprobación, rechazo...). */
+    Page<StoreStatusAuditDto> getStatusAudit(String newStatus, String q, Pageable pageable);
     List<StoreDocumentDto> getDocuments(Long storeId);
     StoreDocumentDto reviewDocument(Long storeId, Long docId, ReviewDocumentCommand command);
     List<StoreCategoryDto> listCategories();

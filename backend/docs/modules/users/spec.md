@@ -21,6 +21,11 @@
 ### RN-USER-004 — Siembra de Cuentas
 - `DatabaseSeeder` crea el `SUPER_ADMIN` inicial **solo si** se define `SEED_SUPERADMIN_PASSWORD` (`app.seed.superadmin-password`); en `dev` tiene un valor por defecto. El administrador de prueba `admin`, el local 1, el "Cliente General" y los ajustes de ejemplo se siembran **solo en el perfil `dev`**. Ninguna contraseña se imprime por consola.
 
+### RN-USER-005 — Tope de usuarios por plan
+Cada local tiene un plan (módulo `stores`, tabla `plans`) que limita sus usuarios **activos**: el administrador cuenta como uno y el plan añade `max_additional_users` más (Básico 1, Estándar 4, Pro 10 → 2, 5 y 11 usuarios activos). El tope se aplica al **crear** un usuario y al **reactivarlo**; desactivar o eliminar (borrado lógico) libera el cupo. Bajar de plan no desactiva a nadie: el local conserva sus usuarios pero no puede crear ni reactivar más hasta quedar dentro del tope. El plan limita solo la cantidad, no el rol. `SUPER_ADMIN` no cuenta ni está limitado.
+
+`users` no depende de `stores`: define el puerto `UserQuotaPolicy` (con `UserQuota`) y `stores` lo implementa (`PlanUserQuotaPolicy`), evitando un ciclo entre módulos.
+
 ## Requerimientos Funcionales
 
 ### RF-USER-001 — Crear Usuario
@@ -30,6 +35,7 @@
   - El nuevo usuario pertenece siempre al local del solicitante.
   - Estado inicial: Activo.
   - Contraseña: mínimo 8 caracteres, al menos 1 letra y 1 número.
+  - Validar unicidad de username y email **sin distinguir mayúsculas** (`AndresV` y `andresv` son el mismo usuario). El login normaliza el usuario a minúsculas, por eso las búsquedas por username y email del repositorio también lo ignoran; antes eran exactas y un usuario registrado con mayúsculas recibía `401` con la contraseña correcta.
 
 ### RF-USER-002 — Editar Usuario
 - **Prioridad**: Alta
@@ -88,6 +94,11 @@
 
 ### DELETE /api/v1/users/{id}
 - **Permisos**: Administrador. Borrado lógico.
+
+### GET /api/v1/users/quota
+- **Permisos**: ADMINISTRATOR
+- **Response 200**: `{ "planName": "Básico", "activeUsers": 2, "maxActiveUsers": 2, "canCreateMore": false }` del local del llamador. `204` si el local no tiene tope aplicable.
+- La UI lo usa para mostrar el uso del plan y deshabilitar «Nuevo usuario» al llegar al tope. Crear o reactivar por encima del tope devuelve `400` con el motivo.
 
 ### PATCH /api/v1/users/{id}/password
 - **Permisos**: usuario propio (con la contraseña actual); Administrador sobre cualquiera; Supervisor solo sobre `SELLER`.

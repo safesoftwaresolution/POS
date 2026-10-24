@@ -2,7 +2,10 @@
 // y el envio/lectura JSON. Todos los modulos de servicios (`*Api.js`) construyen
 // sus llamadas sobre `fetchApi`; ningun otro modulo debe usar `fetch` directamente.
 
-const API_BASE_URL = '/api/v1';
+// En produccion el backend vive en otro dominio: VITE_API_URL se incrusta al compilar.
+// Sin ella (dev) se usa la ruta relativa y el proxy de Vite.
+const API_ORIGIN = (import.meta.env.VITE_API_URL ?? '').replace(/\/+$/, '');
+export const API_BASE_URL = `${API_ORIGIN}/api/v1`;
 
 // Genera una clave de idempotencia (UUID). Se usa en operaciones no idempotentes
 // (ventas, compras) para que un reenvío no cree registros duplicados en el backend.
@@ -85,6 +88,14 @@ async function refreshAccessToken() {
 }
 
 // Core HTTP Fetch Wrapper
+// Respuestas exitosas sin cuerpo (204, o 201 de /auth/register): response.json() fallaria con
+// "Unexpected end of JSON input" aunque la operacion haya funcionado.
+async function parseSuccessBody(response) {
+  if (response.status === 204) return true;
+  const text = await response.text();
+  return text ? JSON.parse(text) : true;
+}
+
 export async function fetchApi(endpoint, options = {}, _retried = false) {
   const headers = {
     'Content-Type': 'application/json',
@@ -122,16 +133,7 @@ export async function fetchApi(endpoint, options = {}, _retried = false) {
     throw new Error(errorData.message || `Error HTTP ${response.status}`);
   }
 
-  return readSuccessBody(response);
-}
-
-// Lee el cuerpo de una respuesta exitosa. Un 204, o un 200/201 sin cuerpo (p. ej. POST /auth/register,
-// que responde 201 vacio), devuelve true: llamar a response.json() sobre un cuerpo vacio lanza
-// "Unexpected end of JSON input" aunque la operacion haya tenido exito.
-async function readSuccessBody(response) {
-  if (response.status === 204) return true;
-  const text = await response.text();
-  return text ? JSON.parse(text) : true;
+  return await parseSuccessBody(response);
 }
 
 // Variante de fetchApi para subir archivos (multipart/form-data). No fija 'Content-Type':
@@ -169,5 +171,5 @@ export async function uploadFileApi(endpoint, formData, options = {}, _retried =
     throw new Error(errorData.message || `Error HTTP ${response.status}`);
   }
 
-  return readSuccessBody(response);
+  return await parseSuccessBody(response);
 }

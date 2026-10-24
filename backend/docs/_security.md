@@ -16,6 +16,9 @@
 ### Endpoints públicos (sin token)
 Definidos en `SecurityConfig`:
 - `POST /api/v1/auth/login`, `POST /api/v1/auth/refresh`, `POST /api/v1/auth/register`, `GET /api/v1/auth/verify-email`
+- `POST /api/v1/auth/resend-verification` — reenvía el enlace de verificación; responde `204` siempre (no revela qué correos existen) y limita a un envío por correo por minuto.
+- `POST /api/v1/auth/forgot-password` — envía un enlace de recuperación (un solo uso, 1 h) solo a cuentas activas con correo verificado; mismas garantías (`204` siempre, 1 envío/min).
+- `POST /api/v1/auth/reset-password` — consume el token, fija la nueva contraseña (misma política de fortaleza), **revoca todas las sesiones** del usuario y limpia su bloqueo por intentos. Tokens: opacos, solo se guarda su SHA-256 (`password_reset_tokens`, V19).
 - `GET /api/v1/legal/**` (políticas y términos vigentes)
 - `POST /api/v1/support/tickets` y `GET /api/v1/support/tickets/track/**` (el seguimiento devuelve solo estado y resolución, no datos de contacto)
 - `/v3/api-docs/**`, `/swagger-ui/**`, `/swagger-ui.html` (la documentación está abierta en todos los perfiles; desactivarla o protegerla en producción)
@@ -29,7 +32,7 @@ Deshabilitado; la sesión viaja en cookies, y la mitigación es `SameSite=Strict
 
 ### Bloqueo y límites
 - **Bloqueo de login**: 5 intentos fallidos en 15 minutos → 30 min de bloqueo (`403`). El contador está en memoria (se pierde al reiniciar, no se comparte entre instancias).
-- **No hay rate limiting** en `/register`, `/refresh`, `/verify-email` ni `/support/tickets`. Pendiente (`_roadmap.md`).
+- **No hay rate limiting** en `/register`, `/refresh`, `/verify-email` ni `/support/tickets`. Pendiente (`_roadmap.md`). `/resend-verification` y `/forgot-password` solo limitan a un envío por correo por minuto, con el contador en memoria.
 - **Contraseñas**: BCrypt costo 10; mínimo 8 caracteres con una letra y un número.
 
 ## Roles del Sistema (RBAC)

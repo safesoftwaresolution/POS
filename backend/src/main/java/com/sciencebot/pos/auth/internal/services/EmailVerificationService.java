@@ -47,6 +47,12 @@ public class EmailVerificationService {
         return rawToken;
     }
 
+    /** Borra los tokens del usuario (previo a eliminar su cuenta). */
+    @Transactional
+    public void deleteForUser(Long userId) {
+        repository.deleteByUserId(userId);
+    }
+
     /** Valida y consume el token, devolviendo el id del usuario asociado. */
     @Transactional
     public Long consume(String rawToken) {

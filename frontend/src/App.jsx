@@ -1,5 +1,6 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import useAutoRefresh from './hooks/useAutoRefresh';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { ModalProvider } from './context/ModalContext';
@@ -13,6 +14,8 @@ import BackofficeHeader from './components/backoffice/Header';
 import LoginBento from './pages/LoginBento';
 import RegisterBento from './pages/RegisterBento';
 import VerifyEmailBento from './pages/VerifyEmailBento';
+import ForgotPasswordBento from './pages/ForgotPasswordBento';
+import ResetPasswordBento from './pages/ResetPasswordBento';
 import PendingStoreReviewBento from './pages/PendingStoreReviewBento';
 
 const StoreOnboardingBento = lazy(() => import('./pages/onboarding/StoreOnboardingBento'));
@@ -37,6 +40,9 @@ const LegalDocumentsBento = lazy(() => import('./pages/backoffice/LegalDocuments
 const SupportTicketsBento = lazy(() => import('./pages/backoffice/SupportTicketsBento'));
 const StaffBento = lazy(() => import('./pages/backoffice/StaffBento'));
 const OnboardingBento = lazy(() => import('./pages/backoffice/OnboardingBento'));
+const StoreAuditBento = lazy(() => import('./pages/backoffice/StoreAuditBento'));
+const UsersDirectoryBento = lazy(() => import('./pages/backoffice/UsersDirectoryBento'));
+const StatsBento = lazy(() => import('./pages/backoffice/StatsBento'));
 
 // Las páginas se cargan bajo demanda: el bundle inicial solo trae login, registro y los layouts.
 function PageFallback() {
@@ -63,6 +69,13 @@ function RequireActiveStore({ children }) {
       .catch(() => { if (!cancelled) setStore(null); });
     return () => { cancelled = true; };
   }, []);
+
+  // Mientras el local sigue en revisión, consulta su estado cada cierto tiempo: al aprobarse, el POS se
+  // abre solo sin que la persona tenga que recargar.
+  useAutoRefresh(() => {
+    if (store && store.status === 'ACTIVE') return;
+    getOwnStoreApi().then(setStore).catch(() => {});
+  });
 
   if (store === undefined) {
     return null;
@@ -150,6 +163,7 @@ function ProtectedLayoutContent({ mobileSidebarOpen, setMobileSidebarOpen, sideb
             <Route path="/inventory" element={<InventoryBento />} />
             <Route path="/suppliers" element={<Navigate to="/inventory?tab=suppliers" replace />} />
             <Route path="/products" element={<ProductsBento />} />
+            <Route path="/categories" element={<CategoriesBento />} />
             <Route path="/customers" element={<CustomersBento />} />
             <Route path="/invoicing" element={<InvoicingBento />} />
             <Route path="/reports" element={<RequireRole roles={['ADMINISTRATOR', 'SUPERVISOR']}><ReportsBento /></RequireRole>} />
@@ -217,6 +231,9 @@ function BackofficeProtectedLayout() {
             <Route path="/support" element={<SupportTicketsBento />} />
             <Route path="/staff" element={<StaffBento />} />
             <Route path="/onboarding" element={<OnboardingBento />} />
+            <Route path="/audit" element={<StoreAuditBento />} />
+            <Route path="/users" element={<UsersDirectoryBento />} />
+            <Route path="/stats" element={<StatsBento />} />
             <Route path="*" element={<Navigate to="/backoffice" replace />} />
           </Routes>
           </Suspense>
@@ -237,6 +254,8 @@ export default function App() {
               <Route path="/login" element={<LoginBento />} />
               <Route path="/register" element={<RegisterBento />} />
               <Route path="/verify-email" element={<VerifyEmailBento />} />
+              <Route path="/forgot-password" element={<ForgotPasswordBento />} />
+              <Route path="/reset-password" element={<ResetPasswordBento />} />
               <Route path="/legal/:slug" element={<LegalPage />} />
               <Route path="/support" element={<SupportPage />} />
               <Route path="/onboarding/store" element={<StoreOnboardingBento />} />

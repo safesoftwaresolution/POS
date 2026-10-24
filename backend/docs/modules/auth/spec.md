@@ -71,6 +71,29 @@
 - **Permisos**: Público
 - **Response 200**: igual que login (autologuea). **Errores**: 400/401 si el token es inválido, usado o expirado.
 
+### POST /api/v1/auth/resend-verification
+- **Permisos**: Público
+- **Request**: `{ "email": "..." }`
+- **Response**: `204 No Content` siempre, exista o no la cuenta. Solo envía si la cuenta existe y sigue sin verificar; máximo un envío por correo por minuto (en memoria). Si el correo falla en `register`, la cuenta queda creada y el usuario usa este endpoint.
+
+### Correos transaccionales
+Todos los correos (verificación, recuperación de contraseña y aprobación de local) usan la plantilla `shared.email.EmailTemplate`: cabecera BentoPOS, tarjeta con el contenido, botón de acción con enlace de respaldo y pie, en HTML con tablas y estilos en línea y sin imágenes externas. Los valores que vienen del usuario se escapan con `EmailTemplate.escape`. El nombre de producto en asuntos y cuerpo es **BentoPOS**.
+
+### POST /api/v1/backoffice/onboarding/pending-users/{userId}/resend-verification
+- **Permisos**: `SUPER_ADMIN` (controlador en el módulo `backoffice`, que llega a `auth` solo por `AuthFacade.resendVerificationToUser`).
+- **Response**: `204 No Content`. A diferencia del reenvío público, informa de los problemas: `400` si la cuenta ya está verificada o se envió otro correo hace menos de un minuto (el enfriamiento se comparte con el reenvío público), `409` si el proveedor de correo falla (un fallo no inicia el enfriamiento, así que se puede reintentar).
+
+### POST /api/v1/auth/forgot-password
+- **Permisos**: Público
+- **Request**: `{ "email": "..." }`
+- **Response**: `204 No Content` siempre. Envía un enlace `…/reset-password?token=…` (vigencia `SECURITY_PASSWORD_RESET_EXPIRATION_MS`, 1 h) solo si la cuenta está activa y con el correo verificado; máximo un envío por correo por minuto. El token y el correo se generan en segundo plano (`PasswordResetMailer`, `@Async`), así que la respuesta no depende del SMTP ni revela por tiempo qué correos existen; un fallo de envío solo se registra en el log.
+
+### POST /api/v1/auth/reset-password
+- **Permisos**: Público
+- **Request**: `{ "token": "...", "newPassword": "..." }`
+- **Response**: `204 No Content`. Consume el token (un solo uso), cambia la contraseña, revoca todos los refresh tokens del usuario y levanta su bloqueo por intentos fallidos. Es transaccional: si la contraseña no cumple la política, el token no se consume.
+- **Errores**: `400` con el motivo (enlace inválido, usado, expirado o contraseña débil). Se usa 400 y no 401 a propósito: el cliente interpreta cualquier 401 como sesión expirada.
+
 ### POST /api/v1/auth/refresh
 - **Permisos**: Público (el access token puede estar expirado)
 - **Request**: refresh token vía cookie `HttpOnly` o body `{ "refreshToken": "..." }`

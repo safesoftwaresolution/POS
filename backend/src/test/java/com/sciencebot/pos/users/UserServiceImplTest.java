@@ -21,6 +21,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
@@ -29,6 +30,7 @@ class UserServiceImplTest {
     @Mock private UserRepository userRepository;
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private UserMapper userMapper;
+    @Mock private UserQuotaPolicy userQuotaPolicy;
     @InjectMocks private UserServiceImpl userService;
 
     @BeforeEach
@@ -74,6 +76,186 @@ class UserServiceImplTest {
         assertTrue(result.active());
         assertEquals(1L, result.storeId());
         verify(userRepository, times(1)).save(any(User.class));
+    }
+
+    private static final UserQuota BASIC_QUOTA = new UserQuota("BASIC", "Básico", 2);
+
+    private CreateUserCommand sellerCommand() {
+        return new CreateUserCommand("Juan Perez", "juanp", "juan@tienda.com", "Password123", "SELLER", 1L);
+    }
+
+    @Test
+    void createUser_StoreAtPlanLimit_IsRefusedAndSavesNothing() {
+        when(userQuotaPolicy.quotaFor(1L)).thenReturn(Optional.of(BASIC_QUOTA));
+        when(userRepository.countByStoreIdAndActiveTrue(1L)).thenReturn(2L);
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> userService.createUser(sellerCommand()));
+
+        assertTrue(ex.getMessage().contains("Básico"));
+        assertTrue(ex.getMessage().contains("2 usuarios activos"));
+        verify(userRepository, never()).save(any(User.class));
+    }
+
+    @Test
+    void createUser_StoreBelowPlanLimit_IsAllowed() {
+        when(userQuotaPolicy.quotaFor(1L)).thenReturn(Optional.of(BASIC_QUOTA));
+        when(userRepository.countByStoreIdAndActiveTrue(1L)).thenReturn(1L);
+        when(passwordEncoder.encode("Password123")).thenReturn("enc");
+        User saved = new User();
+        saved.setId(5L);
+        when(userRepository.save(any(User.class))).thenReturn(saved);
+        when(userMapper.toDto(any(User.class))).thenReturn(new UserDto(5L, "Juan Perez", "juanp", "juan@tienda.com", "SELLER", true, 1L, true));
+
+        assertNotNull(userService.createUser(sellerCommand()));
+        verify(userRepository).save(any(User.class));
+    }
+
+    @Test
+    void createUser_StoreWithoutApplicableQuota_IsNotLimited() {
+        when(userQuotaPolicy.quotaFor(1L)).thenReturn(Optional.empty());
+        when(passwordEncoder.encode("Password123")).thenReturn("enc");
+        User saved = new User();
+        saved.setId(5L);
+        when(userRepository.save(any(User.class))).thenReturn(saved);
+        when(userMapper.toDto(any(User.class))).thenReturn(new UserDto(5L, "Juan Perez", "juanp", "juan@tienda.com", "SELLER", true, 1L, true));
+
+        assertNotNull(userService.createUser(sellerCommand()));
+        verify(userRepository, never()).countByStoreIdAndActiveTrue(anyLong());
+    }
+
+    @Test
+    void createUser_SuperAdmin_SkipsQuotaCheck() {
+        when(passwordEncoder.encode("Password123")).thenReturn("enc");
+        User saved = new User();
+        saved.setId(6L);
+        when(userRepository.save(any(User.class))).thenReturn(saved);
+        when(userMapper.toDto(any(User.class))).thenReturn(new UserDto(6L, "Root", "root2", "root2@x.com", "SUPER_ADMIN", true, null, true));
+
+        userService.createUser(new CreateUserCommand("Root", "root2", "root2@x.com", "Password123", "SUPER_ADMIN", null));
+
+        verifyNoInteractions(userQuotaPolicy);
+    }
+
+    @Test
+    void changeStatus_ReactivatingBeyondPlanLimit_IsRefused() {
+        User inactive = new User();
+        inactive.setId(9L);
+        inactive.setUsername("viejo");
+        inactive.setRole("SELLER");
+        inactive.setActive(false);
+        inactive.setStoreId(1L);
+        when(userRepository.findById(9L)).thenReturn(Optional.of(inactive));
+        when(userQuotaPolicy.quotaFor(1L)).thenReturn(Optional.of(BASIC_QUOTA));
+        when(userRepository.countByStoreIdAndActiveTrue(1L)).thenReturn(2L);
+
+        assertThrows(IllegalArgumentException.class, () -> userService.changeStatus(9L, true));
+
+        assertFalse(inactive.isActive());
+        verify(userRepository, never()).save(any(User.class));
+    }
+
+    @Test
+    void changeStatus_Deactivating_DoesNotConsultQuota() {
+        User active = new User();
+        active.setId(9L);
+        active.setUsername("viejo");
+        active.setRole("SELLER");
+        active.setActive(true);
+        active.setStoreId(1L);
+        when(userRepository.findById(9L)).thenReturn(Optional.of(active));
+
+        userService.changeStatus(9L, false);
+
+        assertFalse(active.isActive());
+        verifyNoInteractions(userQuotaPolicy);
+    }
+
+    @Test
+    void changeStatus_ReactivatingTheOnlyAdmin_IsAllowed() {
+        User inactiveAdmin = new User();
+        inactiveAdmin.setId(4L);
+        inactiveAdmin.setUsername("dueno");
+        inactiveAdmin.setRole("ADMINISTRATOR");
+        inactiveAdmin.setActive(false);
+        inactiveAdmin.setStoreId(1L);
+        when(userRepository.findById(4L)).thenReturn(Optional.of(inactiveAdmin));
+        when(userQuotaPolicy.quotaFor(1L)).thenReturn(Optional.empty());
+
+        userService.changeStatus(4L, true);
+
+        assertTrue(inactiveAdmin.isActive());
+    }
+
+    private static User userWithRole(Long id, String username, String role, boolean active, Long storeId) {
+        User u = new User();
+        u.setId(id);
+        u.setUsername(username);
+        u.setRole(role);
+        u.setActive(active);
+        u.setStoreId(storeId);
+        return u;
+    }
+
+    @Test
+    void deleteUserPermanently_RemovesAUserWithoutHistory() {
+        User seller = userWithRole(5L, "vendedor", "SELLER", true, 1L);
+        when(userRepository.findById(5L)).thenReturn(Optional.of(seller));
+
+        userService.deleteUserPermanently(5L);
+
+        verify(userRepository).delete(seller);
+        verify(userRepository).flush();
+    }
+
+    @Test
+    void deleteUserPermanently_WithBusinessHistory_ThrowsConflictAndKeepsTheUser() {
+        User seller = userWithRole(5L, "vendedor", "SELLER", true, 1L);
+        when(userRepository.findById(5L)).thenReturn(Optional.of(seller));
+        doThrow(new org.springframework.dao.DataIntegrityViolationException("FK_sales_user"))
+                .when(userRepository).flush();
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class, () -> userService.deleteUserPermanently(5L));
+
+        assertTrue(ex.getMessage().contains("Inactívalo"));
+    }
+
+    @Test
+    void deleteUserPermanently_RefusesSuperAdminSelfAndTheOnlyStoreAdmin() {
+        when(userRepository.findById(1L)).thenReturn(Optional.of(userWithRole(1L, "root", "SUPER_ADMIN", true, null)));
+        assertThrows(IllegalArgumentException.class, () -> userService.deleteUserPermanently(1L));
+
+        Authentication auth = mock(Authentication.class);
+        when(auth.getName()).thenReturn("yo");
+        SecurityContext context = mock(SecurityContext.class);
+        when(context.getAuthentication()).thenReturn(auth);
+        SecurityContextHolder.setContext(context);
+        when(userRepository.findById(2L)).thenReturn(Optional.of(userWithRole(2L, "yo", "SELLER", true, 1L)));
+        assertThrows(IllegalArgumentException.class, () -> userService.deleteUserPermanently(2L));
+
+        when(userRepository.findById(3L)).thenReturn(Optional.of(userWithRole(3L, "dueno", "ADMINISTRATOR", true, 1L)));
+        when(userRepository.countByStoreIdAndRoleAndActiveTrue(1L, "ADMINISTRATOR")).thenReturn(1L);
+        assertThrows(IllegalArgumentException.class, () -> userService.deleteUserPermanently(3L));
+
+        verify(userRepository, never()).delete(any(User.class));
+    }
+
+    @Test
+    void getQuotaStatus_ReportsUsageForTheCallerStore() {
+        TenantContext.setStoreId(1L);
+        when(userQuotaPolicy.quotaFor(1L)).thenReturn(Optional.of(BASIC_QUOTA));
+        when(userRepository.countByStoreIdAndActiveTrue(1L)).thenReturn(2L);
+
+        UserQuotaStatusDto status = userService.getQuotaStatus().orElseThrow();
+
+        assertEquals("Básico", status.planName());
+        assertEquals(2L, status.activeUsers());
+        assertEquals(2, status.maxActiveUsers());
+        assertFalse(status.canCreateMore());
+    }
+
+    @Test
+    void getQuotaStatus_WithoutStoreContext_IsEmpty() {
+        assertTrue(userService.getQuotaStatus().isEmpty());
     }
 
     @Test

@@ -9,7 +9,7 @@ Crear el esquema y las entidades que Alegra necesita porque **nosotros** enviamo
 Nada (puede ir en paralelo con FEAT-021).
 
 ## ⚠️ Número de migración
-`.ai/features.json` reserva **V20** para **FEAT-019** (pending). Antes de crear el archivo, listar `backend/src/main/resources/db/migration/` y usar la **siguiente versión libre** (hoy V21 si FEAT-019 ya tomó V20; V20 si no). En este documento "V<N>" es esa versión. Nunca editar una migración aplicada.
+V20 ya la usa main (`V20__Store_Status_Audit_Snapshot.sql`). Antes de crear el archivo, listar `backend/src/main/resources/db/migration/` y usar la **siguiente versión libre** (hoy V25; FEAT-019 y FEAT-018 también necesitan una). En este documento "V<N>" es esa versión. Nunca editar una migración aplicada.
 
 ## Context Pack (R8)
 - Docs (4): `backend/docs/modules/billing/spec.md` (Modelo de Datos), `backend/docs/_database-schema.md`, `backend/docs/_conventions.md`, `backend/docs/_security.md`.

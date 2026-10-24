@@ -72,6 +72,16 @@ public class UserController {
         return ResponseEntity.ok(users);
     }
 
+    @GetMapping("/quota")
+    @PreAuthorize("hasRole('ADMINISTRATOR')")
+    @Operation(
+            summary = "Cupo de usuarios del plan",
+            description = "Usuarios activos del local frente al tope de su plan. 204 si el local no tiene tope aplicable."
+    )
+    public ResponseEntity<UserQuotaStatusDto> getQuota() {
+        return userFacade.getQuotaStatus().map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.noContent().build());
+    }
+
     @GetMapping("/{id}")
     @PreAuthorize("hasRole('ADMINISTRATOR')")
     @Operation(

@@ -33,7 +33,7 @@ FEAT-022 migración ──┬─ FEAT-023 asignador ─ FEAT-024 infraestructura
 
 ## Reglas de coordinación
 
-- **Migraciones: una a la vez.** FEAT-019 reserva V20; FEAT-018 y FEAT-022 también pueden necesitar una. El número se decide al implementar, mirando `backend/src/main/resources/db/migration/`; nunca se numeran en paralelo. Orden recomendado de merge: FEAT-019 (si se hace) → FEAT-022 → FEAT-018.
+- **Migraciones: una a la vez.** FEAT-019, FEAT-018 y FEAT-022 necesitan una cada una (V20 ya la usa main; hoy la siguiente libre es V25). El número se decide al implementar, mirando `backend/src/main/resources/db/migration/`; nunca se numeran en paralelo. Orden recomendado de merge: FEAT-019 (si se hace) → FEAT-022 → FEAT-018.
 - **Un escritor por archivo.** Si dos tareas de la misma ola se ejecutan a la vez en la misma carpeta, cada una usa su propia rama/worktree.
 - **Cada tarea termina** con `.\mvnw.cmd test` en verde, una entrada en `.ai/progress/history.md` y un plan de commits aprobado por el usuario (Committer). Nada de push sin pedirlo.
 

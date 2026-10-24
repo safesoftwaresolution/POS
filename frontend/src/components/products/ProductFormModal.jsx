@@ -1,6 +1,8 @@
-import React, { useRef } from 'react';
-import { AlertCircle, ImagePlus, Plus } from 'lucide-react';
+import React, { useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { AlertCircle, ImagePlus, Plus, ScanLine } from 'lucide-react';
 import { Button, Field, Input, Modal, Select, inputClass } from '../ui';
+import { BarcodeScanner } from '../scanner';
 
 /**
  * Alta / edición de un producto. El estado vive en la página (`product`, `setProduct`);
@@ -13,6 +15,7 @@ export default function ProductFormModal({
   onSubmit, onClose,
 }) {
   const imageInputRef = useRef(null);
+  const [scanning, setScanning] = useState(false);
   const isEdit = !!product.id;
   const set = (patch) => setProduct({ ...product, ...patch });
   const noCategories = categories.length === 0;
@@ -100,7 +103,26 @@ export default function ProductFormModal({
         <Input label="Nombre Comercial del Producto" value={product.name} onChange={e => set({ name: e.target.value })} placeholder="Ej. Arroz 1kg" required />
 
         <div className="grid grid-cols-2 gap-3">
-          <Input label="Código de Barras" className="font-mono" value={product.barcode} onChange={e => set({ barcode: e.target.value })} placeholder="770..." />
+          <Field label="Código de Barras">
+            <div className="relative">
+              <input
+                className={`${inputClass} font-mono lg:pr-3.5 pr-11`}
+                value={product.barcode}
+                onChange={e => set({ barcode: e.target.value })}
+                placeholder="770..."
+              />
+              {/* Solo en móvil/tablet: en escritorio el lector USB escribe directo en el campo. */}
+              <button
+                type="button"
+                onClick={() => setScanning(true)}
+                aria-label="Escanear código de barras con la cámara"
+                title="Escanear con la cámara"
+                className="lg:hidden absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-xl bg-solid text-white flex items-center justify-center active:scale-95 transition-all cursor-pointer"
+              >
+                <ScanLine className="w-4 h-4" />
+              </button>
+            </div>
+          </Field>
           <Input label="Código Interno" className="font-mono" value={product.internalCode} onChange={e => set({ internalCode: e.target.value })} placeholder="PROD-101" disabled={isEdit} />
         </div>
 
@@ -117,6 +139,19 @@ export default function ProductFormModal({
           <Button type="submit" className="w-1/2" disabled={noCategories}>{isEdit ? 'Guardar Cambios' : 'Guardar Producto'}</Button>
         </div>
       </form>
+
+      {/* El escáner se monta en <body> para quedar por encima del modal sin heredar su desenfoque ni su scroll. */}
+      {scanning && createPortal(
+        <BarcodeScanner
+          onDetect={(code) => {
+            set({ barcode: code });
+            setScanning(false); // un producto = un código: se cierra al primer acierto
+            return { ok: true, message: `Código ${code} leído` };
+          }}
+          onClose={() => setScanning(false)}
+        />,
+        document.body
+      )}
     </Modal>
   );
 }

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, Package, Plus } from 'lucide-react';
+import { Search, Package, Plus, ScanLine } from 'lucide-react';
 
 function ProductCard({ product, onAdd }) {
   const stockVal = product.quantityAvailable ?? product.stock ?? 0;
@@ -70,11 +70,12 @@ function ProductCard({ product, onAdd }) {
 export default function ProductCatalog({
   inputRef, searchQuery, onSearchChange, onSearchKeyDown,
   categories, selectedCategory, onSelectCategory,
-  products, loading, onAdd,
+  products, loading, onAdd, onOpenScanner,
 }) {
   return (
     <div className="flex flex-col gap-4 lg:h-full lg:overflow-hidden lg:pt-8 lg:pl-8 lg:pr-4">
-      <div className="relative shrink-0">
+      <div className="flex gap-2 shrink-0">
+      <div className="relative flex-1">
         <Search className="w-4 h-4 text-ink-muted absolute left-4 top-1/2 -translate-y-1/2" />
         <input
           ref={inputRef}
@@ -93,6 +94,17 @@ export default function ProductCatalog({
             Limpiar
           </button>
         )}
+      </div>
+      {onOpenScanner && (
+        <button
+          type="button"
+          onClick={onOpenScanner}
+          aria-label="Escanear con la cámara"
+          className="lg:hidden h-12 w-12 shrink-0 rounded-2xl bg-solid text-white flex items-center justify-center active:scale-95 transition-all cursor-pointer"
+        >
+          <ScanLine className="w-5 h-5" />
+        </button>
+      )}
       </div>
 
       <div className="shrink-0 flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">

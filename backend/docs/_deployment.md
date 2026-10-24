@@ -53,9 +53,9 @@ java -jar target/app.pos-0.0.1-SNAPSHOT.jar
 ```
 
 ## Inicialización de BD
-- Esquema: **lo crea Flyway** (`db/migration`, hoy `V1`…`V19`) y Hibernate solo lo valida (`ddl-auto=validate`) en `dev` y `prod`. Nunca `update`.
+- Esquema: **lo crea Flyway** (`db/migration`, hoy `V1`…`V24`) y Hibernate solo lo valida (`ddl-auto=validate`) en `dev` y `prod`. Nunca `update`. Solo el perfil `test` deja que Hibernate cree el esquema.
 - `dev` persiste en `./data/app_db` (borra `backend/data/` para empezar de cero).
-- Datos semilla: el `SUPER_ADMIN` inicial solo si se define `SEED_SUPERADMIN_PASSWORD`. El administrador `admin`, el local 1, el "Cliente General" y los ajustes de ejemplo se siembran **únicamente en `dev`**. En producción cada local se crea por el flujo de auto-registro y onboarding.
+- Datos semilla: el `SUPER_ADMIN` inicial solo si se define `SEED_SUPERADMIN_PASSWORD`. El administrador `admin`, el local 1, el "Cliente General" y los ajustes de ejemplo se siembran **únicamente en `dev`**, igual que los productos de ejemplo (`ProductDemoSeeder`). En cualquier perfil se siembran, de forma idempotente, las categorías de producto base (`CategorySeeder`) y los tipos de negocio de los locales (`StoreCategorySeeder`). En producción cada local se crea por el flujo de auto-registro y onboarding.
 
 ---
 

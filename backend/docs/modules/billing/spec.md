@@ -310,7 +310,7 @@ Una fila por local (relación 1 a 1 con `stores`).
 > secretos **no** se pueden trasladar por SQL porque el cifrado ocurre en la capa Java, así que el local queda
 > en `NOT_REQUESTED` hasta que el SUPER_ADMIN vuelva a cargarlos.
 
-### Tabla: `electronic_credit_notes` (`V18__Credit_Notes.sql`)
+### Tabla: `electronic_credit_notes` (`V23__Credit_Notes.sql`)
 | Campo | Tipo | Restricciones |
 |---|---|---|
 | id | BIGSERIAL | PK, Auto-increment |
@@ -331,7 +331,7 @@ Una fila por local (relación 1 a 1 con `stores`).
 
 Índices: `IDX_electronic_credit_notes_store`, `IDX_electronic_credit_notes_store_status`, `IDX_electronic_credit_notes_bill`.
 
-### Tabla: `electronic_debit_notes` (`V19__Debit_Notes.sql`)
+### Tabla: `electronic_debit_notes` (`V24__Debit_Notes.sql`)
 | Campo | Tipo | Restricciones |
 |---|---|---|
 | id | BIGSERIAL | PK, Auto-increment |

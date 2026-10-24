@@ -11,6 +11,12 @@ export async function getUsersApi(page = 0, size = 100) {
   };
 }
 
+// Cupo de usuarios del plan del local. Devuelve null si el local no tiene un tope aplicable (204).
+export async function getUserQuotaApi() {
+  const data = await fetchApi('/users/quota');
+  return data && data !== true ? data : null;
+}
+
 export async function createUserApi({ fullName, username, email, password, role, storeId }) {
   return await fetchApi('/users', {
     method: 'POST',

@@ -108,6 +108,41 @@ Relación 1 a 1 con `stores`: la PK **es** el `store_id`. DDL completo en `modul
 | updated_by | VARCHAR(100) | Último usuario que modificó la configuración |
 | created_at / updated_at | TIMESTAMP | |
 
+## Tabla `store_status_audit` (módulo stores)
+Historial inmutable de cambios de estado de un local (`V18__Store_Status_Audit.sql`). Solo se inserta.
+
+| Columna | Tipo | Notas |
+|---|---|---|
+| id | BIGSERIAL PK | |
+| store_id | BIGINT | `FK_store_status_audit_store` → `stores(id)` |
+| previous_status | VARCHAR(30) | Nulo en el registro inicial y en el respaldo de V18 |
+| new_status | VARCHAR(30) | `PENDING_VERIFICATION`, `ACTIVE`, `REJECTED`, `SUSPENDED`, `INACTIVE` |
+| reason | VARCHAR(255) | Motivo (rechazos) |
+| performed_by | VARCHAR(100) | Usuario autenticado; nulo en el respaldo de V18 |
+| created_at | TIMESTAMP | |
+
+`V20__Store_Status_Audit_Snapshot.sql` elimina la FK a `stores` y añade `store_name`, `store_email` y `store_tax_id` (copia de los datos del local en cada evento, rellenada para las filas previas). Así la auditoría sobrevive a la eliminación definitiva de un local; `new_status` admite también `DELETED`.
+
+Índices: `IDX_store_status_audit_store(store_id, created_at)`, `IDX_store_status_audit_status(new_status, created_at)`.
+
+## Tabla `plans` y columna `stores.plan_code` (módulo stores)
+`V22__Store_Plans.sql`. `plans`: `code` PK (`BASIC`, `STANDARD`, `PRO`), `name`, `max_additional_users` (usuarios activos permitidos además del administrador) y `sort_order`. `stores.plan_code` VARCHAR(20) NOT NULL, `DEFAULT 'BASIC'`, `FK_stores_plan` → `plans(code)`; los locales que ya existían pasaron a `PRO`. En `store_status_audit`, `new_status` admite también `PLAN_CHANGED`.
+
+## Tabla `store_user_audit` (módulo stores)
+Historial inmutable de asignaciones de usuarios a locales hechas por el SUPER_ADMIN (`V21__Store_User_Audit.sql`). Solo se inserta. Sin FKs a `stores` ni `users`: guarda copia de los datos (`store_name`, `username`, `full_name`, `role`) para sobrevivir a borrados.
+
+| Columna | Tipo | Notas |
+|---|---|---|
+| id | BIGSERIAL PK | |
+| store_id / user_id | BIGINT | Sin FK (snapshot) |
+| store_name, username, full_name, role | VARCHAR | Copia al momento de la asignación |
+| action | VARCHAR(20) | `OWNER_ASSIGNED` |
+| performed_by | VARCHAR(100) | SUPER_ADMIN que la hizo |
+| created_at | TIMESTAMP | |
+
+## Tabla `password_reset_tokens` (módulo auth)
+Tokens de recuperación de contraseña (`V19__Password_Reset_Tokens.sql`), mismo esquema que `email_verification_tokens`: `token_hash` (SHA-256, único), `user_id` (FK `users`), `expires_at`, `used_at`, `created_at`. Índice `IDX_prt_user(user_id)`.
+
 ## Tabla `numbering_range_audit` (módulo billing)
 Bitácora de cambios sobre rangos de numeración DIAN (`V15`, ampliada en `V17`).
 
@@ -170,7 +205,7 @@ Antes este documento los listaba como existentes; **no hay ninguna migración qu
 Toda modificación al esquema físico (tablas, columnas, datos semilla, índices) **DEBE** gestionarse mediante scripts de Flyway.
 
 - **Ubicación obligatoria**: `src/main/resources/db/migration/`
-- **Nomenclatura**: `V<Versión>__<Descripcion_Breve>.sql` (ej. `V19__Debit_Notes.sql`). La siguiente libre es `V20`.
+- **Nomenclatura**: `V<Versión>__<Descripcion_Breve>.sql` (ej. `V24__Debit_Notes.sql`). La siguiente libre es `V25`.
 - **Inmutabilidad**: una migración ya aplicada **nunca** se modifica; la corrección va en una versión nueva.
 - **Validación**: Hibernate usa `ddl-auto=validate` en dev y prod, por lo que cualquier discrepancia entre entidades y esquema falla el arranque. Solo el perfil `test` deja que Hibernate cree el esquema (`create-drop`, Flyway desactivado); los `V*MigrationSqlTest` ejecutan Flyway a mano contra su propia H2.
 - **Compatibilidad H2**: las migraciones con datos deben ser seguras en H2 (perfil `dev`); H2 2.4.x falla al validar `CHECK … IN (…)` desde una conexión distinta a la que los creó.

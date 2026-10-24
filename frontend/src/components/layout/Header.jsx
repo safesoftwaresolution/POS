@@ -157,12 +157,6 @@ export default function Header({ onToggleMobileMenu }) {
             <h1 className="text-xl font-bold text-ink tracking-tight truncate">
               {pageInfo.title}
             </h1>
-            {isOnPos && (
-              <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#FFF0EB] text-brand border border-[#FFD5C8] shrink-0">
-                <span className="w-1.5 h-1.5 rounded-full bg-brand"></span>
-                Modo Rápido
-              </span>
-            )}
           </div>
           <p className="text-xs text-ink-soft truncate hidden sm:block">{pageInfo.subtitle}</p>
         </div>

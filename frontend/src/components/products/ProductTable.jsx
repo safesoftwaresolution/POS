@@ -24,8 +24,8 @@ export default function ProductTable({
   }
 
   return (
-    <div className="overflow-x-auto -mx-6">
-      <table className="w-full text-left text-xs">
+    <div className="md:overflow-x-auto md:-mx-6">
+      <table className="table-cards w-full text-left text-xs">
         <thead>
           <tr className="border-b border-line bg-gray-50/50 dark:bg-page text-ink-muted uppercase text-[10px] tracking-wider font-extrabold">
             <th className="py-3 px-6">Producto</th>
@@ -46,7 +46,7 @@ export default function ProductTable({
                 className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer group"
                 onClick={() => onEdit(p)}
               >
-                <td className="py-3 px-6">
+                <td data-label="" className="py-3 px-6">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-gray-50 dark:bg-page border border-line flex items-center justify-center overflow-hidden shrink-0">
                       {p.imageUrl ? (
@@ -65,8 +65,8 @@ export default function ProductTable({
                     </div>
                   </div>
                 </td>
-                <td className="py-3 px-3 font-mono font-semibold text-ink-soft">{p.internalCode}</td>
-                <td className="py-3 px-3">
+                <td data-label="Código" className="py-3 px-3 font-mono font-semibold text-ink-soft">{p.internalCode}</td>
+                <td data-label="Categoría" className="py-3 px-3">
                   <div className="flex items-center gap-1 flex-wrap">
                     <span className="text-[10px] px-2 py-0.5 rounded-full bg-brand/10 dark:bg-brand/20 text-brand font-extrabold">
                       {p.categoryName || 'General'}
@@ -78,15 +78,15 @@ export default function ProductTable({
                     )}
                   </div>
                 </td>
-                <td className="py-3 px-3 text-right font-black text-sm text-ink tabular-nums">
+                <td data-label="Precio" className="py-3 px-3 text-right font-black text-sm text-ink tabular-nums">
                   ${(p.salePrice || p.price || 0).toLocaleString('es-CO')}
                 </td>
-                <td className="py-3 px-3">
+                <td data-label="Stock" className="py-3 px-3">
                   <span className={`font-bold tabular-nums ${isLow ? 'text-amber-600 dark:text-amber-400' : 'text-ink'}`}>
                     {stockVal} {isLow && '(Bajo)'}
                   </span>
                 </td>
-                <td className="py-3 px-6 text-right" onClick={(e) => e.stopPropagation()}>
+                <td data-label="Acciones" className="py-3 px-6 text-right" onClick={(e) => e.stopPropagation()}>
                   <div className="flex items-center justify-end gap-1">
                     <button onClick={() => onBarcode(p)} title="Ver código de barras" className={`${ICON_BTN} hover:text-brand`}>
                       <Barcode className="w-4 h-4" />

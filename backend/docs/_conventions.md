@@ -75,6 +75,7 @@ src/main/java/com/sciencebot/pos/
 ### Base de Datos y Migraciones
 - `ddl-auto=validate` en dev y prod; solo el perfil `test` deja a Hibernate crear el esquema.
 - Todo cambio de esquema es una migración Flyway en `src/main/resources/db/migration/` (ver `_database-schema.md`).
+- Pon nombre explícito a toda restricción (`CONSTRAINT UK_tabla_col UNIQUE (...)`); un `UNIQUE` en línea recibe en PostgreSQL el nombre `<tabla>_<columna>_key`. Un `DROP CONSTRAINT IF EXISTS` con un nombre inexistente no falla ni hace nada (así V9 dejó la unicidad global vigente hasta V25); `MigrationConstraintNamesTest` lo vigila desde V25.
 
 ### Mapeo de Datos (Mappers)
 - Prohibido mapear entidad ↔ DTO con métodos privados del servicio: usar una clase `@Component` en `internal/mappers/` inyectada por constructor.

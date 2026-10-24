@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import { loginApi, logoutApi, refreshSessionApi } from '../services/authApi';
 import { setAuthToken, SESSION_EXPIRED_EVENT } from '../services/http';
 

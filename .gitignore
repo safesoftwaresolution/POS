@@ -7,6 +7,8 @@ backend/backup/
 frontend/node_modules/
 frontend/dist/
 frontend/.vite/
+frontend/vite.local*.config.js
+frontend/*.local.*
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/

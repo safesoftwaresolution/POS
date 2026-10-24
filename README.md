@@ -179,7 +179,10 @@ La especificación de cada módulo está en [`backend/docs/modules/`](./backend/
 | `/inventory` | Inventario | Kardex, compras, proveedores (`?tab=suppliers`) y devoluciones (`?tab=returns`). |
 | `/customers` | Clientes | Directorio para facturación electrónica. |
 | `/invoicing` | Facturación DIAN | Facturas emitidas, habilitación y rangos de numeración del local. |
-| `/reports` | Reportes | Analítica de ventas, stock y rentabilidad. |
+| `/sales` | Ventas | Historial de ventas con filtros por fecha, búsqueda y detalle. |
+| `/cash` | Caja | Arqueo (esperado vs contado), efectivo por cajero y recaudo por método de pago (solo `ADMINISTRATOR`). |
+
+Las analíticas (ventas por vendedor, top de productos, rentabilidad, compras, estado de inventario) viven en el Dashboard (`/`); `/reports` redirige allí.
 | `/documents` | Documentos | Documentos KYC del local. |
 | `/settings` | Configuración | Datos del negocio, logo y parámetros. |
 

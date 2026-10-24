@@ -78,7 +78,7 @@ Una revisión del arnés, los specs y el código encontró desajustes. **Ya corr
 - **`.ai/features.json`** sigue en 1.2.0 (última entrada 2026-08-19) y `history.md` no refleja la rama paralela; el módulo `backoffice` tampoco figura como módulo en el harness. No se tocó (el harness tiene su propio protocolo).
 
 - **Frontend (2026-10-16)**: tokens de color y componentes base (`components/ui`), pantalla de usuarios del local, editar/eliminar clientes, activar/desactivar productos, logo vía `/settings/logo`, rutas con guarda por rol y carga diferida, páginas públicas de legal y soporte. Pendiente: `GET /purchases/{id}` sin pantalla de detalle; ~24 avisos `set-state-in-effect` de oxlint (cargas iniciales con `setLoading` dentro de efectos); `InvoicingBento`, `ProductsBento` y `POSBento` ya se dividieron en `components/invoicing|products|pos` (2026-10-16); quedan grandes `CheckoutModal` (≈525), `StoresBento` (≈600), `BillingBento` y `StaffBento` (≈470-500); revisión visual y de contraste (WCAG) en modo claro/oscuro.
-- **Reportes por rol**: el Sidebar muestra "Reportes" a `SUPERVISOR`, pero solo `/reports/stock` admite ese rol (ventas, top, rentabilidad, compras y cierre de caja son solo `ADMINISTRATOR`); la pantalla debería ocultar las pestañas que el rol no puede consultar.
+- **Reportes por rol** (resuelto): las analíticas están en el Dashboard y muestran a cada rol solo lo que su endpoint permite (`SUPERVISOR` ve el estado de inventario; el resto de reportes y la Caja son solo `ADMINISTRATOR`).
 
 ## Valores agregados propuestos (para retail colombiano)
 
@@ -86,7 +86,7 @@ Una revisión del arnés, los specs y el código encontró desajustes. **Ya corr
 2. **Subcategorías de tienda** — *Implementado 2026-09-16* (`categories`, `V12`).
 3. **Venta a crédito / fiado a clientes** — saldo pendiente por cliente y abonos parciales. Requiere nuevo campo en `sales` o módulo de cuentas por cobrar.
 4. **Alertas de stock bajo** — *Implementadas*: notificación en la app y correo a ADMINISTRATOR/SUPERVISOR al cruzar el mínimo (`LowStockAlertNotifier`). Falta la sugerencia de orden de compra hacia `purchases`.
-5. **Cierre de caja / arqueo diario** — *Implementado* (`GET /api/v1/reports/cash-closing`, UI en `ReportsBento`). Falta "efectivo contado vs esperado".
+5. **Cierre de caja / arqueo diario** — *Implementado* (`GET /api/v1/reports/cash-closing`, UI en `CashBento` (`/cash`), con el arqueo "efectivo contado vs esperado" calculado en el cliente; no se guarda el cierre).
 6. **Impresión térmica directa** (58/80 mm) en vez de `window.print()`.
 7. **Envío de tiquete por WhatsApp/correo** al cliente tras la venta.
 8. **Modo offline / PWA** (impacto alto, esfuerzo alto: cola local y conflictos con el descuento de stock).

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import MoneyInput from '../ui/MoneyInput';
 import {
   X,
   CreditCard,
@@ -219,14 +220,13 @@ export default function CheckoutModal({
                   <label htmlFor="checkout-cash" className={`${SECTION_LABEL} block mb-1.5`}>Efectivo recibido</label>
                   <div className="relative">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-gray-400">$</span>
-                    <input
+                    <MoneyInput
                       id="checkout-cash"
-                      type="number"
                       autoFocus
                       value={cashTendered}
-                      onChange={(e) => onCashTenderedChange(e.target.value)}
+                      onChange={onCashTenderedChange}
                       placeholder="0"
-                      className="w-full h-12 pl-9 pr-4 bg-page border border-line rounded-2xl text-lg font-black text-ink tabular-nums focus:outline-none focus:border-ink dark:focus:border-brand"
+                      className="h-12 pl-9 pr-4 rounded-2xl text-lg font-black tabular-nums dark:focus:border-brand"
                     />
                   </div>
                 </div>

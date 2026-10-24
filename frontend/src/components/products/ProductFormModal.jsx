@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AlertCircle, ImagePlus, Plus, ScanLine } from 'lucide-react';
-import { Button, Field, Input, Modal, Select, inputClass } from '../ui';
+import { Button, Field, Input, Modal, MoneyInput, Select, inputClass } from '../ui';
 import { BarcodeScanner } from '../scanner';
 
 /**
@@ -127,7 +127,7 @@ export default function ProductFormModal({
         </div>
 
         <div className={isEdit ? '' : 'grid grid-cols-2 gap-3'}>
-          <Input label="Precio Venta ($ COP)" type="number" value={product.price} onChange={e => set({ price: e.target.value })} placeholder="12000" required />
+          <MoneyInput label="Precio Venta ($ COP)" value={product.price} onChange={price => set({ price })} placeholder="12.000" required />
           {!isEdit && (
             <Input label="Stock Inicial" type="number" value={product.stock} onChange={e => set({ stock: e.target.value })} placeholder="50" />
           )}

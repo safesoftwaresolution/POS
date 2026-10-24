@@ -28,6 +28,8 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<Map<String, String>> handleBadCredentials(BadCredentialsException ex) {
         Map<String, String> response = new HashMap<>();
@@ -110,6 +112,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<Map<String, String>> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
+        // El mensaje al cliente es genérico a propósito; la restricción exacta (nombre y valor) queda en el log.
+        log.error("Violación de integridad de datos: {}", ex.getMostSpecificCause().getMessage(), ex);
         Map<String, String> response = new HashMap<>();
         response.put("error", "Conflict");
         response.put("message", "Conflicto de integridad de datos: el registro ya existe o viola una restricción del sistema");

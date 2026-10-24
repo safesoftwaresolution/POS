@@ -1,4 +1,4 @@
-<!-- spec-version: 1.1 | last-updated: 2026-09-16 -->
+<!-- spec-version: 1.2 | last-updated: 2026-10-24 -->
 # Módulo: Productos (Products)
 
 ## Dependencias
@@ -25,6 +25,8 @@
   - Campos opcionales: barcode (único por tienda si ingresado), subcategoryId (ver RN-PROD-003), description, imageUrl.
   - Stock inicial: 0 (se alimenta vía módulo de Compras o Inventario).
   - Validar RN-PROD-001 (precio venta ≥ precio compra).
+  - Un `barcode` en blanco se guarda como `NULL` (un `""` chocaría con la unicidad por tienda).
+  - Carga masiva: la importación desde Excel (crear y actualizar productos en bloque, con conteo físico) vive en `inventory` (RF-INV-005) y usa esta misma fachada; `ProductFacade.findByInternalCodes` / `findByBarcodes` resuelven los códigos del archivo en lote.
 
 ### RF-PROD-002 — Editar Producto
 - **Prioridad**: Alta

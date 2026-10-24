@@ -44,6 +44,19 @@ public class InventoryServiceImpl implements InventoryFacade {
     @Override
     @Transactional
     public InventoryMovementDto registerMovement(Long productId, String movementType, int quantity, String reason) {
+        return registerMovement(productId, movementType, quantity, reason, true);
+    }
+
+    /**
+     * Igual que {@link #registerMovement(Long, String, int, String)} pero permite no avisar de stock bajo.
+     * La importación masiva lo usa con {@code alertLowStock = false}: un conteo puede dejar decenas de
+     * productos bajo el mínimo (una ráfaga de correos) y además corre en una transacción que puede revertirse,
+     * mientras que la alerta es asíncrona y saldría igual. Uso interno del módulo (no está en la fachada);
+     * es público para que pase por el proxy transaccional.
+     */
+    @Transactional
+    public InventoryMovementDto registerMovement(Long productId, String movementType, int quantity, String reason,
+                                                 boolean alertLowStock) {
         if (productId == null) {
             throw new IllegalArgumentException("El ID del producto es obligatorio");
         }
@@ -94,7 +107,7 @@ public class InventoryServiceImpl implements InventoryFacade {
         // El stock acaba de cruzar el minimo hacia abajo (antes estaba por encima, ahora no):
         // se avisa una sola vez en el momento en que ocurre, no en cada movimiento subsiguiente
         // mientras siga por debajo.
-        if (newStock <= product.minStock() && previousStock > product.minStock()) {
+        if (alertLowStock && newStock <= product.minStock() && previousStock > product.minStock()) {
             lowStockAlertNotifier.notifyLowStock(requireCurrentStoreId(), product, newStock);
         }
 

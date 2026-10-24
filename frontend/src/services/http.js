@@ -96,6 +96,16 @@ async function parseSuccessBody(response) {
   return text ? JSON.parse(text) : true;
 }
 
+// Error de una respuesta no exitosa. Además del mensaje lleva `status` y el cuerpo en `data`, porque algunos
+// endpoints devuelven detalle útil (p. ej. la vista previa de una importación rechazada con 422).
+async function httpError(response) {
+  const errorData = await response.json().catch(() => ({}));
+  const error = new Error(errorData.message || `Error HTTP ${response.status}`);
+  error.status = response.status;
+  error.data = errorData;
+  return error;
+}
+
 export async function fetchApi(endpoint, options = {}, _retried = false) {
   const headers = {
     'Content-Type': 'application/json',
@@ -129,8 +139,7 @@ export async function fetchApi(endpoint, options = {}, _retried = false) {
   }
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.message || `Error HTTP ${response.status}`);
+    throw await httpError(response);
   }
 
   return await parseSuccessBody(response);
@@ -167,9 +176,36 @@ export async function uploadFileApi(endpoint, formData, options = {}, _retried =
   }
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.message || `Error HTTP ${response.status}`);
+    throw await httpError(response);
   }
 
   return await parseSuccessBody(response);
+}
+
+// Variante de fetchApi para descargar archivos (Excel, etc.): devuelve un Blob en vez de JSON.
+// Comparte el mismo manejo de token/refresh/errores que fetchApi.
+export async function downloadFileApi(endpoint, _retried = false) {
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    headers: authToken ? { Authorization: `Bearer ${authToken}` } : {},
+    credentials: 'include',
+  });
+
+  if (response.status === 401) {
+    if (!_retried) {
+      const refreshed = await refreshAccessToken();
+      if (refreshed) {
+        return downloadFileApi(endpoint, true);
+      }
+    }
+    setAuthToken('');
+    setRefreshToken('');
+    notifySessionExpired();
+    throw new Error('Sesión expirada o credenciales no válidas.');
+  }
+
+  if (!response.ok) {
+    throw await httpError(response);
+  }
+
+  return await response.blob();
 }

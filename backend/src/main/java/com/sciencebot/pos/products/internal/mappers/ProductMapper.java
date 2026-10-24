@@ -48,7 +48,9 @@ public class ProductMapper {
                 product.isActive(),
                 product.getImageUrl(),
                 product.getTaxRate(),
-                product.getUnspscCode()
+                product.getUnspscCode(),
+                product.getCategoryId(),
+                product.getDescription()
         );
     }
 }

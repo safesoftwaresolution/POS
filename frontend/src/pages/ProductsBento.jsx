@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Package, Layers } from 'lucide-react';
+import { Plus, Search, Package, Layers, FileSpreadsheet } from 'lucide-react';
 import { getProductsApi, createProductApi, updateProductApi, deleteProductApi, changeProductStatusApi } from '../services/productsApi';
 import { getCategoriesApi } from '../services/categoriesApi';
 import {
@@ -15,6 +15,7 @@ import { uploadFileApi } from '../services/http';
 import BarcodeModal from '../components/BarcodeModal';
 import ProductTable from '../components/products/ProductTable';
 import ProductFormModal from '../components/products/ProductFormModal';
+import ProductImportModal from '../components/products/ProductImportModal';
 import SubcategoriesPanel from '../components/products/SubcategoriesPanel';
 import SubcategoryModal from '../components/products/SubcategoryModal';
 import { Button, Card, PageHeader } from '../components/ui';
@@ -44,8 +45,11 @@ const TABS = [
 export default function ProductsBento() {
   const { confirm, notify } = useModal();
   const { user } = useAuth();
-  const canManageSubcategories = user?.role === 'ADMINISTRATOR' || user?.role === 'SUPERVISOR';
+  // Mismo criterio que el backend: crear/importar productos y gestionar subcategorías es de ADMINISTRATOR y SUPERVISOR.
+  const canManageProducts = user?.role === 'ADMINISTRATOR' || user?.role === 'SUPERVISOR';
+  const canManageSubcategories = canManageProducts;
   const [activeTab, setActiveTab] = useState('catalog');
+  const [showImportModal, setShowImportModal] = useState(false);
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [subcategories, setSubcategories] = useState([]);
@@ -298,8 +302,11 @@ export default function ProductsBento() {
         title="Productos"
         subtitle="Catálogo y subcategorías de tu tienda en BentoPOS"
         actions={
-          activeTab === 'catalog' ? (
-            <Button icon={Plus} onClick={openCreateModal}>Crear Nuevo Producto</Button>
+          activeTab === 'catalog' && canManageProducts ? (
+            <>
+              <Button variant="outline" icon={FileSpreadsheet} onClick={() => setShowImportModal(true)}>Importar Excel</Button>
+              <Button icon={Plus} onClick={openCreateModal}>Crear Nuevo Producto</Button>
+            </>
           ) : activeTab === 'subcategories' && canManageSubcategories ? (
             <Button icon={Plus} onClick={openCreateSubModal}>Nueva Subcategoría</Button>
           ) : null
@@ -355,7 +362,7 @@ export default function ProductsBento() {
             products={filtered}
             loading={loading}
             canToggleStatus={canManageSubcategories}
-            onCreate={openCreateModal}
+            onCreate={canManageProducts ? openCreateModal : null}
             onEdit={openEditModal}
             onBarcode={setBarcodeProduct}
             onToggleStatus={handleToggleStatus}
@@ -405,6 +412,13 @@ export default function ProductsBento() {
           onCreateSubcategory={handleCreateSubcategory}
           onSubmit={handleSubmitProduct}
           onClose={() => setShowAddModal(false)}
+        />
+      )}
+
+      {showImportModal && (
+        <ProductImportModal
+          onClose={() => setShowImportModal(false)}
+          onImported={() => Promise.all([loadProducts(), loadSubcategories()])}
         />
       )}
 

@@ -18,7 +18,7 @@ export default function ProductTable({
         icon={Package}
         title="No se encontraron productos"
         description="Crea tu primer producto para empezar a registrar ventas"
-        action={<Button size="sm" onClick={onCreate}>+ Registrar Primer Producto</Button>}
+        action={onCreate ? <Button size="sm" onClick={onCreate}>+ Registrar Primer Producto</Button> : null}
       />
     );
   }

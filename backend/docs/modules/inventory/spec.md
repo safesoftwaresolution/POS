@@ -1,8 +1,8 @@
-<!-- spec-version: 1.1 | last-updated: 2026-10-16 -->
+<!-- spec-version: 1.2 | last-updated: 2026-10-24 -->
 # Módulo: Inventario (Inventory)
 
 ## Dependencias
-- **Requiere**: products, users, notifications (alerta de stock bajo), shared/email
+- **Requiere**: products, categories (importación masiva), users, notifications (alerta de stock bajo), shared/email
 - **Requerido por**: sales, purchases, reports
 
 ## Reglas de Negocio
@@ -46,6 +46,22 @@
 - Filtros: productId, movementType, rango de fechas.
 - Mostrar: producto, tipo, cantidad, stock anterior, stock nuevo, usuario, fecha.
 
+### RF-INV-005 — Importación Masiva y Conteo Físico (Excel)
+- **Prioridad**: Alta
+- Implementación: `ProductImportFacade` → `ProductImportServiceImpl` (orquesta), `ProductImportWorkbook` (Apache POI: escribe la plantilla y lee el archivo), `ProductImportRowParser` (convierte celdas). Vive en `inventory` porque este módulo ya depende de `products` y es dueño del kardex.
+- **Plantilla** (`.xlsx`): hoja `Instrucciones`, hoja `Productos` (fila 1 = encabezados) y hoja oculta `Listas` (fuente de los desplegables). Columnas: `Código interno *`, `Nombre *`, `Categoría *` (desplegable con las categorías globales), `Subcategoría`, `Código de barras`, `Precio de compra`, `Precio de venta *`, `IVA %` (0/5/19), `Stock`, `Stock mínimo`, `Descripción`, `Código UNSPSC`. `*` = obligatoria para productos nuevos. Las columnas de código tienen formato texto para que Excel no los pase a notación científica. Con `withProducts=true` la hoja trae los productos activos del local y su stock actual.
+- **Lectura**: las columnas se reconocen por el encabezado (sin importar mayúsculas, tildes, `*` ni orden; con algunos alias). Solo `Código interno` es obligatoria como columna: un archivo de conteo puede traer solo código + stock. Filas vacías se ignoran. Límites: `.xlsx`, ≤ 2 MB, ≤ 5.000 filas. Números en texto aceptan `$`, espacios y separadores (`12.500`, `12.500,50`, `12,500.50`); un separador único seguido de 3 dígitos es de miles. El IVA acepta `19`, `19%` o `0.19` (celda con formato porcentaje).
+- **Reglas por fila** (la llave es `internal_code` exacto dentro del local):
+  - Código nuevo → se crea el producto (stock 0) y, si `Stock` > 0, un movimiento `ENTRY` "Stock inicial (importación masiva)". Defaults: compra 0, IVA 0, stock mínimo 5.
+  - Código existente → se actualizan solo las celdas llenas (vacía = conservar). `Stock` se toma como **conteo físico**: la diferencia contra el stock leído al validar entra como `AJUSTE` (sube) o `SALIDA` (baja) con motivo "Conteo físico (importación masiva)". Vacío = no se toca. Si hubo ventas mientras se importaba, se descuentan del conteo (no se borran).
+  - Primero se actualizan los datos y después el stock: `adjustStockInStore` hace flush del update pendiente antes de su `UPDATE` atómico y la entidad no se vuelve a ensuciar.
+  - Subcategoría inexistente en esa categoría → se crea una vez (aviso en la vista previa). Si cambia la categoría y la subcategoría viene vacía, se quita (aviso).
+  - Errores: obligatorios faltantes, números inválidos o negativos, stock no entero, IVA distinto de 0/5/19, categoría inexistente, código o barcode repetido en el archivo, barcode de otro producto del local, venta < compra (RN-PROD-001, con los valores ya combinados), largos máximos.
+  - Producto existente inactivo → se actualiza y sigue inactivo (aviso).
+  - Acción por fila: `CREATE`, `UPDATE`, `UNCHANGED` (no se llama a `updateProduct`) o `ERROR`.
+- **Todo o nada**: la vista previa no escribe nada. Al importar se vuelve a validar; con una sola fila con error responde 422 con la vista previa y no guarda nada. Si todo está bien se aplica en **una transacción**; si algo falla a mitad (p. ej. stock insuficiente por una venta concurrente) se revierte todo y responde 409 con el número de fila. Reimportar el mismo archivo deja todo `UNCHANGED` y no genera movimientos.
+- **Alertas**: durante la importación no se envía la alerta de stock bajo por producto (RN-INV-003): sería una ráfaga de correos y la alerta asíncrona saldría aunque la transacción se revierta. El resultado informa `lowStockProducts`.
+
 ## API Endpoints
 
 ### POST /api/v1/inventory/movements
@@ -63,6 +79,33 @@
 ### GET /api/v1/inventory/movements
 - **Permisos**: Admin, Supervisor, Vendedor (solo lectura)
 - **Query params**: productId, movementType, dateFrom, dateTo, page, size
+
+### GET /api/v1/inventory/import/template
+- **Permisos**: Admin, Supervisor
+- **Query params**: `withProducts` (default `false`)
+- **Response 200**: archivo `.xlsx` (`attachment`)
+
+### POST /api/v1/inventory/import/preview
+- **Permisos**: Admin, Supervisor
+- **Request**: `multipart/form-data` con `file` (.xlsx)
+- **Response 200** (no guarda nada):
+  ```json
+  { "totalRows": 3, "toCreate": 1, "toUpdate": 1, "unchanged": 0, "withErrors": 1,
+    "rows": [
+      { "rowNumber": 2, "internalCode": "P-0001", "name": "Arroz 500g", "action": "CREATE", "currentStock": null, "newStock": 40, "errors": [], "warnings": [] },
+      { "rowNumber": 3, "internalCode": "P-0002", "name": "Leche", "action": "UPDATE", "currentStock": 10, "newStock": 7, "errors": [], "warnings": [] },
+      { "rowNumber": 4, "internalCode": "P-0003", "name": null, "action": "ERROR", "currentStock": null, "newStock": 0, "errors": ["Nombre es obligatorio para un producto nuevo."], "warnings": [] } ] }
+  ```
+- **Errores**: 400 (no es un .xlsx válido, falta la columna `Código interno`, hoja vacía, > 2 MB o > 5.000 filas), 413 (supera el límite de subida)
+
+### POST /api/v1/inventory/import
+- **Permisos**: Admin, Supervisor
+- **Request**: `multipart/form-data` con `file` (.xlsx)
+- **Response 200**:
+  ```json
+  { "totalRows": 120, "created": 100, "updated": 15, "unchanged": 5, "stockMovements": 110, "subcategoriesCreated": 2, "lowStockProducts": 7 }
+  ```
+- **Errores**: 400 (igual que preview), 409 (algo cambió mientras se importaba; no se guardó nada), 422 (`{ "error", "message", "preview" }`: hay filas con errores; no se guardó nada)
 
 ## Modelo de Datos
 
@@ -87,3 +130,4 @@
 |---|---|---|---|
 | Crear movimiento | ✓ | ✓ | - |
 | Leer historial | ✓ | ✓ | ✓ |
+| Importación masiva / conteo (plantilla, vista previa, importar) | ✓ | ✓ | - |

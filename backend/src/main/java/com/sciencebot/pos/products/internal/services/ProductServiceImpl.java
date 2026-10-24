@@ -21,12 +21,18 @@ import org.springframework.transaction.annotation.Transactional;
 
 import jakarta.persistence.EntityNotFoundException;
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
+import java.util.function.BiFunction;
 
 @Service
 @Transactional(readOnly = true)
 public class ProductServiceImpl implements ProductFacade, CategoryDeleteValidator, CategoryProductCountProvider,
         SubcategoryDeleteValidator, SubcategoryProductCountProvider {
+
+    private static final int LOOKUP_BATCH_SIZE = 500;
 
     private final ProductRepository productRepository;
     private final CategoryFacade categoryFacade;
@@ -82,7 +88,7 @@ public class ProductServiceImpl implements ProductFacade, CategoryDeleteValidato
         Product product = new Product();
         product.setStoreId(storeId);
         product.setInternalCode(command.internalCode().trim());
-        product.setBarcode(command.barcode() != null ? command.barcode().trim() : null);
+        product.setBarcode(normalizeBarcode(command.barcode()));
         product.setName(command.name().trim());
         product.setCategoryId(command.categoryId());
         product.setSubcategoryId(command.subcategoryId());
@@ -128,7 +134,7 @@ public class ProductServiceImpl implements ProductFacade, CategoryDeleteValidato
         product.setPurchasePrice(command.purchasePrice());
         product.setSalePrice(command.salePrice());
         product.setMinStock(command.minStock());
-        product.setBarcode(command.barcode() != null ? command.barcode().trim() : null);
+        product.setBarcode(normalizeBarcode(command.barcode()));
         product.setDescription(command.description() != null ? command.description().trim() : null);
         product.setImageUrl(command.imageUrl() != null ? command.imageUrl().trim() : null);
         if (command.taxRate() != null) {
@@ -182,6 +188,34 @@ public class ProductServiceImpl implements ProductFacade, CategoryDeleteValidato
         Page<Product> page = productRepository.findAll(spec, pageable);
         return page.map(productMapper::toDto);
 
+    }
+
+    @Override
+    public List<ProductDto> findByInternalCodes(Collection<String> internalCodes) {
+        return findInBatches(internalCodes, productRepository::findByStoreIdAndInternalCodeIn);
+    }
+
+    @Override
+    public List<ProductDto> findByBarcodes(Collection<String> barcodes) {
+        return findInBatches(barcodes, productRepository::findByStoreIdAndBarcodeIn);
+    }
+
+    /** Parte la lista en lotes para no armar un IN gigante (la importación masiva puede traer miles de códigos). */
+    private List<ProductDto> findInBatches(Collection<String> values,
+                                           BiFunction<Long, Collection<String>, List<Product>> query) {
+        Long storeId = requireCurrentStoreId();
+        List<String> distinct = values.stream().filter(v -> v != null && !v.isBlank()).distinct().toList();
+        List<ProductDto> result = new ArrayList<>();
+        for (int from = 0; from < distinct.size(); from += LOOKUP_BATCH_SIZE) {
+            List<String> batch = distinct.subList(from, Math.min(from + LOOKUP_BATCH_SIZE, distinct.size()));
+            query.apply(storeId, batch).forEach(product -> result.add(productMapper.toDto(product)));
+        }
+        return result;
+    }
+
+    /** Un código de barras en blanco se guarda como NULL: "" chocaría con UK_products_store_barcode. */
+    private static String normalizeBarcode(String barcode) {
+        return barcode == null || barcode.isBlank() ? null : barcode.trim();
     }
 
     /** Un producto de otro local se trata como inexistente (evita filtrar su existencia). */

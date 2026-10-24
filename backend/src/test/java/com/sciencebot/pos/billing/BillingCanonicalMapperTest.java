@@ -167,7 +167,7 @@ class BillingCanonicalMapperTest {
                 productId, "LAP-01", "770123456", "Laptop HP", "Tecnologia",
                 null, null, BigDecimal.valueOf(2000000.00), BigDecimal.valueOf(2500000.00),
                 5, 1, true, null,
-                BigDecimal.valueOf(19.00), "43211503"
+                BigDecimal.valueOf(19.00), "43211503", null, null
         );
         when(productFacade.getById(productId)).thenReturn(Optional.of(prod));
 

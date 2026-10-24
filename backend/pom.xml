@@ -20,6 +20,7 @@
 		<!-- springdoc 3.1.x se construye contra Spring Boot 4.1; la serie 2.8.x es para Boot 3. -->
 		<springdoc.version>3.1.1</springdoc.version>
 		<awssdk.version>2.56.0</awssdk.version>
+		<poi.version>5.5.1</poi.version>
 		<sonar.coverage.jacoco.xmlReportPaths>${project.basedir}/target/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
 	</properties>
 	<dependencies>
@@ -134,6 +135,12 @@
 		<dependency>
 			<groupId>software.amazon.awssdk</groupId>
 			<artifactId>url-connection-client</artifactId>
+		</dependency>
+		<!-- Plantilla e importacion masiva de productos (.xlsx). Spring Boot no gestiona su version. -->
+		<dependency>
+			<groupId>org.apache.poi</groupId>
+			<artifactId>poi-ooxml</artifactId>
+			<version>${poi.version}</version>
 		</dependency>
 	</dependencies>
 

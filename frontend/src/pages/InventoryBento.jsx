@@ -9,13 +9,16 @@ import {
   RotateCcw,
   RefreshCw,
   Barcode,
-  PackageX
+  PackageX,
+  FileSpreadsheet
 } from 'lucide-react';
 import { getProductsApi } from '../services/productsApi';
 import { createPurchaseApi } from '../services/inventoryApi';
 import { getSuppliersApi } from '../services/suppliersApi';
 import { useModal } from '../context/ModalContext';
+import { useAuth } from '../context/AuthContext';
 import BarcodeModal from '../components/BarcodeModal';
+import ProductImportModal from '../components/products/ProductImportModal';
 import ReturnsBento from './ReturnsBento';
 import SuppliersBento from './SuppliersBento';
 import useAutoRefresh from '../hooks/useAutoRefresh';
@@ -28,6 +31,10 @@ const TABS = [
 
 export default function InventoryBento() {
   const { notify } = useModal();
+  const { user } = useAuth();
+  // El conteo masivo ajusta stock: mismo permiso que los movimientos de inventario en el backend.
+  const canCountStock = user?.role === 'ADMINISTRATOR' || user?.role === 'SUPERVISOR';
+  const [showCountModal, setShowCountModal] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = TABS.some(t => t.id === searchParams.get('tab')) ? searchParams.get('tab') : 'stock';
   const setActiveTab = (tab) => setSearchParams(tab === 'stock' ? {} : { tab }, { replace: true });
@@ -118,18 +125,28 @@ export default function InventoryBento() {
         </div>
 
         {activeTab === 'stock' && (
-          <button
-            onClick={() => {
-              if (productsList.length > 0) {
-                openPurchaseModal(productsList[0]);
-              } else {
-                notify('Debes crear primero un producto en el catálogo.', { danger: false });
-              }
-            }}
-            className="px-4 py-2.5 bg-solid hover:bg-solid-hover text-white rounded-2xl text-xs font-bold flex items-center gap-2 shadow-md shadow-[#0A0A0A]/10 cursor-pointer transition-all"
-          >
-            <Truck className="w-4 h-4" /> Registrar Compra (+Stock)
-          </button>
+          <div className="flex items-center gap-2">
+            {canCountStock && (
+              <button
+                onClick={() => setShowCountModal(true)}
+                className="px-4 py-2.5 border border-line hover:border-line-strong text-ink bg-card rounded-2xl text-xs font-bold flex items-center gap-2 cursor-pointer transition-all"
+              >
+                <FileSpreadsheet className="w-4 h-4" /> Conteo masivo (Excel)
+              </button>
+            )}
+            <button
+              onClick={() => {
+                if (productsList.length > 0) {
+                  openPurchaseModal(productsList[0]);
+                } else {
+                  notify('Debes crear primero un producto en el catálogo.', { danger: false });
+                }
+              }}
+              className="px-4 py-2.5 bg-solid hover:bg-solid-hover text-white rounded-2xl text-xs font-bold flex items-center gap-2 shadow-md shadow-[#0A0A0A]/10 cursor-pointer transition-all"
+            >
+              <Truck className="w-4 h-4" /> Registrar Compra (+Stock)
+            </button>
+          </div>
         )}
       </div>
 
@@ -368,6 +385,10 @@ export default function InventoryBento() {
             </div>
           </form>
         </div>
+      )}
+
+      {showCountModal && (
+        <ProductImportModal mode="count" onClose={() => setShowCountModal(false)} onImported={() => loadInventory()} />
       )}
 
       <BarcodeModal product={barcodeProduct} onClose={() => setBarcodeProduct(null)} />

@@ -16,6 +16,7 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
@@ -181,6 +182,15 @@ public class GlobalExceptionHandler {
         response.put("error", "Method Not Allowed");
         response.put("message", String.format("El método HTTP '%s' no está soportado para este endpoint", ex.getMethod()));
         return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).body(response);
+    }
+
+    /** Archivo por encima de spring.servlet.multipart.max-file-size: sin esto llega al catch-all como un 500. */
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<Map<String, String>> handleMaxUploadSizeExceeded(MaxUploadSizeExceededException ex) {
+        Map<String, String> response = new HashMap<>();
+        response.put("error", "Payload Too Large");
+        response.put("message", "El archivo es demasiado grande para subirlo");
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(response);
     }
 
     /**

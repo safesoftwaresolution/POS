@@ -1,6 +1,6 @@
 {
   "version": "1.5.0",
-  "last_updated": "2026-10-20",
+  "last_updated": "2026-10-24",
   "notes": "Los IDs son únicos y no se reutilizan. FEAT-001..006 son anteriores. FEAT-007..013 se registraron RETROACTIVAMENTE el 2026-10-16: ese trabajo se hizo fuera del protocolo Leader→Implementer→Reviewer→Committer (ver progress/history.md). Ojo: las entradas más antiguas de history.md rotuladas 'FEAT-004 — Módulos Auth y Users' (2026-07-09) corresponden a una tarea previa a la renumeración; el FEAT-004 vigente es la formalización de Billing.",
   "features": [
     {
@@ -377,6 +377,21 @@
       "status": "pending",
       "assigned_to": null,
       "notes": "Salió de FEAT-018 el 2026-10-20. No bloquea la integración con Alegra. La rotación solo afecta a los secretos de Factus en BD: el token de Alegra vive en variable de entorno."
+    },
+    {
+      "id": "FEAT-031",
+      "title": "Importación masiva de productos e inventario desde plantilla Excel",
+      "description": "Plantilla .xlsx (vacía o con los productos del local), vista previa por fila y carga 'todo o nada' en inventory (/api/v1/inventory/import): código nuevo crea el producto con stock inicial (ENTRY), código existente actualiza datos y toma Stock como conteo físico (AJUSTE/SALIDA). Apache POI 5.5.1. UI: botón 'Importar Excel' en Productos y 'Conteo masivo (Excel)' en Inventario. Spec: modules/inventory/spec.md RF-INV-005.",
+      "acceptance_criteria": [
+        "Con una fila inválida no se guarda nada (422 con la vista previa)",
+        "El stock final de un producto actualizado y contado en la misma fila es exactamente el contado",
+        "Reimportar el mismo archivo no crea productos ni movimientos",
+        "SELLER y SUPER_ADMIN reciben 403 en los tres endpoints"
+      ],
+      "status": "done",
+      "assigned_to": null,
+      "completed_at": "2026-10-24",
+      "notes": "Hecho con Claude Code fuera del protocolo Leader→Implementer→Reviewer→Committer. Pendientes señalados en _roadmap.md: importar CSV, UNIQUE globales de V1 en PostgreSQL y el rollback-only del InventoryMapper."
     }
   ]
 }

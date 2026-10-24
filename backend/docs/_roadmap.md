@@ -1,4 +1,4 @@
-<!-- doc-version: 1.4 | last-updated: 2026-10-16 -->
+<!-- doc-version: 1.5 | last-updated: 2026-10-24 -->
 # Roadmap y Estado por Módulo
 
 Este documento complementa los `spec.md` de cada módulo (que describen el comportamiento *actual*). Aquí se registra lo que **falta**, la **deuda técnica** conocida y las **próximas ideas**, para que quede como referencia entre sesiones de trabajo.
@@ -10,8 +10,8 @@ Este documento complementa los `spec.md` de cada módulo (que describen el compo
 | auth | JWT access+refresh con rotación y ventana de gracia, auto-registro con verificación de correo (V7), reenvío de verificación y recuperación de contraseña por correo (V19) | Lockout en memoria; sin rate limiting; logout exige token válido; sin caducidad absoluta de sesión; sin `SecurityConfig` test por rol | 2FA opcional para ADMIN |
 | users | CRUD por local, `SUPER_ADMIN` no asignable por el local, seed de superadmin solo con `SEED_SUPERADMIN_PASSWORD`, tope de usuarios activos por plan (V22, RN-USER-005) | Listado solo de activos (no se puede reactivar); sin protección del último `SUPER_ADMIN`; no se revocan sesiones al cambiar clave; `PATCH …/password` sin `@PreAuthorize` | Invitación de usuarios por correo |
 | categories | Catálogo global + subcategorías por local (V12) | — | Íconos/colores por categoría |
-| products | CRUD por local, barcode/código únicos por local, stock con `UPDATE` atómico (`adjustStock`) | `updatePurchasePrice` rechaza costo > precio de venta | Carga masiva por CSV/Excel |
-| inventory | Kardex, alerta de stock bajo (notificación + correo) | Tipos de movimiento sin enum (`ENTRY`/`ENTRADA`); `AJUSTE` solo suma; alerta antes del commit | Conteo físico con motivo |
+| products | CRUD por local, barcode/código únicos por local, stock con `UPDATE` atómico (`adjustStock`), carga masiva por Excel (vía `inventory`, RF-INV-005) | `updatePurchasePrice` rechaza costo > precio de venta; en PostgreSQL podrían seguir vivos los `UNIQUE` globales en línea de V1 (`products_internal_code_key`/`products_barcode_key`; V9 solo borra `UK_products_*`), igual en `customers.identification` y `suppliers.tax_id`: verificar con `\d products` | Importar también desde CSV |
+| inventory | Kardex, alerta de stock bajo (notificación + correo), importación masiva y conteo físico desde Excel con vista previa y "todo o nada" (RF-INV-005) | Tipos de movimiento sin enum (`ENTRY`/`ENTRADA`); `AJUSTE` solo suma; alerta antes del commit; `InventoryMapper` atrapa el `EntityNotFoundException` de `UserFacade.getById` pero la transacción ya quedó marcada para rollback (con el fallback `orElse(1L)` y sin ese usuario, el movimiento falla con `UnexpectedRollbackException`) | Conteo por cámara/escáner en el móvil |
 | purchases | Compras a proveedor, sube stock, idempotencia | — | Órdenes de compra sugeridas por stock bajo |
 | sales | Multi-método de pago, devoluciones, multi-tenant, idempotencia, evento `SaleCompletedEvent` | Método de pago no validado contra el catálogo; stock insuficiente responde 400 (no 409); falta filtro por vendedor; fallback `orElse(1L)` de usuario | Venta a crédito/fiado |
 | customers | CRUD por local, "Cliente General" por local | — | Historial de compras por cliente |
@@ -91,4 +91,4 @@ Una revisión del arnés, los specs y el código encontró desajustes. **Ya corr
 7. **Envío de tiquete por WhatsApp/correo** al cliente tras la venta.
 8. **Modo offline / PWA** (impacto alto, esfuerzo alto: cola local y conflictos con el descuento de stock).
 9. **Reportes de rentabilidad por categoría** (`/profitability` ya existe por producto).
-10. **Carga masiva de productos** por CSV/Excel.
+10. **Carga masiva de productos** — *Implementada 2026-10-24* desde Excel (.xlsx) con plantilla, vista previa y conteo físico (`inventory`, RF-INV-005). Falta CSV.

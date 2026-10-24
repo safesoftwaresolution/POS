@@ -8,7 +8,8 @@ import {
   Users,
   FileText,
   FileCheck2,
-  BarChart3,
+  Receipt,
+  Wallet,
   Settings,
   UserCog,
   HelpCircle,
@@ -79,6 +80,8 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
       title: 'Operación',
       items: [
         { path: '/pos', label: 'Punto de Venta', icon: ShoppingCart },
+        { path: '/sales', label: 'Ventas', icon: Receipt },
+        ...(user?.role === 'ADMINISTRATOR' ? [{ path: '/cash', label: 'Caja', icon: Wallet }] : []),
         { path: '/products', label: 'Productos', icon: Tag },
         { path: '/inventory', label: 'Inventario', icon: Package, badge: lowStockCount > 0 ? lowStockCount : undefined },
       ],
@@ -91,10 +94,6 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
         ...(user?.role === 'ADMINISTRATOR' ? [{ path: '/documents', label: 'Documentos', icon: FileCheck2 }] : []),
       ],
     },
-    ...(user?.role !== 'SELLER' ? [{
-      title: 'Análisis',
-      items: [{ path: '/reports', label: 'Reportes', icon: BarChart3 }],
-    }] : []),
     {
       title: 'Sistema',
       items: [

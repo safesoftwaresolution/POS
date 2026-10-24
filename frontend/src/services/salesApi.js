@@ -5,6 +5,21 @@ export async function getSalesApi(page = 0, size = 20) {
   return data.content || data || [];
 }
 
+/**
+ * Búsqueda paginada de ventas del local. `dateFrom`/`dateTo` son ISO con hora (`2026-10-24T00:00:00`).
+ * Devuelve la página completa de Spring: `{ content, totalElements, totalPages, number }`.
+ */
+export async function searchSalesApi({ dateFrom, dateTo, customerId, page = 0, size = 20 } = {}) {
+  const params = new URLSearchParams({ page: String(page), size: String(size) });
+  if (dateFrom) params.set('dateFrom', dateFrom);
+  if (dateTo) params.set('dateTo', dateTo);
+  if (customerId) params.set('customerId', String(customerId));
+  const data = await fetchApi(`/sales?${params.toString()}`);
+  return Array.isArray(data)
+    ? { content: data, totalElements: data.length, totalPages: 1, number: 0 }
+    : data;
+}
+
 export async function getSaleByIdApi(id) {
   return await fetchApi(`/sales/${id}`);
 }

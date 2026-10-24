@@ -34,14 +34,15 @@ function formatHeaderDate(date) {
 }
 
 const PAGE_TITLES = {
-  '/': { title: 'Dashboard', subtitle: 'Resumen en tiempo real de tu negocio' },
+  '/': { title: 'Dashboard', subtitle: 'Resumen y analíticas de tu negocio' },
   '/pos': { title: 'Punto de Venta', subtitle: 'Registra ventas, escanea productos y cobra' },
   '/products': { title: 'Productos', subtitle: 'Catálogo, precios y subcategorías' },
   '/inventory': { title: 'Inventario', subtitle: 'Stock, devoluciones y proveedores' },
   '/customers': { title: 'Clientes', subtitle: 'Base de datos de clientes frecuentes' },
   '/invoicing': { title: 'Facturación DIAN', subtitle: 'Facturas electrónicas y su estado ante la DIAN' },
   '/documents': { title: 'Documentos', subtitle: 'Documentos legales de tu tienda' },
-  '/reports': { title: 'Reportes', subtitle: 'Rendimiento de ventas y compras' },
+  '/sales': { title: 'Ventas', subtitle: 'Historial de todas las ventas de tu local' },
+  '/cash': { title: 'Caja', subtitle: 'Arqueo y recaudo por cajero y método de pago' },
   '/users': { title: 'Usuarios', subtitle: 'Personal con acceso a tu local y sus permisos' },
   '/settings': { title: 'Configuración', subtitle: 'Preferencias y datos de tu negocio' },
 };

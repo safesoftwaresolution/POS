@@ -93,7 +93,17 @@ async function refreshAccessToken() {
 async function parseSuccessBody(response) {
   if (response.status === 204) return true;
   const text = await response.text();
-  return text ? JSON.parse(text) : true;
+  return text ? hoistPageMeta(JSON.parse(text)) : true;
+}
+
+// Spring Boot 4 serializa una Page como `{ content, page: { size, number, totalElements, totalPages } }`;
+// el frontend lee `totalElements`/`totalPages` en la raíz, así que se suben aquí, en un solo sitio.
+function hoistPageMeta(data) {
+  if (data && Array.isArray(data.content) && data.page && typeof data.page === 'object' && data.totalPages === undefined) {
+    const { size, number, totalElements, totalPages } = data.page;
+    return { ...data, size, number, totalElements, totalPages };
+  }
+  return data;
 }
 
 // Error de una respuesta no exitosa. Además del mensaje lleva `status` y el cuerpo en `data`, porque algunos

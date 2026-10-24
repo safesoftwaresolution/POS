@@ -77,7 +77,7 @@ export default function InstallPrompt() {
 
   return (
     <>
-      <div className="fixed left-3 right-3 bottom-3 z-120 max-w-md mx-auto flex items-center gap-3 p-3 rounded-2xl bg-solid text-white shadow-2xl lg:hidden" role="dialog" aria-label="Instalar BentoPOS">
+      <div className="fixed left-3 right-3 bottom-3 z-120 max-w-md mx-auto flex items-center gap-3 p-3 rounded-2xl bg-solid text-white shadow-2xl" role="dialog" aria-label="Instalar BentoPOS">
         <img src="/icons/icon-192.png" alt="" className="w-11 h-11 rounded-xl shrink-0" />
         <div className="flex-1 min-w-0">
           <p className="text-sm font-extrabold">Instala BentoPOS</p>

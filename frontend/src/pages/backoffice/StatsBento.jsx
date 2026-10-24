@@ -4,6 +4,7 @@ import {
   PieChart, BarChart3, FileText,
 } from 'lucide-react';
 import { getBackofficeStatsOverviewApi } from '../../services/backoffice/statsApi';
+import useAutoRefresh from '../../hooks/useAutoRefresh';
 
 const money = (n) => `$${Math.round(Number(n) || 0).toLocaleString('es-CO')}`;
 // Importes grandes en formato corto para las etiquetas de las barras (1,2 M).
@@ -181,17 +182,19 @@ export default function StatsBento() {
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
 
-  useEffect(() => {
-    (async () => {
-      try {
-        setStats(await getBackofficeStatsOverviewApi());
-      } catch (e) {
-        setErrorMsg(e.message || 'No se pudieron cargar las estadísticas.');
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, []);
+  const load = async ({ silent = false } = {}) => {
+    try {
+      setStats(await getBackofficeStatsOverviewApi());
+      setErrorMsg('');
+    } catch (e) {
+      if (!silent) setErrorMsg(e.message || 'No se pudieron cargar las estadísticas.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { load(); }, []);
+  useAutoRefresh(() => load({ silent: true }));
 
   const k = stats?.kpis;
 

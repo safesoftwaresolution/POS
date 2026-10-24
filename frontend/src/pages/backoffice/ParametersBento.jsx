@@ -9,6 +9,7 @@ import {
   deactivateParameterValueApi
 } from '../../services/parametersApi';
 import { useModal } from '../../context/ModalContext';
+import useAutoRefresh from '../../hooks/useAutoRefresh';
 
 const EMPTY_TOPIC_FORM = { code: '', name: '', description: '' };
 const EMPTY_VALUE_FORM = { id: null, code: '', label: '', extraValue: '', sortOrder: 0 };
@@ -29,31 +30,36 @@ export default function ParametersBento() {
   const [valueForm, setValueForm] = useState(EMPTY_VALUE_FORM);
   const [valueError, setValueError] = useState('');
 
-  const loadTopics = useCallback(async () => {
-    setLoadingTopics(true);
+  const loadTopics = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) setLoadingTopics(true);
     try {
       setTopics(await getParameterTopicsApi());
     } catch (e) {
       console.warn('Error cargando temas de parámetros:', e);
-      setTopics([]);
+      if (!silent) setTopics([]);
     } finally {
-      setLoadingTopics(false);
+      if (!silent) setLoadingTopics(false);
     }
   }, []);
 
   useEffect(() => { loadTopics(); }, [loadTopics]);
 
-  const loadValues = useCallback(async (topicCode) => {
-    setLoadingValues(true);
+  const loadValues = useCallback(async (topicCode, { silent = false } = {}) => {
+    if (!silent) setLoadingValues(true);
     try {
       setValues(await getParameterValuesApi(topicCode));
     } catch (e) {
       console.warn('Error cargando valores del tema:', e);
-      setValues([]);
+      if (!silent) setValues([]);
     } finally {
-      setLoadingValues(false);
+      if (!silent) setLoadingValues(false);
     }
   }, []);
+
+  useAutoRefresh(() => Promise.all([
+    loadTopics({ silent: true }),
+    selectedTopic ? loadValues(selectedTopic.code, { silent: true }) : null,
+  ]));
 
   const selectTopic = (topic) => {
     setSelectedTopic(topic);
@@ -221,8 +227,8 @@ export default function ParametersBento() {
               ) : values.length === 0 ? (
                 <div className="py-8 text-center text-xs font-bold text-ink-muted">Este tema aún no tiene valores</div>
               ) : (
-                <div className="overflow-x-auto -mx-2">
-                  <table className="w-full text-xs min-w-[480px]">
+                <div className="md:overflow-x-auto md:-mx-2">
+                  <table className="table-cards w-full text-xs min-w-[480px]">
                     <thead>
                       <tr className="text-left text-[10px] font-extrabold text-ink-muted uppercase">
                         <th className="px-2 py-2">Código</th>
@@ -235,10 +241,10 @@ export default function ParametersBento() {
                     <tbody>
                       {values.map(v => (
                         <tr key={v.id} className="border-t border-line">
-                          <td className="px-2 py-3 font-mono font-bold text-ink-soft">{v.code}</td>
-                          <td className="px-2 py-3 font-extrabold text-ink">{v.label}</td>
-                          <td className="px-2 py-3 text-ink-soft">{v.extraValue || '—'}</td>
-                          <td className="px-2 py-3 text-center">
+                          <td data-label="" className="px-2 py-3 font-mono font-bold text-ink-soft">{v.code}</td>
+                          <td data-label="Etiqueta" className="px-2 py-3 font-extrabold text-ink">{v.label}</td>
+                          <td data-label="Dato extra" className="px-2 py-3 text-ink-soft">{v.extraValue || '—'}</td>
+                          <td data-label="Estado" className="px-2 py-3 text-center">
                             <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
                               v.active
                                 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
@@ -247,7 +253,7 @@ export default function ParametersBento() {
                               {v.active ? 'Activo' : 'Inactivo'}
                             </span>
                           </td>
-                          <td className="px-2 py-3 text-right space-x-1">
+                          <td data-label="Acciones" className="px-2 py-3 text-right space-x-1">
                             <button
                               onClick={() => openEditValue(v)}
                               title="Editar valor"

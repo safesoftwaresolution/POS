@@ -13,6 +13,7 @@ import { getCategoriesApi } from '../services/categoriesApi';
 import { getParameterValuesApi } from '../services/parametersApi';
 import { newIdempotencyKey } from '../services/http';
 import { useModal } from '../context/ModalContext';
+import useAutoRefresh from '../hooks/useAutoRefresh';
 
 export default function POSBento() {
   const { notify } = useModal();
@@ -110,6 +111,14 @@ export default function POSBento() {
   useEffect(() => {
     loadData();
   }, []);
+
+  // Stock y precios al día sin tocar el carrito ni el cliente elegido.
+  useAutoRefresh(async () => {
+    try {
+      const prods = await getProductsApi();
+      if (Array.isArray(prods)) setProductsList(prods);
+    } catch { /* se reintenta en el siguiente ciclo */ }
+  });
 
   // El lector de código de barras funciona como teclado: mantiene el foco en este campo
   // para que escanear (sin hacer click en nada) funcione en cualquier momento del flujo.

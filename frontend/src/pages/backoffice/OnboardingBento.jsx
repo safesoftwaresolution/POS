@@ -167,8 +167,8 @@ export default function OnboardingBento() {
         ) : pendingUsers.length === 0 ? (
           <div className="py-8 text-center text-xs font-bold text-ink-muted">No hay usuarios pendientes de verificar</div>
         ) : (
-          <div className="overflow-x-auto -mx-2">
-            <table className="w-full text-xs min-w-[560px]">
+          <div className="md:overflow-x-auto md:-mx-2">
+            <table className="table-cards w-full text-xs min-w-[560px]">
               <thead>
                 <tr className="text-left text-[10px] font-extrabold text-ink-muted uppercase">
                   <th className="px-2 py-2">Nombre</th>
@@ -180,14 +180,14 @@ export default function OnboardingBento() {
               <tbody>
                 {pendingUsers.map(u => (
                   <tr key={u.id} className="border-t border-line">
-                    <td className="px-2 py-3 font-extrabold text-ink">{u.fullName}</td>
-                    <td className="px-2 py-3 text-ink-soft font-semibold">{u.username}</td>
-                    <td className="px-2 py-3">
+                    <td data-label="" className="px-2 py-3 font-extrabold text-ink">{u.fullName}</td>
+                    <td data-label="Usuario" className="px-2 py-3 text-ink-soft font-semibold">{u.username}</td>
+                    <td data-label="Correo" className="px-2 py-3">
                       <span className="flex items-center gap-1.5 font-semibold text-gray-600 dark:text-gray-300">
                         <Mail className="w-3.5 h-3.5 text-ink-muted" /> {u.email}
                       </span>
                     </td>
-                    <td className="px-2 py-3 text-right">
+                    <td data-label="Acciones" className="px-2 py-3 text-right">
                       <button
                         onClick={() => handleResend(u)}
                         disabled={resendingId === u.id}
@@ -220,8 +220,8 @@ export default function OnboardingBento() {
         ) : verifiedUsers.length === 0 ? (
           <div className="py-8 text-center text-xs font-bold text-ink-muted">Aún no hay usuarios verificados</div>
         ) : (
-          <div className="overflow-x-auto -mx-2">
-            <table className="w-full text-xs min-w-[560px]">
+          <div className="md:overflow-x-auto md:-mx-2">
+            <table className="table-cards w-full text-xs min-w-[560px]">
               <thead>
                 <tr className="text-left text-[10px] font-extrabold text-ink-muted uppercase">
                   <th className="px-2 py-2">Nombre</th>
@@ -233,14 +233,14 @@ export default function OnboardingBento() {
               <tbody>
                 {verifiedUsers.map(u => (
                   <tr key={u.id} className="border-t border-line">
-                    <td className="px-2 py-3 font-extrabold text-ink">{u.fullName}</td>
-                    <td className="px-2 py-3 text-ink-soft font-semibold">{u.username}</td>
-                    <td className="px-2 py-3">
+                    <td data-label="" className="px-2 py-3 font-extrabold text-ink">{u.fullName}</td>
+                    <td data-label="Usuario" className="px-2 py-3 text-ink-soft font-semibold">{u.username}</td>
+                    <td data-label="Correo" className="px-2 py-3">
                       <span className="flex items-center gap-1.5 font-semibold text-gray-600 dark:text-gray-300">
                         <Mail className="w-3.5 h-3.5 text-ink-muted" /> {u.email}
                       </span>
                     </td>
-                    <td className="px-2 py-3">
+                    <td data-label="Local" className="px-2 py-3">
                       {u.storeId ? (
                         <span className="text-emerald-600 dark:text-emerald-400 font-bold">Con local registrado</span>
                       ) : (
@@ -265,8 +265,8 @@ export default function OnboardingBento() {
         ) : pendingStores.length === 0 ? (
           <div className="py-8 text-center text-xs font-bold text-ink-muted">No hay locales pendientes</div>
         ) : (
-          <div className="overflow-x-auto -mx-2">
-            <table className="w-full text-xs min-w-[680px]">
+          <div className="md:overflow-x-auto md:-mx-2">
+            <table className="table-cards w-full text-xs min-w-[680px]">
               <thead>
                 <tr className="text-left text-[10px] font-extrabold text-ink-muted uppercase">
                   <th className="px-2 py-2">Local</th>
@@ -277,16 +277,16 @@ export default function OnboardingBento() {
               <tbody>
                 {pendingStores.map(s => (
                   <tr key={s.id} className="border-t border-line">
-                    <td className="px-2 py-3">
+                    <td data-label="" className="px-2 py-3">
                       <p className="font-extrabold text-ink">{s.name}</p>
                       <p className="text-[10px] text-ink-muted font-mono">NIT: {s.taxId || '—'}</p>
                     </td>
-                    <td className="px-2 py-3">
+                    <td data-label="Contacto" className="px-2 py-3">
                       <span className="flex items-center gap-1.5 font-semibold text-gray-600 dark:text-gray-300">
                         <Mail className="w-3.5 h-3.5 text-ink-muted" /> {s.email}
                       </span>
                     </td>
-                    <td className="px-2 py-3 text-right space-x-2">
+                    <td data-label="Acciones" className="px-2 py-3 text-right space-x-2">
                       <button
                         onClick={() => handleApprove(s)}
                         className="px-3 py-1.5 bg-solid hover:bg-solid-hover text-white rounded-xl text-[11px] font-bold inline-flex items-center gap-1 cursor-pointer shadow-sm shadow-[#0A0A0A]/10"
@@ -318,8 +318,8 @@ export default function OnboardingBento() {
         ) : rejectedStores.length === 0 ? (
           <div className="py-8 text-center text-xs font-bold text-ink-muted">No hay locales rechazados</div>
         ) : (
-          <div className="overflow-x-auto -mx-2">
-            <table className="w-full text-xs min-w-[680px]">
+          <div className="md:overflow-x-auto md:-mx-2">
+            <table className="table-cards w-full text-xs min-w-[680px]">
               <thead>
                 <tr className="text-left text-[10px] font-extrabold text-ink-muted uppercase">
                   <th className="px-2 py-2">Local</th>
@@ -331,17 +331,17 @@ export default function OnboardingBento() {
               <tbody>
                 {rejectedStores.map(s => (
                   <tr key={s.id} className="border-t border-line">
-                    <td className="px-2 py-3">
+                    <td data-label="" className="px-2 py-3">
                       <p className="font-extrabold text-ink">{s.name}</p>
                       <p className="text-[10px] text-ink-muted font-mono">NIT: {s.taxId || '—'}</p>
                     </td>
-                    <td className="px-2 py-3">
+                    <td data-label="Contacto" className="px-2 py-3">
                       <span className="flex items-center gap-1.5 font-semibold text-gray-600 dark:text-gray-300">
                         <Mail className="w-3.5 h-3.5 text-ink-muted" /> {s.email}
                       </span>
                     </td>
-                    <td className="px-2 py-3 text-ink-soft">{s.rejectionReason || '—'}</td>
-                    <td className="px-2 py-3 text-right">
+                    <td data-label="Motivo del rechazo" className="px-2 py-3 text-ink-soft">{s.rejectionReason || '—'}</td>
+                    <td data-label="Acciones" className="px-2 py-3 text-right">
                       <button
                         onClick={() => setDeleting({ kind: 'store', item: s })}
                         className="px-3 py-1.5 bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400 rounded-xl text-[11px] font-bold inline-flex items-center gap-1 cursor-pointer"

@@ -18,6 +18,7 @@ import ProductFormModal from '../components/products/ProductFormModal';
 import SubcategoriesPanel from '../components/products/SubcategoriesPanel';
 import SubcategoryModal from '../components/products/SubcategoryModal';
 import { Button, Card, PageHeader } from '../components/ui';
+import useAutoRefresh from '../hooks/useAutoRefresh';
 
 const EMPTY_PRODUCT = {
   id: null,
@@ -63,16 +64,16 @@ export default function ProductsBento() {
   const [subForm, setSubForm] = useState(EMPTY_SUBCATEGORY);
   const [subErrorMsg, setSubErrorMsg] = useState('');
 
-  const loadProducts = async (inactive = showInactive) => {
-    setLoading(true);
+  const loadProducts = async (inactive = showInactive, { silent = false } = {}) => {
+    if (!silent) setLoading(true);
     try {
       const data = await getProductsApi('', null, 0, 50, !inactive);
       setProducts(Array.isArray(data) ? data : []);
     } catch (e) {
       console.warn('Error cargando productos:', e);
-      setProducts([]);
+      if (!silent) setProducts([]);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
@@ -99,6 +100,7 @@ export default function ProductsBento() {
     loadCategories();
     loadSubcategories();
   }, []);
+  useAutoRefresh(() => Promise.all([loadProducts(showInactive, { silent: true }), loadCategories(), loadSubcategories()]));
 
   const subcategoriesForSelectedCategory = subcategories.filter(
     sub => String(sub.categoryId) === String(newProduct.categoryId)

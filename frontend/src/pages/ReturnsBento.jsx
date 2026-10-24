@@ -9,6 +9,7 @@ import {
   X,
 } from 'lucide-react';
 import { getSalesApi, getSaleReturnsApi, createSaleReturnApi } from '../services/salesApi';
+import useAutoRefresh from '../hooks/useAutoRefresh';
 
 const money = (n) => `$${Math.round(n || 0).toLocaleString('es-CO')}`;
 const dateFmt = (iso) => (iso ? new Date(iso).toLocaleString('es-CO', { dateStyle: 'medium', timeStyle: 'short' }) : '—');
@@ -26,22 +27,23 @@ export default function ReturnsBento() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  const loadSales = async () => {
-    setLoading(true);
+  const loadSales = async ({ silent = false } = {}) => {
+    if (!silent) setLoading(true);
     try {
       const data = await getSalesApi(0, 50);
       setSales(Array.isArray(data) ? data : []);
     } catch (e) {
       console.warn('Error cargando ventas:', e);
-      setSales([]);
+      if (!silent) setSales([]);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
   useEffect(() => {
     loadSales();
   }, []);
+  useAutoRefresh(() => loadSales({ silent: true }));
 
   const filtered = sales.filter((s) =>
     (s.invoiceNumber && s.invoiceNumber.toLowerCase().includes(search.toLowerCase())) ||
@@ -202,7 +204,7 @@ export default function ReturnsBento() {
               )}
 
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
+                <table className="table-cards w-full text-left text-xs">
                   <thead>
                     <tr className="border-b border-line text-ink-muted uppercase tracking-wider font-extrabold text-[10px]">
                       <th className="py-2 px-2">Producto</th>
@@ -216,10 +218,10 @@ export default function ReturnsBento() {
                       const returnable = returnableFor(item);
                       return (
                         <tr key={item.id}>
-                          <td className="py-2.5 px-2 font-bold text-ink">{item.productName}</td>
-                          <td className="py-2.5 px-2 text-center tabular-nums">{item.quantity}</td>
-                          <td className="py-2.5 px-2 text-center tabular-nums text-ink-soft">{returnable}</td>
-                          <td className="py-2.5 px-2 text-center">
+                          <td data-label="" className="py-2.5 px-2 font-bold text-ink">{item.productName}</td>
+                          <td data-label="Vendido" className="py-2.5 px-2 text-center tabular-nums">{item.quantity}</td>
+                          <td data-label="Disponible" className="py-2.5 px-2 text-center tabular-nums text-ink-soft">{returnable}</td>
+                          <td data-label="A devolver" className="py-2.5 px-2 text-center">
                             <input
                               type="number"
                               min="0"

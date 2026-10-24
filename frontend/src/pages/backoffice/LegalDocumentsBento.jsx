@@ -8,6 +8,7 @@ import {
   toggleBackofficeLegalDocumentPublishApi
 } from '../../services/backoffice/legalApi';
 import { useModal } from '../../context/ModalContext';
+import useAutoRefresh from '../../hooks/useAutoRefresh';
 
 const EMPTY_FORM = { id: null, slug: '', title: '', content: '', version: '' };
 
@@ -20,19 +21,20 @@ export default function LegalDocumentsBento() {
   const [errorMsg, setErrorMsg] = useState('');
   const [showForm, setShowForm] = useState(false);
 
-  const loadDocuments = useCallback(async () => {
-    setLoading(true);
+  const loadDocuments = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) setLoading(true);
     try {
       setDocuments(await getBackofficeLegalDocumentsApi());
     } catch (e) {
       console.warn('Error cargando documentos legales:', e);
-      setDocuments([]);
+      if (!silent) setDocuments([]);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, []);
 
   useEffect(() => { loadDocuments(); }, [loadDocuments]);
+  useAutoRefresh(() => loadDocuments({ silent: true }));
 
   const openCreate = () => {
     setForm(EMPTY_FORM);
@@ -128,8 +130,8 @@ export default function LegalDocumentsBento() {
             </div>
           </div>
         ) : (
-          <div className="overflow-x-auto -mx-2">
-            <table className="w-full text-xs min-w-[720px]">
+          <div className="md:overflow-x-auto md:-mx-2">
+            <table className="table-cards w-full text-xs min-w-[720px]">
               <thead>
                 <tr className="text-left text-[10px] font-extrabold text-ink-muted uppercase">
                   <th className="px-2 py-2">Documento</th>
@@ -142,13 +144,13 @@ export default function LegalDocumentsBento() {
               <tbody>
                 {documents.map(doc => (
                   <tr key={doc.id} className="border-t border-line hover:bg-gray-50/60 dark:hover:bg-white/5">
-                    <td className="px-2 py-3">
+                    <td data-label="" className="px-2 py-3">
                       <p className="font-extrabold text-ink">{doc.title}</p>
                       <p className="text-[10px] text-ink-muted">Actualizado: {doc.updatedAt ? new Date(doc.updatedAt).toLocaleDateString() : '—'}</p>
                     </td>
-                    <td className="px-2 py-3 text-ink-soft font-mono">{doc.slug}</td>
-                    <td className="px-2 py-3 text-ink-soft font-semibold">{doc.version || '—'}</td>
-                    <td className="px-2 py-3">
+                    <td data-label="Slug" className="px-2 py-3 text-ink-soft font-mono">{doc.slug}</td>
+                    <td data-label="Versión" className="px-2 py-3 text-ink-soft font-semibold">{doc.version || '—'}</td>
+                    <td data-label="Estado" className="px-2 py-3">
                       <span className={`text-[10px] px-2 py-0.5 rounded-full font-extrabold ${
                         doc.published
                           ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
@@ -157,7 +159,7 @@ export default function LegalDocumentsBento() {
                         {doc.published ? 'Publicado' : 'Borrador'}
                       </span>
                     </td>
-                    <td className="px-2 py-3">
+                    <td data-label="Acciones" className="px-2 py-3">
                       <div className="flex items-center justify-end gap-1">
                         <button
                           onClick={() => handleTogglePublish(doc)}

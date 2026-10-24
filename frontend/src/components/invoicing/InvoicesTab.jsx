@@ -9,6 +9,7 @@ import {
   downloadInvoiceXmlApi
 } from '../../services/billingApi';
 import { deliverBlob } from '../../utils/downloadBlob';
+import useAutoRefresh from '../../hooks/useAutoRefresh';
 import { useModal } from '../../context/ModalContext';
 import { INVOICE_STATUSES, INVOICE_STATUS_LABELS, INVOICE_STATUS_STYLES, FIELD_CLASS, formatDateTime } from './constants';
 
@@ -27,19 +28,20 @@ export default function InvoicesTab({ role, refreshKey, onChanged }) {
   const [detail, setDetail] = useState(null);
   const [copiedId, setCopiedId] = useState(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) setLoading(true);
     try {
       setData(await listInvoicesApi(statusFilter, page, 20));
     } catch (e) {
       console.warn('Error cargando facturas:', e);
-      setData({ content: [], totalPages: 0 });
+      if (!silent) setData({ content: [], totalPages: 0 });
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [statusFilter, page]);
 
   useEffect(() => { load(); }, [load, refreshKey]);
+  useAutoRefresh(() => load({ silent: true }));
 
   const handleRetry = async (invoice) => {
     setRetrying(invoice.saleId);
@@ -159,7 +161,7 @@ export default function InvoicesTab({ role, refreshKey, onChanged }) {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs min-w-[760px]">
+            <table className="table-cards w-full text-left text-xs min-w-[760px]">
               <thead>
                 <tr className="border-b border-line bg-gray-50/70 dark:bg-white/[0.03] text-[10px] font-extrabold uppercase tracking-wider text-ink-muted">
                   <th className="py-3.5 px-5">Factura</th>
@@ -174,18 +176,18 @@ export default function InvoicesTab({ role, refreshKey, onChanged }) {
                   const validated = inv.status === 'VALIDATED';
                   return (
                     <tr key={inv.id} className="hover:bg-gray-50/60 dark:hover:bg-white/5">
-                      <td className="py-3.5 px-5">
+                      <td data-label="" className="py-3.5 px-5">
                         <span className="font-mono font-bold text-ink block">{inv.factusNumber || '—'}</span>
                         <span className="text-[10px] text-ink-muted font-mono">Venta #{inv.saleId}</span>
                       </td>
-                      <td className="py-3.5 px-4 text-gray-600 dark:text-gray-300 font-medium">{formatDateTime(inv.validatedAt)}</td>
-                      <td className="py-3.5 px-4">
+                      <td data-label="Validada el" className="py-3.5 px-4 text-gray-600 dark:text-gray-300 font-medium">{formatDateTime(inv.validatedAt)}</td>
+                      <td data-label="Estado DIAN" className="py-3.5 px-4">
                         <span className={`inline-flex items-center gap-1 text-[10px] px-2.5 py-1 rounded-full font-extrabold ${INVOICE_STATUS_STYLES[inv.status] || ''}`}>
                           {validated ? <CheckCircle2 className="w-3 h-3" /> : inv.status === 'PENDING' ? <Clock className="w-3 h-3" /> : <AlertTriangle className="w-3 h-3" />}
                           {INVOICE_STATUS_LABELS[inv.status] || inv.status}
                         </span>
                       </td>
-                      <td className="py-3.5 px-4">
+                      <td data-label="CUFE" className="py-3.5 px-4">
                         {inv.cufe ? (
                           <div className="flex items-center gap-1.5 max-w-[170px]">
                             <span className="font-mono text-[10px] text-ink-soft truncate" title={inv.cufe}>{inv.cufe}</span>
@@ -203,7 +205,7 @@ export default function InvoicesTab({ role, refreshKey, onChanged }) {
                           <span className="text-gray-400">—</span>
                         )}
                       </td>
-                      <td className="py-3.5 px-5">
+                      <td data-label="Acciones" className="py-3.5 px-5">
                         <div className="flex items-center justify-end gap-1.5">
                           {validated && (
                             <>

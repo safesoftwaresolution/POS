@@ -23,6 +23,7 @@ import {
 } from '../../services/backoffice/billingApi';
 import { getBackofficeStoresApi } from '../../services/backoffice/storesApi';
 import { useModal } from '../../context/ModalContext';
+import useAutoRefresh from '../../hooks/useAutoRefresh';
 
 const STATUSES = ['DOCUMENTS_SUBMITTED', 'AWAITING_PROVIDER', 'ACTIVE', 'REJECTED', 'SUSPENDED', 'NOT_REQUESTED'];
 
@@ -89,21 +90,20 @@ export default function BillingBento() {
     }
   }, []);
 
-  const loadRows = useCallback(async () => {
-    setLoading(true);
-    setErrorMsg('');
+  const loadRows = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) { setLoading(true); setErrorMsg(''); }
     try {
       setRows(await listBackofficeBillingByStatusApi(statusFilter));
     } catch (e) {
-      setErrorMsg(e.message || 'Error al cargar el estado de facturación.');
-      setRows([]);
+      if (!silent) { setErrorMsg(e.message || 'Error al cargar el estado de facturación.'); setRows([]); }
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [statusFilter]);
 
   useEffect(() => { loadStores(); }, [loadStores]);
   useEffect(() => { loadRows(); }, [loadRows]);
+  useAutoRefresh(() => Promise.all([loadRows({ silent: true }), loadStores()]));
 
   const openDetail = async (storeId) => {
     setDetailLoading(true);
@@ -236,8 +236,8 @@ export default function BillingBento() {
             <p className="text-xs font-bold text-gray-700 dark:text-gray-300">No hay locales en "{STATUS_LABELS[statusFilter]}"</p>
           </div>
         ) : (
-          <div className="overflow-x-auto -mx-2">
-            <table className="w-full text-xs min-w-[760px]">
+          <div className="md:overflow-x-auto md:-mx-2">
+            <table className="table-cards w-full text-xs min-w-[760px]">
               <thead>
                 <tr className="text-left text-[10px] font-extrabold text-ink-muted uppercase">
                   <th className="px-2 py-2">Local</th>
@@ -251,25 +251,25 @@ export default function BillingBento() {
               <tbody>
                 {rows.map(r => (
                   <tr key={r.storeId} className="border-t border-line hover:bg-gray-50/60 dark:hover:bg-white/5">
-                    <td className="px-2 py-3">
+                    <td data-label="" className="px-2 py-3">
                       <p className="font-extrabold text-ink">{storeName(r.storeId)}</p>
                       <p className="text-[10px] text-ink-muted">{storesById[r.storeId]?.email || '—'}</p>
                     </td>
-                    <td className="px-2 py-3 font-semibold text-gray-600 dark:text-gray-300">{r.environment}</td>
-                    <td className="px-2 py-3 text-center">
+                    <td data-label="Entorno Activo" className="px-2 py-3 font-semibold text-gray-600 dark:text-gray-300">{r.environment}</td>
+                    <td data-label="Sandbox" className="px-2 py-3 text-center">
                       {r.sandboxConfigured
                         ? <CheckCircle2 className="w-4 h-4 text-emerald-500 inline" />
                         : <XCircle className="w-4 h-4 text-gray-300 dark:text-gray-600 inline" />}
                     </td>
-                    <td className="px-2 py-3 text-center">
+                    <td data-label="Producción" className="px-2 py-3 text-center">
                       {r.productionConfigured
                         ? <CheckCircle2 className="w-4 h-4 text-emerald-500 inline" />
                         : <XCircle className="w-4 h-4 text-gray-300 dark:text-gray-600 inline" />}
                     </td>
-                    <td className="px-2 py-3 font-mono text-[11px] text-ink-soft">
+                    <td data-label="Rango Activo (S / P)" className="px-2 py-3 font-mono text-[11px] text-ink-soft">
                       {r.sandboxNumberingRangeId ?? '—'} / {r.productionNumberingRangeId ?? '—'}
                     </td>
-                    <td className="px-2 py-3 text-right">
+                    <td data-label="Acciones" className="px-2 py-3 text-right">
                       <button
                         onClick={() => openDetail(r.storeId)}
                         className="px-3 py-1.5 bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 text-gray-700 dark:text-gray-200 rounded-xl text-[11px] font-bold cursor-pointer"

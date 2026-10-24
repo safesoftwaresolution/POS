@@ -128,8 +128,8 @@ export default function StoreAuditBento() {
         ) : data.content.length === 0 ? (
           <div className="py-8 text-center text-xs font-bold text-ink-muted">No hay registros de auditoría</div>
         ) : (
-          <div className="overflow-x-auto -mx-2">
-            <table className="w-full text-xs min-w-[760px]">
+          <div className="md:overflow-x-auto md:-mx-2">
+            <table className="table-cards w-full text-xs min-w-[760px]">
               <thead>
                 <tr className="text-left text-[10px] font-extrabold text-ink-muted uppercase">
                   <th className="px-2 py-2">Fecha</th>
@@ -142,21 +142,21 @@ export default function StoreAuditBento() {
               <tbody>
                 {data.content.map(row => (
                   <tr key={row.id} className="border-t border-line align-top">
-                    <td className="px-2 py-3 text-ink-soft font-semibold whitespace-nowrap">{formatDate(row.createdAt)}</td>
-                    <td className="px-2 py-3">
+                    <td data-label="" className="px-2 py-3 text-ink-soft font-semibold whitespace-nowrap">{formatDate(row.createdAt)}</td>
+                    <td data-label="Local" className="px-2 py-3">
                       <p className="font-extrabold text-ink">{row.storeName}</p>
                       <p className="text-[10px] text-ink-muted font-mono">NIT: {row.taxId || '—'}</p>
                       <p className="text-[10px] text-ink-muted">{row.storeEmail}</p>
                     </td>
-                    <td className="px-2 py-3">
+                    <td data-label="Cambio" className="px-2 py-3">
                       <span className="inline-flex items-center gap-1.5">
                         {row.previousStatus ? <StatusBadge status={row.previousStatus} /> : <span className="text-ink-muted">—</span>}
                         <ArrowRight className="w-3 h-3 text-ink-muted" />
                         <StatusBadge status={row.newStatus} />
                       </span>
                     </td>
-                    <td className="px-2 py-3 font-semibold text-ink-soft">{row.performedBy || 'No registrado'}</td>
-                    <td className="px-2 py-3 text-ink-soft">{row.reason || '—'}</td>
+                    <td data-label="Realizado por" className="px-2 py-3 font-semibold text-ink-soft">{row.performedBy || 'No registrado'}</td>
+                    <td data-label="Motivo" className="px-2 py-3 text-ink-soft">{row.reason || '—'}</td>
                   </tr>
                 ))}
               </tbody>

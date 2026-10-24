@@ -7,6 +7,7 @@ import {
   deleteCategoryApi
 } from '../../services/categoriesApi';
 import { useModal } from '../../context/ModalContext';
+import useAutoRefresh from '../../hooks/useAutoRefresh';
 
 const EMPTY_FORM = { id: null, name: '', description: '' };
 
@@ -18,19 +19,20 @@ export default function ProductCategoriesBento() {
   const [error, setError] = useState('');
   const [showForm, setShowForm] = useState(false);
 
-  const loadCategories = useCallback(async () => {
-    setLoading(true);
+  const loadCategories = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) setLoading(true);
     try {
       setCategories(await getCategoriesApi());
     } catch (e) {
       console.warn('Error cargando categorías de producto:', e);
-      setCategories([]);
+      if (!silent) setCategories([]);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, []);
 
   useEffect(() => { loadCategories(); }, [loadCategories]);
+  useAutoRefresh(() => loadCategories({ silent: true }));
 
   const openCreate = () => {
     setForm(EMPTY_FORM);

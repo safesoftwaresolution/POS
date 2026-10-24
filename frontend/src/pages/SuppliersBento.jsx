@@ -7,6 +7,7 @@ import {
   deleteSupplierApi
 } from '../services/suppliersApi';
 import { useModal } from '../context/ModalContext';
+import useAutoRefresh from '../hooks/useAutoRefresh';
 
 const EMPTY_FORM = { id: null, companyName: '', taxId: '', contactName: '', email: '', phone: '', address: '' };
 
@@ -19,19 +20,20 @@ export default function SuppliersBento() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [errorMsg, setErrorMsg] = useState('');
 
-  const loadSuppliers = useCallback(async () => {
-    setLoading(true);
+  const loadSuppliers = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) setLoading(true);
     try {
       setSuppliers(await getSuppliersApi());
     } catch (e) {
       console.warn('Error cargando proveedores:', e);
-      setSuppliers([]);
+      if (!silent) setSuppliers([]);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, []);
 
   useEffect(() => { loadSuppliers(); }, [loadSuppliers]);
+  useAutoRefresh(() => loadSuppliers({ silent: true }));
 
   const openCreate = () => {
     setForm(EMPTY_FORM);

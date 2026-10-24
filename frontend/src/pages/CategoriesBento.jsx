@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Tags, Plus, Search, Pencil, Trash2, Package, AlertCircle } from 'lucide-react';
 import { getCategoriesApi, createCategoryApi, updateCategoryApi, deleteCategoryApi } from '../services/api';
+import useAutoRefresh from '../hooks/useAutoRefresh';
 
 export default function CategoriesBento() {
   const [categories, setCategories] = useState([]);
@@ -11,22 +12,23 @@ export default function CategoriesBento() {
   const [errorMsg, setErrorMsg] = useState('');
   const [form, setForm] = useState({ name: '', description: '' });
 
-  const loadCategories = async () => {
-    setLoading(true);
+  const loadCategories = async ({ silent = false } = {}) => {
+    if (!silent) setLoading(true);
     try {
       const data = await getCategoriesApi();
       setCategories(Array.isArray(data) ? data : []);
     } catch (e) {
       console.warn('Error cargando categorías:', e);
-      setCategories([]);
+      if (!silent) setCategories([]);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
   useEffect(() => {
     loadCategories();
   }, []);
+  useAutoRefresh(() => loadCategories({ silent: true }));
 
   const openCreateModal = () => {
     setEditingCategory(null);

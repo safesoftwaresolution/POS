@@ -18,6 +18,7 @@ import { useModal } from '../context/ModalContext';
 import BarcodeModal from '../components/BarcodeModal';
 import ReturnsBento from './ReturnsBento';
 import SuppliersBento from './SuppliersBento';
+import useAutoRefresh from '../hooks/useAutoRefresh';
 
 const TABS = [
   { id: 'stock', label: 'Stock', icon: Package },
@@ -40,16 +41,16 @@ export default function InventoryBento() {
   const [increaseAmount, setIncreaseAmount] = useState('');
   const [barcodeProduct, setBarcodeProduct] = useState(null);
 
-  const loadInventory = async () => {
-    setLoading(true);
+  const loadInventory = async ({ silent = false } = {}) => {
+    if (!silent) setLoading(true);
     try {
       const data = await getProductsApi();
       setProductsList(Array.isArray(data) ? data : []);
     } catch (e) {
       console.warn('Error cargando inventario:', e);
-      setProductsList([]);
+      if (!silent) setProductsList([]);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
@@ -66,6 +67,7 @@ export default function InventoryBento() {
     loadInventory();
     loadSuppliers();
   }, []);
+  useAutoRefresh(() => Promise.all([loadInventory({ silent: true }), loadSuppliers()]));
 
   const lowStockCount = productsList.filter(p => (p.quantityAvailable ?? p.stock ?? 0) <= (p.minStock || 5)).length;
   const outOfStockCount = productsList.filter(p => (p.quantityAvailable ?? p.stock ?? 0) <= 0).length;
@@ -234,7 +236,7 @@ export default function InventoryBento() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+            <table className="table-cards w-full text-left text-xs">
               <thead>
                 <tr className="border-b border-gray-200 dark:border-gray-800 text-ink-muted uppercase tracking-wider font-extrabold text-[10px]">
                   <th className="py-3 px-3">Código</th>
@@ -252,25 +254,25 @@ export default function InventoryBento() {
                   const isLow = stockVal <= (item.minStock || 5);
                   return (
                     <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
-                      <td className="py-3 px-3 font-mono font-bold text-ink-soft">{item.internalCode}</td>
-                      <td className="py-3 px-3 font-bold text-ink">{item.name}</td>
-                      <td className="py-3 px-3 text-right font-extrabold text-ink tabular-nums">
+                      <td data-label="" className="py-3 px-3 font-mono font-bold text-ink-soft">{item.internalCode}</td>
+                      <td data-label="Producto" className="py-3 px-3 font-bold text-ink">{item.name}</td>
+                      <td data-label="Precio Venta" className="py-3 px-3 text-right font-extrabold text-ink tabular-nums">
                         ${(item.salePrice || item.price || 0).toLocaleString('es-CO')}
                       </td>
-                      <td className="py-3 px-3 text-center font-black text-sm tabular-nums text-ink">
+                      <td data-label="Stock Actual" className="py-3 px-3 text-center font-black text-sm tabular-nums text-ink">
                         {stockVal}
                       </td>
-                      <td className="py-3 px-3 text-center font-semibold text-ink-muted tabular-nums">
+                      <td data-label="Stock Mínimo" className="py-3 px-3 text-center font-semibold text-ink-muted tabular-nums">
                         {item.minStock || 5}
                       </td>
-                      <td className="py-3 px-3 text-center">
+                      <td data-label="Estado" className="py-3 px-3 text-center">
                         <span className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold ${
                           isLow ? 'bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-400 border border-amber-300 dark:border-amber-500/30' : 'bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700'
                         }`}>
                           {isLow ? 'REABASTECER' : 'ÓPTIMO'}
                         </span>
                       </td>
-                      <td className="py-3 px-3 text-center">
+                      <td data-label="Acciones" className="py-3 px-3 text-center">
                         <div className="flex items-center justify-center gap-1.5">
                           <button
                             onClick={() => setBarcodeProduct(item)}

@@ -108,6 +108,10 @@ Relación 1 a 1 con `stores`: la PK **es** el `store_id`. DDL completo en `modul
 | updated_by | VARCHAR(100) | Último usuario que modificó la configuración |
 | created_at / updated_at | TIMESTAMP | |
 
+## Tabla `user_deletion_audit` (módulo users, V26)
+
+Registro inmutable (solo inserciones) de cada borrado definitivo de usuario: `user_id`, `username`, `full_name`, `email`, `role`, `store_id` (copia de los datos), `kind` (`PERMANENT` o `UNVERIFIED`), `performed_by` y `created_at`. Sin llave foránea a propósito: sobrevive al usuario y al local. Sin datos sensibles. Se escribe en la misma transacción del borrado y se lee en `GET /api/v1/backoffice/user-deletions` (`SUPER_ADMIN`). Los locales eliminados quedan en `store_status_audit` (`new_status = 'DELETED'`).
+
 ## Tabla `store_status_audit` (módulo stores)
 Historial inmutable de cambios de estado de un local (`V18__Store_Status_Audit.sql`). Solo se inserta.
 
@@ -205,7 +209,7 @@ Antes este documento los listaba como existentes; **no hay ninguna migración qu
 Toda modificación al esquema físico (tablas, columnas, datos semilla, índices) **DEBE** gestionarse mediante scripts de Flyway.
 
 - **Ubicación obligatoria**: `src/main/resources/db/migration/`
-- **Nomenclatura**: `V<Versión>__<Descripcion_Breve>.sql` (ej. `V24__Debit_Notes.sql`). La siguiente libre es `V25`.
+- **Nomenclatura**: `V<Versión>__<Descripcion_Breve>.sql` (ej. `V26__User_Deletion_Audit.sql`). La siguiente libre es `V27`.
 - **Inmutabilidad**: una migración ya aplicada **nunca** se modifica; la corrección va en una versión nueva.
 - **Validación**: Hibernate usa `ddl-auto=validate` en dev y prod, por lo que cualquier discrepancia entre entidades y esquema falla el arranque. Solo el perfil `test` deja que Hibernate cree el esquema (`create-drop`, Flyway desactivado); los `V*MigrationSqlTest` ejecutan Flyway a mano contra su propia H2.
 - **Compatibilidad H2**: las migraciones con datos deben ser seguras en H2 (perfil `dev`); H2 2.4.x falla al validar `CHECK … IN (…)` desde una conexión distinta a la que los creó.

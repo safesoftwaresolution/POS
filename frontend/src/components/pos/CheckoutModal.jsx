@@ -4,7 +4,8 @@ import {
   X,
   CreditCard,
   Banknote,
-  ArrowRightLeft,
+  Smartphone,
+  Landmark,
   Wallet,
   CheckCircle2,
   Printer,
@@ -35,7 +36,7 @@ import { useModal } from '../../context/ModalContext';
 const money = (value) => `$${Number(value || 0).toLocaleString('es-CO')}`;
 
 // Ícono por código del catálogo PAYMENT_METHODS; los códigos nuevos usan el ícono genérico.
-const PAYMENT_ICONS = { CASH: Banknote, CARD: CreditCard, NEQUI: ArrowRightLeft, TRANSFER: ArrowRightLeft };
+const PAYMENT_ICONS = { CASH: Banknote, CARD: CreditCard, NEQUI: Smartphone, TRANSFER: Landmark };
 
 const INVOICE_BADGE = {
   VALIDATED: { label: 'Validada por la DIAN', cls: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20' },
@@ -116,9 +117,8 @@ export default function CheckoutModal({
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="text-xs font-extrabold text-ink">Emitir factura electrónica DIAN</span>
-                      <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-brand text-white tracking-wider">FACTUS</span>
                     </div>
-                    <p className="text-[11px] text-ink-soft">Se transmite con CUFE, código QR y XML</p>
+                    <p className="text-[11px] text-ink-soft">Se envía a la DIAN a través de Factus, nuestro proveedor autorizado (incluye CUFE, QR y XML)</p>
                   </div>
                 </div>
 

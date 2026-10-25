@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Wallet, RefreshCw, CheckCircle2, MinusCircle, PlusCircle, CreditCard, Users } from 'lucide-react';
 import { getCashClosingReportApi } from '../services/reportsApi';
 import useAutoRefresh from '../hooks/useAutoRefresh';
-import { Button, MoneyInput, PageHeader, inputClass } from '../components/ui';
+import { Button, DateRangeFilter, MoneyInput, PageHeader } from '../components/ui';
 import { LoadingRows, RankedList, SectionCard, sortedEntries } from '../components/analytics/parts';
 import { dayEnd, dayStart, isoDaysAgo, money, paymentLabel } from '../utils/format';
 
@@ -44,12 +44,8 @@ export default function CashBento() {
         actions={<Button size="sm" icon={RefreshCw} loading={loading} onClick={() => load()}>Actualizar</Button>}
       />
 
-      <div className="bento-card p-4 flex flex-wrap items-center gap-2">
-        <span className="text-xs font-extrabold uppercase text-ink-muted mr-1">Período</span>
-        <input type="date" value={dateFrom} max={dateTo} onChange={(e) => setDateFrom(e.target.value)} className={`${inputClass} w-auto`} />
-        <span className="text-xs text-ink-muted font-bold">–</span>
-        <input type="date" value={dateTo} min={dateFrom} max={isoDaysAgo(0)} onChange={(e) => setDateTo(e.target.value)} className={`${inputClass} w-auto`} />
-        <Button variant="soft" size="sm" onClick={() => { setDateFrom(isoDaysAgo(0)); setDateTo(isoDaysAgo(0)); }}>Hoy</Button>
+      <div className="bento-card p-4">
+        <DateRangeFilter from={dateFrom} to={dateTo} onChange={(from, to) => { setDateFrom(from); setDateTo(to); }} />
       </div>
 
       {error && <div className="p-3.5 rounded-2xl border border-red-200 bg-red-50 dark:bg-red-500/10 text-xs font-bold text-red-600">{error}</div>}

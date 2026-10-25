@@ -5,5 +5,6 @@ export { default as Modal } from './Modal';
 export { default as EmptyState } from './EmptyState';
 export { default as PageHeader } from './PageHeader';
 export { Field, Input, Select, inputClass } from './Field';
+export { default as DateRangeFilter } from './DateRangeFilter';
 export { default as MoneyInput, formatCop } from './MoneyInput';
 export { cx } from './cx';

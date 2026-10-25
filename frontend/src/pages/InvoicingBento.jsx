@@ -74,7 +74,7 @@ export default function InvoicingBento() {
             <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-brand text-white">Factus</span>
           </div>
           <p className="text-xs text-ink-soft font-medium mt-1">
-            Seguimiento de facturas, CUFE y numeración oficial de tu local ante la DIAN
+            Seguimiento de facturas, CUFE y numeración oficial de tu local ante la DIAN. Factus es el proveedor tecnológico autorizado que las transmite.
           </p>
         </div>
 

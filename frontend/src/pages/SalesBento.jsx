@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Receipt, Search, RefreshCw, ChevronLeft, ChevronRight, Eye } from 'lucide-react';
 import { searchSalesApi } from '../services/salesApi';
 import useAutoRefresh from '../hooks/useAutoRefresh';
-import { Badge, Button, EmptyState, Modal, PageHeader, inputClass } from '../components/ui';
+import { Badge, Button, DateRangeFilter, EmptyState, Modal, PageHeader, inputClass } from '../components/ui';
 import { dayEnd, dayStart, isoDaysAgo, money, paymentLabel } from '../utils/format';
 
 const PAGE_SIZE = 20;
@@ -36,7 +36,7 @@ export default function SalesBento() {
   useEffect(() => { load(); }, [load]);
   useAutoRefresh(() => load({ silent: true }));
 
-  const changeDate = (setter) => (e) => { setter(e.target.value); setPage(0); };
+  const changeRange = (from, to) => { setDateFrom(from); setDateTo(to); setPage(0); };
 
   // Búsqueda y método de pago filtran la página cargada (el rango de fechas sí es del servidor).
   const rows = useMemo(() => {
@@ -74,10 +74,8 @@ export default function SalesBento() {
             className={`${inputClass} pl-10`}
           />
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <input type="date" value={dateFrom} max={dateTo} onChange={changeDate(setDateFrom)} className={`${inputClass} w-auto`} />
-          <span className="text-xs text-ink-muted font-bold">–</span>
-          <input type="date" value={dateTo} min={dateFrom} max={isoDaysAgo(0)} onChange={changeDate(setDateTo)} className={`${inputClass} w-auto`} />
+        <div className="flex flex-col lg:flex-row lg:items-start gap-3">
+          <DateRangeFilter from={dateFrom} to={dateTo} onChange={changeRange} />
           <select value={method} onChange={(e) => setMethod(e.target.value)} className={`${inputClass} w-auto`}>
             <option value="ALL">Todos los pagos</option>
             {methods.map((m) => <option key={m} value={m}>{paymentLabel(m)}</option>)}

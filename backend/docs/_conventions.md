@@ -90,3 +90,7 @@ src/main/java/com/sciencebot/pos/
 - Perfil `test`: `src/test/resources/application.properties` **reemplaza por completo** al de `main` (mismo nombre en el classpath). El `DatabaseSeeder` solo siembra datos de desarrollo en el perfil `dev`, así que un test que necesite un usuario debe crearlo.
 - Migraciones: `V*MigrationSqlTest` ejecutan Flyway a mano contra su propia H2 en memoria.
 - Los tests de seguridad por rol (`@PreAuthorize`) con `MockMvc` son escasos; los controllers se prueban casi siempre como POJOs. Al añadir un endpoint con permisos, cubrir al menos el 403.
+
+### Aislamiento por local en repositorios
+
+`TenantScopedRepositoriesTest` revisa todo repositorio cuya entidad tiene `storeId` y falla si un metodo declarado no menciona el local (`...StoreId...` en el nombre derivado, o `storeId`/`store_id` en su `@Query`). Un metodo nuevo debe filtrar por local; si es global a proposito (clave unica global, job o metrica de plataforma), se agrega a `PLATFORM_WIDE` en el test con su motivo, y el servicio que lo usa debe validar el `storeId` del resultado.

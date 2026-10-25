@@ -29,6 +29,7 @@ Todas se leen con `${VAR:default}` desde `application*.properties`; en local se 
 | `APP_CORS_ALLOWED_ORIGINS` | Lista de orígenes CORS separados por coma | por defecto, `APP_FRONTEND_URL` |
 | `EMAIL_PROVIDER` | `log` (solo escribe en el log) o `smtp` | `log`: con él **nadie recibe el correo de verificación** |
 | `EMAIL_FROM`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD` | Envío SMTP | |
+| `SWAGGER_ENABLED` | Enciende `/v3/api-docs` y Swagger UI en `prod` (apagado por defecto) | `false` |
 | `EMAIL_VERIFICATION_EXPIRATION_MS` | Vigencia del enlace de verificación | 86400000 (24 h) |
 | `BILLING_PROVIDER` | `factus` o `mock`. Un valor desconocido **falla** (sin respaldo a `mock`) | `factus` |
 | `BILLING_ENCRYPTION_KEY` | Clave AES-256 (32 bytes en Base64) que cifra las credenciales de Factus de cada local | Sin valor por defecto; no perderla ni cambiarla |

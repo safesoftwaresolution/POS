@@ -21,7 +21,7 @@ Definidos en `SecurityConfig`:
 - `POST /api/v1/auth/reset-password` — consume el token, fija la nueva contraseña (misma política de fortaleza), **revoca todas las sesiones** del usuario y limpia su bloqueo por intentos. Tokens: opacos, solo se guarda su SHA-256 (`password_reset_tokens`, V19).
 - `GET /api/v1/legal/**` (políticas y términos vigentes)
 - `POST /api/v1/support/tickets` y `GET /api/v1/support/tickets/track/**` (el seguimiento devuelve solo estado y resolución, no datos de contacto)
-- `/v3/api-docs/**`, `/swagger-ui/**`, `/swagger-ui.html` (la documentación está abierta en todos los perfiles; desactivarla o protegerla en producción)
+- `/v3/api-docs/**`, `/swagger-ui/**`, `/swagger-ui.html` (abierta en `dev`; en el perfil `prod` está **apagada** salvo `SWAGGER_ENABLED=true`)
 - Cualquier ruta que **no** empiece por `/api/v1/` también queda abierta (`anyRequest().permitAll()`), por ejemplo `/h2-console` en `dev`.
 
 ### CORS

@@ -90,6 +90,8 @@ async function refreshAccessToken() {
 // Core HTTP Fetch Wrapper
 // Respuestas exitosas sin cuerpo (204, o 201 de /auth/register): response.json() fallaria con
 // "Unexpected end of JSON input" aunque la operacion haya funcionado.
+const PUBLIC_AUTH_ENDPOINT = /^\/auth\/(verify-email|reset-password|forgot-password)/;
+
 async function parseSuccessBody(response) {
   if (response.status === 204) return true;
   const text = await response.text();
@@ -132,9 +134,10 @@ export async function fetchApi(endpoint, options = {}, _retried = false) {
   if (response.status === 401) {
     // Un 401 de /auth/login es 'credenciales incorrectas': se muestra el mensaje del backend, sin intentar
     // renovar ni cerrar una sesion que no existe. Tampoco se renueva el propio endpoint de refresh.
-    if (endpoint === '/auth/login') {
+    // Endpoints publicos: un 401 aqui es un rechazo del servidor (credenciales, token vencido), no una sesion que expiro.
+    if (endpoint === '/auth/login' || PUBLIC_AUTH_ENDPOINT.test(endpoint)) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || 'Usuario o contraseña incorrectos');
+      throw new Error(errorData.message || (endpoint === '/auth/login' ? 'Usuario o contraseña incorrectos' : 'El enlace no es válido o ya venció.'));
     }
     if (!_retried && endpoint !== '/auth/refresh') {
       const refreshed = await refreshAccessToken();

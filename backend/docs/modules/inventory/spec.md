@@ -1,4 +1,4 @@
-<!-- spec-version: 1.2 | last-updated: 2026-10-24 -->
+<!-- spec-version: 1.3 | last-updated: 2026-10-25 -->
 # Módulo: Inventario (Inventory)
 
 ## Dependencias
@@ -23,9 +23,10 @@
 - **Prioridad**: Alta
 - **Criterios de Aceptación**:
   - Campos: productId, quantity (> 0), reason.
-  - Tipo de movimiento: `ENTRADA` (el código también acepta el alias `ENTRY`).
+  - Tipo de movimiento: `ENTRADA` (el código también acepta el alias `ENTRY`). En la práctica se escribe `ENTRY`: es la grafía de la importación (RF-INV-005), del "Stock inicial" al crear un producto y de la pantalla *Mover stock*.
   - Stock nuevo = stock actual + quantity.
   - Registrar movimiento con previous_stock y new_stock.
+  - **Desde la UI** (Inventario → *Mover stock* → *Entrada*, solo Admin/Supervisor): sube stock **sin proveedor**, así no cuenta como compra en los reportes ni reescribe el costo (RN-PUR-002). Motivo obligatorio: *Inventario inicial*, *Mercancía que ya tenía*, *Bonificación u obsequio del proveedor* u *Otro* (exige nota). El `reason` se guarda como la etiqueta o `etiqueta: nota` (máx. 255 caracteres; el backend no lo valida). La cantidad es un entero entre 1 y 1.000.000.
 
 ### RF-INV-002 — Registrar Salida de Inventario (Manual)
 - **Prioridad**: Alta
@@ -34,17 +35,22 @@
   - Tipo de movimiento: `SALIDA` (alias `EXIT`).
   - Validar RN-INV-001: stock resultante ≥ 0.
   - Registrar movimiento con previous_stock y new_stock.
+  - **Desde la UI** (*Mover stock* → *Salida*): motivo obligatorio — *Vencimiento*, *Daño o rotura*, *Pérdida o robo*, *Consumo propio*, *Muestra u obsequio*, *Devolución a proveedor* u *Otro* (exige nota). Escribe `SALIDA`, salvo *Devolución a proveedor*, que escribe `DEVOLUCION`. La pantalla bloquea una salida mayor al stock; el backend la revalida (400).
 
 ### RF-INV-003 — Registrar Ajuste de Inventario
 - **Prioridad**: Media
 - Ajuste manual tras conteo físico. Tipo: `AJUSTE` (alias `ADJUSTMENT`).
 - **Limitación**: el ajuste siempre **suma** (`delta = +quantity`); no puede disminuir stock. Para bajar stock se usa `SALIDA`. Pendiente decidir si el ajuste es un delta con signo o un valor absoluto contado.
+- **Desde la UI** (*Mover stock* → *Contar y ajustar*): se escribe la cantidad contada y la pantalla muestra "Sistema: X → Contado: Y (diferencia ±Z)". Z > 0 envía `AJUSTE`; Z < 0 envía `SALIDA` (el ajuste solo suma); Z = 0 no envía nada. El movimiento aplica la **diferencia** sobre el stock vigente, no fija el valor contado: una venta que ocurra mientras tanto se descuenta del conteo en vez de pisarse, igual que en el conteo por Excel (RF-INV-005). El `reason` queda como `Conteo físico: sistema X, contado Y` (más la nota opcional).
+- **Grafías que escribe hoy el sistema**: `ENTRY` (importación, producto nuevo, *Entrada*), `SALIDA` (importación, *Salida*, conteo), `AJUSTE` (importación, conteo), `COMPRA`, `VENTA`, `DEVOLUCION_VENTA` (devolución de un cliente) y `DEVOLUCION` (devolución a proveedor desde *Salida*; antes nadie la escribía). Los alias se siguen aceptando y se rotulan igual en la pantalla *Movimientos*.
 - **Tipos aceptados por el servicio**: suman `ENTRADA/ENTRY, COMPRA, AJUSTE/ADJUSTMENT, DEVOLUCION_VENTA`; restan `SALIDA/EXIT, VENTA, RETURN, DEVOLUCION` (devolución al proveedor). Cualquier otro valor → 400. El texto se guarda tal como llega (en mayúsculas), así que el kardex mezcla alias (`ENTRY` y `ENTRADA`); pendiente normalizar a un enum.
 
 ### RF-INV-004 — Consultar Historial de Movimientos (Kardex)
 - **Prioridad**: Alta
 - Filtros: productId, movementType, rango de fechas.
 - Mostrar: producto, tipo, cantidad, stock anterior, stock nuevo, usuario, fecha.
+- **Orden**: del más reciente al más antiguo (`createdAt` y luego `id`, ambos descendentes), fijado en el controlador. Sin eso la primera página traía los movimientos más antiguos. Cubierto por `InventoryMovementsOrderTest`.
+- **Desde la UI**: pestaña *Movimientos* de Inventario (la ven también los vendedores): 20 por página, filtro por producto (búsqueda en el servidor) y rango de fechas, con refresco automático. No filtra por tipo: el backend compara el texto exacto y el kardex mezcla alias (`ENTRY`/`ENTRADA`, `SALIDA`/`EXIT`), así que el filtro daría resultados incompletos. El signo de la cantidad sale de `newStock - previousStock`, no del tipo.
 
 ### RF-INV-005 — Importación Masiva y Conteo Físico (Excel)
 - **Prioridad**: Alta

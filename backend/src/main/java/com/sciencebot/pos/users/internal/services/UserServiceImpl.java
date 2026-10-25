@@ -4,6 +4,10 @@ import com.sciencebot.pos.config.security.PosUserDetails;
 import com.sciencebot.pos.config.tenant.TenantContext;
 import com.sciencebot.pos.users.*;
 import com.sciencebot.pos.users.internal.entities.User;
+import com.sciencebot.pos.users.internal.entities.UserDeletionAudit;
+import com.sciencebot.pos.users.internal.repositories.UserDeletionAuditRepository;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import com.sciencebot.pos.users.internal.repositories.UserRepository;
 import com.sciencebot.pos.users.internal.mappers.UserMapper;
 import org.springframework.data.domain.Page;
@@ -32,6 +36,7 @@ public class UserServiceImpl implements UserFacade, UserDetailsService {
     private final PasswordEncoder passwordEncoder;
     private final UserMapper userMapper;
     private final UserQuotaPolicy userQuotaPolicy;
+    private final UserDeletionAuditRepository deletionAuditRepository;
     private final org.springframework.context.ApplicationEventPublisher eventPublisher;
 
     public UserServiceImpl(
@@ -39,11 +44,13 @@ public class UserServiceImpl implements UserFacade, UserDetailsService {
             @org.springframework.context.annotation.Lazy PasswordEncoder passwordEncoder,
             UserMapper userMapper,
             UserQuotaPolicy userQuotaPolicy,
+            UserDeletionAuditRepository deletionAuditRepository,
             org.springframework.context.ApplicationEventPublisher eventPublisher) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.userMapper = userMapper;
         this.userQuotaPolicy = userQuotaPolicy;
+        this.deletionAuditRepository = deletionAuditRepository;
         this.eventPublisher = eventPublisher;
     }
 
@@ -316,6 +323,7 @@ public class UserServiceImpl implements UserFacade, UserDetailsService {
                     "Solo se puede eliminar a un usuario que no verifico su correo y no tiene un local.");
         }
         userRepository.delete(user);
+        recordDeletion(user, UserDeletionAudit.KIND_UNVERIFIED);
     }
 
     @Override
@@ -337,11 +345,36 @@ public class UserServiceImpl implements UserFacade, UserDetailsService {
         try {
             userRepository.delete(user);
             userRepository.flush(); // fuerza las llaves foraneas aqui para traducirlas a un mensaje claro
+            recordDeletion(user, UserDeletionAudit.KIND_PERMANENT);
         } catch (org.springframework.dao.DataIntegrityViolationException e) {
             throw new IllegalStateException(
                     "El usuario tiene ventas, compras, movimientos o devoluciones registrados y no se puede eliminar. "
                             + "Inactívalo para impedir su acceso.");
         }
+    }
+
+    @Override
+    public Page<UserDeletionAuditDto> listDeletionAudit(Pageable pageable) {
+        Pageable newestFirst = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(),
+                Sort.by(Sort.Direction.DESC, "createdAt", "id"));
+        return deletionAuditRepository.findAll(newestFirst)
+                .map(a -> new UserDeletionAuditDto(a.getId(), a.getUserId(), a.getUsername(), a.getFullName(),
+                        a.getEmail(), a.getRole(), a.getStoreId(), a.getKind(), a.getPerformedBy(), a.getCreatedAt()));
+    }
+
+    /** Misma transaccion que el borrado: si uno falla, el otro se revierte. */
+    private void recordDeletion(User user, String kind) {
+        UserDeletionAudit entry = new UserDeletionAudit();
+        entry.setUserId(user.getId());
+        entry.setUsername(user.getUsername());
+        entry.setFullName(user.getFullName());
+        entry.setEmail(user.getEmail());
+        entry.setRole(user.getRole());
+        entry.setStoreId(user.getStoreId());
+        entry.setKind(kind);
+        String actor = getCurrentUsername();
+        entry.setPerformedBy(actor != null ? actor : "system");
+        deletionAuditRepository.save(entry);
     }
 
     @Override

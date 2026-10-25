@@ -31,6 +31,7 @@ class UserServiceImplTest {
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private UserMapper userMapper;
     @Mock private UserQuotaPolicy userQuotaPolicy;
+    @Mock private com.sciencebot.pos.users.internal.repositories.UserDeletionAuditRepository deletionAuditRepository;
     @Mock private org.springframework.context.ApplicationEventPublisher eventPublisher;
     @InjectMocks private UserServiceImpl userService;
 
@@ -206,6 +207,15 @@ class UserServiceImplTest {
 
         verify(userRepository).delete(seller);
         verify(userRepository).flush();
+
+        org.mockito.ArgumentCaptor<com.sciencebot.pos.users.internal.entities.UserDeletionAudit> entry =
+                org.mockito.ArgumentCaptor.forClass(com.sciencebot.pos.users.internal.entities.UserDeletionAudit.class);
+        verify(deletionAuditRepository).save(entry.capture());
+        assertEquals(5L, entry.getValue().getUserId());
+        assertEquals("vendedor", entry.getValue().getUsername());
+        assertEquals("SELLER", entry.getValue().getRole());
+        assertEquals(1L, entry.getValue().getStoreId());
+        assertEquals("PERMANENT", entry.getValue().getKind());
     }
 
     @Test
@@ -218,6 +228,7 @@ class UserServiceImplTest {
         IllegalStateException ex = assertThrows(IllegalStateException.class, () -> userService.deleteUserPermanently(5L));
 
         assertTrue(ex.getMessage().contains("Inactívalo"));
+        verifyNoInteractions(deletionAuditRepository); // un borrado que no ocurrio no deja registro
     }
 
     @Test

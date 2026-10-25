@@ -30,6 +30,8 @@ public interface UserFacade {
      * el usuario ya tiene ventas, compras, movimientos o devoluciones. El llamador borra antes sus tokens.
      */
     void deleteUserPermanently(Long userId);
+    /** Historial de borrados definitivos de usuarios, el mas reciente primero (solo lectura). */
+    Page<UserDeletionAuditDto> listDeletionAudit(Pageable pageable);
     /** Establece una nueva contrasena sin contexto de sesion (flujo "olvide mi contrasena", ya validado por token). */
     void resetPassword(Long userId, String newPassword);
     /** Marca el correo del usuario como verificado (llamado al consumir el token de verificacion). */

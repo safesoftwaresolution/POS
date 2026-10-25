@@ -7,6 +7,15 @@ export async function createInventoryMovementApi(productId, movementType, quanti
   });
 }
 
+// Kardex del local, del más reciente al más antiguo. `dateFrom`/`dateTo` son ISO con hora (`2026-10-24T00:00:00`).
+export async function getInventoryMovementsApi({ productId, dateFrom, dateTo, page = 0, size = 20 } = {}) {
+  const params = new URLSearchParams({ page, size });
+  if (productId) params.set('productId', productId);
+  if (dateFrom) params.set('dateFrom', dateFrom);
+  if (dateTo) params.set('dateTo', dateTo);
+  return await fetchApi(`/inventory/movements?${params.toString()}`);
+}
+
 export async function createPurchaseApi(purchaseData, idempotencyKey) {
   const key = idempotencyKey || newIdempotencyKey();
   return await fetchApi('/purchases', {

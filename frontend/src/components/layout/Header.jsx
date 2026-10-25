@@ -37,7 +37,7 @@ const PAGE_TITLES = {
   '/': { title: 'Dashboard', subtitle: 'Resumen y analíticas de tu negocio' },
   '/pos': { title: 'Punto de Venta', subtitle: 'Registra ventas, escanea productos y cobra' },
   '/products': { title: 'Productos', subtitle: 'Catálogo, precios y subcategorías' },
-  '/inventory': { title: 'Inventario', subtitle: 'Stock, devoluciones y proveedores' },
+  '/inventory': { title: 'Inventario', subtitle: 'Stock, movimientos, devoluciones y proveedores' },
   '/customers': { title: 'Clientes', subtitle: 'Base de datos de clientes frecuentes' },
   '/invoicing': { title: 'Facturación DIAN', subtitle: 'Facturas electrónicas y su estado ante la DIAN' },
   '/documents': { title: 'Documentos', subtitle: 'Documentos legales de tu tienda' },

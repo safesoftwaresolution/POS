@@ -10,30 +10,33 @@ import {
   RefreshCw,
   Barcode,
   PackageX,
-  FileSpreadsheet
+  FileSpreadsheet,
+  History,
+  ArrowLeftRight
 } from 'lucide-react';
 import { getProductsApi } from '../services/productsApi';
-import { createPurchaseApi } from '../services/inventoryApi';
 import { getSuppliersApi } from '../services/suppliersApi';
-import { useModal } from '../context/ModalContext';
 import { useAuth } from '../context/AuthContext';
 import BarcodeModal from '../components/BarcodeModal';
 import ProductImportModal from '../components/products/ProductImportModal';
+import StockMovementModal from '../components/inventory/StockMovementModal';
+import MovementsPanel from '../components/inventory/MovementsPanel';
 import ReturnsBento from './ReturnsBento';
 import SuppliersBento from './SuppliersBento';
 import useAutoRefresh from '../hooks/useAutoRefresh';
 
 const TABS = [
   { id: 'stock', label: 'Stock', icon: Package },
+  { id: 'movements', label: 'Movimientos', icon: History },
   { id: 'returns', label: 'Devoluciones', icon: RotateCcw },
   { id: 'suppliers', label: 'Proveedores', icon: Truck },
 ];
 
 export default function InventoryBento() {
-  const { notify } = useModal();
   const { user } = useAuth();
-  // El conteo masivo ajusta stock: mismo permiso que los movimientos de inventario en el backend.
-  const canCountStock = user?.role === 'ADMINISTRATOR' || user?.role === 'SUPERVISOR';
+  // Mover stock, comprar y el conteo masivo escriben en el kardex: mismo permiso que POST /inventory/movements
+  // y POST /purchases en el backend (un vendedor solo puede consultar).
+  const canMoveStock = user?.role === 'ADMINISTRATOR' || user?.role === 'SUPERVISOR';
   const [showCountModal, setShowCountModal] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = TABS.some(t => t.id === searchParams.get('tab')) ? searchParams.get('tab') : 'stock';
@@ -42,10 +45,8 @@ export default function InventoryBento() {
   const [suppliers, setSuppliers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [showPurchaseModal, setShowPurchaseModal] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState(null);
-  const [selectedSupplierId, setSelectedSupplierId] = useState('');
-  const [increaseAmount, setIncreaseAmount] = useState('');
+  // null = cerrado; { product } = abierto (product puede ser null: el producto se elige dentro del modal).
+  const [moveModal, setMoveModal] = useState(null);
   const [barcodeProduct, setBarcodeProduct] = useState(null);
 
   const loadInventory = async ({ silent = false } = {}) => {
@@ -79,36 +80,6 @@ export default function InventoryBento() {
   const lowStockCount = productsList.filter(p => (p.quantityAvailable ?? p.stock ?? 0) <= (p.minStock || 5)).length;
   const outOfStockCount = productsList.filter(p => (p.quantityAvailable ?? p.stock ?? 0) <= 0).length;
 
-  const openPurchaseModal = (product) => {
-    setSelectedProduct(product);
-    setSelectedSupplierId('');
-    setIncreaseAmount('');
-    setShowPurchaseModal(true);
-  };
-
-  const handleStockIncrease = async (e) => {
-    e.preventDefault();
-    const qty = parseInt(increaseAmount);
-    if (!selectedProduct || !selectedSupplierId || isNaN(qty) || qty <= 0) return;
-
-    try {
-      await createPurchaseApi({
-        supplierId: Number(selectedSupplierId),
-        items: [{
-          productId: selectedProduct.id,
-          quantity: qty,
-          unitCost: selectedProduct.purchasePrice || (selectedProduct.price * 0.7)
-        }]
-      });
-      setShowPurchaseModal(false);
-      setSelectedProduct(null);
-      setIncreaseAmount('');
-      await loadInventory();
-    } catch (e) {
-      notify('Error registrando compra: ' + e.message);
-    }
-  };
-
   const filtered = productsList.filter(p =>
     (p.name && p.name.toLowerCase().includes(search.toLowerCase())) ||
     (p.barcode && p.barcode.includes(search)) ||
@@ -121,31 +92,27 @@ export default function InventoryBento() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-ink">Inventario</h1>
-          <p className="text-xs text-ink-soft font-medium">Stock, devoluciones y proveedores en un solo módulo de BentoPOS</p>
+          <p className="text-xs text-ink-soft font-medium">Stock, movimientos, devoluciones y proveedores en un solo módulo de BentoPOS</p>
         </div>
 
         {activeTab === 'stock' && (
           <div className="flex items-center gap-2">
-            {canCountStock && (
-              <button
-                onClick={() => setShowCountModal(true)}
-                className="px-4 py-2.5 border border-line hover:border-line-strong text-ink bg-card rounded-2xl text-xs font-bold flex items-center gap-2 cursor-pointer transition-all"
-              >
-                <FileSpreadsheet className="w-4 h-4" /> Conteo masivo (Excel)
-              </button>
+            {canMoveStock && (
+              <>
+                <button
+                  onClick={() => setShowCountModal(true)}
+                  className="px-4 py-2.5 border border-line hover:border-line-strong text-ink bg-card rounded-2xl text-xs font-bold flex items-center gap-2 cursor-pointer transition-all"
+                >
+                  <FileSpreadsheet className="w-4 h-4" /> Conteo masivo (Excel)
+                </button>
+                <button
+                  onClick={() => setMoveModal({ product: null })}
+                  className="px-4 py-2.5 bg-solid hover:bg-solid-hover text-white rounded-2xl text-xs font-bold flex items-center gap-2 shadow-md shadow-[#0A0A0A]/10 cursor-pointer transition-all"
+                >
+                  <ArrowLeftRight className="w-4 h-4" /> Mover stock
+                </button>
+              </>
             )}
-            <button
-              onClick={() => {
-                if (productsList.length > 0) {
-                  openPurchaseModal(productsList[0]);
-                } else {
-                  notify('Debes crear primero un producto en el catálogo.', { danger: false });
-                }
-              }}
-              className="px-4 py-2.5 bg-solid hover:bg-solid-hover text-white rounded-2xl text-xs font-bold flex items-center gap-2 shadow-md shadow-[#0A0A0A]/10 cursor-pointer transition-all"
-            >
-              <Truck className="w-4 h-4" /> Registrar Compra (+Stock)
-            </button>
           </div>
         )}
       </div>
@@ -170,6 +137,7 @@ export default function InventoryBento() {
         })}
       </div>
 
+      {activeTab === 'movements' && <MovementsPanel />}
       {activeTab === 'returns' && <ReturnsBento />}
       {activeTab === 'suppliers' && <SuppliersBento />}
 
@@ -237,8 +205,8 @@ export default function InventoryBento() {
               className="w-full pl-10 pr-3 py-1.5 bg-page border border-line rounded-2xl text-xs font-semibold text-ink placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-ink"
             />
           </div>
-          <button onClick={loadInventory} className="text-xs font-bold text-brand dark:text-brand flex items-center gap-1 hover:underline cursor-pointer">
-            <RefreshCw className="w-3.5 h-3.5" /> Actualizar Kardex
+          <button onClick={() => loadInventory()} className="text-xs font-bold text-brand dark:text-brand flex items-center gap-1 hover:underline cursor-pointer">
+            <RefreshCw className="w-3.5 h-3.5" /> Actualizar stock
           </button>
         </div>
 
@@ -298,12 +266,14 @@ export default function InventoryBento() {
                           >
                             <Barcode className="w-4 h-4" />
                           </button>
-                          <button
-                            onClick={() => openPurchaseModal(item)}
-                            className="px-2.5 py-1 bg-brand/10 dark:bg-brand/20 hover:bg-solid hover:text-white text-brand dark:text-brand rounded-xl text-[11px] font-bold transition-all cursor-pointer"
-                          >
-                            + Cargar Stock
-                          </button>
+                          {canMoveStock && (
+                            <button
+                              onClick={() => setMoveModal({ product: item })}
+                              className="px-2.5 py-1 bg-brand/10 dark:bg-brand/20 hover:bg-solid hover:text-white text-brand dark:text-brand rounded-xl text-[11px] font-bold transition-all cursor-pointer"
+                            >
+                              Mover stock
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -315,76 +285,14 @@ export default function InventoryBento() {
         )}
       </div>
 
-      {/* Stock Increase Modal */}
-      {showPurchaseModal && selectedProduct && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <form onSubmit={handleStockIncrease} className="bento-card max-w-sm w-full bg-card p-6 rounded-3xl shadow-2xl space-y-4 border border-line">
-            <h3 className="font-extrabold text-base text-ink">Registrar Compra / Carga de Stock</h3>
-            <p className="text-xs text-ink-soft font-medium">Producto: <span className="font-bold text-brand dark:text-brand">{selectedProduct.name}</span></p>
-
-            {suppliers.length === 0 && (
-              <div className="p-3 bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30 rounded-xl text-xs font-bold flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 shrink-0" />
-                <span>
-                  Aún no tienes proveedores registrados.{' '}
-                  <button
-                    type="button"
-                    onClick={() => { setShowPurchaseModal(false); setActiveTab('suppliers'); }}
-                    className="underline font-bold cursor-pointer"
-                  >
-                    Crea uno aquí
-                  </button> antes de registrar una compra.
-                </span>
-              </div>
-            )}
-
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-gray-600 dark:text-gray-300">Proveedor:</label>
-              <select
-                value={selectedSupplierId}
-                onChange={(e) => setSelectedSupplierId(e.target.value)}
-                className="w-full p-2.5 bg-page border border-gray-300 dark:border-line rounded-2xl text-sm font-bold text-ink focus:outline-none focus:border-ink"
-                required
-                disabled={suppliers.length === 0}
-              >
-                <option value="" disabled>Selecciona un proveedor...</option>
-                {suppliers.map(s => (
-                  <option key={s.id} value={s.id}>{s.companyName}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-gray-600 dark:text-gray-300">Cantidad Comprada:</label>
-              <input
-                type="number"
-                value={increaseAmount}
-                onChange={(e) => setIncreaseAmount(e.target.value)}
-                placeholder="Ej. 10, 25, 50..."
-                className="w-full p-2.5 bg-page border border-gray-300 dark:border-line rounded-2xl text-sm font-bold text-ink focus:outline-none focus:border-ink"
-                required
-                min="1"
-              />
-            </div>
-
-            <div className="flex gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setShowPurchaseModal(false)}
-                className="w-1/2 py-2.5 bg-gray-100 dark:bg-line hover:bg-gray-200 dark:hover:bg-line-strong text-gray-700 dark:text-gray-300 rounded-2xl text-xs font-bold cursor-pointer"
-              >
-                Cancelar
-              </button>
-              <button
-                type="submit"
-                disabled={suppliers.length === 0}
-                className="w-1/2 py-2.5 bg-solid hover:bg-solid-hover disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-2xl text-xs font-extrabold shadow-md shadow-[#0A0A0A]/10 cursor-pointer"
-              >
-                Registrar Compra
-              </button>
-            </div>
-          </form>
-        </div>
+      {moveModal && (
+        <StockMovementModal
+          product={moveModal.product}
+          suppliers={suppliers}
+          onClose={() => setMoveModal(null)}
+          onDone={() => loadInventory({ silent: true })}
+          onGoToSuppliers={() => { setMoveModal(null); setActiveTab('suppliers'); }}
+        />
       )}
 
       {showCountModal && (

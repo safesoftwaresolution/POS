@@ -43,10 +43,9 @@ export default function InvoicingBento() {
     if (!canSeeActivation) return;
     if (!silent) setRangesLoading(true);
     try {
-      const [act, rgs] = await Promise.all([
-        getBillingActivationStatusApi().catch(() => null),
-        listNumberingRangesApi().catch(() => [])
-      ]);
+      const act = await getBillingActivationStatusApi().catch(() => null);
+      // Sin habilitación ACTIVE el backend responde 409 a los rangos (no hay credenciales del local): ni se piden.
+      const rgs = act?.status === 'ACTIVE' ? await listNumberingRangesApi().catch(() => []) : [];
       setActivation(act);
       setRanges(Array.isArray(rgs) ? rgs : []);
     } finally {

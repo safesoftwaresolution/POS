@@ -52,6 +52,10 @@ class PurchaseServiceImplTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
+        // Sin sesion el servicio atribuye al usuario "admin"; el usuario debe existir (ya no hay id 1 por defecto).
+        com.sciencebot.pos.users.UserDto actor = org.mockito.Mockito.mock(com.sciencebot.pos.users.UserDto.class);
+        org.mockito.Mockito.when(actor.id()).thenReturn(1L);
+        org.mockito.Mockito.when(userFacade.findByUsername("admin")).thenReturn(Optional.of(actor));
         TenantContext.setStoreId(STORE_ID);
     }
 

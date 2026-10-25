@@ -116,7 +116,7 @@ public class InventoryServiceImpl implements InventoryFacade {
         String username = (auth != null) ? auth.getName() : "admin";
         Long userId = userFacade.findByUsername(username)
                 .map(u -> u.id())
-                .orElse(1L);    
+                .orElseThrow(() -> new IllegalStateException("No se pudo identificar al usuario autenticado"));
 
         InventoryMovement movement = new InventoryMovement();
         movement.setStoreId(requireCurrentStoreId());

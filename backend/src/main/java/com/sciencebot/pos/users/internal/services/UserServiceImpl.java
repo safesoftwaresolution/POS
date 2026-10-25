@@ -32,16 +32,19 @@ public class UserServiceImpl implements UserFacade, UserDetailsService {
     private final PasswordEncoder passwordEncoder;
     private final UserMapper userMapper;
     private final UserQuotaPolicy userQuotaPolicy;
+    private final org.springframework.context.ApplicationEventPublisher eventPublisher;
 
     public UserServiceImpl(
             UserRepository userRepository,
             @org.springframework.context.annotation.Lazy PasswordEncoder passwordEncoder,
             UserMapper userMapper,
-            UserQuotaPolicy userQuotaPolicy) {
+            UserQuotaPolicy userQuotaPolicy,
+            org.springframework.context.ApplicationEventPublisher eventPublisher) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.userMapper = userMapper;
         this.userQuotaPolicy = userQuotaPolicy;
+        this.eventPublisher = eventPublisher;
     }
 
     @Override
@@ -244,6 +247,9 @@ public class UserServiceImpl implements UserFacade, UserDetailsService {
         validatePasswordStrength(command.newPassword());
         user.setPassword(passwordEncoder.encode(command.newPassword()));
         userRepository.save(user);
+        if (!user.getUsername().equalsIgnoreCase(currentUsername)) {
+            eventPublisher.publishEvent(new PasswordResetByAdminEvent(user.getId(), user.getUsername()));
+        }
     }
 
     @Override

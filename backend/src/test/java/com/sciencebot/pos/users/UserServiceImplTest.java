@@ -31,6 +31,7 @@ class UserServiceImplTest {
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private UserMapper userMapper;
     @Mock private UserQuotaPolicy userQuotaPolicy;
+    @Mock private org.springframework.context.ApplicationEventPublisher eventPublisher;
     @InjectMocks private UserServiceImpl userService;
 
     @BeforeEach
@@ -329,6 +330,7 @@ class UserServiceImplTest {
 
         assertEquals("newEncodedPassword", user.getPassword());
         verify(userRepository, times(1)).save(user);
+        verifyNoInteractions(eventPublisher);
     }
 
     @Test
@@ -377,6 +379,8 @@ class UserServiceImplTest {
 
         assertEquals("newEncodedPassword", user.getPassword());
         verify(userRepository, times(1)).save(user);
+        // El auth escucha este evento para cerrar las sesiones y levantar el bloqueo de la cuenta restablecida.
+        verify(eventPublisher).publishEvent(new PasswordResetByAdminEvent(1L, "juanp"));
     }
 
     @Test

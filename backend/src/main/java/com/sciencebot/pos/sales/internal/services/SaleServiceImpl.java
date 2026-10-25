@@ -128,7 +128,7 @@ public class SaleServiceImpl implements SaleFacade {
         String username = (auth != null) ? auth.getName() : "admin";
         Long userId = userFacade.findByUsername(username)
                 .map(u -> u.id())
-                .orElse(1L);
+                .orElseThrow(() -> new IllegalStateException("No se pudo identificar al usuario autenticado"));
 
         Sale sale = new Sale();
         sale.setStoreId(storeId);
@@ -275,7 +275,7 @@ public class SaleServiceImpl implements SaleFacade {
         String username = (auth != null) ? auth.getName() : "admin";
         Long userId = userFacade.findByUsername(username)
                 .map(u -> u.id())
-                .orElse(1L);
+                .orElseThrow(() -> new IllegalStateException("No se pudo identificar al usuario autenticado"));
 
         SaleReturn saleReturn = new SaleReturn();
         saleReturn.setSaleId(saleId);

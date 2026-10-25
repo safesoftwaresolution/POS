@@ -177,6 +177,13 @@ public class AuthService implements AuthFacade {
         lockoutCache.remove(userFacade.getById(userId).username().toLowerCase());
     }
 
+    /** Tras un restablecimiento hecho por un administrador: la sesion vieja no debe sobrevivir a la contrasena vieja. */
+    @Transactional
+    public void closeSessionsAndClearLockout(Long userId, String username) {
+        refreshTokenService.revokeAllForUser(userId);
+        lockoutCache.remove(username.toLowerCase());
+    }
+
     @Override
     @Transactional
     public void deleteUnverifiedAccount(Long userId) {

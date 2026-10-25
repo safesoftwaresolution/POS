@@ -12,6 +12,7 @@ import {
 } from '../services/reportsApi';
 import useAutoRefresh from '../hooks/useAutoRefresh';
 import { Button, EmptyState } from '../components/ui';
+import GettingStarted from '../components/dashboard/GettingStarted';
 import AnalyticsPanel from '../components/analytics/AnalyticsPanel';
 import { LoadingRows, RankedList, SectionCard } from '../components/analytics/parts';
 import { dayEnd, dayStart, isoDaysAgo, money, paymentLabel } from '../utils/format';
@@ -168,6 +169,14 @@ export default function DashboardBento() {
           </button>
         </div>
       </div>
+
+      {!loading && (
+        <GettingStarted
+          hasProducts={products.length > 0}
+          hasSales={sales.length > 0}
+          canCreateProducts={canSeeStock}
+        />
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         <KpiCard

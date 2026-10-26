@@ -57,6 +57,31 @@ public class ReportController {
         return ResponseEntity.ok(reportService.getSalesReport(dateFrom, dateTo));
     }
 
+    @GetMapping("/sales-heatmap")
+    @PreAuthorize("hasRole('ADMINISTRATOR')")
+    @Operation(
+            summary = "Mapa de calor de ventas",
+            description = """
+                    Ventas agrupadas por día de la semana (1 = lunes … 7 = domingo) y hora del día, para saber cuándo vende más
+                    el local. Solo devuelve las franjas con ventas. Sin fechas, usa los últimos 30 días. Solo para **ADMINISTRATOR**.
+                    """
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Franjas con ventas",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            array = @ArraySchema(schema = @Schema(implementation = SalesHeatmapCellDto.class)))),
+            @ApiResponse(responseCode = "401", description = "No autenticado", content = @Content),
+            @ApiResponse(responseCode = "403", description = "Solo ADMINISTRATOR puede acceder a reportes", content = @Content)
+    })
+    public ResponseEntity<List<SalesHeatmapCellDto>> getSalesHeatmap(
+            @Parameter(description = "Fecha inicial del período (ISO 8601)", example = "2025-01-01T00:00:00")
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime dateFrom,
+            @Parameter(description = "Fecha final del período (ISO 8601)", example = "2025-12-31T23:59:59")
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime dateTo
+    ) {
+        return ResponseEntity.ok(reportService.getSalesHeatmap(dateFrom, dateTo));
+    }
+
     @GetMapping("/top-products")
     @PreAuthorize("hasRole('ADMINISTRATOR')")
     @Operation(

@@ -1,6 +1,7 @@
 package com.sciencebot.pos.reports.internal.repositories;
 
 import com.sciencebot.pos.reports.ProfitabilityReportDto;
+import com.sciencebot.pos.reports.SalesHeatmapCellDto;
 import com.sciencebot.pos.reports.StockReportDto;
 import com.sciencebot.pos.reports.TopProductDto;
 import com.sciencebot.pos.reports.internal.repositories.ReportProjections.ExpiringProductProjection;
@@ -61,6 +62,28 @@ public class ReportDaoJdbc implements ReportDao {
                 .param("from", from)
                 .param("to", to)
                 .query(SellerSaleProjection.class)
+                .list();
+    }
+
+    @Override
+    public List<SalesHeatmapCellDto> findSalesHeatmap(Long storeId, LocalDateTime from, LocalDateTime to) {
+        String sql = """
+            SELECT
+                EXTRACT(ISODOW FROM s.created_at) AS dayOfWeek,
+                EXTRACT(HOUR FROM s.created_at) AS hourOfDay,
+                COUNT(s.id) AS transactionCount,
+                COALESCE(SUM(s.total_amount), 0) AS totalSold
+            FROM sales s
+            WHERE s.store_id = :storeId AND s.created_at >= :from AND s.created_at <= :to
+            GROUP BY EXTRACT(ISODOW FROM s.created_at), EXTRACT(HOUR FROM s.created_at)
+            ORDER BY dayOfWeek, hourOfDay
+            """;
+
+        return jdbcClient.sql(sql)
+                .param("storeId", storeId)
+                .param("from", from)
+                .param("to", to)
+                .query(SalesHeatmapCellDto.class)
                 .list();
     }
 

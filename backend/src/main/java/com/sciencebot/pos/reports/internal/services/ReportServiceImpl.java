@@ -51,6 +51,13 @@ public class ReportServiceImpl implements ReportService {
     }
 
     @Override
+    public List<SalesHeatmapCellDto> getSalesHeatmap(LocalDateTime dateFrom, LocalDateTime dateTo) {
+        LocalDateTime from = (dateFrom != null) ? dateFrom : LocalDateTime.now().minusDays(DEFAULT_REPORT_DAYS);
+        LocalDateTime to = (dateTo != null) ? dateTo : LocalDateTime.now();
+        return reportDao.findSalesHeatmap(requireCurrentStoreId(), from, to);
+    }
+
+    @Override
     public List<TopProductDto> getTopProductsReport(LocalDateTime dateFrom, LocalDateTime dateTo, int limit) {
         LocalDateTime from = (dateFrom != null) ? dateFrom : LocalDateTime.now().minusDays(DEFAULT_REPORT_DAYS);
         LocalDateTime to = (dateTo != null) ? dateTo : LocalDateTime.now();

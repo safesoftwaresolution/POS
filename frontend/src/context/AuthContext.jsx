@@ -1,8 +1,7 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { AuthContext } from './contexts';
 import { loginApi, logoutApi, refreshSessionApi } from '../services/authApi';
 import { setAuthToken, SESSION_EXPIRED_EVENT } from '../services/http';
-
-const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
   // Solo se persiste el perfil (usuario, rol, local), nunca un token: la sesion la mantienen las cookies HttpOnly.
@@ -82,8 +81,4 @@ export function AuthProvider({ children }) {
       {children}
     </AuthContext.Provider>
   );
-}
-
-export function useAuth() {
-  return useContext(AuthContext);
 }

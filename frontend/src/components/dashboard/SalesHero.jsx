@@ -35,7 +35,7 @@ function MiniStat({ title, value, hint, spark, onClick }) {
  * Bloque principal del Dashboard: ventas del período en grande, variación frente al período anterior,
  * curva por día y tres métricas con su tendencia. `daily` trae `{ key, label, detail, value, count }` por día.
  */
-export default function SalesHero({ days, loading, totalSold, previousTotal, daily, transactions, averageTicket, dianCount, onNavigate }) {
+export default function SalesHero({ days, loading, totalSold, previousTotal, daily, previousDaily, transactions, averageTicket, dianCount, onNavigate }) {
   const animatedTotal = useCountUp(totalSold);
   const animatedCount = useCountUp(transactions);
   const animatedTicket = useCountUp(averageTicket);
@@ -55,9 +55,16 @@ export default function SalesHero({ days, loading, totalSold, previousTotal, dai
         {loading ? (
           <div className="h-52 mt-10 rounded-2xl bg-page animate-pulse" />
         ) : (
-          <AreaChart data={daily} formatValue={money} />
+          <AreaChart data={daily} compare={previousDaily} formatValue={money} />
         )}
       </div>
+
+      {previousDaily && (
+        <div className="mt-3 flex items-center gap-4 text-[10px] font-semibold text-ink-muted">
+          <span className="flex items-center gap-1.5"><span className="w-4 h-0.5 bg-brand rounded" /> Este período</span>
+          <span className="flex items-center gap-1.5"><span className="w-4 border-t-2 border-dashed border-ink-muted opacity-60" /> {days} días antes</span>
+        </div>
+      )}
 
       <div className="mt-4 pt-3 border-t border-line grid grid-cols-3 divide-x divide-line">
         <MiniStat

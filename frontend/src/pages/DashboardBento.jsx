@@ -6,8 +6,8 @@ import { getProductsApi } from '../services/productsApi';
 import { searchSalesApi } from '../services/salesApi';
 import { listInvoicesApi } from '../services/billingApi';
 import {
-  getExpiringReportApi, getProfitabilityReportApi, getPurchasesReportApi, getSalesReportApi, getStockReportApi,
-  getTopProductsReportApi,
+  getExpiringReportApi, getProfitabilityReportApi, getPurchasesReportApi, getSalesHeatmapApi, getSalesReportApi,
+  getStockReportApi, getTopProductsReportApi,
 } from '../services/reportsApi';
 import useLoad from '../hooks/useLoad';
 import GettingStarted from '../components/dashboard/GettingStarted';
@@ -28,9 +28,12 @@ const RANGES = [
 // salen de los reportes (agregados en base de datos), así que no dependen de este tope.
 const SALES_SAMPLE = 200;
 const EMPTY_DASHBOARD = {
-  products: [], sales: [], dianCount: null, salesReport: null, hasAnySale: false, previousTotal: null,
+  products: [], sales: [], previousSales: [], heatmap: [], dianCount: null, salesReport: null, hasAnySale: false, previousTotal: null,
   topProducts: [], profitability: [], purchases: null, stock: [], expiring: [],
 };
+
+// El mapa de calor necesita historia suficiente para que las franjas se distingan: al menos 30 días.
+const HEATMAP_DAYS = 30;
 
 const sumSales = (sales) => sales.reduce((sum, s) => sum + Number(s.totalAmount || 0), 0);
 
@@ -53,14 +56,15 @@ export default function DashboardBento() {
     const previousTo = dayEnd(isoDaysAgo(days));
     // Cada bloque falla por separado: un reporte caído no deja el panel en blanco.
     const safe = (promise, fallback) => promise.catch(() => fallback);
-    const [prods, salesPage, anySale, dian, report, previousReport, previousPage, top, profit, purch, stockRows, expiringRows] = await Promise.all([
+    const [prods, salesPage, anySale, dian, report, previousReport, previousPage, heat, top, profit, purch, stockRows, expiringRows] = await Promise.all([
       safe(getProductsApi(), null),
       safe(searchSalesApi({ dateFrom: from, dateTo: to, size: SALES_SAMPLE }), null),
       safe(searchSalesApi({ size: 1 }), null),
       safe(listInvoicesApi('VALIDATED', 0, 1), null),
       isAdmin ? safe(getSalesReportApi(from, to), null) : null,
       isAdmin ? safe(getSalesReportApi(previousFrom, previousTo), null) : null,
-      isAdmin ? null : safe(searchSalesApi({ dateFrom: previousFrom, dateTo: previousTo, size: SALES_SAMPLE }), null),
+      safe(searchSalesApi({ dateFrom: previousFrom, dateTo: previousTo, size: SALES_SAMPLE }), null),
+      isAdmin ? safe(getSalesHeatmapApi(dayStart(isoDaysAgo(Math.max(days, HEATMAP_DAYS) - 1)), to), null) : null,
       isAdmin ? safe(getTopProductsReportApi(from, to, 8), null) : null,
       isAdmin ? safe(getProfitabilityReportApi(from, to), null) : null,
       isAdmin ? safe(getPurchasesReportApi(from, to), null) : null,
@@ -74,6 +78,8 @@ export default function DashboardBento() {
     return {
       products: Array.isArray(prods) ? prods : previous.products,
       sales: salesPage ? salesPage.content || [] : previous.sales,
+      previousSales: previousPage ? previousPage.content || [] : previous.previousSales,
+      heatmap: Array.isArray(heat) ? heat : previous.heatmap,
       hasAnySale: anySale ? (anySale.totalElements ?? (anySale.content || []).length) > 0 : previous.hasAnySale,
       dianCount: dian ? dian.totalElements ?? (dian.content || []).length : previous.dianCount,
       salesReport: report || previous.salesReport,
@@ -85,7 +91,7 @@ export default function DashboardBento() {
       expiring: Array.isArray(expiringRows) ? expiringRows : previous.expiring,
     };
   }, [days, belowMinStock, expiringDays, isAdmin, canSeeStock], { initial: EMPTY_DASHBOARD, autoRefresh: true });
-  const { products, sales, hasAnySale, previousTotal, dianCount, salesReport, topProducts, profitability, purchases, stock, expiring } = dashboard;
+  const { products, sales, previousSales, heatmap, hasAnySale, previousTotal, dianCount, salesReport, topProducts, profitability, purchases, stock, expiring } = dashboard;
 
   const lowStockCount = products.filter((p) => (p.quantityAvailable ?? p.stock ?? 0) <= (p.minStock || 5)).length;
 
@@ -117,6 +123,18 @@ export default function DashboardBento() {
       };
     });
   }, [sales, days]);
+
+  // Total por día del período anterior, alineado día a día con `daily` para dibujarlo como línea punteada.
+  const previousDaily = useMemo(() => {
+    if (previousSales.length === 0) return null;
+    const buckets = new Map();
+    for (let i = days * 2 - 1; i >= days; i -= 1) buckets.set(isoDaysAgo(i), 0);
+    previousSales.forEach((s) => {
+      const key = (s.createdAt || '').slice(0, 10);
+      if (buckets.has(key)) buckets.set(key, buckets.get(key) + Number(s.totalAmount || 0));
+    });
+    return [...buckets.values()];
+  }, [previousSales, days]);
 
   const { paymentMix, paymentTotal } = useMemo(() => {
     const totals = {};
@@ -182,6 +200,7 @@ export default function DashboardBento() {
             totalSold={totalSold}
             previousTotal={previousTotal}
             daily={daily}
+            previousDaily={previousDaily}
             transactions={transactions}
             averageTicket={averageTicket}
             dianCount={dianCount}
@@ -207,7 +226,7 @@ export default function DashboardBento() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {isAdmin && (
           <div className="lg:col-span-7">
-            <InsightsPanel loading={loading} sales={salesReport} topProducts={topProducts} profitability={profitability} purchases={purchases} />
+            <InsightsPanel loading={loading} sales={salesReport} topProducts={topProducts} profitability={profitability} purchases={purchases} heatmap={heatmap} />
           </div>
         )}
         <div className={isAdmin ? 'lg:col-span-5' : 'lg:col-span-12'}>

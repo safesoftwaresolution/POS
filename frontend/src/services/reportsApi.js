@@ -11,6 +11,11 @@ export async function getSalesReportApi(dateFrom, dateTo) {
   return await fetchApi(`/reports/sales?${dateParams(dateFrom, dateTo)}`);
 }
 
+/** Ventas por día de la semana (1 = lunes) y hora: `[{ dayOfWeek, hourOfDay, transactionCount, totalSold }]`. */
+export async function getSalesHeatmapApi(dateFrom, dateTo) {
+  return await fetchApi(`/reports/sales-heatmap?${dateParams(dateFrom, dateTo)}`);
+}
+
 export async function getTopProductsReportApi(dateFrom, dateTo, limit = 10) {
   const params = dateParams(dateFrom, dateTo);
   return await fetchApi(`/reports/top-products?${params}&limit=${limit}`);

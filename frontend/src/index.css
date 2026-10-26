@@ -128,6 +128,17 @@
   }
 }
 
+/* iOS Safari amplía la página al enfocar un campo con letra menor a 16 px. Los campos usan text-xs (12 px), así que en
+   pantallas táctiles se fuerzan a 16 px. Va fuera de @layer a propósito: lo que no está en una capa gana a las
+   utilidades de Tailwind. No se usa maximum-scale en el viewport: bloquearía el zoom por accesibilidad. */
+@media (hover: none) and (pointer: coarse) {
+  input:not([type='checkbox'], [type='radio'], [type='range'], [type='color'], [type='file'], [type='button'], [type='submit']),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
 /* Dashboard: animaciones de entrada de graficas y tarjetas. Se desactivan con "reducir movimiento". */
 @keyframes chart-reveal { from { clip-path: inset(-20% 100% -20% 0); } to { clip-path: inset(-20% -5% -20% 0); } }
 @keyframes chart-fade { from { opacity: 0; } to { opacity: 1; } }

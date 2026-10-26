@@ -12,12 +12,13 @@ function labelStep(count) {
  * Gráfica de área con curva suave, degradado y tooltip al pasar el cursor o el dedo.
  * `data`: `[{ key, label, value, detail }]`; `formatValue` da formato al monto del tooltip.
  */
-export function AreaChart({ data, formatValue, className = 'h-52' }) {
+export function AreaChart({ data, compare, formatValue, className = 'h-52' }) {
   const gradientId = useId();
   const [hovered, setHovered] = useState(null);
   const values = data.map((d) => d.value);
-  const max = Math.max(...values, 0);
+  const max = Math.max(...values, ...(compare || []), 0);
   const points = pointsFor(values, max);
+  const comparePoints = compare ? pointsFor(compare, max) : null;
   const peak = max > 0 ? values.indexOf(max) : -1;
   const step = labelStep(data.length);
 
@@ -54,6 +55,7 @@ export function AreaChart({ data, formatValue, className = 'h-52' }) {
             </linearGradient>
           </defs>
           <path d={areaPath(points)} fill={`url(#${gradientId})`} />
+          {comparePoints && <path d={smoothPath(comparePoints)} {...LINE_PROPS} strokeWidth={1.5} strokeDasharray="4 4" className="text-ink-muted opacity-60" />}
           <path d={smoothPath(points)} {...LINE_PROPS} />
         </svg>
 
@@ -70,6 +72,7 @@ export function AreaChart({ data, formatValue, className = 'h-52' }) {
             >
               <div className="text-[10px] font-semibold opacity-70 first-letter:uppercase">{data[active].detail}</div>
               <div className="text-xs font-black tabular-nums">{formatValue(data[active].value)}</div>
+              {compare && <div className="text-[10px] font-semibold opacity-70 tabular-nums">Antes: {formatValue(compare[active] ?? 0)}</div>}
             </div>
           </>
         )}

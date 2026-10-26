@@ -1,0 +1,60 @@
+---
+import Brand from './Brand.astro';
+import Icon from './Icon.astro';
+import { links, nav } from '../lib/site.js';
+---
+<header class="fixed inset-x-0 top-3 z-50 px-3 sm:px-5">
+  <div
+    class="mx-auto flex max-w-[1200px] items-center justify-between gap-3 rounded-full border border-line bg-card/80 py-2 pl-4 pr-2 shadow-[0_4px_24px_rgba(0,0,0,0.05)] backdrop-blur-xl"
+  >
+    <a href="/" aria-label="BentoPOS, inicio" class="text-ink">
+      <Brand />
+    </a>
+
+    <nav aria-label="Principal" class="hidden items-center gap-1 md:flex">
+      {nav.map((l) => (
+        <a href={l.href} class="rounded-full px-3.5 py-2 text-sm font-semibold text-ink-soft transition-colors hover:bg-page hover:text-ink">
+          {l.label}
+        </a>
+      ))}
+    </nav>
+
+    <div class="flex items-center gap-1.5">
+      <button
+        type="button"
+        data-theme-toggle
+        class="grid size-9 place-items-center rounded-full border border-line text-ink-soft transition-colors hover:bg-page hover:text-ink"
+        aria-label="Cambiar entre tema claro y oscuro"
+      >
+        <Icon name="moon" class="size-4 dark:hidden" />
+        <Icon name="sun" class="hidden size-4 dark:block" />
+      </button>
+      <a href={links.login} class="btn btn-ghost hidden !px-4 !py-2.5 sm:inline-flex">Ingresar</a>
+      <a href={links.register} class="btn btn-brand !px-4 !py-2.5">Crear cuenta</a>
+      <button
+        type="button"
+        data-menu-btn
+        class="group grid size-9 place-items-center rounded-full border border-line text-ink-soft transition-colors hover:bg-page hover:text-ink md:hidden"
+        aria-label="Abrir menú"
+        aria-controls="mobile-menu"
+        aria-expanded="false"
+      >
+        <Icon name="menu" class="size-4 group-aria-expanded:hidden" />
+        <Icon name="x" class="hidden size-4 group-aria-expanded:block" />
+      </button>
+    </div>
+  </div>
+
+  <div
+    id="mobile-menu"
+    hidden
+    class="mx-auto mt-2 max-w-[1200px] rounded-3xl border border-line bg-card/95 p-2 shadow-[0_12px_40px_rgba(0,0,0,0.12)] backdrop-blur-xl md:hidden"
+  >
+    <nav aria-label="Menú móvil" class="flex flex-col">
+      {nav.map((l) => (
+        <a href={l.href} class="rounded-2xl px-4 py-3 text-[15px] font-semibold text-ink hover:bg-page">{l.label}</a>
+      ))}
+      <a href={links.login} class="mt-1 rounded-2xl px-4 py-3 text-[15px] font-bold text-brand-text hover:bg-page">Ingresar al sistema</a>
+    </nav>
+  </div>
+</header>

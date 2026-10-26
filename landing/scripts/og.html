@@ -1,0 +1,94 @@
+<!doctype html>
+<!--
+  Plantilla de la imagen para redes (public/og.png, 1200x630).
+  Para regenerarla: abrir este archivo en un navegador a 1200x630 y capturar la pagina.
+-->
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<title>BentoPOS — og</title>
+<style>
+  @font-face {
+    font-family: 'PJS';
+    src: url('../node_modules/@fontsource-variable/plus-jakarta-sans/files/plus-jakarta-sans-latin-wght-normal.woff2') format('woff2');
+    font-weight: 200 800;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1200px; height: 630px; overflow: hidden; }
+  body {
+    font-family: 'PJS', system-ui, sans-serif;
+    background: #0E0E12;
+    color: #F4F4F6;
+    position: relative;
+    -webkit-font-smoothing: antialiased;
+  }
+  .glow {
+    position: absolute; right: -260px; top: -340px; width: 940px; height: 940px;
+    background: radial-gradient(closest-side, rgba(255, 85, 32, 0.42), transparent);
+  }
+  .dots {
+    position: absolute; inset: 0;
+    background-image: radial-gradient(#34343F 1.3px, transparent 1.6px);
+    background-size: 30px 30px;
+    -webkit-mask-image: radial-gradient(75% 95% at 25% 45%, #000 20%, transparent 100%);
+  }
+  .brand {
+    position: absolute; left: 72px; top: 62px;
+    display: flex; align-items: center; gap: 16px;
+    font-weight: 800; font-size: 36px; letter-spacing: -0.03em;
+  }
+  .brand b { color: #FF5520; font-weight: 800; }
+  .brand svg { width: 52px; height: 52px; }
+  h1 {
+    position: absolute; left: 72px; top: 168px;
+    font-size: 100px; line-height: 0.98; letter-spacing: -0.04em; font-weight: 300;
+  }
+  h1 span { display: block; }
+  h1 .o { font-weight: 800; color: #FF5520; }
+  .sub {
+    position: absolute; left: 76px; top: 410px; width: 580px;
+    font-size: 29px; line-height: 1.35; color: #A8A8B3; font-weight: 500;
+  }
+  .url {
+    position: absolute; left: 76px; bottom: 44px;
+    display: inline-flex; align-items: center; gap: 12px;
+    font-size: 24px; font-weight: 700; color: #F4F4F6;
+    border: 1px solid #34343F; border-radius: 999px; padding: 12px 24px;
+    background: rgba(23, 23, 27, 0.8);
+  }
+  .url i { width: 10px; height: 10px; border-radius: 50%; background: #FF5520; display: block; }
+  .iso { position: absolute; right: 84px; top: 96px; width: 410px; height: 410px; transform: rotate(5deg); }
+</style>
+</head>
+<body>
+  <div class="glow"></div>
+  <div class="dots"></div>
+
+  <div class="brand">
+    <svg viewBox="-6 -6 108 108" xmlns="http://www.w3.org/2000/svg">
+      <rect width="96" height="96" rx="32" fill="#24242D" />
+      <rect x="21" y="21" width="24" height="24" rx="6" fill="#FF5520" />
+      <rect x="51" y="21" width="24" height="24" rx="6" fill="#DADADA" />
+      <rect x="21" y="51" width="24" height="24" rx="6" fill="#DADADA" />
+      <rect x="51" y="51" width="24" height="24" rx="6" fill="#532011" />
+      <circle cx="91.5" cy="4.5" r="10.5" fill="#0E0E12" />
+      <circle cx="91.5" cy="4.5" r="7.5" fill="#FF5520" />
+    </svg>
+    <span>Bento<b>POS</b></span>
+  </div>
+
+  <h1><span>Tu negocio,</span><span class="o">en equilibrio<em style="font-style:normal;margin-left:-0.06em">.</em></span></h1>
+  <p class="sub">Punto de venta, inventario en tiempo real y facturación electrónica DIAN.</p>
+  <div class="url"><i></i>posbento.com</div>
+
+  <svg class="iso" viewBox="-6 -6 108 108" xmlns="http://www.w3.org/2000/svg">
+    <rect width="96" height="96" rx="32" fill="#17171B" stroke="#2C2C36" stroke-width="0.8" />
+    <rect x="21" y="21" width="24" height="24" rx="6" fill="#FF5520" />
+    <rect x="51" y="21" width="24" height="24" rx="6" fill="#DADADA" />
+    <rect x="21" y="51" width="24" height="24" rx="6" fill="#DADADA" />
+    <rect x="51" y="51" width="24" height="24" rx="6" fill="#532011" />
+    <circle cx="91.5" cy="4.5" r="10.5" fill="#0E0E12" />
+    <circle cx="91.5" cy="4.5" r="7.5" fill="#FF5520" />
+  </svg>
+</body>
+</html>

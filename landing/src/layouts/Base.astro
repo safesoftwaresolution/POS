@@ -1,0 +1,119 @@
+---
+import '../styles/global.css';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import { SITE_URL, SITE_NAME } from '../lib/site.js';
+
+interface Props {
+  title?: string;
+  description?: string;
+  /** Pagina sin cabecera ni pie (redirecciones). */
+  bare?: boolean;
+  /** Excluye la pagina de los buscadores. */
+  noindex?: boolean;
+}
+
+const {
+  title = 'BentoPOS — Punto de venta y facturación electrónica DIAN',
+  description = 'Punto de venta, inventario en tiempo real y facturación electrónica DIAN en un solo sistema. Cobra rápido, controla tu stock y factura sin frenar la caja.',
+  bare = false,
+  noindex = false,
+} = Astro.props;
+
+const canonical = new URL(Astro.url.pathname, SITE_URL).href;
+const ogImage = new URL('/og.png', SITE_URL).href;
+---
+<!doctype html>
+<html lang="es-CO">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    {noindex && <meta name="robots" content="noindex, follow" />}
+
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#F7F7F5" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0E0E12" media="(prefers-color-scheme: dark)" />
+
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content={SITE_NAME} />
+    <meta property="og:locale" content="es_CO" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImage} />
+
+    <slot name="head" />
+
+    <!-- Tema antes del primer pintado: evita el destello claro/oscuro. Respeta la preferencia del sistema. -->
+    <script is:inline>
+      (function () {
+        var r = document.documentElement, t = null;
+        try { t = localStorage.getItem('theme'); } catch (e) {}
+        var dark = t ? t === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+        r.classList.toggle('dark', dark);
+        r.classList.add('js');
+      })();
+    </script>
+    <noscript><style>.reveal { opacity: 1 !important; translate: none !important; }</style></noscript>
+  </head>
+  <body>
+    {!bare && <a href="#contenido" class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-full focus:bg-solid focus:px-4 focus:py-2 focus:text-sm focus:font-bold focus:text-solid-ink">Saltar al contenido</a>}
+    {!bare && <Header />}
+    <main id="contenido">
+      <slot />
+    </main>
+    {!bare && <Footer />}
+
+    <script>
+      const root = document.documentElement;
+
+      // Tema claro/oscuro (la preferencia se guarda solo si el navegador lo permite).
+      document.querySelectorAll('[data-theme-toggle]').forEach((btn) =>
+        btn.addEventListener('click', () => {
+          const dark = !root.classList.contains('dark');
+          root.classList.toggle('dark', dark);
+          try { localStorage.setItem('theme', dark ? 'dark' : 'light'); } catch (e) {}
+        }),
+      );
+
+      // Menu movil.
+      const menuBtn = document.querySelector('[data-menu-btn]');
+      const menu = document.getElementById('mobile-menu');
+      const setMenu = (open) => {
+        if (!menuBtn || !menu) return;
+        menuBtn.setAttribute('aria-expanded', String(open));
+        menu.hidden = !open;
+      };
+      menuBtn?.addEventListener('click', () => setMenu(menuBtn.getAttribute('aria-expanded') !== 'true'));
+      menu?.addEventListener('click', (e) => { if (e.target.closest('a')) setMenu(false); });
+      document.addEventListener('keydown', (e) => { if (e.key === 'Escape') setMenu(false); });
+
+      // Aparicion al hacer scroll.
+      const items = document.querySelectorAll('.reveal');
+      if ('IntersectionObserver' in window) {
+        const io = new IntersectionObserver(
+          (entries) => entries.forEach((en) => {
+            if (en.isIntersecting) { en.target.classList.add('is-in'); io.unobserve(en.target); }
+          }),
+          { rootMargin: '0px 0px -8% 0px', threshold: 0.08 },
+        );
+        items.forEach((el) => io.observe(el));
+      } else {
+        items.forEach((el) => el.classList.add('is-in'));
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,19 @@
+---
+import Base from '../layouts/Base.astro';
+import Icon from '../components/Icon.astro';
+import { links } from '../lib/site.js';
+---
+<Base noindex title="Página no encontrada — BentoPOS" description="La página que buscas no existe.">
+  <section class="relative isolate grid min-h-[80vh] place-items-center overflow-hidden px-5 pb-16 pt-32">
+    <div class="hero-glow absolute inset-0 -z-10" aria-hidden="true"></div>
+    <div class="text-center">
+      <p class="text-[clamp(6rem,22vw,12rem)] font-black leading-none tracking-tighter text-line-strong" aria-hidden="true">404</p>
+      <h1 class="-mt-4 text-3xl font-extrabold tracking-tight md:text-4xl">Esta página no está en el inventario.</h1>
+      <p class="mx-auto mt-4 max-w-md text-ink-soft">Puede que el enlace haya cambiado. Vuelve al inicio o entra al sistema.</p>
+      <div class="mt-8 flex flex-wrap justify-center gap-3">
+        <a href="/" class="btn btn-brand btn-lg">Ir al inicio <Icon name="arrow-right" class="size-4" /></a>
+        <a href={links.login} class="btn btn-ghost btn-lg">Ingresar al sistema</a>
+      </div>
+    </div>
+  </section>
+</Base>

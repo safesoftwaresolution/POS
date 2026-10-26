@@ -1,0 +1,14 @@
+---
+// Isotipo + nombre en texto, como el sidebar del sistema (DESIGN.md §5.1).
+import Logo from './Logo.astro';
+
+interface Props {
+  class?: string;
+  size?: 'md' | 'lg';
+}
+const { class: cls = '', size = 'md' } = Astro.props;
+---
+<span class:list={['inline-flex items-center gap-2.5', cls]}>
+  <Logo variant="icon" class={size === 'lg' ? 'size-10' : 'size-8'} label="" />
+  <span class:list={['font-extrabold leading-none tracking-[-0.03em] text-ink', size === 'lg' ? 'text-[1.7rem]' : 'text-[1.3rem]']}>Bento<span class="text-brand">POS</span></span>
+</span>

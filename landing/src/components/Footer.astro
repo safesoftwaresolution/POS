@@ -1,0 +1,55 @@
+---
+import Brand from './Brand.astro';
+import { links, nav } from '../lib/site.js';
+
+const year = new Date().getFullYear();
+
+const cols = [
+  { title: 'Producto', items: nav.map((l) => ({ href: l.href.startsWith('#') ? `/${l.href}` : l.href, label: l.label })) },
+  {
+    title: 'Tu cuenta',
+    items: [
+      { href: links.login, label: 'Ingresar' },
+      { href: links.register, label: 'Crear cuenta' },
+      { href: links.forgot, label: 'Recuperar contraseña' },
+    ],
+  },
+  {
+    title: 'Legal y ayuda',
+    items: [
+      { href: links.terms, label: 'Términos y condiciones' },
+      { href: links.privacy, label: 'Política de privacidad' },
+      { href: links.support, label: 'Soporte' },
+    ],
+  },
+];
+---
+<footer class="border-t border-line">
+  <div class="wrap py-14 md:py-16">
+    <div class="grid gap-10 md:grid-cols-[1.4fr_repeat(3,1fr)]">
+      <div class="max-w-xs">
+        <a href="/" aria-label="BentoPOS, inicio" class="inline-block text-ink">
+          <Brand size="lg" />
+        </a>
+        <p class="mt-4 text-sm leading-relaxed text-ink-soft">
+          Tu negocio, en equilibrio. Caja, inventario y facturación electrónica DIAN en un solo lugar.
+        </p>
+      </div>
+      {cols.map((c) => (
+        <nav aria-label={c.title}>
+          <h2 class="eyebrow !text-ink-muted">{c.title}</h2>
+          <ul class="mt-4 space-y-2.5">
+            {c.items.map((i) => (
+              <li><a href={i.href} class="text-sm font-medium text-ink-soft transition-colors hover:text-ink">{i.label}</a></li>
+            ))}
+          </ul>
+        </nav>
+      ))}
+    </div>
+
+    <div class="mt-12 flex flex-col gap-2 border-t border-line pt-6 text-xs text-ink-muted sm:flex-row sm:items-center sm:justify-between">
+      <p>© {year} BentoPOS. Todos los derechos reservados.</p>
+      <p>Hecho para el comercio colombiano.</p>
+    </div>
+  </div>
+</footer>

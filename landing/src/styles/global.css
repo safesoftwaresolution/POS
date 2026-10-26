@@ -1,0 +1,313 @@
+@import "tailwindcss";
+@import "@fontsource-variable/plus-jakarta-sans";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Tokens semanticos: mismos nombres que frontend/src/index.css (DESIGN.md §2.3b) para que el
+   vocabulario sea el mismo en el sistema y en la landing. */
+@theme inline {
+  --font-sans: "Plus Jakarta Sans Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --color-page: var(--bg-page);
+  --color-card: var(--bg-card);
+  --color-line: var(--border-card);
+  --color-line-strong: var(--border-strong);
+  --color-ink: var(--text-primary);
+  --color-ink-soft: var(--text-secondary);
+  --color-ink-muted: var(--text-muted);
+  --color-brand: var(--color-primary);
+  --color-brand-hover: var(--color-primary-hover);
+  --color-brand-text: var(--brand-text);
+  --color-on-brand: var(--on-brand);
+  --color-solid: var(--solid);
+  --color-solid-hover: var(--solid-hover);
+  --color-solid-ink: var(--solid-text);
+}
+
+@layer base {
+  :root {
+    color-scheme: light;
+    --bg-page: #F7F7F5;
+    --bg-card: #FFFFFF;
+    --border-card: #EAEAEA;
+    --border-strong: #D0D0CE;
+    /* Texto secundario/apagado un punto mas oscuro que en el sistema (#7A7A7A / #A0A0A0):
+       en una pagina de lectura deben llegar a contraste AA (>= 4.5:1). */
+    --text-primary: #0A0A0A;
+    --text-secondary: #5B5B59;
+    --text-muted: #6F6F6D;
+    --solid: #0A0A0A;
+    --solid-hover: #202020;
+    --solid-text: #FFFFFF;
+    --color-primary: #FF5520;
+    --color-primary-hover: #E64712;
+    /* Blanco sobre #FF5520 da 3.2:1; el negro da 6.2:1. Por eso el texto sobre naranja es oscuro. */
+    --on-brand: #0A0A0A;
+    /* Naranja para texto pequeno sobre fondo claro (5.1:1 sobre blanco). */
+    --brand-text: #C93A0E;
+    --logo-tile: #0A0A0A;
+  }
+
+  html.dark {
+    color-scheme: dark;
+    --bg-page: #0E0E12;
+    --bg-card: #17171B;
+    --border-card: #272730;
+    --border-strong: #34343F;
+    --text-primary: #F4F4F6;
+    --text-secondary: #A8A8B3;
+    --text-muted: #8E8E9B;
+    --solid: #262630;
+    --solid-hover: #31313E;
+    --solid-text: #FFFFFF;
+    --brand-text: #FF6A3D;
+    --logo-tile: #24242D;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background-color: var(--bg-page);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    overflow-x: hidden;
+    transition: background-color 0.25s ease, color 0.25s ease;
+  }
+
+  ::selection {
+    background: var(--color-primary);
+    color: #0A0A0A;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 3px;
+    border-radius: 8px;
+  }
+
+  [id] {
+    scroll-margin-top: 6rem;
+  }
+
+  /* Titulares parejos (sin palabras huerfanas) y parrafos sin viudas. */
+  h1, h2, h3 { text-wrap: balance; }
+  p { text-wrap: pretty; }
+
+  /* Scrollbar fino, como en el sistema. */
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 9999px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--color-primary); }
+
+  .tabular-nums { font-variant-numeric: tabular-nums; }
+}
+
+@layer components {
+  .wrap {
+    width: 100%;
+    max-width: 1200px;
+    margin-inline: auto;
+    padding-inline: 1.25rem;
+  }
+  @media (min-width: 768px) {
+    .wrap { padding-inline: 2rem; }
+  }
+
+  .ic { display: inline-block; flex-shrink: 0; }
+  .ic > svg { display: block; width: 100%; height: 100%; }
+
+  .logo-tile { fill: var(--logo-tile); }
+  .logo-ring { fill: var(--bg-card); }
+
+  /* Tarjeta bento (DESIGN.md §4): 24px, borde sutil, elevacion al pasar el cursor. */
+  .bento-card {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-card);
+    border-radius: 1.5rem;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.02);
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s ease,
+      border-color 0.25s ease, background-color 0.25s ease;
+  }
+  .bento-card:hover {
+    transform: translateY(-3px);
+    border-color: var(--border-strong);
+    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.07);
+  }
+  html.dark .bento-card { box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4); }
+  html.dark .bento-card:hover { box-shadow: 0 14px 38px rgba(0, 0, 0, 0.6); }
+
+  /* Franjas siempre oscuras (facturacion, cierre): negro puro en claro, carbon elevado en oscuro. */
+  .band {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    background: #0A0A0A;
+    color: #FFFFFF;
+    border: 1px solid #0A0A0A;
+    border-radius: 2rem;
+  }
+  html.dark .band {
+    background: #131318;
+    border-color: #272730;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 9999px;
+    padding: 0.7rem 1.2rem;
+    font-size: 0.875rem;
+    font-weight: 700;
+    line-height: 1;
+    white-space: nowrap;
+    border: 1px solid transparent;
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease,
+      box-shadow 0.2s ease, transform 0.2s ease;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn-lg { padding: 1rem 1.7rem; font-size: 0.95rem; }
+
+  .btn-brand {
+    background: var(--color-primary);
+    color: var(--on-brand);
+    box-shadow: 0 6px 22px color-mix(in srgb, var(--color-primary) 32%, transparent);
+  }
+  .btn-brand:hover {
+    background: var(--color-primary-hover);
+    box-shadow: 0 10px 30px color-mix(in srgb, var(--color-primary) 45%, transparent);
+  }
+  .btn-solid { background: var(--solid); color: var(--solid-text); }
+  .btn-solid:hover { background: var(--solid-hover); }
+  .btn-ghost { border-color: var(--border-strong); color: var(--text-primary); background: transparent; }
+  .btn-ghost:hover { background: var(--bg-card); border-color: var(--text-muted); }
+  .btn-on-dark { border-color: rgba(255, 255, 255, 0.22); color: #fff; background: transparent; }
+  .btn-on-dark:hover { background: rgba(255, 255, 255, 0.08); border-color: rgba(255, 255, 255, 0.4); }
+
+  .eyebrow {
+    font-size: 0.6875rem;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--brand-text);
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    border: 1px solid var(--border-card);
+    background: var(--bg-card);
+    border-radius: 9999px;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    white-space: nowrap;
+  }
+
+  /* Estados semanticos (DESIGN.md §2.4). */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    border: 1px solid;
+    border-radius: 9999px;
+    padding: 0.15rem 0.55rem;
+    font-size: 0.625rem;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .badge-ok { color: #047857; background: #ecfdf5; border-color: #a7f3d0; }
+  .badge-warn { color: #b45309; background: #fffbeb; border-color: #fde68a; }
+  .badge-info { color: #1d4ed8; background: #eff6ff; border-color: #bfdbfe; }
+  html.dark .badge-ok { color: #34d399; background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.25); }
+  html.dark .badge-warn { color: #fbbf24; background: rgba(245, 158, 11, 0.14); border-color: rgba(245, 158, 11, 0.25); }
+  html.dark .badge-info { color: #60a5fa; background: rgba(59, 130, 246, 0.14); border-color: rgba(59, 130, 246, 0.25); }
+  .badge-bad { color: #b91c1c; background: #fef2f2; border-color: #fecaca; }
+  html.dark .badge-bad { color: #f87171; background: rgba(239, 68, 68, 0.14); border-color: rgba(239, 68, 68, 0.28); }
+  /* Variantes sobre fondo siempre oscuro (.band). */
+  .band .badge-ok { color: #34d399; background: rgba(16, 185, 129, 0.12); border-color: rgba(16, 185, 129, 0.3); }
+  .band .badge-bad { color: #f87171; background: rgba(239, 68, 68, 0.14); border-color: rgba(239, 68, 68, 0.3); }
+  .band .eyebrow { color: #FF7A4D; }
+  .band .badge-warn { color: #fbbf24; background: rgba(245, 158, 11, 0.14); border-color: rgba(245, 158, 11, 0.3); }
+
+  /* Fondo del hero: cuadricula de puntos que se desvanece + resplandor naranja. */
+  .hero-glow {
+    background: radial-gradient(60% 55% at 50% 0%, color-mix(in srgb, var(--color-primary) 18%, transparent), transparent 72%);
+  }
+  .dot-grid {
+    background-image: radial-gradient(var(--border-strong) 1px, transparent 1.2px);
+    background-size: 24px 24px;
+    -webkit-mask-image: radial-gradient(75% 65% at 50% 25%, #000 25%, transparent 100%);
+    mask-image: radial-gradient(75% 65% at 50% 25%, #000 25%, transparent 100%);
+    opacity: 0.8;
+  }
+
+  /* Cinta de capacidades. Dos pistas identicas: al desplazar una -100% el bucle es continuo. */
+  .marquee {
+    display: flex;
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+    mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+  }
+  .marquee-track {
+    display: flex;
+    flex-shrink: 0;
+    gap: 0.75rem;
+    padding-right: 0.75rem;
+    animation: marquee 42s linear infinite;
+  }
+  .marquee:hover .marquee-track { animation-play-state: paused; }
+
+  /* FAQ: <details> nativo, sin JS. */
+  .faq summary { list-style: none; cursor: pointer; }
+  .faq summary::-webkit-details-marker { display: none; }
+  .faq details[open] .faq-chevron { transform: rotate(180deg); }
+  .faq details[open] { border-color: var(--border-strong); }
+}
+
+/* ---- Movimiento ---- */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes marquee { to { transform: translateX(-100%); } }
+@keyframes float { 0%, 100% { translate: 0 0; } 50% { translate: 0 -8px; } }
+@keyframes scan { 0%, 100% { top: 6%; } 50% { top: 90%; } }
+@keyframes pop-in {
+  0% { opacity: 0; transform: translateY(8px) scale(0.96); }
+  100% { opacity: 1; transform: none; }
+}
+
+.fade-up { animation: fade-up 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) both; animation-delay: var(--d, 0ms); }
+.float { animation: float 6s ease-in-out infinite; }
+.scan-line { animation: scan 3.2s ease-in-out infinite; }
+
+/* Aparicion al hacer scroll. Solo se oculta si hay JS (clase html.js, puesta en <head>).
+   Se anima `translate` (no `transform`) para no pisar el hover de .bento-card. */
+html.js .reveal {
+  opacity: 0;
+  translate: 0 18px;
+  transition: opacity 0.8s cubic-bezier(0.2, 0.7, 0.2, 1), translate 0.8s cubic-bezier(0.2, 0.7, 0.2, 1);
+  transition-delay: var(--d, 0ms);
+}
+html.js .reveal.is-in { opacity: 1; translate: 0 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .fade-up, .float, .scan-line { animation: none; }
+  html.js .reveal { opacity: 1; translate: none; transition: none; }
+  .marquee { -webkit-mask-image: none; mask-image: none; flex-wrap: wrap; }
+  .marquee-track { animation: none; flex-wrap: wrap; padding-right: 0; }
+  .marquee-track[aria-hidden="true"] { display: none; }
+  .bento-card, .btn { transition: none; }
+}

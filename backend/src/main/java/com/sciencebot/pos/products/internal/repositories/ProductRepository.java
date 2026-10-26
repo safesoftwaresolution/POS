@@ -47,6 +47,7 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
 
     boolean existsByStoreIdAndInternalCode(Long storeId, String internalCode);
     boolean existsByStoreIdAndBarcode(Long storeId, String barcode);
+    boolean existsByStoreIdAndImageUrl(Long storeId, String imageUrl);
 
     // Nota: intencionalmente NO se filtran por local. Las categorias son globales (solo
     // SUPER_ADMIN las administra) y este chequeo se dispara al borrar una categoria global,

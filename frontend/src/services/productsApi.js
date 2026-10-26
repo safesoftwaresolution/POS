@@ -70,3 +70,8 @@ export async function changeProductStatusApi(id, active) {
     body: JSON.stringify({ active }),
   });
 }
+
+/** Borra de R2 una foto recién subida que no llegó a guardarse en ningún producto. */
+export async function deleteStorageFileApi(key) {
+  return fetchApi(`/storage/files?key=${encodeURIComponent(key)}`, { method: 'DELETE' });
+}

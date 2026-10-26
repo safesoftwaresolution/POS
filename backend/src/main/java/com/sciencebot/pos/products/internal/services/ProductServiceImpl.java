@@ -14,6 +14,11 @@ import com.sciencebot.pos.products.internal.repositories.ProductLotRepository;
 import com.sciencebot.pos.products.internal.repositories.ProductRepository;
 import com.sciencebot.pos.products.internal.repositories.ProductSpecifications;
 import com.sciencebot.pos.products.internal.mappers.ProductMapper;
+import com.sciencebot.pos.storage.StorageFacade;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.data.domain.Page;
 
 import org.springframework.data.domain.Pageable;
@@ -29,6 +34,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
@@ -37,6 +43,8 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class ProductServiceImpl implements ProductFacade, CategoryDeleteValidator, CategoryProductCountProvider,
         SubcategoryDeleteValidator, SubcategoryProductCountProvider {
+
+    private static final Logger log = LoggerFactory.getLogger(ProductServiceImpl.class);
 
     private static final int LOOKUP_BATCH_SIZE = 500;
     /** Tope de una fecha de vencimiento: más allá es casi seguro un error de digitación (p. ej. 2206). */
@@ -48,15 +56,18 @@ public class ProductServiceImpl implements ProductFacade, CategoryDeleteValidato
     private final CategoryFacade categoryFacade;
     private final SubcategoryFacade subcategoryFacade;
     private final ProductMapper productMapper;
+    private final StorageFacade storageFacade;
 
     public ProductServiceImpl(
             ProductRepository productRepository,
             ProductLotRepository productLotRepository,
             @org.springframework.context.annotation.Lazy CategoryFacade categoryFacade,
             @org.springframework.context.annotation.Lazy SubcategoryFacade subcategoryFacade,
-            ProductMapper productMapper) {
+            ProductMapper productMapper,
+            StorageFacade storageFacade) {
         this.productRepository = productRepository;
         this.productLotRepository = productLotRepository;
+        this.storageFacade = storageFacade;
         this.categoryFacade = categoryFacade;
         this.subcategoryFacade = subcategoryFacade;
         this.productMapper = productMapper;
@@ -146,6 +157,7 @@ public class ProductServiceImpl implements ProductFacade, CategoryDeleteValidato
             }
         }
 
+        String previousImageUrl = product.getImageUrl();
         product.setName(command.name().trim());
         product.setCategoryId(command.categoryId());
         product.setSubcategoryId(command.subcategoryId());
@@ -163,7 +175,41 @@ public class ProductServiceImpl implements ProductFacade, CategoryDeleteValidato
         }
 
         Product saved = productRepository.save(product);
+        releaseReplacedImage(saved, previousImageUrl);
         return toDto(saved);
+    }
+
+    /**
+     * Si la foto cambió o se quitó, borra la anterior de R2 para no acumular archivos huérfanos.
+     * Se omite si otro producto de la tienda sigue usando esa misma URL. El borrado ocurre tras el
+     * commit y un fallo de R2 solo se registra: nunca debe revertir ni romper el guardado del producto.
+     * (No se borra al desactivar un producto: es reversible y debe conservar su foto.)
+     */
+    private void releaseReplacedImage(Product product, String previousUrl) {
+        if (previousUrl == null || previousUrl.isBlank() || Objects.equals(previousUrl, product.getImageUrl())) {
+            return;
+        }
+        Long storeId = product.getStoreId();
+        if (productRepository.existsByStoreIdAndImageUrl(storeId, previousUrl)) {
+            return;
+        }
+        Runnable delete = () -> {
+            try {
+                storageFacade.deleteFileByUrl(previousUrl, "tienda-" + storeId + "/imagenes-productos/");
+            } catch (Exception e) {
+                log.warn("No se pudo borrar la foto anterior del producto {} de R2: {}", product.getId(), e.getMessage());
+            }
+        };
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    delete.run();
+                }
+            });
+        } else {
+            delete.run();
+        }
     }
 
     @Override

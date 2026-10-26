@@ -124,6 +124,23 @@ public class StorageServiceImpl implements StorageFacade {
         }
     }
 
+    @Override
+    public void deleteFileByUrl(String publicUrl, String keyPrefix) {
+        if (publicUrl == null || publicUrl.isBlank() || keyPrefix == null || keyPrefix.isBlank()) {
+            return;
+        }
+        String base = properties.getPublicUrl() == null ? "" : properties.getPublicUrl().replaceAll("/+$", "");
+        String url = publicUrl.trim();
+        if (!url.startsWith(base + "/")) {
+            return;
+        }
+        String key = url.substring(base.length() + 1);
+        if (key.contains("..") || !key.startsWith(keyPrefix)) {
+            return;
+        }
+        deleteFile(key);
+    }
+
     private String getFileExtension(String filename) {
         if (filename != null && filename.contains(".")) {
             return filename.substring(filename.lastIndexOf(".")).toLowerCase();

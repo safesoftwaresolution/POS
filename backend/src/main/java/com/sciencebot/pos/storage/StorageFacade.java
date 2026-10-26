@@ -30,4 +30,14 @@ public interface StorageFacade {
      * @param key Clave del objeto en el bucket (ej: "products/uuid.jpg")
      */
     void deleteFile(String key);
+
+    /**
+     * Elimina un archivo a partir de su URL publica, solo si pertenece a {@code keyPrefix}
+     * (ej: "tienda-1/imagenes-productos/"). Si la URL no es de este bucket o queda fuera del
+     * prefijo, no hace nada: nunca borra objetos ajenos.
+     *
+     * @param publicUrl URL publica devuelta al subir el archivo
+     * @param keyPrefix Prefijo de clave que debe cumplir el objeto para poder borrarse
+     */
+    void deleteFileByUrl(String publicUrl, String keyPrefix);
 }

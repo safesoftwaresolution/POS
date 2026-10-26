@@ -9,6 +9,7 @@ import com.sciencebot.pos.products.internal.repositories.ProductLotRepository;
 import com.sciencebot.pos.products.internal.repositories.ProductRepository;
 import com.sciencebot.pos.products.internal.services.ProductServiceImpl;
 import com.sciencebot.pos.products.internal.mappers.ProductMapper;
+import com.sciencebot.pos.storage.StorageFacade;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -43,6 +44,9 @@ class ProductServiceImplTest {
 
     @Mock
     private ProductMapper productMapper;
+
+    @Mock
+    private StorageFacade storageFacade;
 
     @InjectMocks
     private ProductServiceImpl productService;
@@ -532,6 +536,83 @@ class ProductServiceImplTest {
                 () -> productService.assignLot(10L, 1, LocalDate.now().plusDays(30), null));
 
         assertTrue(ex.getMessage().contains("no tiene unidades sin fecha"));
+    }
+
+    // ---- foto del producto en R2 ----
+
+    private static final String OLD_URL = "https://pub.r2.dev/tienda-1/imagenes-productos/vieja.jpg";
+    private static final String NEW_URL = "https://pub.r2.dev/tienda-1/imagenes-productos/nueva.jpg";
+    private static final String PREFIX = "tienda-1/imagenes-productos/";
+
+    @Test
+    void updateProduct_ReplacingThePhoto_DeletesTheOldOneFromR2() {
+        stubUpdate(OLD_URL);
+
+        productService.updateProduct(10L, updateCommand(NEW_URL));
+
+        verify(storageFacade).deleteFileByUrl(OLD_URL, PREFIX);
+    }
+
+    @Test
+    void updateProduct_RemovingThePhoto_DeletesTheOldOneFromR2() {
+        stubUpdate(OLD_URL);
+
+        productService.updateProduct(10L, updateCommand(null));
+
+        verify(storageFacade).deleteFileByUrl(OLD_URL, PREFIX);
+    }
+
+    @Test
+    void updateProduct_KeepingThePhoto_DeletesNothing() {
+        stubUpdate(OLD_URL);
+
+        productService.updateProduct(10L, updateCommand(OLD_URL));
+
+        verifyNoInteractions(storageFacade);
+    }
+
+    @Test
+    void updateProduct_OldPhotoStillUsedByAnotherProduct_IsKept() {
+        stubUpdate(OLD_URL);
+        when(productRepository.existsByStoreIdAndImageUrl(STORE_ID, OLD_URL)).thenReturn(true);
+
+        productService.updateProduct(10L, updateCommand(NEW_URL));
+
+        verifyNoInteractions(storageFacade);
+    }
+
+    @Test
+    void updateProduct_R2Failure_DoesNotBreakTheSave() {
+        stubUpdate(OLD_URL);
+        doThrow(new IllegalStateException("R2 caído")).when(storageFacade).deleteFileByUrl(any(), any());
+
+        assertDoesNotThrow(() -> productService.updateProduct(10L, updateCommand(NEW_URL)));
+    }
+
+    @Test
+    void deleteProduct_OnlyDeactivates_AndKeepsThePhoto() {
+        Product product = ownProduct(5);
+        product.setImageUrl(OLD_URL);
+        when(productRepository.findById(10L)).thenReturn(Optional.of(product));
+
+        productService.deleteProduct(10L);
+
+        assertFalse(product.isActive());
+        verifyNoInteractions(storageFacade);
+    }
+
+    private void stubUpdate(String currentImageUrl) {
+        Product product = ownProduct(5);
+        product.setImageUrl(currentImageUrl);
+        when(productRepository.findById(10L)).thenReturn(Optional.of(product));
+        when(categoryFacade.getById(1L)).thenReturn(Optional.of(new CategoryDto(1L, "Lácteos", "Lácteos", 0)));
+        when(productRepository.save(any(Product.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        stubMapper();
+    }
+
+    private static UpdateProductCommand updateCommand(String imageUrl) {
+        return new UpdateProductCommand("Leche entera 1L", null, 1L, null,
+                BigDecimal.valueOf(2000), BigDecimal.valueOf(3000), null, 5, imageUrl);
     }
 
     // ---- helpers ----

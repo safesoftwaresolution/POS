@@ -127,4 +127,26 @@ class StorageServiceImplTest {
 
         verifyNoInteractions(s3Client);
     }
+
+    @Test
+    void deleteFileByUrl_OwnKey_DeletesTheObject() {
+        storageService.deleteFileByUrl("https://pub-test.r2.dev/tienda-1/imagenes-productos/abc.jpg",
+                "tienda-1/imagenes-productos/");
+
+        ArgumentCaptor<DeleteObjectRequest> captor = ArgumentCaptor.forClass(DeleteObjectRequest.class);
+        verify(s3Client).deleteObject(captor.capture());
+        assertEquals("tienda-1/imagenes-productos/abc.jpg", captor.getValue().key());
+    }
+
+    @Test
+    void deleteFileByUrl_OtherStoreOtherBucketOrTraversal_DoesNothing() {
+        String prefix = "tienda-1/imagenes-productos/";
+        storageService.deleteFileByUrl("https://pub-test.r2.dev/tienda-2/imagenes-productos/abc.jpg", prefix);
+        storageService.deleteFileByUrl("https://otro-sitio.com/tienda-1/imagenes-productos/abc.jpg", prefix);
+        storageService.deleteFileByUrl("https://pub-test.r2.dev/tienda-1/imagenes-productos/../tienda-2/x.jpg", prefix);
+        storageService.deleteFileByUrl(null, prefix);
+        storageService.deleteFileByUrl("https://pub-test.r2.dev/tienda-1/imagenes-productos/abc.jpg", " ");
+
+        verifyNoInteractions(s3Client);
+    }
 }

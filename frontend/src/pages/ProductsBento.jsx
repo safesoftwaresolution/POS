@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Plus, Search, Package, Layers, FileSpreadsheet } from 'lucide-react';
-import { getProductsApi, createProductApi, updateProductApi, deleteProductApi, changeProductStatusApi } from '../services/productsApi';
+import { getProductsApi, createProductApi, updateProductApi, deleteProductApi, changeProductStatusApi, deleteStorageFileApi } from '../services/productsApi';
 import { getCategoriesApi } from '../services/categoriesApi';
 import {
   getSubcategoriesApi,
@@ -61,6 +61,8 @@ export default function ProductsBento() {
   const [errorMsg, setErrorMsg] = useState('');
   const [newProduct, setNewProduct] = useState(EMPTY_PRODUCT);
   const [uploadingImage, setUploadingImage] = useState(false);
+  // Clave en R2 de la foto subida en este formulario que todavía no se guardó en un producto.
+  const unsavedUploadKey = useRef(null);
   const [showNewSubcategory, setShowNewSubcategory] = useState(false);
   const [newSubcategoryName, setNewSubcategoryName] = useState('');
   const [subSearch, setSubSearch] = useState('');
@@ -206,12 +208,25 @@ export default function ProductsBento() {
         }
       }
 
+      unsavedUploadKey.current = null; // la foto ya quedó guardada en el producto
       setShowAddModal(false);
       setNewProduct(EMPTY_PRODUCT);
       reloadProducts();
     } catch (err) {
       setErrorMsg(err.message || 'Error al guardar el producto. Intenta nuevamente.');
     }
+  };
+
+  // Una foto que se subió pero no se guardó (formulario cancelado o foto reemplazada) se borra de R2.
+  const discardUnsavedUpload = () => {
+    const key = unsavedUploadKey.current;
+    unsavedUploadKey.current = null;
+    if (key) deleteStorageFileApi(key).catch(() => {});
+  };
+
+  const closeProductModal = () => {
+    discardUnsavedUpload();
+    setShowAddModal(false);
   };
 
   const handleImageChange = async (e) => {
@@ -225,6 +240,8 @@ export default function ProductsBento() {
       formData.append('file', await prepareImageForUpload(file));
       formData.append('folder', 'imagenes-productos');
       const result = await uploadFileApi('/storage/upload', formData);
+      discardUnsavedUpload();
+      unsavedUploadKey.current = result.key;
       setNewProduct(prev => ({ ...prev, imageUrl: result.url }));
     } catch (err) {
       setErrorMsg(err.message || 'Error al subir la imagen. Intenta nuevamente.');
@@ -390,7 +407,7 @@ export default function ProductsBento() {
           setNewSubcategoryName={setNewSubcategoryName}
           onCreateSubcategory={handleCreateSubcategory}
           onSubmit={handleSubmitProduct}
-          onClose={() => setShowAddModal(false)}
+          onClose={closeProductModal}
         />
       )}
 

@@ -1,0 +1,27 @@
+---
+// Las rutas del sistema (/login, /register, /verify-email...) vivian en posbento.com antes de que la landing
+// ocupara ese dominio. Los correos ya enviados y los favoritos viejos apuntan ahi: esta pagina los reenvia al
+// sistema conservando la ruta, el ?token=... y el #hash.
+import Base from '../layouts/Base.astro';
+import Brand from './Brand.astro';
+import { APP_URL } from '../lib/site.js';
+
+interface Props {
+  path: string;
+}
+const { path } = Astro.props;
+---
+<Base bare noindex title="Redirigiendo a BentoPOS…" description="Te llevamos al sistema de BentoPOS.">
+  <div class="grid min-h-screen place-items-center px-5">
+    <div class="text-center">
+      <Brand size="lg" />
+      <p class="mt-8 text-base font-semibold text-ink-soft">Te estamos llevando al sistema…</p>
+      <a id="go" href={`${APP_URL}${path}`} class="btn btn-brand btn-lg mt-6">Continuar</a>
+    </div>
+  </div>
+  <script is:inline define:vars={{ appUrl: APP_URL, path }}>
+    var target = appUrl + path + window.location.search + window.location.hash;
+    document.getElementById('go').setAttribute('href', target);
+    window.location.replace(target);
+  </script>
+</Base>

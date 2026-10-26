@@ -3,6 +3,7 @@ import useAuth from '../hooks/useAuth';
 import { useNavigate, Link } from 'react-router-dom';
 import { User, KeyRound, ArrowRight, AlertCircle } from 'lucide-react';
 import BentoIcon from '../components/BentoIcon';
+import { LANDING_URL } from '../constants/site';
 import { resendVerificationApi } from '../services/authApi';
 
 export default function LoginBento() {
@@ -46,11 +47,13 @@ export default function LoginBento() {
 
         {/* Brand Header */}
         <div className="text-center space-y-3">
-          <BentoIcon size="w-16 h-16 mx-auto" rounded="rounded-3xl" />
-          <div className="flex items-baseline justify-center gap-1">
-            <span className="font-black text-2xl tracking-tight text-white">Bento</span>
-            <span className="font-black text-2xl tracking-tight text-brand">POS</span>
-          </div>
+          <a href={LANDING_URL} aria-label="BentoPOS, ir al sitio" className="block space-y-3">
+            <BentoIcon size="w-16 h-16 mx-auto" rounded="rounded-3xl" />
+            <div className="flex items-baseline justify-center gap-1">
+              <span className="font-black text-2xl tracking-tight text-white">Bento</span>
+              <span className="font-black text-2xl tracking-tight text-brand">POS</span>
+            </div>
+          </a>
           <p className="text-xs text-gray-400 font-semibold tracking-wide">
             Sistema de Punto de Venta • Iniciar Sesión
           </p>

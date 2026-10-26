@@ -1,0 +1,66 @@
+---
+import Base from '../layouts/Base.astro';
+import Hero from '../components/Hero.astro';
+import Capabilities from '../components/Capabilities.astro';
+import Features from '../components/Features.astro';
+import Dian from '../components/Dian.astro';
+import Steps from '../components/Steps.astro';
+import Roles from '../components/Roles.astro';
+import Faq from '../components/Faq.astro';
+import FinalCta from '../components/FinalCta.astro';
+import { faq } from '../lib/faq.js';
+import { SITE_URL, SITE_NAME } from '../lib/site.js';
+
+const description =
+  'Punto de venta, inventario en tiempo real y facturación electrónica DIAN en un solo sistema. Cobra rápido, controla tu stock y factura sin frenar la caja.';
+
+// Datos estructurados para buscadores (sin precios ni calificaciones: no inventamos datos).
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'Organization',
+      '@id': `${SITE_URL}/#organization`,
+      name: SITE_NAME,
+      url: SITE_URL,
+      logo: `${SITE_URL}/icons/icon-192.png`,
+    },
+    {
+      '@type': 'WebSite',
+      '@id': `${SITE_URL}/#website`,
+      url: SITE_URL,
+      name: SITE_NAME,
+      inLanguage: 'es-CO',
+      publisher: { '@id': `${SITE_URL}/#organization` },
+    },
+    {
+      '@type': 'SoftwareApplication',
+      name: SITE_NAME,
+      applicationCategory: 'BusinessApplication',
+      operatingSystem: 'Web',
+      inLanguage: 'es-CO',
+      url: SITE_URL,
+      description,
+    },
+    {
+      '@type': 'FAQPage',
+      mainEntity: faq.map((f) => ({
+        '@type': 'Question',
+        name: f.q,
+        acceptedAnswer: { '@type': 'Answer', text: f.a },
+      })),
+    },
+  ],
+};
+---
+<Base description={description}>
+  <script slot="head" is:inline type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+  <Hero />
+  <Capabilities />
+  <Features />
+  <Dian />
+  <Steps />
+  <Roles />
+  <Faq />
+  <FinalCta />
+</Base>

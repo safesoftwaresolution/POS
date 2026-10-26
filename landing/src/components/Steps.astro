@@ -1,0 +1,48 @@
+---
+import Icon from './Icon.astro';
+
+const steps = [
+  {
+    n: '01',
+    i: 'user-plus',
+    t: 'Crea tu cuenta',
+    d: 'Regístrate, verifica tu correo y entra al sistema. Tú serás el Administrador de tu local.',
+  },
+  {
+    n: '02',
+    i: 'store',
+    t: 'Configura tu local',
+    d: 'Carga tus productos y categorías, y envía tus documentos (RUT y Cámara de Comercio) para habilitar la facturación electrónica.',
+  },
+  {
+    n: '03',
+    i: 'zap',
+    t: 'Vende y factura',
+    d: 'Cobra en caja: el stock se descuenta solo y la factura electrónica se emite en segundo plano.',
+  },
+];
+---
+<section id="como-funciona" class="py-20 md:py-28">
+  <div class="wrap">
+    <div class="reveal mx-auto max-w-2xl text-center">
+      <p class="eyebrow">Cómo funciona</p>
+      <h2 class="mt-3 text-[clamp(2rem,4.6vw,3.4rem)] leading-[1.04] tracking-[-0.03em]">
+        <span class="font-light">De la cuenta a tu primera venta,</span>
+        <span class="font-extrabold"> en tres pasos.</span>
+      </h2>
+    </div>
+
+    <ol class="mt-14 grid gap-4 md:grid-cols-3">
+      {steps.map((s, i) => (
+        <li class="reveal" style={`--d:${i * 100}ms`}>
+          <div class="bento-card relative h-full overflow-hidden p-7">
+            <span class="pointer-events-none absolute right-5 top-2 select-none text-[6rem] font-black leading-none tracking-tighter text-line" aria-hidden="true">{s.n}</span>
+            <span class="relative grid size-11 place-items-center rounded-2xl bg-solid text-solid-ink"><Icon name={s.i} class="size-5" /></span>
+            <h3 class="relative mt-6 text-xl font-extrabold tracking-tight"><span class="sr-only">Paso {s.n}: </span>{s.t}</h3>
+            <p class="relative mt-2 text-[15px] leading-relaxed text-ink-soft">{s.d}</p>
+          </div>
+        </li>
+      ))}
+    </ol>
+  </div>
+</section>

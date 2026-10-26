@@ -1,0 +1,21 @@
+---
+// Codigo de barras decorativo (no codifica nada). Cada digito es el ancho de una barra o un espacio, alternando.
+interface Props {
+  pattern?: string;
+  height?: number;
+  class?: string;
+}
+
+const { pattern = '2114123111324211223114112312121411321', height = 60, class: cls = '' } = Astro.props;
+
+let x = 0;
+const bars: { x: number; w: number }[] = [];
+[...pattern].forEach((c, i) => {
+  const w = Number(c);
+  if (i % 2 === 0) bars.push({ x, w });
+  x += w;
+});
+---
+<svg class={cls} viewBox={`0 0 ${x} ${height}`} preserveAspectRatio="none" aria-hidden="true" focusable="false">
+  {bars.map((b) => <rect x={b.x} y="0" width={b.w} height={height} fill="currentColor" />)}
+</svg>

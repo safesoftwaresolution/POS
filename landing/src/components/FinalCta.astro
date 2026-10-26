@@ -1,0 +1,32 @@
+---
+import Icon from './Icon.astro';
+import { links } from '../lib/site.js';
+---
+<section class="px-3 pb-16 sm:px-5 md:pb-24">
+  <div class="band mx-auto max-w-[1200px] px-6 py-20 text-center sm:px-12 md:py-28">
+    <div class="pointer-events-none absolute left-1/2 top-0 -z-10 h-72 w-[42rem] max-w-full -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand/40 blur-[120px]"></div>
+
+    <!-- Eco del isotipo: cuatro compartimentos bento flotando a los lados -->
+    <div class="pointer-events-none absolute inset-0 -z-10 hidden md:block" aria-hidden="true">
+      <span class="float absolute left-[7%] top-[18%] size-14 rotate-[-12deg] rounded-2xl bg-brand opacity-90"></span>
+      <span class="float absolute right-[8%] top-[14%] size-12 rotate-[10deg] rounded-2xl bg-white/15" style="animation-delay:-2s"></span>
+      <span class="float absolute bottom-[16%] left-[10%] size-10 rotate-[8deg] rounded-xl bg-white/15" style="animation-delay:-4s"></span>
+      <span class="float absolute bottom-[20%] right-[7%] size-16 rotate-[-8deg] rounded-2xl bg-[#532011]" style="animation-delay:-1s"></span>
+    </div>
+
+    <div class="reveal relative">
+      <p class="eyebrow">Empieza hoy</p>
+      <h2 class="mx-auto mt-4 max-w-3xl text-[clamp(2.2rem,5.6vw,4.2rem)] leading-[1.02] tracking-[-0.035em]">
+        <span class="font-light">Pon tu negocio</span>
+        <span class="block font-extrabold text-brand">en equilibrio<span class="-ml-[0.06em]">.</span></span>
+      </h2>
+      <p class="mx-auto mt-6 max-w-xl text-base leading-relaxed text-white/70 md:text-lg">
+        Crea tu cuenta, carga tus productos y empieza a cobrar con el control de tu inventario y tus facturas en un solo lugar.
+      </p>
+      <div class="mt-9 flex flex-wrap items-center justify-center gap-3">
+        <a href={links.register} class="btn btn-brand btn-lg">Crear cuenta <Icon name="arrow-right" class="size-4" /></a>
+        <a href={links.login} class="btn btn-on-dark btn-lg">Ingresar al sistema</a>
+      </div>
+    </div>
+  </div>
+</section>

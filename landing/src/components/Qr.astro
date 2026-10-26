@@ -1,0 +1,36 @@
+---
+// QR decorativo (no codifica nada): tres marcadores de esquina + modulos pseudoaleatorios deterministas.
+interface Props {
+  class?: string;
+}
+const { class: cls = '' } = Astro.props;
+
+const N = 17;
+let seed = 7;
+const rnd = () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
+
+const inFinder = (x: number, y: number) =>
+  (x < 7 && y < 7) || (x >= N - 7 && y < 7) || (x < 7 && y >= N - 7);
+
+const cells: { x: number; y: number }[] = [];
+for (let y = 0; y < N; y++) {
+  for (let x = 0; x < N; x++) {
+    if (!inFinder(x, y) && rnd() > 0.52) cells.push({ x, y });
+  }
+}
+const finders = [
+  [0, 0],
+  [N - 7, 0],
+  [0, N - 7],
+];
+---
+<svg class={cls} viewBox={`0 0 ${N} ${N}`} shape-rendering="crispEdges" aria-hidden="true" focusable="false">
+  {finders.map(([fx, fy]) => (
+    <>
+      <rect x={fx} y={fy} width="7" height="7" fill="currentColor" />
+      <rect x={fx + 1} y={fy + 1} width="5" height="5" fill="var(--qr-bg, #fff)" />
+      <rect x={fx + 2} y={fy + 2} width="3" height="3" fill="currentColor" />
+    </>
+  ))}
+  {cells.map((c) => <rect x={c.x} y={c.y} width="1" height="1" fill="currentColor" />)}
+</svg>

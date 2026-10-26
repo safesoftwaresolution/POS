@@ -1,0 +1,30 @@
+---
+import Icon from './Icon.astro';
+
+const items = [
+  { i: 'scan-barcode', t: 'Lector o cámara' },
+  { i: 'banknote', t: 'Efectivo, tarjeta y transferencia' },
+  { i: 'receipt-text', t: 'Factura electrónica DIAN' },
+  { i: 'boxes', t: 'Stock en tiempo real' },
+  { i: 'tags', t: 'IVA 0 %, 5 % y 19 %' },
+  { i: 'store', t: 'Varios locales' },
+  { i: 'truck', t: 'Compras a proveedores' },
+  { i: 'chart-column', t: 'Reportes al día' },
+  { i: 'smartphone', t: 'Instalable en el celular' },
+  { i: 'moon', t: 'Modo claro y oscuro' },
+];
+---
+<section aria-label="Capacidades del sistema" class="border-y border-line bg-card/40 py-7">
+  <p class="eyebrow mb-5 text-center !text-ink-muted">Pensado para el comercio colombiano</p>
+  <div class="marquee">
+    {[false, true].map((dup) => (
+      <ul class="marquee-track" aria-hidden={dup ? 'true' : undefined}>
+        {items.map((it) => (
+          <li class="chip !px-4 !py-2 !text-[13px]">
+            <Icon name={it.i} class="size-4 text-brand-text" /> {it.t}
+          </li>
+        ))}
+      </ul>
+    ))}
+  </div>
+</section>

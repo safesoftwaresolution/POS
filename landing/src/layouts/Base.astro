@@ -65,6 +65,8 @@ const ogImage = new URL('/og.png', SITE_URL).href;
         var dark = t ? t === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
         r.classList.toggle('dark', dark);
         r.classList.add('js');
+        // Demo animada del hero: solo si la persona no pidio reducir el movimiento (ver scripts/hero-demo.js).
+        if (window.matchMedia('(prefers-reduced-motion: no-preference)').matches) r.classList.add('anim');
       })();
     </script>
     <noscript><style>.reveal { opacity: 1 !important; translate: none !important; }</style></noscript>

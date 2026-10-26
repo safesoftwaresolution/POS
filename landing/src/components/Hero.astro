@@ -39,6 +39,14 @@ import { links } from '../lib/site.js';
 
   <div class="wrap mt-16 md:mt-20">
     <HeroMock />
-    <p class="mt-14 text-center text-xs font-medium text-ink-muted">Vista de ejemplo con datos ficticios.</p>
+    <p class="mt-14 text-center text-xs font-medium text-ink-muted">
+      Vista de ejemplo con datos ficticios.
+      <button
+        type="button"
+        data-mock-toggle
+        aria-pressed="false"
+        class="ml-1 rounded-md px-1 font-semibold text-ink-soft underline decoration-line-strong underline-offset-4 transition-colors hover:text-ink"
+      >Pausar animación</button>
+    </p>
   </div>
 </section>

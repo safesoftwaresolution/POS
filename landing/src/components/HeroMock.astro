@@ -2,14 +2,19 @@
 import Icon from './Icon.astro';
 
 // Maqueta ilustrativa (datos ficticios) del POS: catalogo, ticket y metricas, en el mismo lenguaje bento del sistema.
+//
+// El HTML es el estado FINAL de una venta de ejemplo. src/scripts/hero-demo.js la reproduce desde cero en bucle
+// (escanear -> ticket -> factura DIAN -> cobrar -> stock y ventas -> factura validada); sin JS o con
+// prefers-reduced-motion se queda tal cual esta aqui. Los ganchos son data-m / data-card / data-line / data-before.
 const cats = ['Todos', 'Bebidas', 'Snacks', 'Aseo', 'Lácteos'];
 
+// k: id para la demo. b: stock ANTES de la venta de ejemplo (s es el de despues; la demo lo descuenta).
 const products = [
   { n: 'Agua 600 ml', p: '2.000', s: '48', i: 'Ag', c: 'bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300' },
-  { n: 'Gaseosa 1,5 L', p: '6.500', s: '30', i: 'Gs', c: 'bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300' },
-  { n: 'Pan tajado', p: '5.800', s: '12', i: 'Pn', c: 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300' },
-  { n: 'Leche 1 L', p: '4.200', s: '24', i: 'Lc', c: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300' },
-  { n: 'Arroz 500 g', p: '3.400', s: '5', i: 'Ar', c: 'bg-orange-100 text-orange-700 dark:bg-orange-500/15 dark:text-orange-300' },
+  { n: 'Gaseosa 1,5 L', k: 'gaseosa', b: '31', p: '6.500', s: '30', i: 'Gs', c: 'bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300' },
+  { n: 'Pan tajado', k: 'pan', b: '13', p: '5.800', s: '12', i: 'Pn', c: 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300' },
+  { n: 'Leche 1 L', k: 'leche', b: '26', p: '4.200', s: '24', i: 'Lc', c: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300' },
+  { n: 'Arroz 500 g', k: 'arroz', b: '6', p: '3.400', s: '5', i: 'Ar', c: 'bg-orange-100 text-orange-700 dark:bg-orange-500/15 dark:text-orange-300' },
   { n: 'Café 250 g', p: '9.900', s: '18', i: 'Cf', c: 'bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300' },
   { n: 'Galletas', p: '3.200', s: '36', i: 'Gl', c: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/15 dark:text-yellow-300' },
   { n: 'Jabón líquido', p: '7.800', s: '15', i: 'Jb', c: 'bg-teal-100 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300' },
@@ -30,7 +35,8 @@ const spark = [40, 55, 35, 60, 48, 70, 52, 64, 80, 58, 72, 92];
   class="fade-up relative mx-auto max-w-[1100px]"
   style="--d:480ms"
   role="img"
-  aria-label="Vista de ejemplo del sistema: punto de venta con ticket de cobro, ventas del día y alerta de stock bajo"
+  aria-label="Animación de ejemplo del sistema: se escanean productos, se arma el ticket, se cobra con factura electrónica, el stock y las ventas se actualizan y la factura queda validada"
+  data-mock
 >
   <div class="pointer-events-none absolute inset-x-10 -top-8 h-52 rounded-full bg-brand/25 blur-[90px]"></div>
 
@@ -46,11 +52,11 @@ const spark = [40, 55, 35, 60, 48, 70, 52, 64, 80, 58, 72, 92];
       <span class="w-10"></span>
     </div>
 
-    <div class="grid grid-cols-12 gap-3">
+    <div class="m-fade grid grid-cols-12 gap-3" data-m="grid">
       <!-- Catalogo -->
       <div class="col-span-12 hidden rounded-3xl border border-line bg-card p-4 md:col-span-7 md:block lg:col-span-5">
-        <div class="flex items-center gap-2 rounded-2xl border border-line bg-page px-3 py-2.5 text-xs font-medium text-ink-muted">
-          <Icon name="scan-barcode" class="size-4 text-brand-text" /> Escanea o busca un producto…
+        <div class="m-search flex items-center gap-2 rounded-2xl border border-line bg-page px-3 py-2.5 text-xs font-medium text-ink-muted" data-m="search">
+          <Icon name="scan-barcode" class="size-4 shrink-0 text-brand-text" /> <span class="truncate" data-m="search-text">Escanea o busca un producto…</span>
         </div>
         <div class="mt-3 flex flex-wrap gap-1.5">
           {cats.map((c, i) => (
@@ -59,11 +65,11 @@ const spark = [40, 55, 35, 60, 48, 70, 52, 64, 80, 58, 72, 92];
         </div>
         <div class="mt-3 grid grid-cols-3 gap-2.5">
           {products.map((p) => (
-            <div class="rounded-2xl border border-line bg-page/60 p-2.5">
+            <div class="m-card relative rounded-2xl border border-line bg-page/60 p-2.5" data-card={p.k}>
               <span class:list={['grid size-9 place-items-center rounded-xl text-[11px] font-extrabold', p.c]}>{p.i}</span>
               <p class="mt-2 truncate text-[11px] font-bold">{p.n}</p>
               <p class="text-xs font-extrabold tabular-nums">$ {p.p}</p>
-              <p class="text-[10px] font-medium text-ink-muted tabular-nums">{p.s} uds</p>
+              <p class="text-[10px] font-medium text-ink-muted tabular-nums"><span class="m-num" data-before={p.b}>{p.s}</span> uds</p>
             </div>
           ))}
         </div>
@@ -75,15 +81,21 @@ const spark = [40, 55, 35, 60, 48, 70, 52, 64, 80, 58, 72, 92];
           <p class="text-sm font-extrabold">Ticket</p>
           <span class="text-[11px] font-semibold text-ink-muted tabular-nums">#0187</span>
         </div>
-        <div class="mt-1">
-          {lines.map((l) => (
-            <div class="flex items-center gap-2.5 border-b border-line py-2.5 last:border-0">
-              <span class="grid size-8 shrink-0 place-items-center rounded-lg bg-page text-[11px] font-extrabold tabular-nums">{l.q}</span>
+        <div class="relative mt-1">
+          <!-- Solo visible durante la demo, mientras el ticket esta vacio. -->
+          <div class="m-empty" data-m="empty">
+            <Icon name="scan-barcode" class="size-6 text-brand-text" />
+            <p class="text-xs font-bold">Escanea un producto</p>
+            <p class="text-[10px] text-ink-muted">para empezar el ticket</p>
+          </div>
+          {lines.map((l, i) => (
+            <div class="m-line flex items-center gap-2.5 border-b border-line py-2.5 last:border-0" data-line={i}>
+              <span class="grid size-8 shrink-0 place-items-center rounded-lg bg-page text-[11px] font-extrabold tabular-nums" data-m={i === 0 ? 'qty' : undefined}>{l.q}</span>
               <div class="min-w-0 flex-1">
                 <p class="truncate text-xs font-bold">{l.n}</p>
                 <p class="text-[10px] text-ink-muted tabular-nums">$ {l.u} c/u</p>
               </div>
-              <p class="text-xs font-extrabold tabular-nums">$ {l.t}</p>
+              <p class="text-xs font-extrabold tabular-nums" data-m={i === 0 ? 'amt' : undefined}>$ {l.t}</p>
             </div>
           ))}
         </div>
@@ -92,36 +104,43 @@ const spark = [40, 55, 35, 60, 48, 70, 52, 64, 80, 58, 72, 92];
           <span class="flex items-center gap-2 text-[11px] font-bold">
             <Icon name="receipt-text" class="size-4 text-brand-text" /> Factura electrónica DIAN
           </span>
-          <span class="relative h-5 w-9 shrink-0 rounded-full bg-brand">
-            <span class="absolute right-0.5 top-0.5 size-4 rounded-full bg-white shadow-sm"></span>
+          <span class="m-toggle is-on relative h-5 w-9 shrink-0 rounded-full bg-brand" data-m="dian">
+            <span class="m-knob absolute right-0.5 top-0.5 size-4 rounded-full bg-white shadow-sm"></span>
           </span>
         </div>
 
         <div class="mt-3 flex items-end justify-between">
           <div>
             <p class="text-[10px] font-bold uppercase tracking-wider text-ink-muted">Total</p>
-            <p class="text-[1.65rem] font-extrabold leading-tight tracking-tight tabular-nums">$ 24.100</p>
+            <p class="m-total origin-left text-[1.65rem] font-extrabold leading-tight tracking-tight tabular-nums" data-m="total">$ 24.100</p>
           </div>
           <p class="pb-1 text-[10px] font-medium text-ink-muted">IVA incluido</p>
         </div>
 
         <div class="mt-3 grid grid-cols-3 gap-1.5">
           {pay.map((m, i) => (
-            <span class:list={['rounded-xl border px-2 py-1.5 text-center text-[10px] font-bold', i === 0 ? 'border-brand bg-brand/10 text-brand-text' : 'border-line text-ink-soft']}>{m}</span>
+            <span class:list={['m-pay rounded-xl border border-line px-2 py-1.5 text-center text-[10px] font-bold text-ink-soft', i === 0 && 'is-sel']} data-pay={i}>{m}</span>
           ))}
         </div>
-        <div class="mt-3 grid h-11 place-items-center rounded-2xl bg-brand text-sm font-extrabold text-on-brand">Cobrar $ 24.100</div>
+        <div class="m-btn mt-3 flex h-11 items-center justify-center gap-2 rounded-2xl bg-brand text-sm font-extrabold text-on-brand" data-m="btn">
+          <Icon name="check" class="m-btn-check size-4" />
+          <span data-m="btn-label">Cobrar $ 24.100</span>
+        </div>
       </div>
 
       <!-- Metricas -->
       <div class="col-span-12 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:col-span-3 lg:grid-cols-1">
         <div class="rounded-3xl border border-line bg-card p-4">
           <p class="text-[10px] font-bold uppercase tracking-wider text-ink-muted">Ventas de hoy</p>
-          <p class="mt-1 text-2xl font-extrabold tracking-tight tabular-nums">$ 1.284.500</p>
+          <p class="mt-1 text-2xl font-extrabold tracking-tight tabular-nums" data-m="kpi">$ 1.284.500</p>
           <span class="badge badge-ok mt-2"><Icon name="trending-up" class="size-3" /> 12 % vs ayer</span>
           <div class="mt-3 flex h-12 items-end gap-1">
             {spark.map((h, i) => (
-              <span class:list={['flex-1 rounded-sm', i === spark.length - 1 ? 'bg-brand' : 'bg-line-strong']} style={`height:${h}%`}></span>
+              <span
+                class:list={['flex-1 rounded-sm', i === spark.length - 1 ? 'm-spark-last bg-brand' : 'bg-line-strong']}
+                style={`height:${h}%`}
+                data-m={i === spark.length - 1 ? 'spark' : undefined}
+              ></span>
             ))}
           </div>
         </div>
@@ -129,12 +148,13 @@ const spark = [40, 55, 35, 60, 48, 70, 52, 64, 80, 58, 72, 92];
         <div class="flex flex-col rounded-3xl border border-line bg-card p-4">
           <div class="flex items-center justify-between">
             <p class="text-[10px] font-bold uppercase tracking-wider text-ink-muted">Stock bajo</p>
-            <span class="badge badge-warn"><Icon name="triangle-alert" class="size-3" /> 3 productos</span>
+            <span class="badge badge-warn"><Icon name="triangle-alert" class="size-3" /> <span data-m="low-count">3</span> productos</span>
           </div>
           <ul class="mt-3 space-y-2 text-xs">
-            <li class="flex items-center justify-between"><span class="font-bold">Arroz 500 g</span><span class="font-semibold text-ink-muted tabular-nums">5 uds</span></li>
-            <li class="flex items-center justify-between"><span class="font-bold">Pan tajado</span><span class="font-semibold text-ink-muted tabular-nums">12 uds</span></li>
+            <li class="flex items-center justify-between"><span class="font-bold">Arroz 500 g</span><span class="font-semibold text-ink-muted tabular-nums"><span class="m-num" data-before="6">5</span> uds</span></li>
             <li class="flex items-center justify-between"><span class="font-bold">Aceite 1 L</span><span class="font-semibold text-ink-muted tabular-nums">4 uds</span></li>
+            <!-- Entra durante la demo: al vender, el pan baja a 12 y cruza el minimo. -->
+            <li class="m-low-pan is-in flex items-center justify-between" data-m="low-pan"><span class="font-bold">Pan tajado</span><span class="font-semibold text-ink-muted tabular-nums">12 uds</span></li>
           </ul>
           <span class="mt-4 flex items-center justify-center gap-1.5 rounded-xl border border-line bg-page px-3 py-2 text-[11px] font-bold text-ink-soft lg:mt-auto">
             <Icon name="truck" class="size-3.5" /> Registrar compra
@@ -145,11 +165,25 @@ const spark = [40, 55, 35, 60, 48, 70, 52, 64, 80, 58, 72, 92];
   </div>
 
   <!-- Aviso flotante: la factura se valida en segundo plano -->
-  <div class="float relative z-10 mx-auto mt-4 flex w-fit items-center gap-3 rounded-2xl border border-line bg-card px-4 py-3 shadow-[0_18px_50px_-12px_rgba(0,0,0,0.3)] sm:absolute sm:-bottom-7 sm:right-10 sm:mx-0 sm:mt-0">
-    <span class="grid size-8 place-items-center rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"><Icon name="check" class="size-4" /></span>
+  <div class="m-toast is-in float relative z-10 mx-auto mt-4 flex w-fit items-center gap-3 rounded-2xl border border-line bg-card px-4 py-3 shadow-[0_18px_50px_-12px_rgba(0,0,0,0.3)] sm:absolute sm:-bottom-7 sm:right-10 sm:mx-0 sm:mt-0" data-m="toast">
+    <span class="t-ico grid size-8 place-items-center rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+      <Icon name="check" class="t-check size-4" />
+      <Icon name="clock" class="t-clock size-4" />
+    </span>
     <div>
       <p class="text-xs font-extrabold">Factura FE-1042</p>
-      <p class="text-[11px] font-medium text-ink-muted">Estado: validada</p>
+      <p class="text-[11px] font-medium text-ink-muted" data-m="toast-sub">Estado: validada</p>
     </div>
   </div>
+
+  <!-- Cursor de la demo (solo visible mientras corre la animacion) -->
+  <div class="m-cursor" data-m="cursor" aria-hidden="true">
+    <svg width="20" height="24" viewBox="0 0 20 24" fill="none" focusable="false">
+      <path d="M2 2v18.2l4.8-4.5 3.2 7 3.2-1.5-3.2-6.9 6.6-.5L2 2Z" fill="#fff" stroke="#0A0A0A" stroke-width="1.6" stroke-linejoin="round" />
+    </svg>
+  </div>
 </div>
+
+<script>
+  import '../scripts/hero-demo.js';
+</script>

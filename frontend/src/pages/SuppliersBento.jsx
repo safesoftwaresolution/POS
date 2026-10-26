@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import { Truck, Plus, Search, Edit3, Trash2, Mail, Phone, AlertCircle } from 'lucide-react';
 import {
   getSuppliersApi,
@@ -6,34 +6,23 @@ import {
   updateSupplierApi,
   deleteSupplierApi
 } from '../services/suppliersApi';
-import { useModal } from '../context/ModalContext';
-import useAutoRefresh from '../hooks/useAutoRefresh';
+import useModal from '../hooks/useModal';
+import useLoad from '../hooks/useLoad';
+import asList from '../utils/asList';
 
 const EMPTY_FORM = { id: null, companyName: '', taxId: '', contactName: '', email: '', phone: '', address: '' };
 
 export default function SuppliersBento() {
   const { confirm, notify } = useModal();
-  const [suppliers, setSuppliers] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { data: suppliers, loading, reload } = useLoad(
+    () => asList(getSuppliersApi()),
+    [],
+    { initial: [], autoRefresh: true },
+  );
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [errorMsg, setErrorMsg] = useState('');
-
-  const loadSuppliers = useCallback(async ({ silent = false } = {}) => {
-    if (!silent) setLoading(true);
-    try {
-      setSuppliers(await getSuppliersApi());
-    } catch (e) {
-      console.warn('Error cargando proveedores:', e);
-      if (!silent) setSuppliers([]);
-    } finally {
-      if (!silent) setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { loadSuppliers(); }, [loadSuppliers]);
-  useAutoRefresh(() => loadSuppliers({ silent: true }));
 
   const openCreate = () => {
     setForm(EMPTY_FORM);
@@ -72,7 +61,7 @@ export default function SuppliersBento() {
       }
       setShowModal(false);
       setForm(EMPTY_FORM);
-      await loadSuppliers();
+      reload();
     } catch (err) {
       setErrorMsg(err.message || 'Error al guardar el proveedor. Intenta nuevamente.');
     }
@@ -83,7 +72,7 @@ export default function SuppliersBento() {
     if (!ok) return;
     try {
       await deleteSupplierApi(s.id);
-      await loadSuppliers();
+      reload();
     } catch (err) {
       notify('Error eliminando proveedor: ' + err.message);
     }

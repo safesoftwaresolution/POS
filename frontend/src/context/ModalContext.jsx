@@ -1,11 +1,10 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
+import { ModalContext } from './contexts';
 import { AlertTriangle, HelpCircle } from 'lucide-react';
 
 // Reemplaza window.confirm()/alert() por modales propios, consistentes con el
 // resto de la UI (bento-card + soporte dark mode), en vez de los diálogos
 // nativos del navegador.
-const ModalContext = createContext(null);
-
 export function ModalProvider({ children }) {
   const [modal, setModal] = useState(null);
   // modal = { type: 'confirm' | 'alert', title, message, confirmText, cancelText, danger, resolve }
@@ -101,12 +100,4 @@ export function ModalProvider({ children }) {
       )}
     </ModalContext.Provider>
   );
-}
-
-export function useModal() {
-  const ctx = useContext(ModalContext);
-  if (!ctx) {
-    throw new Error('useModal debe usarse dentro de <ModalProvider>');
-  }
-  return ctx;
 }

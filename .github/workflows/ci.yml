@@ -61,6 +61,7 @@ jobs:
       - run: npm ci
       # oxlint hoy emite avisos (no errores); un error de lint falla el job.
       - run: npm run lint
+      - run: npm test
       - run: npm run build
 
   harness:

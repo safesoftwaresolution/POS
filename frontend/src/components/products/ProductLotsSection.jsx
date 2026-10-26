@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { CalendarClock, Pencil, Plus, Trash2 } from 'lucide-react';
 import { Badge, Button, inputClass } from '../ui';
-import { useModal } from '../../context/ModalContext';
+import useModal from '../../hooks/useModal';
 import { addProductLotApi, deleteProductLotApi, getProductLotsApi, updateProductLotApi } from '../../services/productsApi';
 import { EXPIRY_WINDOW_DAYS, daysUntil, expiryLabel, expiryStatus, formatExpiryDate } from '../../utils/expiry';
 

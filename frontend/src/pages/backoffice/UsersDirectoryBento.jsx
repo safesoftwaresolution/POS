@@ -1,7 +1,10 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Search, ChevronLeft, ChevronRight, AlertCircle, CheckCircle2, UserPlus, X, Store, UserX, UserCheck, Trash2 } from 'lucide-react';
-import useAutoRefresh from '../../hooks/useAutoRefresh';
+import { Search, AlertCircle, CheckCircle2, UserPlus, X, Store, UserX, UserCheck, Trash2 } from 'lucide-react';
+import useLoad from '../../hooks/useLoad';
+import Pager from '../../components/ui/Pager';
+import { ROLE_LABELS } from '../../constants/roles';
+import { formatDateTimeFull as formatDate } from '../../utils/format';
 import {
   getUserDirectoryApi,
   getAssignableOwnersApi,
@@ -12,13 +15,6 @@ import {
   setUserActiveApi,
   deleteUserApi,
 } from '../../services/backoffice/usersDirectoryApi';
-
-const ROLE_LABELS = {
-  SUPER_ADMIN: 'Super admin',
-  ADMINISTRATOR: 'Administrador',
-  SUPERVISOR: 'Supervisor',
-  SELLER: 'Vendedor',
-};
 
 const ROLE_STYLES = {
   SUPER_ADMIN: 'bg-violet-100 dark:bg-violet-500/20 text-violet-700 dark:text-violet-300',
@@ -43,40 +39,8 @@ const ROLE_FILTERS = [
   { value: 'SUPER_ADMIN', label: 'Super admin' },
 ];
 
-const formatDate = (iso) =>
-  iso ? new Date(iso).toLocaleString('es-CO', { dateStyle: 'medium', timeStyle: 'short' }) : '—';
-
 function Pill({ className, children }) {
   return <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${className}`}>{children}</span>;
-}
-
-function Pager({ page, totalPages, totalElements, onChange }) {
-  if (totalPages <= 1) return null;
-  return (
-    <div className="flex items-center justify-between pt-2 border-t border-line">
-      <p className="text-[11px] font-bold text-ink-muted">
-        {totalElements} registros · página {page + 1} de {totalPages}
-      </p>
-      <div className="flex gap-2">
-        <button
-          onClick={() => onChange(Math.max(0, page - 1))}
-          disabled={page === 0}
-          className="p-2 rounded-xl bg-gray-100 dark:bg-line disabled:opacity-40 cursor-pointer"
-          aria-label="Página anterior"
-        >
-          <ChevronLeft className="w-4 h-4" />
-        </button>
-        <button
-          onClick={() => onChange(Math.min(totalPages - 1, page + 1))}
-          disabled={page >= totalPages - 1}
-          className="p-2 rounded-xl bg-gray-100 dark:bg-line disabled:opacity-40 cursor-pointer"
-          aria-label="Página siguiente"
-        >
-          <ChevronRight className="w-4 h-4" />
-        </button>
-      </div>
-    </div>
-  );
 }
 
 const EMPTY_PAGE = { content: [], totalPages: 0, totalElements: 0 };
@@ -90,71 +54,45 @@ export default function UsersDirectoryBento() {
   const [query, setQuery] = useState('');
   const [unassigned, setUnassigned] = useState(false);
   const [page, setPage] = useState(0);
-  const [directory, setDirectory] = useState(EMPTY_PAGE);
-  const [loading, setLoading] = useState(true);
 
-  const [ownerless, setOwnerless] = useState([]);
-  const [candidates, setCandidates] = useState([]);
   const [assigning, setAssigning] = useState(null); // local al que se asigna
   const [selectedUserId, setSelectedUserId] = useState('');
   const [assignBusy, setAssignBusy] = useState(false);
   const [deleting, setDeleting] = useState(null); // usuario pendiente de confirmar su eliminación
   const [actionBusy, setActionBusy] = useState(false);
 
-  const [history, setHistory] = useState(EMPTY_PAGE);
   const [historyPage, setHistoryPage] = useState(0);
-  const [deletions, setDeletions] = useState(EMPTY_PAGE);
   const [deletionsPage, setDeletionsPage] = useState(0);
 
   const [errorMsg, setErrorMsg] = useState('');
   const [infoMsg, setInfoMsg] = useState('');
 
-  // `silent` = refresco automático: sin "Cargando..." y sin mostrar errores transitorios.
-  const loadDirectory = useCallback(async ({ silent = false } = {}) => {
-    if (!silent) setLoading(true);
-    try {
-      setDirectory(await getUserDirectoryApi({ role, storeId: storeIdFilter, q: query, unassigned, page }));
-    } catch (e) {
-      if (!silent) setErrorMsg(e.message || 'No se pudo cargar el directorio de usuarios.');
-    } finally {
-      if (!silent) setLoading(false);
-    }
-  }, [role, storeIdFilter, query, unassigned, page]);
-
-  const loadOwnership = useCallback(async ({ silent = false } = {}) => {
-    try {
+  const { data: directory, loading, error: directoryError, reload: reloadDirectory } = useLoad(
+    () => getUserDirectoryApi({ role, storeId: storeIdFilter, q: query, unassigned, page }),
+    [role, storeIdFilter, query, unassigned, page],
+    { initial: EMPTY_PAGE, autoRefresh: true, errorMessage: 'No se pudo cargar el directorio de usuarios.' },
+  );
+  const { data: ownership, error: ownershipError, reload: reloadOwnership } = useLoad(
+    async () => {
       const [stores, owners] = await Promise.all([getStoresWithoutOwnerApi(), getAssignableOwnersApi()]);
-      setOwnerless(stores);
-      setCandidates(owners);
-    } catch (e) {
-      if (!silent) setErrorMsg(e.message || 'No se pudieron cargar los locales sin administrador.');
-    }
-  }, []);
-
-  const loadHistory = useCallback(async ({ silent = false } = {}) => {
-    try {
-      setHistory(await getOwnerAssignmentsApi(historyPage));
-    } catch (e) {
-      if (!silent) setErrorMsg(e.message || 'No se pudo cargar el historial de asignaciones.');
-    }
-  }, [historyPage]);
-
-  const loadDeletions = useCallback(async ({ silent = false } = {}) => {
-    try {
-      setDeletions(await getUserDeletionsApi(deletionsPage));
-    } catch (e) {
-      if (!silent) setErrorMsg(e.message || 'No se pudo cargar el historial de usuarios eliminados.');
-    }
-  }, [deletionsPage]);
-
-  useEffect(() => { loadDirectory(); }, [loadDirectory]);
-  useEffect(() => { loadOwnership(); }, [loadOwnership]);
-  useEffect(() => { loadHistory(); }, [loadHistory]);
-  useEffect(() => { loadDeletions(); }, [loadDeletions]);
-  useAutoRefresh(() => Promise.all([
-    loadDirectory({ silent: true }), loadOwnership({ silent: true }), loadHistory({ silent: true }),
-    loadDeletions({ silent: true }),
-  ]));
+      return { ownerless: stores, candidates: owners };
+    },
+    [],
+    { initial: { ownerless: [], candidates: [] }, autoRefresh: true, errorMessage: 'No se pudieron cargar los locales sin administrador.' },
+  );
+  const { ownerless, candidates } = ownership;
+  const { data: history, error: historyError, reload: reloadHistory } = useLoad(
+    () => getOwnerAssignmentsApi(historyPage),
+    [historyPage],
+    { initial: EMPTY_PAGE, autoRefresh: true, errorMessage: 'No se pudo cargar el historial de asignaciones.' },
+  );
+  const { data: deletions, error: deletionsError, reload: reloadDeletions } = useLoad(
+    () => getUserDeletionsApi(deletionsPage),
+    [deletionsPage],
+    { initial: EMPTY_PAGE, autoRefresh: true, errorMessage: 'No se pudo cargar el historial de usuarios eliminados.' },
+  );
+  // Un error de acción (asignar, inactivar, eliminar) tiene prioridad sobre uno de carga.
+  const shownError = errorMsg || directoryError || ownershipError || historyError || deletionsError;
 
   const submitSearch = (e) => {
     e.preventDefault();
@@ -182,7 +120,9 @@ export default function UsersDirectoryBento() {
       const user = candidates.find(c => String(c.id) === String(selectedUserId));
       setInfoMsg(`${user?.fullName || 'El usuario'} fue asignado como administrador de "${assigning.name}".`);
       setAssigning(null);
-      await Promise.all([loadDirectory(), loadOwnership(), loadHistory()]);
+      reloadDirectory();
+      reloadOwnership();
+      reloadHistory();
     } catch (e) {
       setAssigning(null);
       setErrorMsg(e.message || 'No se pudo asignar el usuario.');
@@ -198,7 +138,8 @@ export default function UsersDirectoryBento() {
     try {
       await setUserActiveApi(u.id, !u.active);
       setInfoMsg(u.active ? `${u.fullName} fue inactivado y sus sesiones se cerraron.` : `${u.fullName} fue reactivado.`);
-      await Promise.all([loadDirectory(), loadOwnership()]);
+      reloadDirectory();
+      reloadOwnership();
     } catch (e) {
       setErrorMsg(e.message || 'No se pudo cambiar el estado del usuario.');
     } finally {
@@ -213,7 +154,9 @@ export default function UsersDirectoryBento() {
       await deleteUserApi(deleting.id);
       setInfoMsg(`${deleting.fullName} fue eliminado definitivamente.`);
       setDeleting(null);
-      await Promise.all([loadDirectory(), loadOwnership(), loadDeletions()]);
+      reloadDirectory();
+      reloadOwnership();
+      reloadDeletions();
     } catch (e) {
       setDeleting(null);
       setErrorMsg(e.message || 'No se pudo eliminar el usuario.');
@@ -232,10 +175,10 @@ export default function UsersDirectoryBento() {
         </p>
       </div>
 
-      {errorMsg && (
+      {shownError && (
         <div className="p-3 bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800/40 rounded-xl text-xs font-bold flex items-center gap-2">
           <AlertCircle className="w-4 h-4 shrink-0" />
-          <span>{errorMsg}</span>
+          <span>{shownError}</span>
         </div>
       )}
       {infoMsg && (
@@ -255,7 +198,7 @@ export default function UsersDirectoryBento() {
           <div className="py-6 text-center text-xs font-bold text-ink-muted">Todos los locales tienen un administrador asignado</div>
         ) : (
           <div className="md:overflow-x-auto md:-mx-2">
-            <table className="table-cards w-full text-xs min-w-[640px]">
+            <table className="table-cards w-full text-xs md:min-w-[640px]">
               <thead>
                 <tr className="text-left text-[10px] font-extrabold text-ink-muted uppercase">
                   <th className="px-2 py-2">Local</th>
@@ -336,7 +279,7 @@ export default function UsersDirectoryBento() {
           <div className="py-8 text-center text-xs font-bold text-ink-muted">No hay usuarios con esos filtros</div>
         ) : (
           <div className="md:overflow-x-auto md:-mx-2">
-            <table className="table-cards w-full text-xs min-w-[760px]">
+            <table className="table-cards w-full text-xs md:min-w-[760px]">
               <thead>
                 <tr className="text-left text-[10px] font-extrabold text-ink-muted uppercase">
                   <th className="px-2 py-2">Usuario</th>
@@ -417,7 +360,7 @@ export default function UsersDirectoryBento() {
           <div className="py-6 text-center text-xs font-bold text-ink-muted">Aún no se han asignado usuarios a locales desde aquí</div>
         ) : (
           <div className="md:overflow-x-auto md:-mx-2">
-            <table className="table-cards w-full text-xs min-w-[640px]">
+            <table className="table-cards w-full text-xs md:min-w-[640px]">
               <thead>
                 <tr className="text-left text-[10px] font-extrabold text-ink-muted uppercase">
                   <th className="px-2 py-2">Fecha</th>
@@ -455,7 +398,7 @@ export default function UsersDirectoryBento() {
           <div className="py-6 text-center text-xs font-bold text-ink-muted">Aún no se ha eliminado ningún usuario</div>
         ) : (
           <div className="md:overflow-x-auto md:-mx-2">
-            <table className="table-cards w-full text-xs min-w-[640px]">
+            <table className="table-cards w-full text-xs md:min-w-[640px]">
               <thead>
                 <tr className="text-left text-[10px] font-extrabold text-ink-muted uppercase">
                   <th className="px-2 py-2">Fecha</th>

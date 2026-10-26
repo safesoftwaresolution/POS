@@ -1,10 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import {
   Store, Users, Receipt, TrendingUp, UserPlus, ShoppingCart, Gauge, AlertCircle,
   PieChart, BarChart3, FileText,
 } from 'lucide-react';
 import { getBackofficeStatsOverviewApi } from '../../services/backoffice/statsApi';
-import useAutoRefresh from '../../hooks/useAutoRefresh';
+import useLoad from '../../hooks/useLoad';
 
 const money = (n) => `$${Math.round(Number(n) || 0).toLocaleString('es-CO')}`;
 // Importes grandes en formato corto para las etiquetas de las barras (1,2 M).
@@ -80,23 +80,22 @@ function Donut({ items, colorOf }) {
 
   const radius = 40;
   const circumference = 2 * Math.PI * radius;
-  let offset = 0;
+  // Dónde empieza cada tajada: la suma de las anteriores (calculado aparte para no reasignar mientras se dibuja).
+  const offsets = items.map((_, idx) => items.slice(0, idx).reduce((sum, prev) => sum + (prev.value / total) * circumference, 0));
 
   return (
     <div className="flex flex-col sm:flex-row items-center gap-6">
       <svg viewBox="0 0 100 100" className="w-40 h-40 shrink-0 -rotate-90" role="img"
         aria-label={`Total ${total}: ${items.map(i => `${i.label} ${i.value}`).join(', ')}`}>
         <circle cx="50" cy="50" r={radius} fill="none" strokeWidth="14" className="stroke-gray-100 dark:stroke-white/10" />
-        {items.map((i) => {
+        {items.map((i, idx) => {
           const length = (i.value / total) * circumference;
-          const circle = (
+          return (
             <circle key={i.label} cx="50" cy="50" r={radius} fill="none" strokeWidth="14"
-              stroke={colorOf(i)} strokeDasharray={`${length} ${circumference - length}`} strokeDashoffset={-offset}>
+              stroke={colorOf(i)} strokeDasharray={`${length} ${circumference - length}`} strokeDashoffset={-offsets[idx]}>
               <title>{`${i.label}: ${i.value}`}</title>
             </circle>
           );
-          offset += length;
-          return circle;
         })}
         <text x="50" y="50" textAnchor="middle" dominantBaseline="central" transform="rotate(90 50 50)"
           className="fill-current text-ink" style={{ fontSize: 16, fontWeight: 900 }}>{total}</text>
@@ -178,23 +177,11 @@ function BarList({ items, formatValue = (n) => n.toLocaleString('es-CO'), emptyL
 }
 
 export default function StatsBento() {
-  const [stats, setStats] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [errorMsg, setErrorMsg] = useState('');
-
-  const load = async ({ silent = false } = {}) => {
-    try {
-      setStats(await getBackofficeStatsOverviewApi());
-      setErrorMsg('');
-    } catch (e) {
-      if (!silent) setErrorMsg(e.message || 'No se pudieron cargar las estadísticas.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => { load(); }, []);
-  useAutoRefresh(() => load({ silent: true }));
+  const { data: stats, loading, error: errorMsg } = useLoad(
+    () => getBackofficeStatsOverviewApi(),
+    [],
+    { autoRefresh: true, errorMessage: 'No se pudieron cargar las estadísticas.' },
+  );
 
   const k = stats?.kpis;
 

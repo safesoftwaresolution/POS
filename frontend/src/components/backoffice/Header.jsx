@@ -1,7 +1,7 @@
 import React from 'react';
 import { Menu, Sun, Moon } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
-import { useTheme } from '../../context/ThemeContext';
+import useAuth from '../../hooks/useAuth';
+import useTheme from '../../hooks/useTheme';
 
 export default function BackofficeHeader({ onToggleMobileMenu }) {
   const { user } = useAuth();

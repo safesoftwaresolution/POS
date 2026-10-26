@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   Package,
@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { getProductsApi } from '../services/productsApi';
 import { getSuppliersApi } from '../services/suppliersApi';
-import { useAuth } from '../context/AuthContext';
+import useAuth from '../hooks/useAuth';
 import BarcodeModal from '../components/BarcodeModal';
 import ProductImportModal from '../components/products/ProductImportModal';
 import ExpiryBadge from '../components/products/ExpiryBadge';
@@ -24,7 +24,8 @@ import StockMovementModal from '../components/inventory/StockMovementModal';
 import MovementsPanel from '../components/inventory/MovementsPanel';
 import ReturnsBento from './ReturnsBento';
 import SuppliersBento from './SuppliersBento';
-import useAutoRefresh from '../hooks/useAutoRefresh';
+import useLoad from '../hooks/useLoad';
+import asList from '../utils/asList';
 
 const TABS = [
   { id: 'stock', label: 'Stock', icon: Package },
@@ -42,41 +43,16 @@ export default function InventoryBento() {
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = TABS.some(t => t.id === searchParams.get('tab')) ? searchParams.get('tab') : 'stock';
   const setActiveTab = (tab) => setSearchParams(tab === 'stock' ? {} : { tab }, { replace: true });
-  const [productsList, setProductsList] = useState([]);
-  const [suppliers, setSuppliers] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { data: productsList, loading, reload: reloadInventory } = useLoad(
+    () => asList(getProductsApi()),
+    [],
+    { initial: [], autoRefresh: true },
+  );
+  const { data: suppliers } = useLoad(() => asList(getSuppliersApi()), [], { initial: [], autoRefresh: true });
   const [search, setSearch] = useState('');
   // null = cerrado; { product } = abierto (product puede ser null: el producto se elige dentro del modal).
   const [moveModal, setMoveModal] = useState(null);
   const [barcodeProduct, setBarcodeProduct] = useState(null);
-
-  const loadInventory = async ({ silent = false } = {}) => {
-    if (!silent) setLoading(true);
-    try {
-      const data = await getProductsApi();
-      setProductsList(Array.isArray(data) ? data : []);
-    } catch (e) {
-      console.warn('Error cargando inventario:', e);
-      if (!silent) setProductsList([]);
-    } finally {
-      if (!silent) setLoading(false);
-    }
-  };
-
-  const loadSuppliers = async () => {
-    try {
-      setSuppliers(await getSuppliersApi());
-    } catch (e) {
-      console.warn('Error cargando proveedores:', e);
-      setSuppliers([]);
-    }
-  };
-
-  useEffect(() => {
-    loadInventory();
-    loadSuppliers();
-  }, []);
-  useAutoRefresh(() => Promise.all([loadInventory({ silent: true }), loadSuppliers()]));
 
   const lowStockCount = productsList.filter(p => (p.quantityAvailable ?? p.stock ?? 0) <= (p.minStock || 5)).length;
   const outOfStockCount = productsList.filter(p => (p.quantityAvailable ?? p.stock ?? 0) <= 0).length;
@@ -119,14 +95,14 @@ export default function InventoryBento() {
       </div>
 
       {/* Tab Switcher */}
-      <div className="flex bg-gray-100 dark:bg-line rounded-full p-1 border border-gray-200 dark:border-gray-700 w-fit">
+      <div className="flex bg-gray-100 dark:bg-line rounded-full p-1 border border-gray-200 dark:border-gray-700 w-fit max-w-full overflow-x-auto">
         {TABS.map(tab => {
           const Icon = tab.icon;
           return (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-2 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+              className={`px-4 py-2 rounded-full text-xs font-bold flex items-center gap-1.5 shrink-0 transition-all cursor-pointer ${
                 activeTab === tab.id
                   ? 'bg-solid text-white shadow-xs'
                   : 'text-ink-soft hover:text-brand dark:hover:text-brand'
@@ -206,7 +182,7 @@ export default function InventoryBento() {
               className="w-full pl-10 pr-3 py-1.5 bg-page border border-line rounded-2xl text-xs font-semibold text-ink placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-ink"
             />
           </div>
-          <button onClick={() => loadInventory()} className="text-xs font-bold text-brand dark:text-brand flex items-center gap-1 hover:underline cursor-pointer">
+          <button onClick={() => reloadInventory({ silent: false })} className="text-xs font-bold text-brand dark:text-brand flex items-center gap-1 hover:underline cursor-pointer">
             <RefreshCw className="w-3.5 h-3.5" /> Actualizar stock
           </button>
         </div>
@@ -294,13 +270,13 @@ export default function InventoryBento() {
           product={moveModal.product}
           suppliers={suppliers}
           onClose={() => setMoveModal(null)}
-          onDone={() => loadInventory({ silent: true })}
+          onDone={() => reloadInventory()}
           onGoToSuppliers={() => { setMoveModal(null); setActiveTab('suppliers'); }}
         />
       )}
 
       {showCountModal && (
-        <ProductImportModal mode="count" onClose={() => setShowCountModal(false)} onImported={() => loadInventory()} />
+        <ProductImportModal mode="count" onClose={() => setShowCountModal(false)} onImported={() => reloadInventory()} />
       )}
 
       <BarcodeModal product={barcodeProduct} onClose={() => setBarcodeProduct(null)} />

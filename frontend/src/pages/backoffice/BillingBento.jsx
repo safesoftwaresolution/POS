@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import {
   Receipt,
   Key,
@@ -22,8 +22,9 @@ import {
   transitionBackofficeBillingStatusApi
 } from '../../services/backoffice/billingApi';
 import { getBackofficeStoresApi } from '../../services/backoffice/storesApi';
-import { useModal } from '../../context/ModalContext';
-import useAutoRefresh from '../../hooks/useAutoRefresh';
+import useModal from '../../hooks/useModal';
+import useLoad from '../../hooks/useLoad';
+import asList from '../../utils/asList';
 
 const STATUSES = ['DOCUMENTS_SUBMITTED', 'AWAITING_PROVIDER', 'ACTIVE', 'REJECTED', 'SUSPENDED', 'NOT_REQUESTED'];
 
@@ -63,10 +64,19 @@ const EMPTY_CREDENTIALS = { clientId: '', clientSecret: '', username: '', passwo
 export default function BillingBento() {
   const { notify, confirm } = useModal();
   const [statusFilter, setStatusFilter] = useState('DOCUMENTS_SUBMITTED');
-  const [rows, setRows] = useState([]);
-  const [storesById, setStoresById] = useState({});
-  const [loading, setLoading] = useState(true);
-  const [errorMsg, setErrorMsg] = useState('');
+  const { data: rows, loading, error: errorMsg, reload: reloadRows } = useLoad(
+    () => asList(listBackofficeBillingByStatusApi(statusFilter)),
+    [statusFilter],
+    { initial: [], autoRefresh: true, errorMessage: 'Error al cargar el estado de facturación.' },
+  );
+  const { data: storesById } = useLoad(
+    async () => {
+      const data = await getBackofficeStoresApi('ALL', '', 0, 500);
+      return Object.fromEntries((data.content || []).map((s) => [s.id, s]));
+    },
+    [],
+    { initial: {}, autoRefresh: true },
+  );
 
   const [detail, setDetail] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -78,32 +88,6 @@ export default function BillingBento() {
   const [transitioning, setTransitioning] = useState(false);
   const [reasonTarget, setReasonTarget] = useState(null);
   const [reasonText, setReasonText] = useState('');
-
-  const loadStores = useCallback(async () => {
-    try {
-      const data = await getBackofficeStoresApi('ALL', '', 0, 500);
-      const map = {};
-      for (const s of data.content || []) map[s.id] = s;
-      setStoresById(map);
-    } catch (e) {
-      console.warn('Error cargando locales:', e);
-    }
-  }, []);
-
-  const loadRows = useCallback(async ({ silent = false } = {}) => {
-    if (!silent) { setLoading(true); setErrorMsg(''); }
-    try {
-      setRows(await listBackofficeBillingByStatusApi(statusFilter));
-    } catch (e) {
-      if (!silent) { setErrorMsg(e.message || 'Error al cargar el estado de facturación.'); setRows([]); }
-    } finally {
-      if (!silent) setLoading(false);
-    }
-  }, [statusFilter]);
-
-  useEffect(() => { loadStores(); }, [loadStores]);
-  useEffect(() => { loadRows(); }, [loadRows]);
-  useAutoRefresh(() => Promise.all([loadRows({ silent: true }), loadStores()]));
 
   const openDetail = async (storeId) => {
     setDetailLoading(true);
@@ -135,7 +119,7 @@ export default function BillingBento() {
       const updated = await updateBackofficeBillingCredentialsApi(detail.storeId, envTab, credentialsForm);
       setDetail(updated);
       setCredentialsForm(EMPTY_CREDENTIALS);
-      await loadRows();
+      reloadRows();
     } catch (err) {
       notify('Error guardando credenciales: ' + err.message);
     } finally {
@@ -161,7 +145,7 @@ export default function BillingBento() {
     try {
       const updated = await switchBackofficeBillingEnvironmentApi(detail.storeId, environment);
       setDetail(updated);
-      await loadRows();
+      reloadRows();
     } catch (err) {
       notify('Error cambiando el entorno activo: ' + err.message);
     }
@@ -187,7 +171,7 @@ export default function BillingBento() {
       setDetail(updated);
       setReasonTarget(null);
       setReasonText('');
-      await loadRows();
+      reloadRows();
     } catch (err) {
       notify('Error cambiando la etapa: ' + err.message);
     } finally {
@@ -237,7 +221,7 @@ export default function BillingBento() {
           </div>
         ) : (
           <div className="md:overflow-x-auto md:-mx-2">
-            <table className="table-cards w-full text-xs min-w-[760px]">
+            <table className="table-cards w-full text-xs md:min-w-[760px]">
               <thead>
                 <tr className="text-left text-[10px] font-extrabold text-ink-muted uppercase">
                   <th className="px-2 py-2">Local</th>

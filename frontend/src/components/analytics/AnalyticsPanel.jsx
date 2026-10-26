@@ -2,7 +2,8 @@ import React from 'react';
 import { BarChart3, CalendarClock, DollarSign, Package, TrendingUp, Truck } from 'lucide-react';
 import { Badge } from '../ui';
 import { expiryLabel, formatExpiryDate } from '../../utils/expiry';
-import { LoadingRows, RankedList, SectionCard, sortedEntries } from './parts';
+import { LoadingRows, RankedList, SectionCard } from './parts';
+import sortedEntries from './sortedEntries';
 
 const EXPIRING_WINDOWS = [7, 15, 30, 60, 90];
 // Filas visibles en la tarjeta del Dashboard; el resto se consulta en Inventario.

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   RotateCcw,
   Search,
@@ -9,14 +9,18 @@ import {
   X,
 } from 'lucide-react';
 import { getSalesApi, getSaleReturnsApi, createSaleReturnApi } from '../services/salesApi';
-import useAutoRefresh from '../hooks/useAutoRefresh';
+import useLoad from '../hooks/useLoad';
+import asList from '../utils/asList';
 
 const money = (n) => `$${Math.round(n || 0).toLocaleString('es-CO')}`;
 const dateFmt = (iso) => (iso ? new Date(iso).toLocaleString('es-CO', { dateStyle: 'medium', timeStyle: 'short' }) : '—');
 
 export default function ReturnsBento() {
-  const [sales, setSales] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { data: sales, loading, reload: reloadSales } = useLoad(
+    () => asList(getSalesApi(0, 50)),
+    [],
+    { initial: [], autoRefresh: true },
+  );
   const [search, setSearch] = useState('');
 
   const [selectedSale, setSelectedSale] = useState(null);
@@ -26,24 +30,6 @@ export default function ReturnsBento() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-
-  const loadSales = async ({ silent = false } = {}) => {
-    if (!silent) setLoading(true);
-    try {
-      const data = await getSalesApi(0, 50);
-      setSales(Array.isArray(data) ? data : []);
-    } catch (e) {
-      console.warn('Error cargando ventas:', e);
-      if (!silent) setSales([]);
-    } finally {
-      if (!silent) setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadSales();
-  }, []);
-  useAutoRefresh(() => loadSales({ silent: true }));
 
   const filtered = sales.filter((s) =>
     (s.invoiceNumber && s.invoiceNumber.toLowerCase().includes(search.toLowerCase())) ||
@@ -124,7 +110,7 @@ export default function ReturnsBento() {
             Busca la venta original y devuelve los ítems necesarios — el stock se repone automáticamente
           </p>
         </div>
-        <button onClick={loadSales} className="text-xs font-bold text-brand dark:text-brand flex items-center gap-1 hover:underline cursor-pointer">
+        <button onClick={() => reloadSales({ silent: false })} className="text-xs font-bold text-brand dark:text-brand flex items-center gap-1 hover:underline cursor-pointer">
           <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Actualizar ventas
         </button>
       </div>

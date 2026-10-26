@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Store, Phone, Mail, MapPin, Globe, FileText, ArrowRight, AlertCircle } from 'lucide-react';
 import { registerOwnStoreApi } from '../../services/storesApi';
-import { useAuth } from '../../context/AuthContext';
+import useAuth from '../../hooks/useAuth';
 
 const EMPTY_FORM = { name: '', phone: '', email: '', website: '', address: '', taxId: '' };
 

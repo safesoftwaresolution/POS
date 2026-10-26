@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import BentoIcon from '../../components/BentoIcon';
-import { useAuth } from '../../context/AuthContext';
+import useAuth from '../../hooks/useAuth';
 
 const LEGAL_LINKS = [
   { slug: 'terms-and-conditions', label: 'Términos y Condiciones' },

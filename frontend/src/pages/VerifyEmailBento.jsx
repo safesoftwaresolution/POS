@@ -2,40 +2,36 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 import { verifyEmailApi } from '../services/authApi';
-import { useAuth } from '../context/AuthContext';
+import useAuth from '../hooks/useAuth';
 import BentoIcon from '../components/BentoIcon';
 
 export default function VerifyEmailBento() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { setSessionFromResponse } = useAuth();
-  const [status, setStatus] = useState('verifying'); // verifying | success | error
-  const [error, setError] = useState('');
+  const token = searchParams.get('token');
+  const [result, setResult] = useState({ status: 'verifying', error: '' }); // verifying | success | error
   const attempted = useRef(false);
 
-  useEffect(() => {
-    if (attempted.current) return;
-    attempted.current = true;
+  // Sin token no hay nada que verificar: se muestra el error directamente, sin pasar por un efecto.
+  const { status, error } = token ? result : { status: 'error', error: 'Enlace de verificación inválido.' };
 
-    const token = searchParams.get('token');
-    if (!token) {
-      setStatus('error');
-      setError('Enlace de verificación inválido.');
-      return;
-    }
+  useEffect(() => {
+    // El enlace sirve una sola vez: aunque React ejecute el efecto dos veces (modo estricto), se consume una vez.
+    if (!token || attempted.current) return;
+    attempted.current = true;
 
     (async () => {
       try {
         const data = await verifyEmailApi(token);
         setSessionFromResponse(data);
-        setStatus('success');
+        setResult({ status: 'success', error: '' });
         setTimeout(() => navigate('/onboarding/store', { replace: true }), 1200);
       } catch (err) {
-        setStatus('error');
-        setError(err.message || 'No se pudo verificar tu correo.');
+        setResult({ status: 'error', error: err.message || 'No se pudo verificar tu correo.' });
       }
     })();
-  }, [searchParams, navigate, setSessionFromResponse]);
+  }, [token, navigate, setSessionFromResponse]);
 
   return (
     <div className="min-h-screen bg-[#0E0E12] text-white flex items-center justify-center p-4 relative overflow-hidden select-none">

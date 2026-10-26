@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import { Edit3, Plus, X, AlertCircle, Eye, EyeOff, Trash2, ScrollText } from 'lucide-react';
 import {
   getBackofficeLegalDocumentsApi,
@@ -7,34 +7,23 @@ import {
   deleteBackofficeLegalDocumentApi,
   toggleBackofficeLegalDocumentPublishApi
 } from '../../services/backoffice/legalApi';
-import { useModal } from '../../context/ModalContext';
-import useAutoRefresh from '../../hooks/useAutoRefresh';
+import useModal from '../../hooks/useModal';
+import useLoad from '../../hooks/useLoad';
+import asList from '../../utils/asList';
 
 const EMPTY_FORM = { id: null, slug: '', title: '', content: '', version: '' };
 
 export default function LegalDocumentsBento() {
   const { confirm } = useModal();
-  const [documents, setDocuments] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { data: documents, loading, reload } = useLoad(
+    () => asList(getBackofficeLegalDocumentsApi()),
+    [],
+    { initial: [], autoRefresh: true },
+  );
   const [form, setForm] = useState(EMPTY_FORM);
   const [error, setError] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [showForm, setShowForm] = useState(false);
-
-  const loadDocuments = useCallback(async ({ silent = false } = {}) => {
-    if (!silent) setLoading(true);
-    try {
-      setDocuments(await getBackofficeLegalDocumentsApi());
-    } catch (e) {
-      console.warn('Error cargando documentos legales:', e);
-      if (!silent) setDocuments([]);
-    } finally {
-      if (!silent) setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { loadDocuments(); }, [loadDocuments]);
-  useAutoRefresh(() => loadDocuments({ silent: true }));
 
   const openCreate = () => {
     setForm(EMPTY_FORM);
@@ -65,7 +54,7 @@ export default function LegalDocumentsBento() {
       }
       setShowForm(false);
       setForm(EMPTY_FORM);
-      await loadDocuments();
+      reload();
     } catch (err) {
       setError(err.message || 'Error al guardar el documento.');
     }
@@ -75,7 +64,7 @@ export default function LegalDocumentsBento() {
     setErrorMsg('');
     try {
       await toggleBackofficeLegalDocumentPublishApi(doc.id);
-      await loadDocuments();
+      reload();
     } catch (err) {
       setErrorMsg(err.message || 'Error al publicar/despublicar el documento.');
     }
@@ -87,7 +76,7 @@ export default function LegalDocumentsBento() {
     setErrorMsg('');
     try {
       await deleteBackofficeLegalDocumentApi(doc.id);
-      await loadDocuments();
+      reload();
     } catch (err) {
       setErrorMsg(err.message || 'Error al eliminar el documento.');
     }
@@ -131,7 +120,7 @@ export default function LegalDocumentsBento() {
           </div>
         ) : (
           <div className="md:overflow-x-auto md:-mx-2">
-            <table className="table-cards w-full text-xs min-w-[720px]">
+            <table className="table-cards w-full text-xs md:min-w-[720px]">
               <thead>
                 <tr className="text-left text-[10px] font-extrabold text-ink-muted uppercase">
                   <th className="px-2 py-2">Documento</th>

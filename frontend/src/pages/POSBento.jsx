@@ -12,21 +12,43 @@ import { BarcodeScanner } from '../components/scanner';
 import { getCategoriesApi } from '../services/categoriesApi';
 import { getParameterValuesApi } from '../services/parametersApi';
 import { newIdempotencyKey } from '../services/http';
-import { useModal } from '../context/ModalContext';
-import useAutoRefresh from '../hooks/useAutoRefresh';
+import useModal from '../hooks/useModal';
+import useLoad from '../hooks/useLoad';
+import asList from '../utils/asList';
 
 export default function POSBento() {
   const { notify } = useModal();
-  const [productsList, setProductsList] = useState([]);
-  const [customersList, setCustomersList] = useState([]);
-  const [categoriesList, setCategoriesList] = useState(['Todos']);
+  // Stock y precios se refrescan solos sin tocar el carrito ni el cliente elegido.
+  const { data: productsList, loading: productsLoading, reload: reloadProducts } = useLoad(
+    () => asList(getProductsApi()),
+    [],
+    { initial: [], autoRefresh: true },
+  );
+  const { data: customersList, loading: customersLoading, reload: reloadCustomers, setData: setCustomersList } = useLoad(
+    () => asList(getCustomersApi()),
+    [],
+    { initial: [] },
+  );
+  const { data: catalog, loading: catalogLoading } = useLoad(
+    async () => {
+      const [cats, methods] = await Promise.all([
+        asList(getCategoriesApi()).catch(() => []),
+        asList(getParameterValuesApi('PAYMENT_METHODS')).catch(() => []),
+      ]);
+      return { categories: ['Todos', ...cats.map((c) => c.name)], paymentMethods: methods.filter((m) => m.active) };
+    },
+    [],
+    { initial: { categories: ['Todos'], paymentMethods: [] } },
+  );
+  const { categories: categoriesList, paymentMethods } = catalog;
+  const loading = productsLoading || customersLoading || catalogLoading;
   const [selectedCategory, setSelectedCategory] = useState('Todos');
-  const [paymentMethods, setPaymentMethods] = useState([]);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('CASH');
   const [searchQuery, setSearchQuery] = useState('');
   const [cart, setCart] = useState([]);
-  const [selectedCustomer, setSelectedCustomer] = useState(null);
-  const [loading, setLoading] = useState(true);
+  // Sin elección explícita se usa el primer cliente (consumidor final); tras cada venta se vuelve a ese valor.
+  const [customerChoice, setSelectedCustomer] = useState(null);
+  const selectedCustomer = customerChoice ?? customersList[0] ?? null;
 
   const [issueDian, setIssueDian] = useState(false);
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
@@ -79,46 +101,6 @@ export default function POSBento() {
   const focusBarcodeInput = useCallback(() => {
     barcodeInputRef.current?.focus();
   }, []);
-
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      const prods = await getProductsApi();
-      if (Array.isArray(prods)) setProductsList(prods);
-
-      const custs = await getCustomersApi();
-      if (Array.isArray(custs)) {
-        setCustomersList(custs);
-        if (custs.length > 0) setSelectedCustomer(custs[0]);
-      }
-
-      const cats = await getCategoriesApi();
-      if (Array.isArray(cats)) {
-        setCategoriesList(['Todos', ...cats.map(c => c.name)]);
-      }
-
-      const methods = await getParameterValuesApi('PAYMENT_METHODS');
-      if (Array.isArray(methods)) {
-        setPaymentMethods(methods.filter(m => m.active));
-      }
-    } catch (e) {
-      console.warn('Error cargando catálogo POS:', e);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  // Stock y precios al día sin tocar el carrito ni el cliente elegido.
-  useAutoRefresh(async () => {
-    try {
-      const prods = await getProductsApi();
-      if (Array.isArray(prods)) setProductsList(prods);
-    } catch { /* se reintenta en el siguiente ciclo */ }
-  });
 
   // El lector de código de barras funciona como teclado: mantiene el foco en este campo
   // para que escanear (sin hacer click en nada) funcione en cualquier momento del flujo.
@@ -271,7 +253,9 @@ export default function POSBento() {
     setCashTendered('');
     setSelectedPaymentMethod('CASH');
     setIssueDian(false);
-    await loadData();
+    setSelectedCustomer(null);
+    reloadProducts();
+    reloadCustomers();
     focusBarcodeInput();
   };
 

@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import useAutoRefresh from '../../hooks/useAutoRefresh';
+import React, { useState } from 'react';
+import useLoad from '../../hooks/useLoad';
+import useDebouncedValue from '../../hooks/useDebouncedValue';
 import {
   LifeBuoy,
   Search,
@@ -75,13 +76,29 @@ function MetricCard({ label, value, icon: Icon, accent }) {
 }
 
 export default function SupportTicketsBento() {
-  const [metrics, setMetrics] = useState(null);
-  const [tickets, setTickets] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [priorityFilter, setPriorityFilter] = useState('ALL');
+  const debouncedSearch = useDebouncedValue(search, 300);
+
+  const { data: board, loading, reload } = useLoad(
+    async () => {
+      const [m, t] = await Promise.all([
+        getBackofficeSupportMetricsApi().catch(() => null),
+        getBackofficeSupportTicketsApi({
+          type: typeFilter === 'ALL' ? undefined : typeFilter,
+          status: statusFilter === 'ALL' ? undefined : statusFilter,
+          priority: priorityFilter === 'ALL' ? undefined : priorityFilter,
+          q: debouncedSearch.trim() || undefined
+        }).catch(() => [])
+      ]);
+      return { metrics: m, tickets: Array.isArray(t?.content) ? t.content : Array.isArray(t) ? t : [] };
+    },
+    [typeFilter, statusFilter, priorityFilter, debouncedSearch],
+    { initial: { metrics: null, tickets: [] }, autoRefresh: true },
+  );
+  const { metrics, tickets } = board;
 
   const [detailTicket, setDetailTicket] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -90,30 +107,6 @@ export default function SupportTicketsBento() {
   const [statusDraft, setStatusDraft] = useState('OPEN');
   const [priorityDraft, setPriorityDraft] = useState('NORMAL');
   const [notesDraft, setNotesDraft] = useState('');
-
-  const loadData = useCallback(async ({ silent = false } = {}) => {
-    if (!silent) setLoading(true);
-    try {
-      const [m, t] = await Promise.all([
-        getBackofficeSupportMetricsApi().catch(() => null),
-        getBackofficeSupportTicketsApi({
-          type: typeFilter === 'ALL' ? undefined : typeFilter,
-          status: statusFilter === 'ALL' ? undefined : statusFilter,
-          priority: priorityFilter === 'ALL' ? undefined : priorityFilter,
-          q: search.trim() || undefined
-        }).catch(() => [])
-      ]);
-      setMetrics(m);
-      setTickets(Array.isArray(t?.content) ? t.content : Array.isArray(t) ? t : []);
-    } finally {
-      if (!silent) setLoading(false);
-    }
-  }, [typeFilter, statusFilter, priorityFilter, search]);
-
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
-  useAutoRefresh(() => loadData({ silent: true }));
 
   const openDetail = async (ticket) => {
     setDetailTicket(ticket);
@@ -151,7 +144,7 @@ export default function SupportTicketsBento() {
         resolutionNotes: notesDraft
       });
       setDetailTicket(updated);
-      await loadData();
+      reload();
     } catch (e) {
       setDetailError(e.message || 'Error actualizando ticket.');
     } finally {
@@ -233,7 +226,7 @@ export default function SupportTicketsBento() {
           </div>
         ) : (
           <div className="md:overflow-x-auto md:-mx-2">
-            <table className="table-cards w-full text-xs min-w-[820px]">
+            <table className="table-cards w-full text-xs md:min-w-[820px]">
               <thead>
                 <tr className="text-left text-[10px] font-extrabold text-ink-muted uppercase">
                   <th className="px-2 py-2">Radicado</th>

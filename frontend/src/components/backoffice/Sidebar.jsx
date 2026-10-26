@@ -17,7 +17,7 @@ import {
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
+import useAuth from '../../hooks/useAuth';
 import BentoIcon from '../BentoIcon';
 
 export default function BackofficeSidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }) {

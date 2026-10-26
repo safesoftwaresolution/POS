@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import { ShieldCheck, Plus, Edit3, KeyRound, Ban, CheckCircle2, X, AlertCircle, UserCog } from 'lucide-react';
 import {
   getBackofficeStaffApi,
@@ -8,17 +8,20 @@ import {
   changeBackofficeStaffPasswordApi,
   deleteBackofficeStaffApi
 } from '../../services/backoffice/staffApi';
-import { useAuth } from '../../context/AuthContext';
-import { useModal } from '../../context/ModalContext';
-import useAutoRefresh from '../../hooks/useAutoRefresh';
+import useAuth from '../../hooks/useAuth';
+import useModal from '../../hooks/useModal';
+import useLoad from '../../hooks/useLoad';
 
 const EMPTY_STAFF_FORM = { fullName: '', username: '', email: '', password: '' };
 
 export default function StaffBento() {
   const { user } = useAuth();
   const { confirm } = useModal();
-  const [staff, setStaff] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { data: staff, loading, reload } = useLoad(
+    async () => (await getBackofficeStaffApi()).content || [],
+    [],
+    { initial: [], autoRefresh: true },
+  );
   const [errorMsg, setErrorMsg] = useState('');
 
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -32,22 +35,6 @@ export default function StaffBento() {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
-
-  const loadStaff = useCallback(async ({ silent = false } = {}) => {
-    if (!silent) setLoading(true);
-    try {
-      const data = await getBackofficeStaffApi();
-      setStaff(data.content || []);
-    } catch (e) {
-      console.warn('Error cargando operadores del backoffice:', e);
-      if (!silent) setStaff([]);
-    } finally {
-      if (!silent) setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { loadStaff(); }, [loadStaff]);
-  useAutoRefresh(() => loadStaff({ silent: true }));
 
   const isSelf = (member) => member.username?.toLowerCase() === user?.username?.toLowerCase();
 
@@ -64,7 +51,7 @@ export default function StaffBento() {
     try {
       await createBackofficeStaffApi(createForm);
       setShowCreateModal(false);
-      await loadStaff();
+      reload();
     } catch (err) {
       setCreateError(err.message || 'Error al crear el operador.');
     }
@@ -82,7 +69,7 @@ export default function StaffBento() {
     try {
       await updateBackofficeStaffApi(editForm.id, { fullName: editForm.fullName, email: editForm.email });
       setEditForm(null);
-      await loadStaff();
+      reload();
     } catch (err) {
       setEditError(err.message || 'Error al actualizar el operador.');
     }
@@ -93,7 +80,7 @@ export default function StaffBento() {
     setErrorMsg('');
     try {
       await changeBackofficeStaffStatusApi(member.id, !member.active);
-      await loadStaff();
+      reload();
     } catch (err) {
       setErrorMsg(err.message || 'Error al cambiar el estado del operador.');
     }
@@ -105,7 +92,7 @@ export default function StaffBento() {
     setErrorMsg('');
     try {
       await deleteBackofficeStaffApi(member.id);
-      await loadStaff();
+      reload();
     } catch (err) {
       setErrorMsg(err.message || 'Error al desactivar el operador.');
     }
@@ -170,7 +157,7 @@ export default function StaffBento() {
           </div>
         ) : (
           <div className="md:overflow-x-auto md:-mx-2">
-            <table className="table-cards w-full text-xs min-w-[680px]">
+            <table className="table-cards w-full text-xs md:min-w-[680px]">
               <thead>
                 <tr className="text-left text-[10px] font-extrabold text-ink-muted uppercase">
                   <th className="px-2 py-2">Operador</th>

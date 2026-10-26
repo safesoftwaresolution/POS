@@ -1,39 +1,26 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Users, UserPlus, Search, Mail, Phone, CheckCircle2, Edit3, Trash2 } from 'lucide-react';
 import { getCustomersApi, deleteCustomerApi } from '../services/customersApi';
 import CreateDianCustomerModal from '../components/customers/CreateDianCustomerModal';
-import { useAuth } from '../context/AuthContext';
-import { useModal } from '../context/ModalContext';
+import useAuth from '../hooks/useAuth';
+import useModal from '../hooks/useModal';
 import { Button, Badge, Card, EmptyState, PageHeader } from '../components/ui';
-import useAutoRefresh from '../hooks/useAutoRefresh';
+import useLoad from '../hooks/useLoad';
+import asList from '../utils/asList';
 
 export default function CustomersBento() {
   const { user } = useAuth();
   const { confirm, notify } = useModal();
   const canDelete = user?.role === 'ADMINISTRATOR';
 
-  const [customers, setCustomers] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { data: customers, loading, reload } = useLoad(
+    () => asList(getCustomersApi()),
+    [],
+    { initial: [], autoRefresh: true },
+  );
   const [search, setSearch] = useState('');
   // null = cerrado, {} = alta, {customer} = edición
   const [modal, setModal] = useState(null);
-
-  const fetchCustomers = async ({ silent = false } = {}) => {
-    try {
-      const data = await getCustomersApi();
-      setCustomers(Array.isArray(data) ? data : []);
-    } catch (e) {
-      console.warn('Error cargando clientes:', e);
-      if (!silent) setCustomers([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchCustomers();
-  }, []);
-  useAutoRefresh(() => fetchCustomers({ silent: true }));
 
   const handleDelete = async (c) => {
     const ok = await confirm(
@@ -43,7 +30,7 @@ export default function CustomersBento() {
     if (!ok) return;
     try {
       await deleteCustomerApi(c.id);
-      await fetchCustomers();
+      reload();
     } catch (e) {
       notify('No se pudo eliminar el cliente: ' + e.message);
     }
@@ -140,7 +127,7 @@ export default function CustomersBento() {
         <CreateDianCustomerModal
           customer={modal.customer}
           onClose={() => setModal(null)}
-          onCreated={fetchCustomers}
+          onCreated={() => reload()}
         />
       )}
     </div>

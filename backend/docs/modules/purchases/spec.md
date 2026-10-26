@@ -1,4 +1,4 @@
-<!-- spec-version: 1.1 | last-updated: 2026-10-16 -->
+<!-- spec-version: 1.2 | last-updated: 2026-10-25 -->
 # Módulo: Compras (Purchases)
 
 ## Dependencias
@@ -23,7 +23,7 @@
 ### RF-PUR-001 — Registrar Compra de Mercancía
 - **Prioridad**: Alta
 - **Criterios de Aceptación**:
-  - Campos: supplierId (proveedor activo), invoiceNumber (opcional), items[{productId, quantity, unitCost}].
+  - Campos: supplierId (proveedor activo), invoiceNumber (opcional), items[{productId, quantity, unitCost, expirationDate?, lotCode?}]. `expirationDate` (ISO) y `lotCode` son opcionales: con fecha, la entrada del ítem guarda un **lote** con esas unidades en la misma transacción (ver `inventory/spec.md` RF-INV-001 y `products/spec.md` RN-PROD-004). La compra no guarda el lote en `purchase_items`; vive en `product_lots`. Un reenvío idempotente no crea el lote dos veces.
   - Al confirmar:
     - Stock de cada producto sube atómicamente.
     - Se registra movimiento de inventario tipo COMPRA.
@@ -43,7 +43,7 @@
   ```json
   {
     "supplierId": 1, "invoiceNumber": "FAC-PROV-001",
-    "items": [{ "productId": 1, "quantity": 100, "unitCost": 1.15 }]
+    "items": [{ "productId": 1, "quantity": 100, "unitCost": 1.15, "expirationDate": "2027-01-15", "lotCode": "L-2210" }]
   }
   ```
 - **Response 201**: Compra registrada con detalle

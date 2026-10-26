@@ -1,4 +1,4 @@
-<!-- spec-version: 1.3 | last-updated: 2026-10-25 -->
+<!-- spec-version: 1.5 | last-updated: 2026-10-25 -->
 # Módulo: Inventario (Inventory)
 
 ## Dependencias
@@ -27,6 +27,8 @@
   - Stock nuevo = stock actual + quantity.
   - Registrar movimiento con previous_stock y new_stock.
   - **Desde la UI** (Inventario → *Mover stock* → *Entrada*, solo Admin/Supervisor): sube stock **sin proveedor**, así no cuenta como compra en los reportes ni reescribe el costo (RN-PUR-002). Motivo obligatorio: *Inventario inicial*, *Mercancía que ya tenía*, *Bonificación u obsequio del proveedor* u *Otro* (exige nota). El `reason` se guarda como la etiqueta o `etiqueta: nota` (máx. 255 caracteres; el backend no lo valida). La cantidad es un entero entre 1 y 1.000.000.
+
+- **Vencimiento (lote)**: una entrada (`ENTRY`/`ENTRADA`/`COMPRA`) acepta además `expirationDate` (ISO `yyyy-MM-dd`) y `lotCode` opcionales. Con fecha, `registerMovement` guarda un **lote** con esas unidades (`ProductFacade.addLot`) **en la misma transacción** y antes de subir el stock: si el lote es inválido (fecha a más de 20 años, código de más de 50 caracteres) responde 400 y no queda stock subido ni kardex. Una fecha en un movimiento que no es entrada → 400. Sin fecha todo funciona como antes. **Antes de cualquier movimiento que suba el stock** (entrada, compra, ajuste, devolución de cliente) `registerMovement` llama a `ProductFacade.consolidateLots` para fijar en los lotes lo ya vendido (RN-PROD-005); las ventas y las salidas no lo hacen. Ver `products/spec.md` RN-PROD-004/005. **Desde la UI** (*Mover stock* → *Entrada* y *Compra*): campos opcionales "Vencimiento de lo que llega" y "Lote".
 
 ### RF-INV-002 — Registrar Salida de Inventario (Manual)
 - **Prioridad**: Alta
@@ -76,11 +78,12 @@
   ```json
   { "productId": 1, "movementType": "SALIDA", "quantity": 3, "reason": "Merma por vencimiento" }
   ```
+  Una entrada puede añadir `"expirationDate": "2027-01-15", "lotCode": "L-2210"` (opcionales; crean un lote).
 - **Response 201**:
   ```json
   { "id": 1500, "productName": "Coca Cola 350ml", "movementType": "SALIDA", "quantity": 3, "previousStock": 45, "newStock": 42, "reason": "Merma por vencimiento", "user": "supervisor1", "createdAt": "2026-07-07T10:49:00Z" }
   ```
-- **Errores**: 400 (cantidad inválida, stock negativo resultante)
+- **Errores**: 400 (cantidad inválida, stock negativo resultante, vencimiento en un movimiento que no es entrada o fecha inválida)
 
 ### GET /api/v1/inventory/movements
 - **Permisos**: Admin, Supervisor, Vendedor (solo lectura)

@@ -1,4 +1,4 @@
-<!-- spec-version: 1.1 | last-updated: 2026-10-16 -->
+<!-- spec-version: 1.2 | last-updated: 2026-10-25 -->
 # Módulo: Reportes (Reports)
 
 ## Dependencias
@@ -49,6 +49,18 @@ Este módulo no define reglas de negocio propias. Solo consulta datos de otros m
 - **Permisos**: Admin, Supervisor
 - **Query params**: belowMinStock (boolean)
 
+### RF-REP-007 — Lotes Vencidos y Próximos a Vencer
+- **Prioridad**: Media
+- Una fila **por lote** (`product_lots`, ver `products/spec.md` RN-PROD-004/005) de productos **activos** que todavía **tiene unidades** y cuyo vencimiento ya pasó o cae dentro de la ventana, del que vence primero al último (empate: nombre y luego lote). Lotes agotados, productos inactivos o sin lotes no aparecen; el alcance es el local de la sesión.
+- `lotRemaining` es lo que queda del lote, no lo que entró: se reparte el stock del producto asumiendo que se vende primero lo que vence primero. La consulta lo calcula con funciones de ventana (`SUM() OVER`, `LEAST`/`GREATEST`, válidas en H2 y PostgreSQL) y repite la regla de `ProductLotAllocator`; `ExpiringProductsReportTest.sqlAndJavaAllocationAgree` comprueba que coincidan.
+- Cada fila trae `daysToExpire` (negativo si ya venció) y `status`: `EXPIRED` (< 0), `TODAY` (0) o `EXPIRING`. Se calculan en el servicio con `LocalDate.now()` del servidor (zona del JVM), no en SQL.
+- La ventana `days` es opcional: por defecto 30, acotada a 1..365. Máximo 500 filas.
+
+### GET /api/v1/reports/expiring
+- **Permisos**: Admin, Supervisor
+- **Query params**: days (opcional, 1..365, default 30)
+- **Response 200**: `[{ "productId": 1, "productName": "Leche entera 1L", "internalCode": "PROD-001", "lotId": 7, "lotCode": "L-2210", "expirationDate": "2026-11-15", "daysToExpire": 12, "lotRemaining": 24, "quantityAvailable": 60, "status": "EXPIRING" }]`. La UI vive en el Dashboard (tarjeta "Próximos a vencer").
+
 ### GET /api/v1/reports/profitability
 - **Permisos**: Admin
 - **Query params**: dateFrom, dateTo
@@ -67,9 +79,9 @@ Este módulo no define reglas de negocio propias. Solo consulta datos de otros m
 - **Response 200**: `CashClosingReportDto { dateFrom, dateTo, totalByPaymentMethod, expectedCash, cashBySeller }`. La UI vive en `ReportsBento`.
 
 ## Modelo de Datos
-Este módulo no posee tablas propias. Ejecuta queries de solo lectura sobre las tablas de sales, sale_items, purchases, purchase_items, products e inventory_movements.
+Este módulo no posee tablas propias. Ejecuta queries de solo lectura sobre las tablas de sales, sale_items, purchases, purchase_items, products, product_lots e inventory_movements.
 
 ## Permisos
 | Operación | Admin | Supervisor | Vendedor |
 |---|---|---|---|
-| Ver reportes | ✓ (todos) | ✓ (solo stock) | - |
+| Ver reportes | ✓ (todos) | ✓ (stock y vencimientos) | - |

@@ -1,7 +1,7 @@
-<!-- doc-version: 1.3 | last-updated: 2026-10-16 -->
+<!-- doc-version: 1.4 | last-updated: 2026-10-25 -->
 # Esquema de Base de Datos — Vista Global
 
-Fuente de verdad: las migraciones Flyway en `src/main/resources/db/migration/` (hoy `V1` … `V19`). Este documento es el mapa;
+Fuente de verdad: las migraciones Flyway en `src/main/resources/db/migration/` (hoy `V1` … `V27`). Este documento es el mapa;
 el DDL columna a columna vive en las migraciones y, para los módulos con tablas propias complejas, en su `spec.md`.
 
 ## Diagrama Entidad-Relación
@@ -59,7 +59,7 @@ erDiagram
 | auth | `email_verification_tokens` | V7 | Hash del token, `used_at`, expira |
 | categories | `categories` | V1 | **Global** (sin `store_id`) |
 | categories | `product_subcategories` | V12 | Por local; única por (`store_id`, `category_id`, `name`) |
-| products | `products` | V1, V2 (`tax_rate`, `unspsc_code`), V3, V12 (`subcategory_id`) | Único por local: `internal_code` y `barcode` (V9) |
+| products | `products`, `product_lots` | V1, V2 (`tax_rate`, `unspsc_code`), V3, V12 (`subcategory_id`), V27 (`product_lots`: lotes de vencimiento) | Único por local: `internal_code` y `barcode` (V9) |
 | customers | `customers` | V1, V2 (campos DIAN), V3 | Un "Cliente General" por local |
 | suppliers | `suppliers` | V1, V3 | |
 | inventory | `inventory_movements` | V1, V9 (`store_id`) | Kardex; `previous_stock` / `new_stock` |
@@ -193,6 +193,7 @@ Bitácora de cambios sobre rangos de numeración DIAN (`V15`, ampliada en `V17`)
 | IDX_numbering_range_audit_store_range | numbering_range_audit(store_id, range_id) | V15 |
 | IDX_electronic_credit_notes_store / _store_status / _bill | electronic_credit_notes | V18 |
 | IDX_electronic_debit_notes_store / _store_status / _bill | electronic_debit_notes | V19 |
+| IDX_product_lots_product, IDX_product_lots_store_expiration | product_lots(product_id), product_lots(store_id, expiration_date) | V27 |
 
 Búsquedas por `barcode`, `internal_code` e `identification` se resuelven con las restricciones `UNIQUE` por local (V9), no con índices `IDX_` aparte.
 
@@ -209,7 +210,7 @@ Antes este documento los listaba como existentes; **no hay ninguna migración qu
 Toda modificación al esquema físico (tablas, columnas, datos semilla, índices) **DEBE** gestionarse mediante scripts de Flyway.
 
 - **Ubicación obligatoria**: `src/main/resources/db/migration/`
-- **Nomenclatura**: `V<Versión>__<Descripcion_Breve>.sql` (ej. `V26__User_Deletion_Audit.sql`). La siguiente libre es `V27`.
+- **Nomenclatura**: `V<Versión>__<Descripcion_Breve>.sql` (ej. `V27__Product_Lots.sql`). La siguiente libre es `V28`.
 - **Inmutabilidad**: una migración ya aplicada **nunca** se modifica; la corrección va en una versión nueva.
 - **Validación**: Hibernate usa `ddl-auto=validate` en dev y prod, por lo que cualquier discrepancia entre entidades y esquema falla el arranque. Solo el perfil `test` deja que Hibernate cree el esquema (`create-drop`, Flyway desactivado); los `V*MigrationSqlTest` ejecutan Flyway a mano contra su propia H2.
 - **Compatibilidad H2**: las migraciones con datos deben ser seguras en H2 (perfil `dev`); H2 2.4.x falla al validar `CHECK … IN (…)` desde una conexión distinta a la que los creó.

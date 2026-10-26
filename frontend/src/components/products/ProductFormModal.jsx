@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { AlertCircle, ImagePlus, Plus, ScanLine } from 'lucide-react';
+import { AlertCircle, Camera, ImagePlus, Images, Plus, ScanLine } from 'lucide-react';
 import { Button, Field, Input, Modal, MoneyInput, Select, inputClass } from '../ui';
 import { BarcodeScanner } from '../scanner';
 import ProductLotsSection from './ProductLotsSection';
@@ -16,6 +16,8 @@ export default function ProductFormModal({
   onSubmit, onClose,
 }) {
   const imageInputRef = useRef(null);
+  const cameraInputRef = useRef(null);
+  const galleryInputRef = useRef(null);
   const [scanning, setScanning] = useState(false);
   const isEdit = !!product.id;
   const set = (patch) => setProduct({ ...product, ...patch });
@@ -48,10 +50,28 @@ export default function ProductFormModal({
             )}
           </div>
           <div className="space-y-1.5">
-            <Button variant="soft" disabled={uploadingImage} onClick={() => imageInputRef.current?.click()}>
+            {/* Escritorio: selector de archivos. */}
+            <Button variant="soft" className="hidden lg:inline-flex" disabled={uploadingImage} onClick={() => imageInputRef.current?.click()}>
               {uploadingImage ? 'Subiendo...' : product.imageUrl ? 'Cambiar imagen' : 'Subir imagen'}
             </Button>
             <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={onImageChange} />
+
+            {/* Móvil/tablet: elegir entre abrir la cámara o la galería. `capture` abre la cámara nativa. */}
+            <div className="lg:hidden space-y-1.5">
+              <p className="text-xs font-bold text-ink-soft">
+                {uploadingImage ? 'Subiendo foto...' : product.imageUrl ? 'Cambiar foto del producto' : 'Agrega una foto del producto'}
+              </p>
+              <div className="flex gap-2">
+                <Button size="sm" variant="soft" icon={Camera} disabled={uploadingImage} onClick={() => cameraInputRef.current?.click()}>
+                  Tomar foto
+                </Button>
+                <Button size="sm" variant="soft" icon={Images} disabled={uploadingImage} onClick={() => galleryInputRef.current?.click()}>
+                  Galería
+                </Button>
+              </div>
+              <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={onImageChange} />
+              <input ref={galleryInputRef} type="file" accept="image/*" className="hidden" onChange={onImageChange} />
+            </div>
           </div>
         </div>
 

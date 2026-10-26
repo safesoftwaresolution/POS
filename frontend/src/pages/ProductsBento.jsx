@@ -21,6 +21,7 @@ import SubcategoryModal from '../components/products/SubcategoryModal';
 import { Button, Card, PageHeader } from '../components/ui';
 import useLoad from '../hooks/useLoad';
 import asList from '../utils/asList';
+import { prepareImageForUpload } from '../utils/image';
 
 const EMPTY_PRODUCT = {
   id: null,
@@ -221,7 +222,7 @@ export default function ProductsBento() {
     setUploadingImage(true);
     try {
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('file', await prepareImageForUpload(file));
       formData.append('folder', 'imagenes-productos');
       const result = await uploadFileApi('/storage/upload', formData);
       setNewProduct(prev => ({ ...prev, imageUrl: result.url }));

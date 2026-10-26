@@ -3,6 +3,7 @@ package com.sciencebot.pos.products.internal.controllers;
 import com.sciencebot.pos.products.CreateProductCommand;
 import com.sciencebot.pos.products.ProductDto;
 import com.sciencebot.pos.products.ProductFacade;
+import com.sciencebot.pos.products.ProductLotsDto;
 import com.sciencebot.pos.products.UpdateProductCommand;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -20,6 +21,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.Map;
 
 @RestController
@@ -163,6 +165,117 @@ public class ProductController {
             throw new IllegalArgumentException("El campo 'active' es requerido");
         }
         productFacade.changeStatus(id, active);
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Cuerpo para crear o corregir un lote. Al crear (POST) la cantidad es obligatoria; al corregir (PUT) es opcional:
+     * sin ella las unidades del lote no cambian.
+     */
+    @Schema(description = "Datos de un lote de vencimiento")
+    public record ProductLotRequest(
+            @Schema(description = "Unidades del lote. Obligatoria al crear; al corregir es opcional (sin ella no cambian)", example = "10")
+            Integer quantity,
+            @Schema(description = "Fecha de vencimiento del lote", example = "2027-01-15", requiredMode = Schema.RequiredMode.REQUIRED)
+            LocalDate expirationDate,
+            @Schema(description = "Código de lote del proveedor (opcional, máx. 50)", example = "L-2210")
+            String lotCode
+    ) {}
+
+    @GetMapping("/{id}/lots")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'SUPERVISOR')")
+    @Operation(
+            summary = "Lotes de vencimiento de un producto",
+            description = """
+                    Lista los lotes que todavía tienen unidades, del que vence primero al último, con las unidades
+                    que quedan de cada uno (se asume que se vende primero lo que vence primero), y cuántas unidades
+                    del stock no tienen fecha (`undatedQuantity`). Requiere rol **ADMINISTRATOR** o **SUPERVISOR**.
+                    """
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Lotes del producto",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = ProductLotsDto.class))),
+            @ApiResponse(responseCode = "404", description = "Producto no encontrado", content = @Content),
+            @ApiResponse(responseCode = "401", description = "No autenticado", content = @Content),
+            @ApiResponse(responseCode = "403", description = "Sin permisos suficientes", content = @Content)
+    })
+    public ResponseEntity<ProductLotsDto> listLots(
+            @Parameter(description = "ID del producto", example = "1", required = true) @PathVariable Long id) {
+        return ResponseEntity.ok(productFacade.listLots(id));
+    }
+
+    @PostMapping("/{id}/lots")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'SUPERVISOR')")
+    @Operation(
+            summary = "Ponerle fecha de vencimiento a stock que ya existe",
+            description = """
+                    Crea un lote para unidades que ya están en el inventario sin fecha. No mueve stock: la cantidad no
+                    puede superar las unidades sin fecha del producto. Las entradas nuevas con vencimiento se
+                    registran desde *Mover stock* o *Compras*. Requiere rol **ADMINISTRATOR** o **SUPERVISOR**.
+                    """
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Lote creado", content = @Content),
+            @ApiResponse(responseCode = "400", description = "Cantidad mayor a las unidades sin fecha, fecha inválida", content = @Content),
+            @ApiResponse(responseCode = "404", description = "Producto no encontrado", content = @Content),
+            @ApiResponse(responseCode = "401", description = "No autenticado", content = @Content),
+            @ApiResponse(responseCode = "403", description = "Sin permisos suficientes", content = @Content)
+    })
+    public ResponseEntity<Void> assignLot(
+            @Parameter(description = "ID del producto", example = "1", required = true) @PathVariable Long id,
+            @RequestBody ProductLotRequest request) {
+        if (request.quantity() == null) {
+            throw new IllegalArgumentException("La cantidad del lote es obligatoria");
+        }
+        productFacade.assignLot(id, request.quantity(), request.expirationDate(), request.lotCode());
+        return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/{id}/lots/{lotId}")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'SUPERVISOR')")
+    @Operation(
+            summary = "Corregir la fecha, el código o las unidades de un lote",
+            description = """
+                    Cambia la fecha de vencimiento y el código de un lote y, si se envía `quantity`, las unidades que
+                    le quedan. El stock del producto no cambia: subir las unidades las toma de las "sin fecha" (falla
+                    si no alcanzan) y bajarlas las devuelve a ese grupo. Requiere rol **ADMINISTRATOR** o **SUPERVISOR**.
+                    """
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Lote actualizado", content = @Content),
+            @ApiResponse(responseCode = "400", description = "Fecha inválida, unidades inválidas o mayores a las unidades sin fecha", content = @Content),
+            @ApiResponse(responseCode = "404", description = "Producto o lote no encontrado", content = @Content),
+            @ApiResponse(responseCode = "401", description = "No autenticado", content = @Content),
+            @ApiResponse(responseCode = "403", description = "Sin permisos suficientes", content = @Content)
+    })
+    public ResponseEntity<Void> updateLot(
+            @Parameter(description = "ID del producto", example = "1", required = true) @PathVariable Long id,
+            @Parameter(description = "ID del lote", example = "7", required = true) @PathVariable Long lotId,
+            @RequestBody ProductLotRequest request) {
+        productFacade.updateLot(id, lotId, request.expirationDate(), request.lotCode(), request.quantity());
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/{id}/lots/{lotId}")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'SUPERVISOR')")
+    @Operation(
+            summary = "Quitar un lote",
+            description = """
+                    Elimina el registro del lote. El stock no cambia: esas unidades pasan a "sin fecha". Para dar de baja
+                    mercancía vencida use una salida por *Vencimiento* en Inventario. Requiere rol **ADMINISTRATOR** o **SUPERVISOR**.
+                    """
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Lote eliminado", content = @Content),
+            @ApiResponse(responseCode = "404", description = "Producto o lote no encontrado", content = @Content),
+            @ApiResponse(responseCode = "401", description = "No autenticado", content = @Content),
+            @ApiResponse(responseCode = "403", description = "Sin permisos suficientes", content = @Content)
+    })
+    public ResponseEntity<Void> deleteLot(
+            @Parameter(description = "ID del producto", example = "1", required = true) @PathVariable Long id,
+            @Parameter(description = "ID del lote", example = "7", required = true) @PathVariable Long lotId) {
+        productFacade.deleteLot(id, lotId);
         return ResponseEntity.noContent().build();
     }
 

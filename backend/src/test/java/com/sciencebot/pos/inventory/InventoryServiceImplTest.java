@@ -85,6 +85,106 @@ class InventoryServiceImplTest {
     }
 
     @Test
+    void registerMovement_EntryWithExpiration_SavesTheLotAndRaisesTheStock() {
+        ProductDto product = new ProductDto(1L, "P1", "123", "Product 1", "Cat", null, null, BigDecimal.ONE, BigDecimal.TEN, 10, 5, true, null);
+        when(productFacade.getById(1L)).thenReturn(Optional.of(product));
+        when(productFacade.adjustStock(1L, 50)).thenReturn(60);
+        when(movementRepository.save(any(InventoryMovement.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        java.time.LocalDate expiration = java.time.LocalDate.of(2027, 1, 15);
+
+        inventoryService.registerMovement(1L, "ENTRY", 50, "Cargamento", expiration, "L-2210");
+
+        verify(productFacade).addLot(1L, 50, expiration, "L-2210");
+        verify(productFacade).adjustStock(1L, 50);
+    }
+
+    @Test
+    void registerMovement_PurchaseWithExpiration_SavesTheLot() {
+        ProductDto product = new ProductDto(1L, "P1", "123", "Product 1", "Cat", null, null, BigDecimal.ONE, BigDecimal.TEN, 10, 5, true, null);
+        when(productFacade.getById(1L)).thenReturn(Optional.of(product));
+        when(productFacade.adjustStock(1L, 20)).thenReturn(30);
+        when(movementRepository.save(any(InventoryMovement.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        java.time.LocalDate expiration = java.time.LocalDate.of(2027, 2, 1);
+
+        inventoryService.registerMovement(1L, "COMPRA", 20, "Compra", expiration, null);
+
+        verify(productFacade).addLot(1L, 20, expiration, null);
+    }
+
+    @Test
+    void registerMovement_EntryWithoutExpiration_SavesNoLot() {
+        ProductDto product = new ProductDto(1L, "P1", "123", "Product 1", "Cat", null, null, BigDecimal.ONE, BigDecimal.TEN, 10, 5, true, null);
+        when(productFacade.getById(1L)).thenReturn(Optional.of(product));
+        when(productFacade.adjustStock(1L, 5)).thenReturn(15);
+        when(movementRepository.save(any(InventoryMovement.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        inventoryService.registerMovement(1L, "ENTRY", 5, "Sin fecha", null, null);
+
+        verify(productFacade, never()).addLot(any(), anyInt(), any(), any());
+    }
+
+    @Test
+    void registerMovement_EveryStockIncrease_FixesTheSoldLotsBeforeRaisingTheStock() {
+        for (String type : new String[]{"ENTRY", "ENTRADA", "COMPRA", "AJUSTE", "DEVOLUCION_VENTA"}) {
+            reset(productFacade, movementRepository);
+            ProductDto product = new ProductDto(1L, "P1", "123", "Product 1", "Cat", null, null, BigDecimal.ONE, BigDecimal.TEN, 10, 5, true, null);
+            when(productFacade.getById(1L)).thenReturn(Optional.of(product));
+            when(productFacade.adjustStock(1L, 4)).thenReturn(14);
+            when(movementRepository.save(any(InventoryMovement.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+            inventoryService.registerMovement(1L, type, 4, "Sube stock");
+
+            // El orden importa: consolidar con el stock de antes de la subida, no con el de después.
+            org.mockito.InOrder inOrder = inOrder(productFacade);
+            inOrder.verify(productFacade).consolidateLots(1L);
+            inOrder.verify(productFacade).adjustStock(1L, 4);
+        }
+    }
+
+    @Test
+    void registerMovement_EveryStockDecrease_DoesNotConsolidate() {
+        for (String type : new String[]{"SALIDA", "EXIT", "VENTA", "DEVOLUCION", "RETURN"}) {
+            reset(productFacade, movementRepository);
+            ProductDto product = new ProductDto(1L, "P1", "123", "Product 1", "Cat", null, null, BigDecimal.ONE, BigDecimal.TEN, 10, 5, true, null);
+            when(productFacade.getById(1L)).thenReturn(Optional.of(product));
+            when(productFacade.adjustStock(1L, -3)).thenReturn(7);
+            when(movementRepository.save(any(InventoryMovement.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+            inventoryService.registerMovement(1L, type, 3, "Baja stock");
+
+            verify(productFacade, never()).consolidateLots(any());
+        }
+    }
+
+    @Test
+    void registerMovement_ExpirationOnAnExit_IsRejectedWithoutTouchingStock() {
+        ProductDto product = new ProductDto(1L, "P1", "123", "Product 1", "Cat", null, null, BigDecimal.ONE, BigDecimal.TEN, 10, 5, true, null);
+        when(productFacade.getById(1L)).thenReturn(Optional.of(product));
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> inventoryService.registerMovement(1L, "SALIDA", 2, "Merma", java.time.LocalDate.of(2027, 1, 15), null));
+
+        assertTrue(ex.getMessage().contains("solo se puede registrar en una entrada"));
+        verify(productFacade, never()).adjustStock(any(), anyInt());
+        verify(productFacade, never()).addLot(any(), anyInt(), any(), any());
+    }
+
+    @Test
+    void registerMovement_InvalidLot_FailsBeforeRaisingTheStock() {
+        ProductDto product = new ProductDto(1L, "P1", "123", "Product 1", "Cat", null, null, BigDecimal.ONE, BigDecimal.TEN, 10, 5, true, null);
+        when(productFacade.getById(1L)).thenReturn(Optional.of(product));
+        java.time.LocalDate absurd = java.time.LocalDate.now().plusYears(40);
+        doThrow(new IllegalArgumentException("La fecha de vencimiento no puede superar los 20 años a partir de hoy"))
+                .when(productFacade).addLot(1L, 5, absurd, null);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> inventoryService.registerMovement(1L, "ENTRY", 5, "Cargamento", absurd, null));
+
+        verify(productFacade, never()).adjustStock(any(), anyInt());
+        verify(movementRepository, never()).save(any(InventoryMovement.class));
+    }
+
+    @Test
     void registerMovement_InsufficientStock_ThrowsException() {
         ProductDto product = new ProductDto(1L, "P1", "123", "Product 1", "Cat", null, null, BigDecimal.ONE, BigDecimal.TEN, 2, 5, true, null);
         when(productFacade.getById(1L)).thenReturn(Optional.of(product));

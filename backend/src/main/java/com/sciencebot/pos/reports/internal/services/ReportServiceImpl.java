@@ -10,7 +10,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -21,6 +23,9 @@ public class ReportServiceImpl implements ReportService {
 
     private static final int DEFAULT_REPORT_DAYS = 30;
     private static final int DEFAULT_TOP_PRODUCTS_LIMIT = 10;
+    private static final int DEFAULT_EXPIRING_DAYS = 30;
+    private static final int MAX_EXPIRING_DAYS = 365;
+    private static final int MAX_EXPIRING_ROWS = 500;
 
     private final ReportDao reportDao;
 
@@ -57,6 +62,22 @@ public class ReportServiceImpl implements ReportService {
     @Override
     public List<StockReportDto> getStockReport(Boolean belowMinStock) {
         return reportDao.findStockReport(requireCurrentStoreId(), belowMinStock);
+    }
+
+    @Override
+    public List<ExpiringProductDto> getExpiringProductsReport(Integer days) {
+        int window = (days == null) ? DEFAULT_EXPIRING_DAYS : Math.min(Math.max(days, 1), MAX_EXPIRING_DAYS);
+        LocalDate today = LocalDate.now();
+
+        return reportDao.findExpiringProducts(requireCurrentStoreId(), today.plusDays(window), MAX_EXPIRING_ROWS).stream()
+                .map(row -> {
+                    long daysToExpire = ChronoUnit.DAYS.between(today, row.expirationDate());
+                    String status = daysToExpire < 0 ? "EXPIRED" : daysToExpire == 0 ? "TODAY" : "EXPIRING";
+                    return new ExpiringProductDto(row.productId(), row.productName(), row.internalCode(),
+                            row.lotId(), row.lotCode(), row.expirationDate(), daysToExpire, row.lotRemaining(),
+                            row.quantityAvailable(), status);
+                })
+                .toList();
     }
 
     @Override

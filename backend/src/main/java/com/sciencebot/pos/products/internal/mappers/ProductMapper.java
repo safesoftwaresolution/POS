@@ -6,6 +6,8 @@ import com.sciencebot.pos.products.ProductDto;
 import com.sciencebot.pos.products.internal.entities.Product;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDate;
+
 @Component
 public class ProductMapper {
 
@@ -21,6 +23,11 @@ public class ProductMapper {
 
 
     public ProductDto toDto(Product product) {
+        return toDto(product, null);
+    }
+
+    /** {@code nextExpiration}: vencimiento del lote más próximo con unidades (se deriva de los lotes), o null. */
+    public ProductDto toDto(Product product, LocalDate nextExpiration) {
         if (product == null) {
             return null;
         }
@@ -50,7 +57,8 @@ public class ProductMapper {
                 product.getTaxRate(),
                 product.getUnspscCode(),
                 product.getCategoryId(),
-                product.getDescription()
+                product.getDescription(),
+                nextExpiration
         );
     }
 }

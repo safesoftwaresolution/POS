@@ -3,6 +3,7 @@ package com.sciencebot.pos.reports.internal.repositories;
 import com.sciencebot.pos.reports.ProfitabilityReportDto;
 import com.sciencebot.pos.reports.StockReportDto;
 import com.sciencebot.pos.reports.TopProductDto;
+import com.sciencebot.pos.reports.internal.repositories.ReportProjections.ExpiringProductProjection;
 import com.sciencebot.pos.reports.internal.repositories.ReportProjections.PaymentMethodTotalProjection;
 import com.sciencebot.pos.reports.internal.repositories.ReportProjections.SalesTotalsProjection;
 import com.sciencebot.pos.reports.internal.repositories.ReportProjections.SellerSaleProjection;
@@ -11,6 +12,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -112,6 +114,42 @@ public class ReportDaoJdbc implements ReportDao {
         return jdbcClient.sql(sql.toString())
                 .param("storeId", storeId)
                 .query(StockReportDto.class)
+                .list();
+    }
+
+    @Override
+    public List<ExpiringProductProjection> findExpiringProducts(Long storeId, LocalDate limit, int maxRows) {
+        // Lo que queda de cada lote no se guarda: se deriva del stock del producto asumiendo que se vende primero lo
+        // que vence primero. Consumido = max(0, total de lotes - stock); sale del lote que vence antes (empate por id).
+        // "prior" = unidades de los lotes anteriores en ese orden. Misma regla que ProductLotAllocator (hay un test de paridad).
+        String sql = """
+            SELECT * FROM (
+                SELECT
+                    p.id AS productId,
+                    p.name AS productName,
+                    p.internal_code AS internalCode,
+                    l.id AS lotId,
+                    l.lot_code AS lotCode,
+                    l.expiration_date AS expirationDate,
+                    p.quantity_available AS quantityAvailable,
+                    l.quantity - LEAST(l.quantity, GREATEST(0,
+                        GREATEST(0, SUM(l.quantity) OVER (PARTITION BY l.product_id) - p.quantity_available)
+                        - (SUM(l.quantity) OVER (PARTITION BY l.product_id ORDER BY l.expiration_date, l.id) - l.quantity)
+                    )) AS lotRemaining
+                FROM product_lots l
+                JOIN products p ON p.id = l.product_id
+                WHERE l.store_id = :storeId AND p.store_id = :storeId AND p.active = true
+            ) lots
+            WHERE lotRemaining > 0 AND expirationDate <= :limit
+            ORDER BY expirationDate ASC, productName ASC, lotId ASC
+            LIMIT :maxRows
+            """;
+
+        return jdbcClient.sql(sql)
+                .param("storeId", storeId)
+                .param("limit", limit)
+                .param("maxRows", maxRows)
+                .query(ExpiringProductProjection.class)
                 .list();
     }
 

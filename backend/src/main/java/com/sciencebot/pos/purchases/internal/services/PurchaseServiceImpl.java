@@ -125,7 +125,9 @@ public class PurchaseServiceImpl implements PurchaseFacade {
 
             // Register movement in Inventory module (incrementa stock internamente)
             String movementReason = "Compra registrada " + (command.invoiceNumber() != null ? "Factura: " + command.invoiceNumber() : "");
-            inventoryFacade.registerMovement(itemCommand.productId(), "COMPRA", itemCommand.quantity(), movementReason);
+            // Con expirationDate la entrada guarda también el lote (misma transacción: si falla, no queda stock subido).
+            inventoryFacade.registerMovement(itemCommand.productId(), "COMPRA", itemCommand.quantity(), movementReason,
+                    itemCommand.expirationDate(), itemCommand.lotCode());
 
             BigDecimal subtotal = itemCommand.unitCost().multiply(BigDecimal.valueOf(itemCommand.quantity()));
             total = total.add(subtotal);

@@ -204,9 +204,10 @@ class NativeSqlDaosTest {
 
         dao.purge(victim);
 
-        for (String table : List.of("products", "customers", "sales", "electronic_invoices")) {
+        for (String table : List.of("products", "product_lots", "customers", "sales", "electronic_invoices")) {
             assertEquals(0L, count("SELECT COUNT(*) FROM " + table + " WHERE store_id = " + victim), table);
         }
+        assertEquals(1L, count("SELECT COUNT(*) FROM product_lots WHERE store_id = " + keep), "los lotes de otro local no se tocan");
         assertEquals(0L, count("SELECT COUNT(*) FROM sale_items WHERE sale_id = " + victimSale));
         assertEquals(0L, count("SELECT COUNT(*) FROM users WHERE id = " + victimSeller));
         assertEquals(1L, count("SELECT COUNT(*) FROM users WHERE id = " + victimAdmin + " AND store_id IS NULL"));
@@ -226,6 +227,10 @@ class NativeSqlDaosTest {
                 + "5, 10, 5, :s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
                 .param("c", tag + "-P").param("s", storeId).update();
         long product = jdbc.sql("SELECT id FROM products WHERE internal_code = :c").param("c", tag + "-P").query(Long.class).single();
+        // Un lote de vencimiento: la purga debe borrarlo antes que el producto (FK product_lots -> products).
+        jdbc.sql("INSERT INTO product_lots (store_id, product_id, lot_code, quantity, expiration_date, received_at, created_at) "
+                + "VALUES (:s, :p, 'L-PURGE', 5, DATE '2027-01-15', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+                .param("s", storeId).param("p", product).update();
         jdbc.sql("INSERT INTO customers (full_name, identification, store_id, active, created_at, updated_at) "
                 + "VALUES (:c, :c, :s, TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
                 .param("c", tag + "-C").param("s", storeId).update();

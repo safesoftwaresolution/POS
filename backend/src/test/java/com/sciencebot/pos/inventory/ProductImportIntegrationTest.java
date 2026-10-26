@@ -28,6 +28,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -84,6 +85,7 @@ class ProductImportIntegrationTest {
     @AfterEach
     void cleanUp() {
         jdbcTemplate.update("delete from inventory_movements where store_id = ?", storeId);
+        jdbcTemplate.update("delete from product_lots where store_id = ?", storeId);
         jdbcTemplate.update("delete from products where store_id = ?", storeId);
         jdbcTemplate.update("delete from product_subcategories where store_id = ?", storeId);
         jdbcTemplate.update("delete from users where username = ?", username);
@@ -150,6 +152,24 @@ class ProductImportIntegrationTest {
         InventoryMovementDto adjustment = movementsOf(up).get(0);
         assertEquals("AJUSTE", adjustment.movementType());
         assertEquals(5, adjustment.quantity());
+    }
+
+    @Test
+    void import_updatingAProduct_keepsItsLotsAndItsExpiration() throws IOException {
+        Long id = existing("V-1", "Yogur", 1500, 2500, 10, null);
+        LocalDate expiration = LocalDate.of(2027, 3, 1);
+        jdbcTemplate.update("insert into product_lots (store_id, product_id, quantity, expiration_date, received_at, created_at) "
+                        + "values (?, ?, ?, ?, current_timestamp, current_timestamp)",
+                storeId, id, 10, java.sql.Date.valueOf(expiration));
+
+        ProductImportResultDto result = productImportFacade.importProducts(xlsx(
+                row("V-1", null, null, null, null, null, 2800, null, null, null, null, null)));
+
+        assertEquals(1, result.updated());
+        ProductDto yogurt = byCode("V-1");
+        assertEquals(0, new BigDecimal("2800").compareTo(yogurt.salePrice()));
+        assertEquals(expiration, yogurt.expirationDate(), "importar no puede borrar el vencimiento");
+        assertEquals(1, productFacade.listLots(id).lots().size());
     }
 
     @Test

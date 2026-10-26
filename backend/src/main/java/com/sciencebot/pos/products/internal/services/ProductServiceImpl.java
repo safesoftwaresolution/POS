@@ -9,6 +9,8 @@ import com.sciencebot.pos.categories.SubcategoryProductCountProvider;
 import com.sciencebot.pos.config.tenant.TenantContext;
 import com.sciencebot.pos.products.*;
 import com.sciencebot.pos.products.internal.entities.Product;
+import com.sciencebot.pos.products.internal.entities.ProductLot;
+import com.sciencebot.pos.products.internal.repositories.ProductLotRepository;
 import com.sciencebot.pos.products.internal.repositories.ProductRepository;
 import com.sciencebot.pos.products.internal.repositories.ProductSpecifications;
 import com.sciencebot.pos.products.internal.mappers.ProductMapper;
@@ -21,11 +23,15 @@ import org.springframework.transaction.annotation.Transactional;
 
 import jakarta.persistence.EntityNotFoundException;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.BiFunction;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional(readOnly = true)
@@ -33,18 +39,24 @@ public class ProductServiceImpl implements ProductFacade, CategoryDeleteValidato
         SubcategoryDeleteValidator, SubcategoryProductCountProvider {
 
     private static final int LOOKUP_BATCH_SIZE = 500;
+    /** Tope de una fecha de vencimiento: más allá es casi seguro un error de digitación (p. ej. 2206). */
+    private static final int MAX_EXPIRATION_YEARS_AHEAD = 20;
+    private static final int MAX_LOT_CODE_LENGTH = 50;
 
     private final ProductRepository productRepository;
+    private final ProductLotRepository productLotRepository;
     private final CategoryFacade categoryFacade;
     private final SubcategoryFacade subcategoryFacade;
     private final ProductMapper productMapper;
 
     public ProductServiceImpl(
             ProductRepository productRepository,
+            ProductLotRepository productLotRepository,
             @org.springframework.context.annotation.Lazy CategoryFacade categoryFacade,
             @org.springframework.context.annotation.Lazy SubcategoryFacade subcategoryFacade,
             ProductMapper productMapper) {
         this.productRepository = productRepository;
+        this.productLotRepository = productLotRepository;
         this.categoryFacade = categoryFacade;
         this.subcategoryFacade = subcategoryFacade;
         this.productMapper = productMapper;
@@ -52,10 +64,8 @@ public class ProductServiceImpl implements ProductFacade, CategoryDeleteValidato
 
     @Override
     public Optional<ProductDto> getById(Long id) {
-        Product product = productRepository.findById(id)
-                .filter(this::belongsToCurrentStore)
-                .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado con ID: " + id));
-        return Optional.of(productMapper.toDto(product));
+        Product product = requireOwnProduct(id);
+        return Optional.of(toDto(product));
     }
 
 
@@ -84,6 +94,12 @@ public class ProductServiceImpl implements ProductFacade, CategoryDeleteValidato
         }
 
         validateSubcategory(command.subcategoryId(), command.categoryId());
+        if (command.expirationDate() != null) {
+            if (command.quantityAvailable() <= 0) {
+                throw new IllegalArgumentException("El vencimiento del stock inicial requiere un stock inicial mayor que cero");
+            }
+            validateExpirationDate(command.expirationDate());
+        }
 
         Product product = new Product();
         product.setStoreId(storeId);
@@ -103,15 +119,17 @@ public class ProductServiceImpl implements ProductFacade, CategoryDeleteValidato
         product.setActive(true);
 
         Product saved = productRepository.save(product);
-        return productMapper.toDto(saved);
+        if (command.expirationDate() != null) {
+            // El stock inicial entra con su vencimiento: un solo lote con todas las unidades.
+            saveLot(saved, command.quantityAvailable(), command.expirationDate(), null);
+        }
+        return toDto(saved);
     }
 
     @Override
     @Transactional
     public ProductDto updateProduct(Long id, UpdateProductCommand command) {
-        Product product = productRepository.findById(id)
-                .filter(this::belongsToCurrentStore)
-                .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado con ID: " + id));
+        Product product = requireOwnProduct(id);
 
         validatePrices(command.purchasePrice(), command.salePrice());
 
@@ -145,7 +163,7 @@ public class ProductServiceImpl implements ProductFacade, CategoryDeleteValidato
         }
 
         Product saved = productRepository.save(product);
-        return productMapper.toDto(saved);
+        return toDto(saved);
     }
 
     @Override
@@ -186,8 +204,8 @@ public class ProductServiceImpl implements ProductFacade, CategoryDeleteValidato
         spec = spec.and(ProductSpecifications.hasStoreId(requireCurrentStoreId()));
 
         Page<Product> page = productRepository.findAll(spec, pageable);
-        return page.map(productMapper::toDto);
-
+        Map<Long, LocalDate> nextExpirations = nextExpirations(page.getContent());
+        return page.map(product -> productMapper.toDto(product, nextExpirations.get(product.getId())));
     }
 
     @Override
@@ -208,9 +226,200 @@ public class ProductServiceImpl implements ProductFacade, CategoryDeleteValidato
         List<ProductDto> result = new ArrayList<>();
         for (int from = 0; from < distinct.size(); from += LOOKUP_BATCH_SIZE) {
             List<String> batch = distinct.subList(from, Math.min(from + LOOKUP_BATCH_SIZE, distinct.size()));
-            query.apply(storeId, batch).forEach(product -> result.add(productMapper.toDto(product)));
+            List<Product> products = query.apply(storeId, batch);
+            Map<Long, LocalDate> nextExpirations = nextExpirations(products);
+            products.forEach(product -> result.add(productMapper.toDto(product, nextExpirations.get(product.getId()))));
         }
         return result;
+    }
+
+    private ProductDto toDto(Product product) {
+        return productMapper.toDto(product, nextExpiration(product));
+    }
+
+    /** Vencimiento del lote más próximo que aún tiene unidades (una consulta de lotes), o null si el producto no vence. */
+    private LocalDate nextExpiration(Product product) {
+        List<ProductLot> lots = productLotRepository
+                .findByStoreIdAndProductIdOrderByExpirationDateAscIdAsc(product.getStoreId(), product.getId());
+        return lots.isEmpty() ? null : ProductLotAllocator.allocate(lots, product.getQuantityAvailable()).nextExpiration(lots);
+    }
+
+    /** Lo mismo para varios productos con una sola consulta de lotes (listados). Los que no vencen no aparecen en el mapa. */
+    private Map<Long, LocalDate> nextExpirations(Collection<Product> products) {
+        if (products.isEmpty()) {
+            return Map.of();
+        }
+        Map<Long, List<ProductLot>> lotsByProduct = productLotRepository
+                .findByStoreIdAndProductIdInOrderByExpirationDateAscIdAsc(requireCurrentStoreId(),
+                        products.stream().map(Product::getId).toList()).stream()
+                .collect(Collectors.groupingBy(ProductLot::getProductId));
+        Map<Long, LocalDate> result = new HashMap<>();
+        for (Product product : products) {
+            List<ProductLot> lots = lotsByProduct.get(product.getId());
+            if (lots != null) {
+                LocalDate next = ProductLotAllocator.allocate(lots, product.getQuantityAvailable()).nextExpiration(lots);
+                if (next != null) {
+                    result.put(product.getId(), next);
+                }
+            }
+        }
+        return result;
+    }
+
+    // ---- Lotes de vencimiento ----
+
+    @Override
+    @Transactional
+    public void addLot(Long productId, int quantity, LocalDate expirationDate, String lotCode) {
+        saveLot(requireOwnProduct(productId), quantity, expirationDate, lotCode);
+    }
+
+    @Override
+    public ProductLotsDto listLots(Long productId) {
+        Product product = requireOwnProduct(productId);
+        List<ProductLot> lots = productLotRepository
+                .findByStoreIdAndProductIdOrderByExpirationDateAscIdAsc(product.getStoreId(), productId);
+        ProductLotAllocator.Result allocation = ProductLotAllocator.allocate(lots, currentStock(productId));
+        List<ProductLotDto> withUnits = lots.stream()
+                .filter(lot -> allocation.remainingByLotId().get(lot.getId()) > 0)
+                .map(lot -> new ProductLotDto(lot.getId(), lot.getLotCode(), lot.getQuantity(),
+                        allocation.remainingByLotId().get(lot.getId()), lot.getExpirationDate(), lot.getReceivedAt()))
+                .toList();
+        return new ProductLotsDto(withUnits, allocation.undated());
+    }
+
+    @Override
+    @Transactional
+    public void assignLot(Long productId, int quantity, LocalDate expirationDate, String lotCode) {
+        Product product = requireOwnProduct(productId);
+        int undated = ProductLotAllocator.allocate(consolidate(product), currentStock(productId)).undated();
+        if (quantity > undated) {
+            throw new IllegalArgumentException(undated == 0
+                    ? "Este producto no tiene unidades sin fecha de vencimiento"
+                    : "Solo hay " + undated + " unidades sin fecha de vencimiento en este producto");
+        }
+        saveLot(product, quantity, expirationDate, lotCode);
+    }
+
+    @Override
+    @Transactional
+    public void updateLot(Long productId, Long lotId, LocalDate expirationDate, String lotCode, Integer quantity) {
+        Product product = requireOwnProduct(productId);
+        if (expirationDate == null) {
+            throw new IllegalArgumentException("La fecha de vencimiento del lote es obligatoria");
+        }
+        validateExpirationDate(expirationDate);
+        String normalizedCode = normalizeLotCode(lotCode);
+        if (quantity != null && quantity <= 0) {
+            throw new IllegalArgumentException("Las unidades del lote deben ser mayores que cero (para quitar el lote, elimínalo)");
+        }
+
+        // Primero se fija lo ya vendido: las unidades del lote pasan a ser las que realmente le quedan.
+        List<ProductLot> lots = consolidate(product);
+        ProductLot lot = lots.stream().filter(l -> l.getId().equals(lotId)).findFirst()
+                .orElseThrow(() -> new EntityNotFoundException("Lote no encontrado con ID: " + lotId));
+
+        if (quantity != null && quantity != lot.getQuantity()) {
+            int increase = quantity - lot.getQuantity();
+            if (increase > 0) {
+                // Subir las unidades de un lote las toma del stock que no tiene fecha: el stock no cambia.
+                int undated = ProductLotAllocator.allocate(lots, currentStock(productId)).undated();
+                if (increase > undated) {
+                    throw new IllegalArgumentException(undated == 0
+                            ? "No hay unidades sin fecha para ampliar este lote. Sube primero el stock con una entrada o un conteo."
+                            : "Solo hay " + undated + " unidades sin fecha para ampliar este lote. Sube primero el stock con una entrada o un conteo.");
+                }
+            }
+            lot.setQuantity(quantity);
+        }
+        lot.setExpirationDate(expirationDate);
+        lot.setLotCode(normalizedCode);
+        productLotRepository.save(lot);
+    }
+
+    @Override
+    @Transactional
+    public void deleteLot(Long productId, Long lotId) {
+        Product product = requireOwnProduct(productId);
+        // Se consolida antes: así quitar este lote no revive unidades de otros lotes que ya se vendieron.
+        ProductLot lot = consolidate(product).stream().filter(l -> l.getId().equals(lotId)).findFirst()
+                .orElseThrow(() -> new EntityNotFoundException("Lote no encontrado con ID: " + lotId));
+        productLotRepository.delete(lot);
+    }
+
+    @Override
+    @Transactional
+    public void consolidateLots(Long productId) {
+        consolidate(requireOwnProduct(productId));
+    }
+
+    /**
+     * Fija en los lotes lo ya vendido: borra los lotes agotados y deja en los parciales solo lo que les queda. El reparto
+     * FEFO se deriva de "total de lotes − stock"; sin esto, un lote vendido hace tiempo seguiría sumando al total y
+     * reaparecería en cuanto el stock subiera sin lote o se quitara otro lote. Devuelve los lotes que quedan.
+     */
+    private List<ProductLot> consolidate(Product product) {
+        List<ProductLot> lots = productLotRepository
+                .findByStoreIdAndProductIdOrderByExpirationDateAscIdAsc(product.getStoreId(), product.getId());
+        if (lots.isEmpty()) {
+            return lots;
+        }
+        ProductLotAllocator.Result allocation = ProductLotAllocator.allocate(lots, currentStock(product.getId()));
+        List<ProductLot> kept = new ArrayList<>();
+        for (ProductLot lot : lots) {
+            int remaining = allocation.remainingByLotId().get(lot.getId());
+            if (remaining == 0) {
+                productLotRepository.delete(lot);
+            } else {
+                if (remaining != lot.getQuantity()) {
+                    lot.setQuantity(remaining);
+                    productLotRepository.save(lot);
+                }
+                kept.add(lot);
+            }
+        }
+        return kept;
+    }
+
+    private ProductLot saveLot(Product product, int quantity, LocalDate expirationDate, String lotCode) {
+        if (quantity <= 0) {
+            throw new IllegalArgumentException("La cantidad del lote debe ser mayor que cero");
+        }
+        if (expirationDate == null) {
+            throw new IllegalArgumentException("La fecha de vencimiento del lote es obligatoria");
+        }
+        validateExpirationDate(expirationDate);
+
+        ProductLot lot = new ProductLot();
+        lot.setStoreId(product.getStoreId());
+        lot.setProductId(product.getId());
+        lot.setQuantity(quantity);
+        lot.setExpirationDate(expirationDate);
+        lot.setLotCode(normalizeLotCode(lotCode));
+        return productLotRepository.save(lot);
+    }
+
+    /** Stock leído de la BD (no de la entidad, que dentro de una transacción con ventas puede estar desfasada). */
+    private int currentStock(Long productId) {
+        Integer stock = productRepository.findStockById(productId);
+        return stock == null ? 0 : stock;
+    }
+
+    private static String normalizeLotCode(String lotCode) {
+        if (lotCode == null || lotCode.isBlank()) {
+            return null;
+        }
+        String trimmed = lotCode.trim();
+        if (trimmed.length() > MAX_LOT_CODE_LENGTH) {
+            throw new IllegalArgumentException("El código de lote no puede superar los " + MAX_LOT_CODE_LENGTH + " caracteres");
+        }
+        return trimmed;
+    }
+
+    private Product requireOwnProduct(Long id) {
+        return productRepository.findById(id)
+                .filter(this::belongsToCurrentStore)
+                .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado con ID: " + id));
     }
 
     /** Un código de barras en blanco se guarda como NULL: "" chocaría con UK_products_store_barcode. */
@@ -266,6 +475,14 @@ public class ProductServiceImpl implements ProductFacade, CategoryDeleteValidato
         }
     }
 
+
+    /** La fecha es opcional y una ya pasada se acepta (mercancía vencida que hay que poder registrar). */
+    private static void validateExpirationDate(LocalDate expirationDate) {
+        if (expirationDate != null && expirationDate.isAfter(LocalDate.now().plusYears(MAX_EXPIRATION_YEARS_AHEAD))) {
+            throw new IllegalArgumentException("La fecha de vencimiento no puede superar los "
+                    + MAX_EXPIRATION_YEARS_AHEAD + " años a partir de hoy");
+        }
+    }
 
     private void validateCommand(String internalCode, BigDecimal purchasePrice, BigDecimal salePrice, Long categoryId) {
         if (internalCode == null || internalCode.isBlank()) {

@@ -68,7 +68,9 @@ public class InventoryController {
                 command.productId(),
                 command.movementType(),
                 command.quantity(),
-                command.reason()
+                command.reason(),
+                command.expirationDate(),
+                command.lotCode()
         );
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }

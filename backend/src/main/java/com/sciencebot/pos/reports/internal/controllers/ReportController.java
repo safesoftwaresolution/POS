@@ -112,6 +112,35 @@ public class ReportController {
         return ResponseEntity.ok(reportService.getStockReport(belowMinStock));
     }
 
+    @GetMapping("/expiring")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'SUPERVISOR')")
+    @Operation(
+            summary = "Productos vencidos o próximos a vencer",
+            description = """
+                    Lista los productos activos con existencias cuya fecha de vencimiento ya pasó o llega dentro de los
+                    próximos `days` días, del que vence primero al que vence último. Los productos sin fecha de
+                    vencimiento no aparecen.
+                    - `daysToExpire` es negativo si el producto ya venció
+                    - `status`: `EXPIRED`, `TODAY` o `EXPIRING`
+                    - `days` por defecto 30 (entre 1 y 365). Máximo 500 filas.
+
+                    Accesible para **ADMINISTRATOR** y **SUPERVISOR**.
+                    """
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Productos vencidos o por vencer",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            array = @ArraySchema(schema = @Schema(implementation = ExpiringProductDto.class)))),
+            @ApiResponse(responseCode = "401", description = "No autenticado", content = @Content),
+            @ApiResponse(responseCode = "403", description = "Sin permisos suficientes", content = @Content)
+    })
+    public ResponseEntity<List<ExpiringProductDto>> getExpiringProductsReport(
+            @Parameter(description = "Ventana en días hacia adelante (1 a 365)", example = "30")
+            @RequestParam(required = false) Integer days
+    ) {
+        return ResponseEntity.ok(reportService.getExpiringProductsReport(days));
+    }
+
     @GetMapping("/profitability")
     @PreAuthorize("hasRole('ADMINISTRATOR')")
     @Operation(

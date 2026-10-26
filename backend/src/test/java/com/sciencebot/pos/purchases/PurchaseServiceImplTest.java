@@ -18,6 +18,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
@@ -88,8 +89,26 @@ class PurchaseServiceImplTest {
         assertNotNull(result);
         assertEquals(BigDecimal.valueOf(11.50), result.totalAmount());
         verify(productFacade, times(1)).updatePurchasePrice(1L, BigDecimal.valueOf(1.15));
-        verify(inventoryFacade, times(1)).registerMovement(eq(1L), eq("COMPRA"), eq(10), anyString());
+        verify(inventoryFacade, times(1)).registerMovement(eq(1L), eq("COMPRA"), eq(10), anyString(), isNull(), isNull());
         verify(purchaseRepository, times(1)).saveAndFlush(any(Purchase.class));
+    }
+
+    @Test
+    void registerPurchase_ItemWithExpiration_PassesTheLotToTheEntry() {
+        LocalDate expiration = LocalDate.of(2027, 1, 15);
+        CreatePurchaseItemCommand item = new CreatePurchaseItemCommand(1L, 10, BigDecimal.valueOf(1.15), expiration, "L-2210");
+        CreatePurchaseCommand command = new CreatePurchaseCommand(1L, "FAC-02", List.of(item));
+
+        when(supplierFacade.getById(1L)).thenReturn(Optional.of(new SupplierDto(1L, "Supp ABC", "123", "Pedro", "a@a.com", "123", "Calle", true)));
+        when(productFacade.getById(1L)).thenReturn(Optional.of(
+                new ProductDto(1L, "P1", "123", "Prod 1", "Cat", null, null, BigDecimal.ONE, BigDecimal.TEN, 5, 2, true, null)));
+        Purchase saved = new Purchase();
+        saved.setId(11L);
+        when(purchaseRepository.saveAndFlush(any(Purchase.class))).thenReturn(saved);
+
+        purchaseService.registerPurchase(command);
+
+        verify(inventoryFacade).registerMovement(eq(1L), eq("COMPRA"), eq(10), anyString(), eq(expiration), eq("L-2210"));
     }
 
     @Test
@@ -111,7 +130,7 @@ class PurchaseServiceImplTest {
         assertNotNull(result);
         assertEquals(10L, result.id());
         // Reenvío idempotente: no incrementa inventario, no actualiza precios ni persiste otra compra.
-        verify(inventoryFacade, never()).registerMovement(anyLong(), anyString(), anyInt(), anyString());
+        verify(inventoryFacade, never()).registerMovement(anyLong(), anyString(), anyInt(), anyString(), any(), any());
         verify(productFacade, never()).updatePurchasePrice(anyLong(), any());
         verify(purchaseRepository, never()).saveAndFlush(any(Purchase.class));
     }

@@ -74,6 +74,7 @@ public class StorePurgeDao {
         delete("DELETE FROM inventory_movements WHERE store_id = :storeId", storeId);
         delete("DELETE FROM sales WHERE store_id = :storeId", storeId);
         delete("DELETE FROM purchases WHERE store_id = :storeId", storeId);
+        delete("DELETE FROM product_lots WHERE store_id = :storeId", storeId);
         delete("DELETE FROM products WHERE store_id = :storeId", storeId);
         delete("DELETE FROM product_subcategories WHERE store_id = :storeId", storeId);
         delete("DELETE FROM customers WHERE store_id = :storeId", storeId);

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { FileText, RefreshCw, Download, FileCode, Mail, Eye, X, CheckCircle2, Search, Copy, Check, ExternalLink, QrCode, AlertTriangle, Clock } from 'lucide-react';
 import {
   listInvoicesApi,
@@ -9,8 +9,8 @@ import {
   downloadInvoiceXmlApi
 } from '../../services/billingApi';
 import { deliverBlob } from '../../utils/downloadBlob';
-import useAutoRefresh from '../../hooks/useAutoRefresh';
-import { useModal } from '../../context/ModalContext';
+import useLoad from '../../hooks/useLoad';
+import useModal from '../../hooks/useModal';
 import { INVOICE_STATUSES, INVOICE_STATUS_LABELS, INVOICE_STATUS_STYLES, FIELD_CLASS, formatDateTime } from './constants';
 
 export default function InvoicesTab({ role, refreshKey, onChanged }) {
@@ -19,8 +19,6 @@ export default function InvoicesTab({ role, refreshKey, onChanged }) {
   const [statusFilter, setStatusFilter] = useState('');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(0);
-  const [data, setData] = useState({ content: [], totalPages: 0 });
-  const [loading, setLoading] = useState(true);
   const [retrying, setRetrying] = useState(null);
   const [emailTarget, setEmailTarget] = useState(null);
   const [emailValue, setEmailValue] = useState('');
@@ -28,26 +26,17 @@ export default function InvoicesTab({ role, refreshKey, onChanged }) {
   const [detail, setDetail] = useState(null);
   const [copiedId, setCopiedId] = useState(null);
 
-  const load = useCallback(async ({ silent = false } = {}) => {
-    if (!silent) setLoading(true);
-    try {
-      setData(await listInvoicesApi(statusFilter, page, 20));
-    } catch (e) {
-      console.warn('Error cargando facturas:', e);
-      if (!silent) setData({ content: [], totalPages: 0 });
-    } finally {
-      if (!silent) setLoading(false);
-    }
-  }, [statusFilter, page]);
-
-  useEffect(() => { load(); }, [load, refreshKey]);
-  useAutoRefresh(() => load({ silent: true }));
+  const { data, loading, reload } = useLoad(
+    () => listInvoicesApi(statusFilter, page, 20),
+    [statusFilter, page, refreshKey],
+    { initial: { content: [], totalPages: 0 }, autoRefresh: true },
+  );
 
   const handleRetry = async (invoice) => {
     setRetrying(invoice.saleId);
     try {
       await retryInvoiceApi(invoice.saleId);
-      await load();
+      reload();
       onChanged?.();
     } catch (err) {
       notify('Error reintentando la factura: ' + err.message);
@@ -161,7 +150,7 @@ export default function InvoicesTab({ role, refreshKey, onChanged }) {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="table-cards w-full text-left text-xs min-w-[760px]">
+            <table className="table-cards w-full text-left text-xs md:min-w-[760px]">
               <thead>
                 <tr className="border-b border-line bg-gray-50/70 dark:bg-white/[0.03] text-[10px] font-extrabold uppercase tracking-wider text-ink-muted">
                   <th className="py-3.5 px-5">Factura</th>

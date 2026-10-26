@@ -9,7 +9,7 @@ import {
   updateNumberingRangeCurrentApi,
   setDefaultNumberingRangeApi
 } from '../../services/billingApi';
-import { useModal } from '../../context/ModalContext';
+import useModal from '../../hooks/useModal';
 import { ACTIVATION_LABELS, ACTIVATION_STYLES, EMPTY_RANGE_FORM, FIELD_CLASS, formatDateTime } from './constants';
 
 export default function ActivationTab({ role, activation, ranges, rangesLoading, activeRangeId, onReload }) {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import {
   Store,
   Plus,
@@ -32,8 +32,10 @@ import {
   changeBackofficeStorePlanApi,
   deleteBackofficeStoreApi
 } from '../../services/backoffice/storesApi';
-import { useModal } from '../../context/ModalContext';
-import useAutoRefresh from '../../hooks/useAutoRefresh';
+import useModal from '../../hooks/useModal';
+import useLoad from '../../hooks/useLoad';
+import useDebouncedValue from '../../hooks/useDebouncedValue';
+import asList from '../../utils/asList';
 import { DOC_TYPE_LABELS, DOC_STATUS_STYLES } from '../../constants/storeDocuments';
 
 const STATUSES = ['ACTIVE', 'INACTIVE', 'PENDING_VERIFICATION', 'SUSPENDED'];
@@ -72,14 +74,26 @@ function MetricCard({ label, value, icon: Icon, accent }) {
 
 export default function StoresBento() {
   const { notify } = useModal();
-  const [metrics, setMetrics] = useState(null);
-  const [stores, setStores] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [plans, setPlans] = useState([]);
-  const [planUsage, setPlanUsage] = useState({});
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const debouncedSearch = useDebouncedValue(search, 250);
+
+  const { data: metrics, reload: reloadMetrics } = useLoad(() => getBackofficeMetricsApi(), [], { initial: null, autoRefresh: true });
+  const { data: stores, loading, reload: reloadStores } = useLoad(
+    async () => (await getBackofficeStoresApi(statusFilter, debouncedSearch)).content || [],
+    [statusFilter, debouncedSearch],
+    { initial: [], autoRefresh: true },
+  );
+  const { data: categories, reload: reloadCategories } = useLoad(() => asList(getBackofficeStoreCategoriesApi()), [], { initial: [] });
+  const { data: planData, reload: reloadPlans } = useLoad(
+    async () => {
+      const [planList, usage] = await Promise.all([getPlansApi(), getStorePlanUsageApi()]);
+      return { plans: planList, planUsage: Object.fromEntries(usage.map((u) => [u.storeId, u])) };
+    },
+    [],
+    { initial: { plans: [], planUsage: {} }, autoRefresh: true },
+  );
+  const { plans, planUsage } = planData;
   const [errorMsg, setErrorMsg] = useState('');
 
   const [showStoreModal, setShowStoreModal] = useState(false);
@@ -97,62 +111,19 @@ export default function StoresBento() {
   const [deleteConfirm, setDeleteConfirm] = useState('');
   const [deleteBusy, setDeleteBusy] = useState(false);
 
-  const loadMetrics = useCallback(async () => {
-    try {
-      setMetrics(await getBackofficeMetricsApi());
-    } catch (e) {
-      console.warn('Error cargando métricas del backoffice:', e);
-    }
-  }, []);
-
-  const loadStores = useCallback(async ({ silent = false } = {}) => {
-    if (!silent) setLoading(true);
-    try {
-      const data = await getBackofficeStoresApi(statusFilter, search);
-      setStores(data.content || []);
-    } catch (e) {
-      console.warn('Error cargando locales:', e);
-      if (!silent) setStores([]);
-    } finally {
-      if (!silent) setLoading(false);
-    }
-  }, [statusFilter, search]);
-
-  const loadCategories = useCallback(async () => {
-    try {
-      setCategories(await getBackofficeStoreCategoriesApi());
-    } catch (e) {
-      console.warn('Error cargando categorías de locales:', e);
-    }
-  }, []);
-
-  const loadPlans = useCallback(async () => {
-    try {
-      const [planList, usage] = await Promise.all([getPlansApi(), getStorePlanUsageApi()]);
-      setPlans(planList);
-      setPlanUsage(Object.fromEntries(usage.map(u => [u.storeId, u])));
-    } catch (e) {
-      console.warn('Error cargando planes:', e);
-    }
-  }, []);
-
-  useEffect(() => { loadMetrics(); loadCategories(); loadPlans(); }, [loadMetrics, loadCategories, loadPlans]);
-  useEffect(() => {
-    const t = setTimeout(loadStores, 250);
-    return () => clearTimeout(t);
-  }, [loadStores]);
-
-  useAutoRefresh(() => Promise.all([loadMetrics(), loadStores({ silent: true }), loadPlans()]));
-
-  const refreshAll = async () => {
-    await Promise.all([loadMetrics(), loadStores(), loadCategories(), loadPlans()]);
+  const refreshAll = () => {
+    reloadMetrics();
+    reloadStores();
+    reloadCategories();
+    reloadPlans();
   };
 
   const handleChangePlan = async (store, planCode) => {
     setErrorMsg('');
     try {
       await changeBackofficeStorePlanApi(store.id, planCode);
-      await Promise.all([loadStores(), loadPlans()]);
+      reloadStores();
+      reloadPlans();
     } catch (err) {
       setErrorMsg(err.message || 'No se pudo cambiar el plan.');
     }
@@ -172,7 +143,7 @@ export default function StoresBento() {
       notify(`El local "${deletingStore.name}" fue eliminado. Sus administradores quedaron sin local.`,
         { title: 'Local eliminado', danger: false });
       setDeletingStore(null);
-      await refreshAll();
+      refreshAll();
     } catch (err) {
       setDeletingStore(null);
       setErrorMsg(err.message || 'No se pudo eliminar el local.');
@@ -218,7 +189,7 @@ export default function StoresBento() {
         await createBackofficeStoreApi(payload);
       }
       setShowStoreModal(false);
-      await refreshAll();
+      refreshAll();
     } catch (err) {
       setFormError(err.message || 'Error al guardar el local. Intenta nuevamente.');
     }
@@ -228,7 +199,7 @@ export default function StoresBento() {
     setErrorMsg('');
     try {
       await changeBackofficeStoreStatusApi(store.id, status);
-      await refreshAll();
+      refreshAll();
     } catch (err) {
       setErrorMsg(err.message || 'Error al cambiar el estado del local.');
     }
@@ -238,7 +209,7 @@ export default function StoresBento() {
     setErrorMsg('');
     try {
       await verifyBackofficeStoreEmailApi(store.id);
-      await refreshAll();
+      refreshAll();
     } catch (err) {
       setErrorMsg(err.message || 'Error al verificar el correo del local.');
     }
@@ -361,7 +332,7 @@ export default function StoresBento() {
           </div>
         ) : (
           <div className="md:overflow-x-auto md:-mx-2">
-            <table className="table-cards w-full text-xs min-w-[920px]">
+            <table className="table-cards w-full text-xs md:min-w-[920px]">
               <thead>
                 <tr className="text-left text-[10px] font-extrabold text-ink-muted uppercase">
                   <th className="px-2 py-2">Local</th>

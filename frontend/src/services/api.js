@@ -61,7 +61,7 @@ export async function loginApi(username, password) {
 export async function logoutApi() {
   try {
     await fetchApi('/auth/logout', { method: 'POST' });
-  } catch (e) {
+  } catch {
     // Ignore on logout
   } finally {
     setAuthToken('');

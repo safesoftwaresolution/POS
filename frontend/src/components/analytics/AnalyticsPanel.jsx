@@ -1,6 +1,7 @@
 import React from 'react';
 import { BarChart3, DollarSign, Package, TrendingUp, Truck } from 'lucide-react';
-import { LoadingRows, RankedList, SectionCard, sortedEntries } from './parts';
+import { LoadingRows, RankedList, SectionCard } from './parts';
+import sortedEntries from './sortedEntries';
 
 /**
  * Analíticas del período del Dashboard: ventas por vendedor, productos más vendidos, rentabilidad,

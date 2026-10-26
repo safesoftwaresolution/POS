@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -20,48 +20,29 @@ import {
   Moon,
   Bell
 } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
-import { useTheme } from '../../context/ThemeContext';
+import useAuth from '../../hooks/useAuth';
+import useTheme from '../../hooks/useTheme';
 import { getProductsApi } from '../../services/productsApi';
-import { getUnreadNotificationCountApi } from '../../services/notificationsApi';
+import useLoad from '../../hooks/useLoad';
+import useUnreadNotifications from '../../hooks/useUnreadNotifications';
+import asList from '../../utils/asList';
+import { ROLE_LABELS } from '../../constants/roles';
 import BentoIcon from '../BentoIcon';
-
-const ROLE_LABELS = {
-  ADMINISTRATOR: 'Administrador',
-  SUPERVISOR: 'Supervisor',
-  SELLER: 'Vendedor',
-};
 
 export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }) {
   const { logout, user } = useAuth();
   const { darkMode, toggleTheme } = useTheme();
   const navigate = useNavigate();
-  const [lowStockCount, setLowStockCount] = useState(0);
   const [profileOpen, setProfileOpen] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
-
-  useEffect(() => {
-    getProductsApi()
-      .then(data => {
-        const products = Array.isArray(data) ? data : [];
-        setLowStockCount(products.filter(p => (p.quantityAvailable ?? p.stock ?? 0) <= (p.minStock || 5)).length);
-      })
-      .catch(() => setLowStockCount(0));
-  }, []);
-
-  const refreshUnreadCount = useCallback(async () => {
-    try {
-      setUnreadCount(await getUnreadNotificationCountApi());
-    } catch {
-      setUnreadCount(0);
-    }
-  }, []);
-
-  useEffect(() => {
-    refreshUnreadCount();
-    const interval = setInterval(refreshUnreadCount, 45000);
-    return () => clearInterval(interval);
-  }, [refreshUnreadCount]);
+  const [unreadCount] = useUnreadNotifications();
+  const { data: lowStockCount } = useLoad(
+    async () => {
+      const products = await asList(getProductsApi());
+      return products.filter((p) => (p.quantityAvailable ?? p.stock ?? 0) <= (p.minStock || 5)).length;
+    },
+    [],
+    { initial: 0 },
+  );
 
   const getInitials = (name) => {
     if (!name) return 'US';

@@ -1,33 +1,23 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Wallet, RefreshCw, CheckCircle2, MinusCircle, PlusCircle, CreditCard, Users } from 'lucide-react';
 import { getCashClosingReportApi } from '../services/reportsApi';
-import useAutoRefresh from '../hooks/useAutoRefresh';
+import useLoad from '../hooks/useLoad';
 import { Button, DateRangeFilter, MoneyInput, PageHeader } from '../components/ui';
-import { LoadingRows, RankedList, SectionCard, sortedEntries } from '../components/analytics/parts';
+import { LoadingRows, RankedList, SectionCard } from '../components/analytics/parts';
+import sortedEntries from '../components/analytics/sortedEntries';
 import { dayEnd, dayStart, isoDaysAgo, money, paymentLabel } from '../utils/format';
 
 /** Caja: efectivo esperado del período, arqueo contra lo contado y desglose por cajero y método de pago. */
 export default function CashBento() {
   const [dateFrom, setDateFrom] = useState(isoDaysAgo(0));
   const [dateTo, setDateTo] = useState(isoDaysAgo(0));
-  const [closing, setClosing] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const [countedCash, setCountedCash] = useState('');
 
-  const load = useCallback(async ({ silent = false } = {}) => {
-    if (!silent) { setLoading(true); setError(''); }
-    try {
-      setClosing(await getCashClosingReportApi(dayStart(dateFrom), dayEnd(dateTo)));
-    } catch (e) {
-      if (!silent) setError(e.message || 'No se pudo cargar el cierre de caja.');
-    } finally {
-      if (!silent) setLoading(false);
-    }
-  }, [dateFrom, dateTo]);
-
-  useEffect(() => { load(); }, [load]);
-  useAutoRefresh(() => load({ silent: true }));
+  const { data: closing, loading, error, reload } = useLoad(
+    () => getCashClosingReportApi(dayStart(dateFrom), dayEnd(dateTo)),
+    [dateFrom, dateTo],
+    { autoRefresh: true, errorMessage: 'No se pudo cargar el cierre de caja.' },
+  );
 
   const bySeller = useMemo(() => sortedEntries(closing?.cashBySeller), [closing]);
   const byMethod = useMemo(() => sortedEntries(closing?.totalByPaymentMethod, paymentLabel), [closing]);
@@ -41,7 +31,7 @@ export default function CashBento() {
       <PageHeader
         title="Caja"
         subtitle="Efectivo esperado, arqueo y recaudo por cajero y método de pago"
-        actions={<Button size="sm" icon={RefreshCw} loading={loading} onClick={() => load()}>Actualizar</Button>}
+        actions={<Button size="sm" icon={RefreshCw} loading={loading} onClick={() => reload({ silent: false })}>Actualizar</Button>}
       />
 
       <div className="bento-card p-4">

@@ -36,13 +36,18 @@ function detectIosSafari() {
  * Solo aparece en móvil y si la app no está ya instalada.
  */
 export default function InstallPrompt() {
+  // Se decide una sola vez al montar: ya instalada o descartada hace poco → no se ofrece.
+  const [initial] = useState(() => {
+    const eligible = !isStandalone() && !dismissedRecently();
+    return { eligible, ios: eligible && detectIos() };
+  });
   const [installEvent, setInstallEvent] = useState(null);
-  const [iosMode, setIosMode] = useState(false);
-  const [visible, setVisible] = useState(false);
+  const iosMode = initial.ios;
+  const [visible, setVisible] = useState(initial.ios);
   const [showGuide, setShowGuide] = useState(false);
 
   useEffect(() => {
-    if (isStandalone() || dismissedRecently()) return undefined;
+    if (!initial.eligible) return undefined;
 
     const onPrompt = (e) => {
       e.preventDefault();
@@ -53,13 +58,11 @@ export default function InstallPrompt() {
     window.addEventListener('beforeinstallprompt', onPrompt);
     window.addEventListener('appinstalled', onInstalled);
 
-    if (detectIos()) { setIosMode(true); setVisible(true); }
-
     return () => {
       window.removeEventListener('beforeinstallprompt', onPrompt);
       window.removeEventListener('appinstalled', onInstalled);
     };
-  }, []);
+  }, [initial.eligible]);
 
   const close = () => { rememberDismiss(); setVisible(false); setShowGuide(false); };
 

@@ -1,6 +1,6 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Clock, Users, Store, Check, X, AlertCircle, Mail, CheckCircle2, Send, UserCheck, Trash2 } from 'lucide-react';
-import useAutoRefresh from '../../hooks/useAutoRefresh';
+import useLoad from '../../hooks/useLoad';
 import {
   getPendingUsersApi,
   getVerifiedUsersApi,
@@ -30,44 +30,34 @@ function MetricCard({ label, value, icon: Icon, accent }) {
 }
 
 export default function OnboardingBento() {
-  const [stats, setStats] = useState(null);
-  const [pendingUsers, setPendingUsers] = useState([]);
-  const [verifiedUsers, setVerifiedUsers] = useState([]);
-  const [pendingStores, setPendingStores] = useState([]);
-  const [rejectedStores, setRejectedStores] = useState([]);
-  const [deleting, setDeleting] = useState(null); // { kind: 'user' | 'store', item }
-  const [deleteBusy, setDeleteBusy] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [errorMsg, setErrorMsg] = useState('');
-  const [infoMsg, setInfoMsg] = useState('');
-  const [resendingId, setResendingId] = useState(null);
-  const [rejectingStore, setRejectingStore] = useState(null);
-  const [rejectionReason, setRejectionReason] = useState('');
-
-  const loadAll = useCallback(async ({ silent = false } = {}) => {
-    if (!silent) setLoading(true);
-    try {
-      const [statsData, usersData, verifiedData, storesData, rejectedData] = await Promise.all([
+  const { data: onboarding, loading, reload } = useLoad(
+    async () => {
+      const [stats, usersData, verifiedData, storesData, rejectedData] = await Promise.all([
         getOnboardingStatsApi(),
         getPendingUsersApi(),
         getVerifiedUsersApi(),
         getBackofficeStoresApi('PENDING_VERIFICATION'),
         getBackofficeStoresApi('REJECTED'),
       ]);
-      setRejectedStores(rejectedData.content || []);
-      setStats(statsData);
-      setPendingUsers(usersData.content || []);
-      setVerifiedUsers(verifiedData.content || []);
-      setPendingStores(storesData.content || []);
-    } catch (e) {
-      console.warn('Error cargando pendientes de onboarding:', e);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { loadAll(); }, [loadAll]);
-  useAutoRefresh(() => loadAll({ silent: true }));
+      return {
+        stats,
+        pendingUsers: usersData.content || [],
+        verifiedUsers: verifiedData.content || [],
+        pendingStores: storesData.content || [],
+        rejectedStores: rejectedData.content || [],
+      };
+    },
+    [],
+    { initial: { stats: null, pendingUsers: [], verifiedUsers: [], pendingStores: [], rejectedStores: [] }, autoRefresh: true },
+  );
+  const { stats, pendingUsers, verifiedUsers, pendingStores, rejectedStores } = onboarding;
+  const [deleting, setDeleting] = useState(null); // { kind: 'user' | 'store', item }
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [infoMsg, setInfoMsg] = useState('');
+  const [resendingId, setResendingId] = useState(null);
+  const [rejectingStore, setRejectingStore] = useState(null);
+  const [rejectionReason, setRejectionReason] = useState('');
 
   const handleResend = async (user) => {
     setErrorMsg('');
@@ -97,7 +87,7 @@ export default function OnboardingBento() {
         setInfoMsg(`Local "${deleting.item.name}" eliminado definitivamente. Queda registrado en Auditoría.`);
       }
       setDeleting(null);
-      await loadAll();
+      reload();
     } catch (err) {
       setDeleting(null);
       setErrorMsg(err.message || 'No se pudo eliminar.');
@@ -110,7 +100,7 @@ export default function OnboardingBento() {
     setErrorMsg('');
     try {
       await changeBackofficeStoreStatusApi(store.id, 'ACTIVE');
-      await loadAll();
+      reload();
     } catch (err) {
       setErrorMsg(err.message || 'Error al aprobar el local.');
     }
@@ -123,7 +113,7 @@ export default function OnboardingBento() {
       await rejectBackofficeStoreApi(rejectingStore.id, rejectionReason.trim());
       setRejectingStore(null);
       setRejectionReason('');
-      await loadAll();
+      reload();
     } catch (err) {
       setErrorMsg(err.message || 'Error al rechazar el local.');
     }
@@ -168,7 +158,7 @@ export default function OnboardingBento() {
           <div className="py-8 text-center text-xs font-bold text-ink-muted">No hay usuarios pendientes de verificar</div>
         ) : (
           <div className="md:overflow-x-auto md:-mx-2">
-            <table className="table-cards w-full text-xs min-w-[560px]">
+            <table className="table-cards w-full text-xs md:min-w-[560px]">
               <thead>
                 <tr className="text-left text-[10px] font-extrabold text-ink-muted uppercase">
                   <th className="px-2 py-2">Nombre</th>
@@ -221,7 +211,7 @@ export default function OnboardingBento() {
           <div className="py-8 text-center text-xs font-bold text-ink-muted">Aún no hay usuarios verificados</div>
         ) : (
           <div className="md:overflow-x-auto md:-mx-2">
-            <table className="table-cards w-full text-xs min-w-[560px]">
+            <table className="table-cards w-full text-xs md:min-w-[560px]">
               <thead>
                 <tr className="text-left text-[10px] font-extrabold text-ink-muted uppercase">
                   <th className="px-2 py-2">Nombre</th>
@@ -266,7 +256,7 @@ export default function OnboardingBento() {
           <div className="py-8 text-center text-xs font-bold text-ink-muted">No hay locales pendientes</div>
         ) : (
           <div className="md:overflow-x-auto md:-mx-2">
-            <table className="table-cards w-full text-xs min-w-[680px]">
+            <table className="table-cards w-full text-xs md:min-w-[680px]">
               <thead>
                 <tr className="text-left text-[10px] font-extrabold text-ink-muted uppercase">
                   <th className="px-2 py-2">Local</th>
@@ -319,7 +309,7 @@ export default function OnboardingBento() {
           <div className="py-8 text-center text-xs font-bold text-ink-muted">No hay locales rechazados</div>
         ) : (
           <div className="md:overflow-x-auto md:-mx-2">
-            <table className="table-cards w-full text-xs min-w-[680px]">
+            <table className="table-cards w-full text-xs md:min-w-[680px]">
               <thead>
                 <tr className="text-left text-[10px] font-extrabold text-ink-muted uppercase">
                   <th className="px-2 py-2">Local</th>

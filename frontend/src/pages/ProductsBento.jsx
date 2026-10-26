@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Plus, Search, Package, Layers, FileSpreadsheet } from 'lucide-react';
 import { getProductsApi, createProductApi, updateProductApi, deleteProductApi, changeProductStatusApi } from '../services/productsApi';
 import { getCategoriesApi } from '../services/categoriesApi';
@@ -9,8 +9,8 @@ import {
   deleteSubcategoryApi
 } from '../services/subcategoriesApi';
 import { createInventoryMovementApi } from '../services/inventoryApi';
-import { useModal } from '../context/ModalContext';
-import { useAuth } from '../context/AuthContext';
+import useModal from '../hooks/useModal';
+import useAuth from '../hooks/useAuth';
 import { uploadFileApi } from '../services/http';
 import BarcodeModal from '../components/BarcodeModal';
 import ProductTable from '../components/products/ProductTable';
@@ -19,7 +19,8 @@ import ProductImportModal from '../components/products/ProductImportModal';
 import SubcategoriesPanel from '../components/products/SubcategoriesPanel';
 import SubcategoryModal from '../components/products/SubcategoryModal';
 import { Button, Card, PageHeader } from '../components/ui';
-import useAutoRefresh from '../hooks/useAutoRefresh';
+import useLoad from '../hooks/useLoad';
+import asList from '../utils/asList';
 
 const EMPTY_PRODUCT = {
   id: null,
@@ -50,10 +51,6 @@ export default function ProductsBento() {
   const canManageSubcategories = canManageProducts;
   const [activeTab, setActiveTab] = useState('catalog');
   const [showImportModal, setShowImportModal] = useState(false);
-  const [products, setProducts] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [subcategories, setSubcategories] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [showInactive, setShowInactive] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -68,43 +65,17 @@ export default function ProductsBento() {
   const [subForm, setSubForm] = useState(EMPTY_SUBCATEGORY);
   const [subErrorMsg, setSubErrorMsg] = useState('');
 
-  const loadProducts = async (inactive = showInactive, { silent = false } = {}) => {
-    if (!silent) setLoading(true);
-    try {
-      const data = await getProductsApi('', null, 0, 50, !inactive);
-      setProducts(Array.isArray(data) ? data : []);
-    } catch (e) {
-      console.warn('Error cargando productos:', e);
-      if (!silent) setProducts([]);
-    } finally {
-      if (!silent) setLoading(false);
-    }
-  };
-
-  const loadCategories = async () => {
-    try {
-      setCategories(await getCategoriesApi());
-    } catch (e) {
-      console.warn('Error cargando categorías:', e);
-      setCategories([]);
-    }
-  };
-
-  const loadSubcategories = async () => {
-    try {
-      setSubcategories(await getSubcategoriesApi());
-    } catch (e) {
-      console.warn('Error cargando subcategorías:', e);
-      setSubcategories([]);
-    }
-  };
-
-  useEffect(() => {
-    loadProducts();
-    loadCategories();
-    loadSubcategories();
-  }, []);
-  useAutoRefresh(() => Promise.all([loadProducts(showInactive, { silent: true }), loadCategories(), loadSubcategories()]));
+  const { data: products, loading, reload: reloadProducts } = useLoad(
+    () => asList(getProductsApi('', null, 0, 50, !showInactive)),
+    [showInactive],
+    { initial: [], autoRefresh: true },
+  );
+  const { data: categories } = useLoad(() => asList(getCategoriesApi()), [], { initial: [], autoRefresh: true });
+  const { data: subcategories, reload: reloadSubcategories } = useLoad(
+    () => asList(getSubcategoriesApi()),
+    [],
+    { initial: [], autoRefresh: true },
+  );
 
   const subcategoriesForSelectedCategory = subcategories.filter(
     sub => String(sub.categoryId) === String(newProduct.categoryId)
@@ -114,7 +85,7 @@ export default function ProductsBento() {
     if (!newSubcategoryName.trim() || !newProduct.categoryId) return;
     try {
       const created = await createSubcategoryApi(Number(newProduct.categoryId), newSubcategoryName.trim());
-      await loadSubcategories();
+      reloadSubcategories();
       setNewProduct(prev => ({ ...prev, subcategoryId: String(created.id) }));
       setNewSubcategoryName('');
       setShowNewSubcategory(false);
@@ -147,7 +118,7 @@ export default function ProductsBento() {
       }
       setShowSubModal(false);
       setSubForm(EMPTY_SUBCATEGORY);
-      await loadSubcategories();
+      reloadSubcategories();
     } catch (err) {
       setSubErrorMsg(err.message || 'Error al guardar la subcategoría. Intenta nuevamente.');
     }
@@ -158,7 +129,7 @@ export default function ProductsBento() {
     if (!ok) return;
     try {
       await deleteSubcategoryApi(sub.id);
-      await loadSubcategories();
+      reloadSubcategories();
     } catch (err) {
       notify('Error eliminando subcategoría: ' + err.message);
     }
@@ -227,7 +198,7 @@ export default function ProductsBento() {
 
       setShowAddModal(false);
       setNewProduct(EMPTY_PRODUCT);
-      await loadProducts();
+      reloadProducts();
     } catch (err) {
       setErrorMsg(err.message || 'Error al guardar el producto. Intenta nuevamente.');
     }
@@ -252,11 +223,7 @@ export default function ProductsBento() {
     }
   };
 
-  const toggleInactive = () => {
-    const next = !showInactive;
-    setShowInactive(next);
-    loadProducts(next);
-  };
+  const toggleInactive = () => setShowInactive((v) => !v);
 
   const handleToggleStatus = async (p) => {
     const activate = p.active === false;
@@ -268,7 +235,7 @@ export default function ProductsBento() {
     }
     try {
       await changeProductStatusApi(p.id, activate);
-      await loadProducts();
+      reloadProducts();
     } catch (e) {
       notify('No se pudo cambiar el estado del producto: ' + e.message);
     }
@@ -279,7 +246,7 @@ export default function ProductsBento() {
     if (!ok) return;
     try {
       await deleteProductApi(id);
-      await loadProducts();
+      reloadProducts();
     } catch (e) {
       notify('Error eliminando producto: ' + e.message);
     }
@@ -418,7 +385,7 @@ export default function ProductsBento() {
       {showImportModal && (
         <ProductImportModal
           onClose={() => setShowImportModal(false)}
-          onImported={() => Promise.all([loadProducts(), loadSubcategories()])}
+          onImported={() => { reloadProducts(); reloadSubcategories(); }}
         />
       )}
 

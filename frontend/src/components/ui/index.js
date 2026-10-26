@@ -6,5 +6,6 @@ export { default as EmptyState } from './EmptyState';
 export { default as PageHeader } from './PageHeader';
 export { Field, Input, Select, inputClass } from './Field';
 export { default as DateRangeFilter } from './DateRangeFilter';
-export { default as MoneyInput, formatCop } from './MoneyInput';
+export { default as MoneyInput } from './MoneyInput';
+export { formatCop } from '../../utils/format';
 export { cx } from './cx';

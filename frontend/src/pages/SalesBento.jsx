@@ -1,14 +1,12 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Receipt, Search, RefreshCw, ChevronLeft, ChevronRight, Eye } from 'lucide-react';
 import { searchSalesApi } from '../services/salesApi';
-import useAutoRefresh from '../hooks/useAutoRefresh';
+import useLoad from '../hooks/useLoad';
 import { Badge, Button, DateRangeFilter, EmptyState, Modal, PageHeader, inputClass } from '../components/ui';
-import { dayEnd, dayStart, isoDaysAgo, money, paymentLabel } from '../utils/format';
+import { dayEnd, dayStart, formatDateTime, isoDaysAgo, money, paymentLabel } from '../utils/format';
 
 const PAGE_SIZE = 20;
-
-const formatDateTime = (iso) =>
-  iso ? new Date(iso).toLocaleString('es-CO', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—';
+const EMPTY_PAGE = { content: [], totalElements: 0, totalPages: 0 };
 
 /** Historial de todas las ventas del local: filtro por fechas, búsqueda y detalle de cada venta. */
 export default function SalesBento() {
@@ -17,24 +15,13 @@ export default function SalesBento() {
   const [search, setSearch] = useState('');
   const [method, setMethod] = useState('ALL');
   const [page, setPage] = useState(0);
-  const [data, setData] = useState({ content: [], totalElements: 0, totalPages: 0 });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const [selected, setSelected] = useState(null);
 
-  const load = useCallback(async ({ silent = false } = {}) => {
-    if (!silent) { setLoading(true); setError(''); }
-    try {
-      setData(await searchSalesApi({ dateFrom: dayStart(dateFrom), dateTo: dayEnd(dateTo), page, size: PAGE_SIZE }));
-    } catch (e) {
-      if (!silent) setError(e.message || 'No se pudieron cargar las ventas.');
-    } finally {
-      if (!silent) setLoading(false);
-    }
-  }, [dateFrom, dateTo, page]);
-
-  useEffect(() => { load(); }, [load]);
-  useAutoRefresh(() => load({ silent: true }));
+  const { data, loading, error, reload } = useLoad(
+    () => searchSalesApi({ dateFrom: dayStart(dateFrom), dateTo: dayEnd(dateTo), page, size: PAGE_SIZE }),
+    [dateFrom, dateTo, page],
+    { initial: EMPTY_PAGE, autoRefresh: true, errorMessage: 'No se pudieron cargar las ventas.' },
+  );
 
   const changeRange = (from, to) => { setDateFrom(from); setDateTo(to); setPage(0); };
 
@@ -60,7 +47,7 @@ export default function SalesBento() {
         title="Ventas"
         subtitle="Historial de todas las ventas de tu local"
         actions={
-          <Button size="sm" icon={RefreshCw} loading={loading} onClick={() => load()}>Actualizar</Button>
+          <Button size="sm" icon={RefreshCw} loading={loading} onClick={() => reload({ silent: false })}>Actualizar</Button>
         }
       />
 

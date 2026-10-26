@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Calendar,
   Bell,
@@ -12,11 +12,12 @@ import {
   ShoppingBag
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
-import { useTheme } from '../../context/ThemeContext';
+import useAuth from '../../hooks/useAuth';
+import useNow from '../../hooks/useNow';
+import useUnreadNotifications from '../../hooks/useUnreadNotifications';
+import useTheme from '../../hooks/useTheme';
 import {
   getNotificationsApi,
-  getUnreadNotificationCountApi,
   markNotificationReadApi,
   markAllNotificationsReadApi
 } from '../../services/notificationsApi';
@@ -70,27 +71,14 @@ export default function Header({ onToggleMobileMenu }) {
 
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const [unreadCount, setUnreadCount] = useUnreadNotifications();
+  const now = useNow();
   const notifRef = useRef(null);
 
   const getInitials = (name) => {
     if (!name) return 'US';
     return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
   };
-
-  const refreshUnreadCount = useCallback(async () => {
-    try {
-      setUnreadCount(await getUnreadNotificationCountApi());
-    } catch (e) {
-      console.warn('Error consultando notificaciones no leídas:', e);
-    }
-  }, []);
-
-  useEffect(() => {
-    refreshUnreadCount();
-    const interval = setInterval(refreshUnreadCount, 45000);
-    return () => clearInterval(interval);
-  }, [refreshUnreadCount]);
 
   useEffect(() => {
     function handleClickOutside(e) {
@@ -167,7 +155,7 @@ export default function Header({ onToggleMobileMenu }) {
         {/* Current Date */}
         <div className="hidden md:flex items-center gap-2 h-10 px-3.5 text-gray-600 dark:text-gray-300 bg-card border border-line rounded-xl text-xs font-semibold">
           <Calendar className="w-4 h-4" />
-          <span>{formatHeaderDate(new Date())}</span>
+          <span>{formatHeaderDate(now)}</span>
         </div>
 
         {/* Dark / Light Mode Toggle Button */}

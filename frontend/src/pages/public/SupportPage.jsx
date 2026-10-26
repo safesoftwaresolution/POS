@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { CheckCircle2, Search, LifeBuoy } from 'lucide-react';
 import { createSupportTicketApi, trackSupportTicketApi } from '../../services/publicApi';
-import { useAuth } from '../../context/AuthContext';
+import useAuth from '../../hooks/useAuth';
 import { Badge, Button, Card, Input, Select, Field, inputClass } from '../../components/ui';
 import PublicLayout from './PublicLayout';
 

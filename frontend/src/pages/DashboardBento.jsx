@@ -1,16 +1,16 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   AlertTriangle, ArrowUpRight, BarChart3, ChevronRight, CreditCard, FileText, Package, Plus, Receipt, RefreshCw, ShoppingBag,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import useAuth from '../hooks/useAuth';
 import { getProductsApi } from '../services/productsApi';
 import { searchSalesApi } from '../services/salesApi';
 import { listInvoicesApi } from '../services/billingApi';
 import {
   getProfitabilityReportApi, getPurchasesReportApi, getSalesReportApi, getStockReportApi, getTopProductsReportApi,
 } from '../services/reportsApi';
-import useAutoRefresh from '../hooks/useAutoRefresh';
+import useLoad from '../hooks/useLoad';
 import { Button, EmptyState } from '../components/ui';
 import GettingStarted from '../components/dashboard/GettingStarted';
 import AnalyticsPanel from '../components/analytics/AnalyticsPanel';
@@ -24,6 +24,10 @@ const RANGES = [
 // Tope de ventas traídas para el gráfico y la mezcla de pagos. Los totales de dinero de ADMINISTRATOR
 // salen de los reportes (agregados en base de datos), así que no dependen de este tope.
 const SALES_SAMPLE = 200;
+const EMPTY_DASHBOARD = {
+  products: [], sales: [], dianCount: null, salesReport: null,
+  topProducts: [], profitability: [], purchases: null, stock: [],
+};
 
 function KpiCard({ title, icon: Icon, value, hint, hintClass = 'text-ink-muted', onClick }) {
   return (
@@ -51,19 +55,8 @@ export default function DashboardBento() {
 
   const [days, setDays] = useState(7);
   const [belowMinStock, setBelowMinStock] = useState(true);
-  const [loading, setLoading] = useState(true);
 
-  const [products, setProducts] = useState([]);
-  const [sales, setSales] = useState([]);
-  const [dianCount, setDianCount] = useState(null);
-  const [salesReport, setSalesReport] = useState(null);
-  const [topProducts, setTopProducts] = useState([]);
-  const [profitability, setProfitability] = useState([]);
-  const [purchases, setPurchases] = useState(null);
-  const [stock, setStock] = useState([]);
-
-  const load = useCallback(async ({ silent = false } = {}) => {
-    if (!silent) setLoading(true);
+  const { data: dashboard, loading } = useLoad(async (previous) => {
     const from = dayStart(isoDaysAgo(days - 1));
     const to = dayEnd(isoDaysAgo(0));
     // Cada bloque falla por separado: un reporte caído no deja el panel en blanco.
@@ -78,19 +71,19 @@ export default function DashboardBento() {
       isAdmin ? safe(getPurchasesReportApi(from, to), null) : null,
       canSeeStock ? safe(getStockReportApi(belowMinStock), null) : null,
     ]);
-    if (Array.isArray(prods)) setProducts(prods);
-    if (salesPage) setSales(salesPage.content || []);
-    if (dian) setDianCount(dian.totalElements ?? (dian.content || []).length);
-    if (report) setSalesReport(report);
-    if (Array.isArray(top)) setTopProducts(top);
-    if (Array.isArray(profit)) setProfitability(profit);
-    if (purch) setPurchases(purch);
-    if (Array.isArray(stockRows)) setStock(stockRows);
-    setLoading(false);
-  }, [days, belowMinStock, isAdmin, canSeeStock]);
-
-  useEffect(() => { load(); }, [load]);
-  useAutoRefresh(() => load({ silent: true }));
+    // Un bloque que falló conserva lo que ya se veía en vez de quedar en blanco.
+    return {
+      products: Array.isArray(prods) ? prods : previous.products,
+      sales: salesPage ? salesPage.content || [] : previous.sales,
+      dianCount: dian ? dian.totalElements ?? (dian.content || []).length : previous.dianCount,
+      salesReport: report || previous.salesReport,
+      topProducts: Array.isArray(top) ? top : previous.topProducts,
+      profitability: Array.isArray(profit) ? profit : previous.profitability,
+      purchases: purch || previous.purchases,
+      stock: Array.isArray(stockRows) ? stockRows : previous.stock,
+    };
+  }, [days, belowMinStock, isAdmin, canSeeStock], { initial: EMPTY_DASHBOARD, autoRefresh: true });
+  const { products, sales, dianCount, salesReport, topProducts, profitability, purchases, stock } = dashboard;
 
   const lowStockCount = products.filter((p) => (p.quantityAvailable ?? p.stock ?? 0) <= (p.minStock || 5)).length;
 

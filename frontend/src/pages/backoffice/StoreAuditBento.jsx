@@ -1,7 +1,9 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { Search, ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react';
+import React, { useState } from 'react';
+import { Search, ArrowRight } from 'lucide-react';
 import { getStoreStatusAuditApi } from '../../services/backoffice/storesApi';
-import useAutoRefresh from '../../hooks/useAutoRefresh';
+import useLoad from '../../hooks/useLoad';
+import Pager from '../../components/ui/Pager';
+import { formatDateTimeFull as formatDate } from '../../utils/format';
 
 const STATUS_LABELS = {
   PENDING_VERIFICATION: 'Pendiente',
@@ -42,34 +44,16 @@ function StatusBadge({ status }) {
   );
 }
 
-const formatDate = (iso) =>
-  iso ? new Date(iso).toLocaleString('es-CO', { dateStyle: 'medium', timeStyle: 'short' }) : '—';
-
 export default function StoreAuditBento() {
   const [status, setStatus] = useState('ALL');
   const [search, setSearch] = useState('');
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(0);
-  const [data, setData] = useState({ content: [], totalPages: 0, totalElements: 0 });
-  const [loading, setLoading] = useState(true);
-  const [errorMsg, setErrorMsg] = useState('');
-
-  const load = useCallback(async ({ silent = false } = {}) => {
-    if (!silent) {
-      setLoading(true);
-      setErrorMsg('');
-    }
-    try {
-      setData(await getStoreStatusAuditApi(status, query, page));
-    } catch (e) {
-      if (!silent) setErrorMsg(e.message || 'No se pudo cargar la auditoría.');
-    } finally {
-      if (!silent) setLoading(false);
-    }
-  }, [status, query, page]);
-
-  useEffect(() => { load(); }, [load]);
-  useAutoRefresh(() => load({ silent: true }));
+  const { data, loading, error: errorMsg } = useLoad(
+    () => getStoreStatusAuditApi(status, query, page),
+    [status, query, page],
+    { initial: { content: [], totalPages: 0, totalElements: 0 }, autoRefresh: true, errorMessage: 'No se pudo cargar la auditoría.' },
+  );
 
   const submitSearch = (e) => {
     e.preventDefault();
@@ -129,7 +113,7 @@ export default function StoreAuditBento() {
           <div className="py-8 text-center text-xs font-bold text-ink-muted">No hay registros de auditoría</div>
         ) : (
           <div className="md:overflow-x-auto md:-mx-2">
-            <table className="table-cards w-full text-xs min-w-[760px]">
+            <table className="table-cards w-full text-xs md:min-w-[760px]">
               <thead>
                 <tr className="text-left text-[10px] font-extrabold text-ink-muted uppercase">
                   <th className="px-2 py-2">Fecha</th>
@@ -164,31 +148,7 @@ export default function StoreAuditBento() {
           </div>
         )}
 
-        {data.totalPages > 1 && (
-          <div className="flex items-center justify-between pt-2 border-t border-line">
-            <p className="text-[11px] font-bold text-ink-muted">
-              {data.totalElements} registros · página {page + 1} de {data.totalPages}
-            </p>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setPage(p => Math.max(0, p - 1))}
-                disabled={page === 0}
-                className="p-2 rounded-xl bg-gray-100 dark:bg-line disabled:opacity-40 cursor-pointer"
-                aria-label="Página anterior"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => setPage(p => Math.min(data.totalPages - 1, p + 1))}
-                disabled={page >= data.totalPages - 1}
-                className="p-2 rounded-xl bg-gray-100 dark:bg-line disabled:opacity-40 cursor-pointer"
-                aria-label="Página siguiente"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        )}
+        <Pager page={page} totalPages={data.totalPages} totalElements={data.totalElements} onChange={setPage} />
       </div>
     </div>
   );

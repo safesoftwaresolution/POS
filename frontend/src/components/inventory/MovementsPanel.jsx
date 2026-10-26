@@ -1,16 +1,13 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { ChevronLeft, ChevronRight, History, RefreshCw } from 'lucide-react';
 import { getInventoryMovementsApi } from '../../services/inventoryApi';
-import useAutoRefresh from '../../hooks/useAutoRefresh';
+import useLoad from '../../hooks/useLoad';
 import { Badge, Button, DateRangeFilter, EmptyState } from '../ui';
 import ProductPicker from './ProductPicker';
 import { movementTypeInfo } from './movementReasons';
-import { dayEnd, dayStart, isoDaysAgo } from '../../utils/format';
+import { dayEnd, dayStart, formatDateTime, isoDaysAgo } from '../../utils/format';
 
 const PAGE_SIZE = 20;
-
-const formatDateTime = (iso) =>
-  iso ? new Date(iso).toLocaleString('es-CO', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—';
 
 /** Kardex del local: cada entrada, salida, venta, compra y ajuste, del más reciente al más antiguo. */
 export default function MovementsPanel() {
@@ -18,29 +15,22 @@ export default function MovementsPanel() {
   const [dateFrom, setDateFrom] = useState(isoDaysAgo(6));
   const [dateTo, setDateTo] = useState(isoDaysAgo(0));
   const [page, setPage] = useState(0);
-  const [data, setData] = useState({ content: [], totalElements: 0, totalPages: 0 });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
 
-  const load = useCallback(async ({ silent = false } = {}) => {
-    if (!silent) { setLoading(true); setError(''); }
-    try {
-      setData(await getInventoryMovementsApi({
-        productId: product?.id,
-        dateFrom: dayStart(dateFrom),
-        dateTo: dayEnd(dateTo),
-        page,
-        size: PAGE_SIZE,
-      }));
-    } catch (e) {
-      if (!silent) setError(e.message || 'No se pudieron cargar los movimientos.');
-    } finally {
-      if (!silent) setLoading(false);
-    }
-  }, [product, dateFrom, dateTo, page]);
-
-  useEffect(() => { load(); }, [load]);
-  useAutoRefresh(() => load({ silent: true }));
+  const { data, loading, error, reload } = useLoad(
+    () => getInventoryMovementsApi({
+      productId: product?.id,
+      dateFrom: dayStart(dateFrom),
+      dateTo: dayEnd(dateTo),
+      page,
+      size: PAGE_SIZE,
+    }),
+    [product?.id, dateFrom, dateTo, page],
+    {
+      initial: { content: [], totalElements: 0, totalPages: 0 },
+      autoRefresh: true,
+      errorMessage: 'No se pudieron cargar los movimientos.',
+    },
+  );
 
   const changeRange = (from, to) => { setDateFrom(from); setDateTo(to); setPage(0); };
   const changeProduct = (next) => { setProduct(next); setPage(0); };
@@ -55,7 +45,7 @@ export default function MovementsPanel() {
         </div>
         <div className="flex flex-col sm:flex-row sm:items-start gap-3">
           <DateRangeFilter from={dateFrom} to={dateTo} onChange={changeRange} />
-          <Button size="sm" icon={RefreshCw} loading={loading} onClick={() => load()}>Actualizar</Button>
+          <Button size="sm" icon={RefreshCw} loading={loading} onClick={() => reload({ silent: false })}>Actualizar</Button>
         </div>
       </div>
 

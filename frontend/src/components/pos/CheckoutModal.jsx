@@ -31,7 +31,7 @@ import {
   downloadInvoiceXmlApi
 } from '../../services/billingApi';
 import { deliverBlob } from '../../utils/downloadBlob';
-import { useModal } from '../../context/ModalContext';
+import useModal from '../../hooks/useModal';
 
 const money = (value) => `$${Number(value || 0).toLocaleString('es-CO')}`;
 

@@ -1,34 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Tags, Plus, Search, Pencil, Trash2, Package, AlertCircle } from 'lucide-react';
 import { getCategoriesApi, createCategoryApi, updateCategoryApi, deleteCategoryApi } from '../services/api';
-import useAutoRefresh from '../hooks/useAutoRefresh';
+import useLoad from '../hooks/useLoad';
+import asList from '../utils/asList';
 
 export default function CategoriesBento() {
-  const [categories, setCategories] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { data: categories, loading, reload } = useLoad(
+    () => asList(getCategoriesApi()),
+    [],
+    { initial: [], autoRefresh: true },
+  );
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
   const [errorMsg, setErrorMsg] = useState('');
   const [form, setForm] = useState({ name: '', description: '' });
-
-  const loadCategories = async ({ silent = false } = {}) => {
-    if (!silent) setLoading(true);
-    try {
-      const data = await getCategoriesApi();
-      setCategories(Array.isArray(data) ? data : []);
-    } catch (e) {
-      console.warn('Error cargando categorías:', e);
-      if (!silent) setCategories([]);
-    } finally {
-      if (!silent) setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadCategories();
-  }, []);
-  useAutoRefresh(() => loadCategories({ silent: true }));
 
   const openCreateModal = () => {
     setEditingCategory(null);
@@ -54,7 +40,7 @@ export default function CategoriesBento() {
         await createCategoryApi(form.name, form.description);
       }
       setShowModal(false);
-      await loadCategories();
+      reload();
     } catch (err) {
       setErrorMsg(err.message || 'Error al guardar la categoría.');
     }
@@ -68,7 +54,7 @@ export default function CategoriesBento() {
     if (!window.confirm(`¿Seguro que deseas eliminar la categoría "${category.name}"?`)) return;
     try {
       await deleteCategoryApi(category.id);
-      await loadCategories();
+      reload();
     } catch (e) {
       alert('Error eliminando categoría: ' + e.message);
     }

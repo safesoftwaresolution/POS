@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { UserPlus, Search, Edit3, KeyRound, Power, PowerOff, Trash2, ShieldCheck, Users } from 'lucide-react';
 import {
   getUsersApi, getUserQuotaApi, createUserApi, updateUserApi, changeUserStatusApi, changeUserPasswordApi, deleteUserApi,
 } from '../services/usersApi';
-import { useAuth } from '../context/AuthContext';
-import { useModal } from '../context/ModalContext';
+import useAuth from '../hooks/useAuth';
+import useModal from '../hooks/useModal';
 import { Button, Badge, Card, EmptyState, Input, Modal, PageHeader, Select } from '../components/ui';
-import useAutoRefresh from '../hooks/useAutoRefresh';
+import useLoad from '../hooks/useLoad';
 
 const ROLES = [
   { value: 'ADMINISTRATOR', label: 'Administrador', hint: 'Control total del local' },
@@ -133,40 +133,23 @@ function PasswordModal({ user: target, onClose }) {
 export default function UsersBento() {
   const { user: me } = useAuth();
   const { confirm, notify } = useModal();
-  const [users, setUsers] = useState([]);
-  const [total, setTotal] = useState(0);
-  const [quota, setQuota] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const { data: usersData, loading, reload } = useLoad(
+    async () => {
+      const [{ users, total }, quota] = await Promise.all([getUsersApi(), getUserQuotaApi().catch(() => null)]);
+      return { users, total, quota };
+    },
+    [],
+    { initial: { users: [], total: 0, quota: null }, autoRefresh: true },
+  );
+  const { users, total, quota } = usersData;
   const [search, setSearch] = useState('');
   // { type: 'form' | 'password', user? }
   const [modal, setModal] = useState(null);
 
-  const fetchUsers = async ({ silent = false } = {}) => {
-    try {
-      const [{ users: list, total: count }, quotaStatus] = await Promise.all([
-        getUsersApi(),
-        getUserQuotaApi().catch(() => null),
-      ]);
-      setUsers(list);
-      setTotal(count);
-      setQuota(quotaStatus);
-    } catch (e) {
-      console.warn('Error cargando usuarios:', e);
-      if (!silent) setUsers([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchUsers();
-  }, []);
-  useAutoRefresh(() => fetchUsers({ silent: true }));
-
   const run = async (action, errorPrefix) => {
     try {
       await action();
-      await fetchUsers();
+      reload();
     } catch (e) {
       notify(`${errorPrefix}: ${e.message}`);
     }
@@ -314,7 +297,7 @@ export default function UsersBento() {
       </Card>
 
       {modal?.type === 'form' && (
-        <UserFormModal user={modal.user} storeId={me?.storeId} onClose={() => setModal(null)} onSaved={fetchUsers} />
+        <UserFormModal user={modal.user} storeId={me?.storeId} onClose={() => setModal(null)} onSaved={() => reload()} />
       )}
       {modal?.type === 'password' && <PasswordModal user={modal.user} onClose={() => setModal(null)} />}
     </div>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import { Puzzle, Plus, Edit3, Ban, AlertCircle, X, Lock, ChevronRight } from 'lucide-react';
 import {
   getParameterTopicsApi,
@@ -8,19 +8,27 @@ import {
   updateParameterValueApi,
   deactivateParameterValueApi
 } from '../../services/parametersApi';
-import { useModal } from '../../context/ModalContext';
-import useAutoRefresh from '../../hooks/useAutoRefresh';
+import useModal from '../../hooks/useModal';
+import useLoad from '../../hooks/useLoad';
+import asList from '../../utils/asList';
 
 const EMPTY_TOPIC_FORM = { code: '', name: '', description: '' };
 const EMPTY_VALUE_FORM = { id: null, code: '', label: '', extraValue: '', sortOrder: 0 };
 
 export default function ParametersBento() {
   const { confirm, notify } = useModal();
-  const [topics, setTopics] = useState([]);
-  const [loadingTopics, setLoadingTopics] = useState(true);
   const [selectedTopic, setSelectedTopic] = useState(null);
-  const [values, setValues] = useState([]);
-  const [loadingValues, setLoadingValues] = useState(false);
+  const { data: topics, loading: loadingTopics, reload: reloadTopics } = useLoad(
+    () => asList(getParameterTopicsApi()),
+    [],
+    { initial: [], autoRefresh: true },
+  );
+  // Los valores se piden recién cuando se elige un tema, y se vuelven a pedir al cambiar de tema.
+  const { data: values, loading: loadingValues, reload: reloadValues } = useLoad(
+    () => asList(getParameterValuesApi(selectedTopic.code)),
+    [selectedTopic?.code],
+    { initial: [], autoRefresh: true, enabled: Boolean(selectedTopic) },
+  );
 
   const [showTopicForm, setShowTopicForm] = useState(false);
   const [topicForm, setTopicForm] = useState(EMPTY_TOPIC_FORM);
@@ -30,41 +38,7 @@ export default function ParametersBento() {
   const [valueForm, setValueForm] = useState(EMPTY_VALUE_FORM);
   const [valueError, setValueError] = useState('');
 
-  const loadTopics = useCallback(async ({ silent = false } = {}) => {
-    if (!silent) setLoadingTopics(true);
-    try {
-      setTopics(await getParameterTopicsApi());
-    } catch (e) {
-      console.warn('Error cargando temas de parámetros:', e);
-      if (!silent) setTopics([]);
-    } finally {
-      if (!silent) setLoadingTopics(false);
-    }
-  }, []);
-
-  useEffect(() => { loadTopics(); }, [loadTopics]);
-
-  const loadValues = useCallback(async (topicCode, { silent = false } = {}) => {
-    if (!silent) setLoadingValues(true);
-    try {
-      setValues(await getParameterValuesApi(topicCode));
-    } catch (e) {
-      console.warn('Error cargando valores del tema:', e);
-      if (!silent) setValues([]);
-    } finally {
-      if (!silent) setLoadingValues(false);
-    }
-  }, []);
-
-  useAutoRefresh(() => Promise.all([
-    loadTopics({ silent: true }),
-    selectedTopic ? loadValues(selectedTopic.code, { silent: true }) : null,
-  ]));
-
-  const selectTopic = (topic) => {
-    setSelectedTopic(topic);
-    loadValues(topic.code);
-  };
+  const selectTopic = (topic) => setSelectedTopic(topic);
 
   const handleCreateTopic = async (e) => {
     e.preventDefault();
@@ -73,7 +47,7 @@ export default function ParametersBento() {
       await createParameterTopicApi(topicForm.code, topicForm.name, topicForm.description);
       setShowTopicForm(false);
       setTopicForm(EMPTY_TOPIC_FORM);
-      await loadTopics();
+      reloadTopics();
     } catch (err) {
       setTopicError(err.message || 'Error al crear el tema.');
     }
@@ -113,7 +87,7 @@ export default function ParametersBento() {
       }
       setShowValueForm(false);
       setValueForm(EMPTY_VALUE_FORM);
-      await loadValues(selectedTopic.code);
+      reloadValues();
     } catch (err) {
       setValueError(err.message || 'Error al guardar el valor.');
     }
@@ -125,14 +99,14 @@ export default function ParametersBento() {
       if (!ok) return;
       try {
         await deactivateParameterValueApi(val.id);
-        await loadValues(selectedTopic.code);
+        reloadValues();
       } catch (err) {
         notify('Error desactivando valor: ' + err.message);
       }
     } else {
       try {
         await updateParameterValueApi(val.id, { label: val.label, extraValue: val.extraValue, sortOrder: val.sortOrder, active: true });
-        await loadValues(selectedTopic.code);
+        reloadValues();
       } catch (err) {
         notify('Error reactivando valor: ' + err.message);
       }
@@ -228,7 +202,7 @@ export default function ParametersBento() {
                 <div className="py-8 text-center text-xs font-bold text-ink-muted">Este tema aún no tiene valores</div>
               ) : (
                 <div className="md:overflow-x-auto md:-mx-2">
-                  <table className="table-cards w-full text-xs min-w-[480px]">
+                  <table className="table-cards w-full text-xs md:min-w-[480px]">
                     <thead>
                       <tr className="text-left text-[10px] font-extrabold text-ink-muted uppercase">
                         <th className="px-2 py-2">Código</th>

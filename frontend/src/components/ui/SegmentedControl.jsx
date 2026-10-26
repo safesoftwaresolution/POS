@@ -136,7 +136,7 @@ export default function SegmentedControl({
             tabIndex={selected ? 0 : -1}
             onClick={() => onChange(option.id)}
             className={cx(
-              'relative z-10 px-3 py-2 text-xs font-bold cursor-pointer transition-colors duration-200 flex items-center justify-center gap-1.5',
+              'relative z-10 px-2 sm:px-3 py-2 text-xs font-bold cursor-pointer transition-colors duration-200 flex items-center justify-center gap-1.5',
               shape,
               equal ? 'flex-1 basis-0 text-center' : 'shrink-0',
               selected ? 'text-white dark:text-gray-950' : 'text-ink-soft hover:text-ink',

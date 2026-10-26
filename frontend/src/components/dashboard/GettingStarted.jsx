@@ -3,8 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { CheckCircle2, Circle, Rocket } from 'lucide-react';
 
 /**
- * Guía de primer uso: aparece mientras el local no tenga productos o ventas y se oculta sola al completarse.
- * `hasProducts`/`hasSales` vienen del Dashboard; `canCreateProducts` oculta el paso 1 a quien no puede crearlos.
+ * Guía de primer uso: una franja delgada que aparece mientras falte crear un producto o hacer la primera venta
+ * y se oculta sola al completarse. `hasSales` cuenta las ventas de toda la vida, no las del rango del Dashboard.
+ * `canCreateProducts` oculta el paso 1 a quien no puede crearlos.
  */
 export default function GettingStarted({ hasProducts, hasSales, canCreateProducts }) {
   const navigate = useNavigate();
@@ -15,33 +16,32 @@ export default function GettingStarted({ hasProducts, hasSales, canCreateProduct
 
   if (steps.every((s) => s.done)) return null;
 
+  const next = steps.find((s) => !s.done);
+  const completed = steps.filter((s) => s.done).length;
+
   return (
-    <div className="bento-card p-5 space-y-3 border-brand/30">
-      <h2 className="flex items-center gap-2 font-black text-sm text-ink">
-        <Rocket className="w-4 h-4 text-brand" /> Empieza aquí
-      </h2>
-      <ul className="space-y-2">
+    <div className="bento-card hover:transform-none p-4 sm:px-6 border-brand/30 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6">
+      <div className="flex items-center gap-3 min-w-0 flex-1">
+        <div className="w-10 h-10 rounded-2xl bg-brand/10 text-brand flex items-center justify-center shrink-0"><Rocket className="w-5 h-5" /></div>
+        <div className="min-w-0">
+          <p className="text-sm font-black text-ink">Empieza aquí · {completed} de {steps.length}</p>
+          <p className="text-xs text-ink-soft font-medium truncate"><span className="font-bold text-ink">{next.label}.</span> {next.hint}</p>
+        </div>
+      </div>
+      <ul className="flex items-center gap-1.5" aria-label="Progreso">
         {steps.map((s) => (
-          <li key={s.to} className="flex items-center gap-3">
-            {s.done
-              ? <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
-              : <Circle className="w-5 h-5 text-ink-muted shrink-0" />}
-            <div className="flex-1 min-w-0">
-              <p className={`text-xs font-bold ${s.done ? 'text-ink-muted line-through' : 'text-ink'}`}>{s.label}</p>
-              {!s.done && <p className="text-[11px] text-ink-soft font-medium">{s.hint}</p>}
-            </div>
-            {!s.done && (
-              <button
-                type="button"
-                onClick={() => navigate(s.to)}
-                className="px-3 py-1.5 bg-brand text-white text-xs font-extrabold rounded-full cursor-pointer shrink-0"
-              >
-                Ir
-              </button>
-            )}
+          <li key={s.to} title={s.label}>
+            {s.done ? <CheckCircle2 className="w-5 h-5 text-emerald-500" /> : <Circle className="w-5 h-5 text-ink-muted" />}
           </li>
         ))}
       </ul>
+      <button
+        type="button"
+        onClick={() => navigate(next.to)}
+        className="px-4 py-2 bg-brand text-white text-xs font-extrabold rounded-full cursor-pointer shrink-0"
+      >
+        Continuar
+      </button>
     </div>
   );
 }

@@ -88,3 +88,34 @@ docker compose -f docker-compose.prod.yml down
 4. **Sirve el SPA detrás de HTTPS** (proxy inverso): las cookies de sesión y el CORS dependen de ello.
 5. La imagen `prod` fija la zona horaria `America/Bogota` (`TZ` y `-Duser.timezone`), trae un `HEALTHCHECK` TCP y limita la JVM con `-XX:MaxRAMPercentage=75`.
 6. CI: `.github/workflows/ci.yml` corre `mvnw verify`, lint + build del frontend y la validación del arnés en cada push a `develop`/`main` y en cada PR.
+
+## Distribución de dominios (producción)
+
+| Dominio | Qué sirve | App en Dokploy |
+|---|---|---|
+| `posbento.com` y `www.posbento.com` | Landing pública estática (`landing/`) | `landing` (Build Path `/landing`, Nixpacks, Publish Directory `dist`) |
+| `app.posbento.com` | El sistema (SPA de `frontend/`) | `frontend` |
+| `api.posbento.com` | API REST (`backend/`) | `backend` |
+
+Los tres registros DNS son de tipo A hacia la IP del VPS, en modo **solo DNS** (sin proxy de Cloudflare), para que Traefik emita y renueve los certificados Let's Encrypt.
+
+Variables que dependen de esta distribución:
+
+| Variable | Dónde | Valor |
+|---|---|---|
+| `APP_FRONTEND_URL` | backend | `https://app.posbento.com` (los correos de verificación y recuperación enlazan aquí) |
+| `APP_CORS_ALLOWED_ORIGINS` | backend | `https://app.posbento.com`. Durante la migración, `https://posbento.com,https://app.posbento.com` |
+| `PUBLIC_APP_URL` | landing (se incrusta al compilar; cambiarla exige redesplegar) | `https://app.posbento.com` (valor por defecto) |
+
+Las cookies de sesión son `SameSite=Strict`: `app.` y `api.` comparten el sitio registrable `posbento.com`, por lo que siguen enviándose.
+
+### Migración desde `posbento.com` como sistema
+Antes de la landing, el sistema vivía en `posbento.com`; los correos ya enviados y los favoritos apuntan a `/verify-email?token=…`, `/reset-password?token=…` y `/login`. La landing las reenvía a `app.posbento.com` conservando el token (`landing/src/pages/`).
+
+1. DNS: registro A de `app` (y `www` solo DNS).
+2. App `frontend`: agregar `app.posbento.com` con HTTPS y conservar `posbento.com`. Backend: `APP_CORS_ALLOWED_ORIGINS` con ambos orígenes, y reiniciar. Probar login, refresco de sesión y una venta.
+3. App `landing`: crearla con un dominio temporal y `PUBLIC_APP_URL=https://app.posbento.com`; revisar botones y reenvíos.
+4. Corte (horario de poco movimiento): `APP_FRONTEND_URL=https://app.posbento.com` y reiniciar el backend; quitar `posbento.com` y `www` del `frontend`; agregarlos a `landing` y quitar el dominio temporal. La interrupción dura lo que tarda Traefik en emitir el certificado.
+5. Limpieza: dejar `APP_CORS_ALLOWED_ORIGINS` solo con `https://app.posbento.com`; probar un correo real de verificación y uno de recuperación.
+
+Reversa: devolver `posbento.com` al `frontend` y restaurar el valor anterior de `APP_FRONTEND_URL`.

@@ -51,9 +51,11 @@ export default function ProductFormModal({
           </div>
           <div className="space-y-1.5">
             {/* Escritorio: selector de archivos. */}
-            <Button variant="soft" className="hidden lg:inline-flex" disabled={uploadingImage} onClick={() => imageInputRef.current?.click()}>
-              {uploadingImage ? 'Subiendo...' : product.imageUrl ? 'Cambiar imagen' : 'Subir imagen'}
-            </Button>
+            <div className="hidden lg:block">
+              <Button variant="soft" disabled={uploadingImage} onClick={() => imageInputRef.current?.click()}>
+                {uploadingImage ? 'Subiendo...' : product.imageUrl ? 'Cambiar imagen' : 'Subir imagen'}
+              </Button>
+            </div>
             <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={onImageChange} />
 
             {/* Móvil/tablet: elegir entre abrir la cámara o la galería. `capture` abre la cámara nativa. */}

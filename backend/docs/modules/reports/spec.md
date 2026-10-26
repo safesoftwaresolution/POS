@@ -41,6 +41,16 @@ Este módulo no define reglas de negocio propias. Solo consulta datos de otros m
 - **Permisos**: Admin
 - **Query params**: dateFrom, dateTo
 
+### RF-REP-008 — Mapa de Calor de Ventas
+- **Prioridad**: Media
+- Ventas agrupadas por **día de la semana ISO** (1 = lunes … 7 = domingo) y **hora** (0-23) del `created_at`, con la cantidad de ventas y el monto de cada franja. Solo devuelve las franjas con ventas (el cliente rellena las vacías) y está ordenado por día y hora. Alcance: el local de la sesión.
+- Sin fechas usa los últimos 30 días. El SQL usa `EXTRACT(ISODOW …)` y `EXTRACT(HOUR …)`, válidos en H2 y PostgreSQL; el alias de la hora es `hourOfDay` porque `hour` es palabra reservada en H2. `SalesHeatmapReportTest` ejecuta la consulta real contra el esquema Flyway.
+
+### GET /api/v1/reports/sales-heatmap
+- **Permisos**: Admin (son datos de dinero, como `/reports/sales`)
+- **Query params**: dateFrom, dateTo
+- **Respuesta**: `[{ dayOfWeek, hourOfDay, transactionCount, totalSold }]`
+
 ### GET /api/v1/reports/top-products
 - **Permisos**: Admin
 - **Query params**: dateFrom, dateTo, limit (default 10)

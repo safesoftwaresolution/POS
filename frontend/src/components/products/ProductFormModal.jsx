@@ -3,13 +3,14 @@ import { createPortal } from 'react-dom';
 import { AlertCircle, ImagePlus, Plus, ScanLine } from 'lucide-react';
 import { Button, Field, Input, Modal, MoneyInput, Select, inputClass } from '../ui';
 import { BarcodeScanner } from '../scanner';
+import ProductLotsSection from './ProductLotsSection';
 
 /**
  * Alta / edición de un producto. El estado vive en la página (`product`, `setProduct`);
  * este componente solo pinta el formulario y delega las acciones en los callbacks.
  */
 export default function ProductFormModal({
-  product, setProduct, categories, subcategories, errorMsg,
+  product, setProduct, categories, subcategories, errorMsg, canManageLots = false, onLotsChanged,
   uploadingImage, onImageChange,
   creatingSubcategory, setCreatingSubcategory, newSubcategoryName, setNewSubcategoryName, onCreateSubcategory,
   onSubmit, onClose,
@@ -19,6 +20,7 @@ export default function ProductFormModal({
   const isEdit = !!product.id;
   const set = (patch) => setProduct({ ...product, ...patch });
   const noCategories = categories.length === 0;
+  const hasInitialStock = (parseInt(product.stock) || 0) > 0;
 
   return (
     <Modal title={isEdit ? 'Editar Producto' : 'Crear Nuevo Producto'} onClose={onClose} dismissible={false}>
@@ -133,6 +135,34 @@ export default function ProductFormModal({
           )}
         </div>
         {isEdit && <p className="text-[10px] text-ink-muted">Para ajustar el stock ve al módulo de Inventario.</p>}
+
+        {!isEdit && (
+          <Field
+            label="Vencimiento del stock inicial (opcional)"
+            hint={hasInitialStock
+              ? 'Déjala vacía si este producto no vence. Cuando entre más mercancía, la fecha se registra en Inventario → Mover stock.'
+              : 'Primero indica el stock inicial: la fecha corresponde a esas unidades.'}
+          >
+            <div className="flex items-center gap-2">
+              <input
+                type="date"
+                className={inputClass}
+                value={product.expirationDate || ''}
+                disabled={!hasInitialStock}
+                onChange={e => set({ expirationDate: e.target.value })}
+              />
+              {product.expirationDate && (
+                <Button size="sm" variant="soft" className="shrink-0" onClick={() => set({ expirationDate: '' })}>
+                  Quitar fecha
+                </Button>
+              )}
+            </div>
+          </Field>
+        )}
+
+        {isEdit && canManageLots && (
+          <ProductLotsSection productId={product.id} onChanged={onLotsChanged} />
+        )}
 
         <div className="flex gap-2 pt-2">
           <Button variant="soft" className="w-1/2" onClick={onClose}>Cancelar</Button>

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Package, Barcode, Edit3, Trash2, Power, PowerOff } from 'lucide-react';
 import { Button, EmptyState } from '../ui';
+import ExpiryBadge from './ExpiryBadge';
 
 const ICON_BTN = 'p-1.5 text-ink-muted rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer';
 
@@ -82,9 +83,13 @@ export default function ProductTable({
                   ${(p.salePrice || p.price || 0).toLocaleString('es-CO')}
                 </td>
                 <td data-label="Stock" className="py-3 px-3">
-                  <span className={`font-bold tabular-nums ${isLow ? 'text-amber-600 dark:text-amber-400' : 'text-ink'}`}>
-                    {stockVal} {isLow && '(Bajo)'}
-                  </span>
+                  <div className="flex flex-col items-start gap-1">
+                    <span className={`font-bold tabular-nums ${isLow ? 'text-amber-600 dark:text-amber-400' : 'text-ink'}`}>
+                      {stockVal} {isLow && '(Bajo)'}
+                    </span>
+                    {/* Sin existencias no hay nada que vender ni que dar de baja: no se alerta. */}
+                    {stockVal > 0 && <ExpiryBadge date={p.expirationDate} />}
+                  </div>
                 </td>
                 <td data-label="Acciones" className="py-3 px-6 text-right" onClick={(e) => e.stopPropagation()}>
                   <div className="flex items-center justify-end gap-1">

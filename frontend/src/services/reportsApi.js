@@ -20,6 +20,11 @@ export async function getStockReportApi(belowMinStock = false) {
   return await fetchApi(`/reports/stock?belowMinStock=${belowMinStock}`);
 }
 
+/** Productos vencidos y los que vencen dentro de `days` días (activos y con existencias). */
+export async function getExpiringReportApi(days = 30) {
+  return await fetchApi(`/reports/expiring?days=${days}`);
+}
+
 export async function getProfitabilityReportApi(dateFrom, dateTo) {
   return await fetchApi(`/reports/profitability?${dateParams(dateFrom, dateTo)}`);
 }

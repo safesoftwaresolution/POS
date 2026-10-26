@@ -1,10 +1,11 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { AlertTriangle } from 'lucide-react';
-import { Button, Input, Modal, Select } from '../ui';
+import { Button, Field, Input, Modal, Select, inputClass } from '../ui';
 import ProductPicker from './ProductPicker';
 import { createInventoryMovementApi, createPurchaseApi } from '../../services/inventoryApi';
 import { newIdempotencyKey } from '../../services/http';
 import { money } from '../../utils/format';
+import { formatExpiryDate } from '../../utils/expiry';
 import { OPERATIONS, noteMaxLength, planMovement, planPurchase, reasonsFor } from './movementReasons';
 
 const FORM_ID = 'stock-movement-form';
@@ -43,6 +44,9 @@ export default function StockMovementModal({ product: initialProduct = null, sup
   const [counted, setCounted] = useState('');
   const [reasonCode, setReasonCode] = useState('');
   const [note, setNote] = useState('');
+  // Vencimiento de la mercancía que llega (solo Compra y Entrada): guarda un lote con estas unidades.
+  const [expirationDate, setExpirationDate] = useState('');
+  const [lotCode, setLotCode] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   // Candado síncrono: el estado `submitting` llega al siguiente render; este evita un segundo envío en el mismo tick.
@@ -70,14 +74,21 @@ export default function StockMovementModal({ product: initialProduct = null, sup
     setOperation(id);
     setReasonCode('');
     setNote('');
+    setExpirationDate('');
+    setLotCode('');
     setError('');
   };
 
   const changeProduct = (next) => {
     setProduct(next);
     setCounted('');
+    setExpirationDate('');
+    setLotCode('');
     setError('');
   };
+
+  const bringsGoods = operation === 'PURCHASE' || operation === 'ENTRY';
+  const lot = bringsGoods && expirationDate ? { expirationDate, lotCode: lotCode.trim() } : {};
 
   const purchaseKey = (signature) => {
     if (purchaseKeyRef.current.signature !== signature) {
@@ -95,11 +106,18 @@ export default function StockMovementModal({ product: initialProduct = null, sup
     try {
       if (operation === 'PURCHASE') {
         await createPurchaseApi(
-          { supplierId: Number(supplierId), items: [{ productId: product.id, quantity: plan.quantity, unitCost }] },
-          purchaseKey(`${product.id}|${supplierId}|${plan.quantity}|${unitCost}`)
+          {
+            supplierId: Number(supplierId),
+            items: [{
+              productId: product.id, quantity: plan.quantity, unitCost,
+              expirationDate: lot.expirationDate || null, lotCode: lot.lotCode || null,
+            }],
+          },
+          // La fecha y el lote forman parte de la compra: si cambian, es otra compra y necesita otra clave.
+          purchaseKey(`${product.id}|${supplierId}|${plan.quantity}|${unitCost}|${lot.expirationDate || ''}|${lot.lotCode || ''}`)
         );
       } else {
-        await createInventoryMovementApi(product.id, plan.movementType, plan.quantity, plan.reason);
+        await createInventoryMovementApi(product.id, plan.movementType, plan.quantity, plan.reason, lot);
       }
     } catch (err) {
       setError(err.message || 'No se pudo registrar el movimiento.');
@@ -211,6 +229,39 @@ export default function StockMovementModal({ product: initialProduct = null, sup
               placeholder="Ej. 10, 25, 50..."
               disabled={!product}
             />
+            {bringsGoods && (
+              <>
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="Vencimiento de lo que llega (opcional)">
+                    <input
+                      type="date"
+                      className={inputClass}
+                      value={expirationDate}
+                      onChange={(e) => setExpirationDate(e.target.value)}
+                      disabled={!product}
+                    />
+                  </Field>
+                  <Input
+                    label="Lote (opcional)"
+                    className="font-mono"
+                    value={lotCode}
+                    onChange={(e) => setLotCode(e.target.value)}
+                    maxLength={50}
+                    placeholder="Ej. L-2210"
+                    disabled={!product || !expirationDate}
+                  />
+                </div>
+                {product?.expirationDate && !expirationDate && (
+                  <div className={WARNING_BOX}>
+                    <AlertTriangle className="w-4 h-4 shrink-0" />
+                    <span>
+                      Este producto ya maneja vencimiento (próximo: {formatExpiryDate(product.expirationDate)}). Indica la fecha de esta
+                      mercancía para no perder el control; si no la pones, estas unidades quedan sin fecha.
+                    </span>
+                  </div>
+                )}
+              </>
+            )}
             {reasons && (
               <>
                 <Select label="Motivo" value={reasonCode} onChange={(e) => setReasonCode(e.target.value)} disabled={!product}>

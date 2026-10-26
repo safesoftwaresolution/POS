@@ -19,6 +19,7 @@ import { getSuppliersApi } from '../services/suppliersApi';
 import { useAuth } from '../context/AuthContext';
 import BarcodeModal from '../components/BarcodeModal';
 import ProductImportModal from '../components/products/ProductImportModal';
+import ExpiryBadge from '../components/products/ExpiryBadge';
 import StockMovementModal from '../components/inventory/StockMovementModal';
 import MovementsPanel from '../components/inventory/MovementsPanel';
 import ReturnsBento from './ReturnsBento';
@@ -251,11 +252,14 @@ export default function InventoryBento() {
                         {item.minStock || 5}
                       </td>
                       <td data-label="Estado" className="py-3 px-3 text-center">
-                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold ${
-                          isLow ? 'bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-400 border border-amber-300 dark:border-amber-500/30' : 'bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700'
-                        }`}>
-                          {isLow ? 'REABASTECER' : 'ÓPTIMO'}
-                        </span>
+                        <div className="flex flex-col items-center gap-1">
+                          <span className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold ${
+                            isLow ? 'bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-400 border border-amber-300 dark:border-amber-500/30' : 'bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700'
+                          }`}>
+                            {isLow ? 'REABASTECER' : 'ÓPTIMO'}
+                          </span>
+                          {stockVal > 0 && <ExpiryBadge date={item.expirationDate} />}
+                        </div>
                       </td>
                       <td data-label="Acciones" className="py-3 px-3 text-center">
                         <div className="flex items-center justify-center gap-1.5">

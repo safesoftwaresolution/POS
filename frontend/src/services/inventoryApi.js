@@ -1,9 +1,14 @@
 import { fetchApi, newIdempotencyKey, uploadFileApi, downloadFileApi } from './http';
 
-export async function createInventoryMovementApi(productId, movementType, quantity, reason = '') {
+// `lot` (opcional, solo en entradas): { expirationDate: 'YYYY-MM-DD', lotCode } guarda un lote con estas unidades.
+export async function createInventoryMovementApi(productId, movementType, quantity, reason = '', lot = {}) {
   return await fetchApi('/inventory/movements', {
     method: 'POST',
-    body: JSON.stringify({ productId, movementType, quantity, reason }),
+    body: JSON.stringify({
+      productId, movementType, quantity, reason,
+      expirationDate: lot.expirationDate || null,
+      lotCode: lot.expirationDate ? (lot.lotCode || null) : null,
+    }),
   });
 }
 

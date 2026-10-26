@@ -1,6 +1,12 @@
 import React from 'react';
-import { BarChart3, DollarSign, Package, TrendingUp, Truck } from 'lucide-react';
+import { BarChart3, CalendarClock, DollarSign, Package, TrendingUp, Truck } from 'lucide-react';
+import { Badge } from '../ui';
+import { expiryLabel, formatExpiryDate } from '../../utils/expiry';
 import { LoadingRows, RankedList, SectionCard, sortedEntries } from './parts';
+
+const EXPIRING_WINDOWS = [7, 15, 30, 60, 90];
+// Filas visibles en la tarjeta del Dashboard; el resto se consulta en Inventario.
+const EXPIRING_VISIBLE_ROWS = 8;
 
 /**
  * Analíticas del período del Dashboard: ventas por vendedor, productos más vendidos, rentabilidad,
@@ -9,6 +15,7 @@ import { LoadingRows, RankedList, SectionCard, sortedEntries } from './parts';
  */
 export default function AnalyticsPanel({
   isAdmin, loading, sales, topProducts, profitability, purchases, stock, belowMinStock, onBelowMinStockChange,
+  expiring = [], expiringDays = 30, onExpiringDaysChange = () => {},
 }) {
   const sellerEntries = sortedEntries(sales?.salesBySeller);
   const supplierEntries = sortedEntries(purchases?.purchasesBySupplier);
@@ -85,6 +92,67 @@ export default function AnalyticsPanel({
               ))}
             </tbody>
           </table>
+        )}
+      </SectionCard>
+
+      <SectionCard
+        icon={CalendarClock}
+        title="Próximos a vencer"
+        subtitle={`Lotes vencidos y los que vencen en los próximos ${expiringDays} días`}
+        action={
+          <select
+            value={expiringDays}
+            onChange={(e) => onExpiringDaysChange(Number(e.target.value))}
+            aria-label="Ventana de vencimiento"
+            className="shrink-0 px-2.5 py-1 bg-page border border-line rounded-xl text-[11px] font-bold text-ink cursor-pointer focus:outline-none focus:border-ink"
+          >
+            {EXPIRING_WINDOWS.map((d) => <option key={d} value={d}>{d} días</option>)}
+          </select>
+        }
+      >
+        {loading ? (
+          <LoadingRows />
+        ) : expiring.length === 0 ? (
+          <p className="text-xs text-ink-muted font-semibold py-6 text-center">
+            Ningún lote vence en los próximos {expiringDays} días 🎉
+          </p>
+        ) : (
+          <>
+            <table className="table-cards w-full text-left text-xs">
+              <thead>
+                <tr className="border-b border-line text-ink-muted uppercase tracking-wider font-extrabold text-[10px]">
+                  <th className="py-2 px-2">Producto</th>
+                  <th className="py-2 px-2 text-center">Vence</th>
+                  <th className="py-2 px-2 text-center">Estado</th>
+                  <th className="py-2 px-2 text-center">Uds. del lote</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-line font-medium">
+                {expiring.slice(0, EXPIRING_VISIBLE_ROWS).map((p) => (
+                  <tr key={p.lotId}>
+                    <td data-label="" className="py-2.5 px-2">
+                      <span className="font-bold text-ink block">{p.productName}</span>
+                      <span className="text-[10px] text-ink-muted font-mono">
+                        {p.internalCode}{p.lotCode ? ` · Lote ${p.lotCode}` : ''}
+                      </span>
+                    </td>
+                    <td data-label="Vence" className="py-2.5 px-2 text-center font-semibold text-ink-soft tabular-nums">
+                      {formatExpiryDate(p.expirationDate)}
+                    </td>
+                    <td data-label="Estado" className="py-2.5 px-2 text-center">
+                      <Badge tone={p.status === 'EXPIRING' ? 'warning' : 'danger'}>{expiryLabel(p.daysToExpire)}</Badge>
+                    </td>
+                    <td data-label="Uds. del lote" className="py-2.5 px-2 text-center font-black tabular-nums text-ink">{p.lotRemaining}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {expiring.length > EXPIRING_VISIBLE_ROWS && (
+              <p className="text-[11px] text-ink-muted font-semibold pt-3 text-center">
+                y {expiring.length - EXPIRING_VISIBLE_ROWS} lotes más — revísalos en Inventario
+              </p>
+            )}
+          </>
         )}
       </SectionCard>
     </div>

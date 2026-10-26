@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  AlertTriangle, ArrowUpRight, BarChart3, ChevronRight, CreditCard, FileText, Package, Plus, Receipt, RefreshCw, ShoppingBag,
+  AlertTriangle, ArrowUpRight, BarChart3, CalendarClock, ChevronRight, CreditCard, FileText, Package, Plus, Receipt, RefreshCw,
+  ShoppingBag,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -8,7 +9,8 @@ import { getProductsApi } from '../services/productsApi';
 import { searchSalesApi } from '../services/salesApi';
 import { listInvoicesApi } from '../services/billingApi';
 import {
-  getProfitabilityReportApi, getPurchasesReportApi, getSalesReportApi, getStockReportApi, getTopProductsReportApi,
+  getExpiringReportApi, getProfitabilityReportApi, getPurchasesReportApi, getSalesReportApi, getStockReportApi,
+  getTopProductsReportApi,
 } from '../services/reportsApi';
 import useAutoRefresh from '../hooks/useAutoRefresh';
 import { Button, EmptyState } from '../components/ui';
@@ -16,6 +18,7 @@ import GettingStarted from '../components/dashboard/GettingStarted';
 import AnalyticsPanel from '../components/analytics/AnalyticsPanel';
 import { LoadingRows, RankedList, SectionCard } from '../components/analytics/parts';
 import { dayEnd, dayStart, isoDaysAgo, money, paymentLabel } from '../utils/format';
+import { EXPIRY_WINDOW_DAYS } from '../utils/expiry';
 
 const RANGES = [
   { days: 7, label: '7 días' },
@@ -51,6 +54,7 @@ export default function DashboardBento() {
 
   const [days, setDays] = useState(7);
   const [belowMinStock, setBelowMinStock] = useState(true);
+  const [expiringDays, setExpiringDays] = useState(EXPIRY_WINDOW_DAYS);
   const [loading, setLoading] = useState(true);
 
   const [products, setProducts] = useState([]);
@@ -61,6 +65,7 @@ export default function DashboardBento() {
   const [profitability, setProfitability] = useState([]);
   const [purchases, setPurchases] = useState(null);
   const [stock, setStock] = useState([]);
+  const [expiring, setExpiring] = useState([]);
 
   const load = useCallback(async ({ silent = false } = {}) => {
     if (!silent) setLoading(true);
@@ -68,7 +73,7 @@ export default function DashboardBento() {
     const to = dayEnd(isoDaysAgo(0));
     // Cada bloque falla por separado: un reporte caído no deja el panel en blanco.
     const safe = (promise, fallback) => promise.catch(() => fallback);
-    const [prods, salesPage, dian, report, top, profit, purch, stockRows] = await Promise.all([
+    const [prods, salesPage, dian, report, top, profit, purch, stockRows, expiringRows] = await Promise.all([
       safe(getProductsApi(), null),
       safe(searchSalesApi({ dateFrom: from, dateTo: to, size: SALES_SAMPLE }), null),
       safe(listInvoicesApi('VALIDATED', 0, 1), null),
@@ -77,6 +82,7 @@ export default function DashboardBento() {
       isAdmin ? safe(getProfitabilityReportApi(from, to), null) : null,
       isAdmin ? safe(getPurchasesReportApi(from, to), null) : null,
       canSeeStock ? safe(getStockReportApi(belowMinStock), null) : null,
+      canSeeStock ? safe(getExpiringReportApi(expiringDays), null) : null,
     ]);
     if (Array.isArray(prods)) setProducts(prods);
     if (salesPage) setSales(salesPage.content || []);
@@ -86,13 +92,16 @@ export default function DashboardBento() {
     if (Array.isArray(profit)) setProfitability(profit);
     if (purch) setPurchases(purch);
     if (Array.isArray(stockRows)) setStock(stockRows);
+    if (Array.isArray(expiringRows)) setExpiring(expiringRows);
     setLoading(false);
-  }, [days, belowMinStock, isAdmin, canSeeStock]);
+  }, [days, belowMinStock, expiringDays, isAdmin, canSeeStock]);
 
   useEffect(() => { load(); }, [load]);
   useAutoRefresh(() => load({ silent: true }));
 
   const lowStockCount = products.filter((p) => (p.quantityAvailable ?? p.stock ?? 0) <= (p.minStock || 5)).length;
+  const expiredCount = expiring.filter((p) => p.status === 'EXPIRED').length;
+  const expiringCount = expiring.length - expiredCount;
 
   // ADMINISTRATOR: totales exactos del reporte; el resto: sobre las ventas cargadas.
   const loadedTotal = sales.reduce((sum, s) => sum + Number(s.totalAmount || 0), 0);
@@ -235,6 +244,34 @@ export default function DashboardBento() {
         </div>
       )}
 
+      {expiring.length > 0 && (
+        <div className={`bento-card p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
+          expiredCount > 0 ? 'border-red-200 dark:border-red-500/30' : 'border-amber-200 dark:border-amber-500/30'
+        }`}>
+          <div className="flex items-center gap-3.5">
+            <div className={`w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 ${
+              expiredCount > 0
+                ? 'bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/30 text-red-600 dark:text-red-400'
+                : 'bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/30 text-amber-600 dark:text-amber-400'
+            }`}>
+              <CalendarClock className="w-5 h-5" />
+            </div>
+            <p className="text-xs text-ink-soft">
+              <span className="font-bold text-ink">Vencimientos: </span>
+              {expiredCount > 0 && (
+                <>{expiredCount} {expiredCount === 1 ? 'lote ya venció' : 'lotes ya vencieron'}</>
+              )}
+              {expiredCount > 0 && expiringCount > 0 && ' y '}
+              {expiringCount > 0 && (
+                <>{expiringCount} {expiringCount === 1 ? 'vence' : 'vencen'} en los próximos {expiringDays} días</>
+              )}
+              . Retíralos de la venta o dalos de baja desde Inventario.
+            </p>
+          </div>
+          <Button size="sm" onClick={() => navigate('/inventory')}>Ver inventario <ChevronRight className="w-3.5 h-3.5" /></Button>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <SectionCardWide icon={BarChart3} title={`Ventas de los últimos ${days} días`} subtitle="Total vendido por día">
           {loading ? (
@@ -282,6 +319,9 @@ export default function DashboardBento() {
           stock={stock}
           belowMinStock={belowMinStock}
           onBelowMinStockChange={setBelowMinStock}
+          expiring={expiring}
+          expiringDays={expiringDays}
+          onExpiringDaysChange={setExpiringDays}
         />
       )}
 

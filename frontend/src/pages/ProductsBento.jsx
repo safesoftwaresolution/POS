@@ -32,7 +32,9 @@ const EMPTY_PRODUCT = {
   price: '',
   stock: '',
   minStock: 5,
-  imageUrl: ''
+  imageUrl: '',
+  // Vencimiento del stock inicial (solo al crear): viaja con el movimiento de "Stock inicial" y crea un lote.
+  expirationDate: ''
 };
 
 const EMPTY_SUBCATEGORY = { id: null, categoryId: '', name: '', description: '' };
@@ -183,7 +185,8 @@ export default function ProductsBento() {
       price: p.salePrice ?? p.price ?? '',
       stock: '',
       minStock: p.minStock ?? 5,
-      imageUrl: p.imageUrl || ''
+      imageUrl: p.imageUrl || '',
+      expirationDate: ''
     });
     setErrorMsg('');
     setShowAddModal(true);
@@ -208,6 +211,11 @@ export default function ProductsBento() {
           imageUrl: newProduct.imageUrl || null
         });
       } else {
+        const initialStock = parseInt(newProduct.stock) || 0;
+        if (newProduct.expirationDate && initialStock <= 0) {
+          setErrorMsg('Para guardar un vencimiento indica el stock inicial al que corresponde, o deja la fecha vacía.');
+          return;
+        }
         const created = await createProductApi({
           name: newProduct.name,
           barcode: newProduct.barcode || `${Math.floor(1000000000000 + Math.random() * 9000000000000)}`,
@@ -219,9 +227,10 @@ export default function ProductsBento() {
           imageUrl: newProduct.imageUrl || null
         });
 
-        const initialStock = parseInt(newProduct.stock) || 0;
         if (initialStock > 0) {
-          await createInventoryMovementApi(created.id, 'ENTRY', initialStock, 'Stock inicial al crear el producto');
+          await createInventoryMovementApi(created.id, 'ENTRY', initialStock, 'Stock inicial al crear el producto', {
+            expirationDate: newProduct.expirationDate || null,
+          });
         }
       }
 
@@ -403,6 +412,8 @@ export default function ProductsBento() {
           categories={categories}
           subcategories={subcategoriesForSelectedCategory}
           errorMsg={errorMsg}
+          canManageLots={canManageProducts}
+          onLotsChanged={() => loadProducts(showInactive, { silent: true })}
           uploadingImage={uploadingImage}
           onImageChange={handleImageChange}
           creatingSubcategory={showNewSubcategory}

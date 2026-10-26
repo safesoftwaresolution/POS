@@ -28,7 +28,9 @@ const RANGES = [
 // salen de los reportes (agregados en base de datos), así que no dependen de este tope.
 const SALES_SAMPLE = 200;
 const EMPTY_DASHBOARD = {
-  products: [], sales: [], previousSales: [], heatmap: [], dianCount: null, salesReport: null, hasAnySale: false, previousTotal: null,
+  products: [], sales: [], previousSales: [], heatmap: [], dianCount: null, salesReport: null, previousTotal: null,
+  // `null` = aún no se sabe (la consulta falló o no ha terminado): la guía de primer uso no se muestra con datos desconocidos.
+  hasProducts: null, hasAnySale: null,
   topProducts: [], profitability: [], purchases: null, stock: [], expiring: [],
 };
 
@@ -80,6 +82,7 @@ export default function DashboardBento() {
       sales: salesPage ? salesPage.content || [] : previous.sales,
       previousSales: previousPage ? previousPage.content || [] : previous.previousSales,
       heatmap: Array.isArray(heat) ? heat : previous.heatmap,
+      hasProducts: Array.isArray(prods) ? prods.length > 0 : previous.hasProducts,
       hasAnySale: anySale ? (anySale.totalElements ?? (anySale.content || []).length) > 0 : previous.hasAnySale,
       dianCount: dian ? dian.totalElements ?? (dian.content || []).length : previous.dianCount,
       salesReport: report || previous.salesReport,
@@ -91,7 +94,7 @@ export default function DashboardBento() {
       expiring: Array.isArray(expiringRows) ? expiringRows : previous.expiring,
     };
   }, [days, belowMinStock, expiringDays, isAdmin, canSeeStock], { initial: EMPTY_DASHBOARD, autoRefresh: true });
-  const { products, sales, previousSales, heatmap, hasAnySale, previousTotal, dianCount, salesReport, topProducts, profitability, purchases, stock, expiring } = dashboard;
+  const { products, sales, previousSales, heatmap, hasProducts, hasAnySale, previousTotal, dianCount, salesReport, topProducts, profitability, purchases, stock, expiring } = dashboard;
 
   const lowStockCount = products.filter((p) => (p.quantityAvailable ?? p.stock ?? 0) <= (p.minStock || 5)).length;
 
@@ -188,8 +191,8 @@ export default function DashboardBento() {
         </div>
       </div>
 
-      {!loading && (
-        <GettingStarted hasProducts={products.length > 0} hasSales={hasAnySale} canCreateProducts={canSeeStock} />
+      {!loading && hasAnySale !== null && (!canSeeStock || hasProducts !== null) && (
+        <GettingStarted hasProducts={Boolean(hasProducts)} hasSales={hasAnySale} canCreateProducts={canSeeStock} />
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">

@@ -17,6 +17,7 @@ import {
 import { getProductsApi } from '../services/productsApi';
 import { getSuppliersApi } from '../services/suppliersApi';
 import useAuth from '../hooks/useAuth';
+import { SegmentedControl } from '../components/ui';
 import BarcodeModal from '../components/BarcodeModal';
 import ProductImportModal from '../components/products/ProductImportModal';
 import ExpiryBadge from '../components/products/ExpiryBadge';
@@ -95,24 +96,7 @@ export default function InventoryBento() {
       </div>
 
       {/* Tab Switcher */}
-      <div className="flex bg-gray-100 dark:bg-line rounded-full p-1 border border-gray-200 dark:border-gray-700 w-fit max-w-full overflow-x-auto">
-        {TABS.map(tab => {
-          const Icon = tab.icon;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-2 rounded-full text-xs font-bold flex items-center gap-1.5 shrink-0 transition-all cursor-pointer ${
-                activeTab === tab.id
-                  ? 'bg-solid text-white shadow-xs'
-                  : 'text-ink-soft hover:text-brand dark:hover:text-brand'
-              }`}
-            >
-              <Icon className="w-4 h-4" /> {tab.label}
-            </button>
-          );
-        })}
-      </div>
+      <SegmentedControl options={TABS} value={activeTab} onChange={setActiveTab} ariaLabel="Secciones de inventario" pill scrollable equal={false} className="w-fit" />
 
       {activeTab === 'movements' && <MovementsPanel />}
       {activeTab === 'returns' && <ReturnsBento />}

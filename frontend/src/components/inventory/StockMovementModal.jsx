@@ -1,6 +1,6 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { AlertTriangle } from 'lucide-react';
-import { Button, Field, Input, Modal, Select, inputClass } from '../ui';
+import { Button, Field, Input, Modal, SegmentedControl, Select, inputClass } from '../ui';
 import ProductPicker from './ProductPicker';
 import { createInventoryMovementApi, createPurchaseApi } from '../../services/inventoryApi';
 import { newIdempotencyKey } from '../../services/http';
@@ -149,22 +149,7 @@ export default function StockMovementModal({ product: initialProduct = null, sup
           <ProductPicker value={product} onChange={changeProduct} />
         </div>
 
-        <div role="tablist" aria-label="Operación" className="grid grid-cols-2 sm:grid-cols-4 gap-1 bg-gray-100 dark:bg-line rounded-2xl p-1">
-          {OPERATIONS.map((op) => (
-            <button
-              key={op.id}
-              type="button"
-              role="tab"
-              aria-selected={operation === op.id}
-              onClick={() => changeOperation(op.id)}
-              className={`px-2 py-2 rounded-xl text-[11px] font-bold cursor-pointer transition-all ${
-                operation === op.id ? 'bg-solid text-white shadow-xs' : 'text-ink-soft hover:text-ink'
-              }`}
-            >
-              {op.label}
-            </button>
-          ))}
-        </div>
+        <SegmentedControl options={OPERATIONS} value={operation} onChange={changeOperation} ariaLabel="Operación" />
         <p className="text-[11px] text-ink-muted -mt-2">{HELP[operation]}</p>
 
         {operation === 'PURCHASE' && (

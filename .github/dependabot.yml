@@ -22,7 +22,16 @@ updates:
     directory: /backend
     schedule:
       interval: monthly
+    # El proyecto compila y se prueba en Java 21 (pom, CI y Dockerfile). Subir de JDK es una migracion
+    # deliberada, no un bump automatico: la imagen no se prueba en CI.
+    ignore:
+      - dependency-name: eclipse-temurin
+        versions: [">=22"]
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: monthly
+    # Todas las acciones juntas: editan el mismo ci.yml y por separado chocan entre si.
+    groups:
+      actions:
+        patterns: ["*"]

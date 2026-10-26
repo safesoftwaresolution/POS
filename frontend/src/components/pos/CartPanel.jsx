@@ -5,11 +5,12 @@ const money = (n) => n.toLocaleString('es-CO');
 
 /**
  * Ticket de venta (columna derecha en desktop, drawer inferior en mobile): cliente asignado,
- * líneas con stepper de cantidad, totales y botón de cobro.
+ * líneas con stepper de cantidad, totales y botón de cobro. `scanner` es el escáner de cámara
+ * que se muestra arriba del ticket en mobile.
  */
 export default function CartPanel({
   cart, customers, selectedCustomer, onSelectCustomer,
-  subtotal, total, mobileOpen, onCloseMobile, onClear, onQuantity, onCheckout,
+  subtotal, total, mobileOpen, scanner, onCloseMobile, onClear, onQuantity, onCheckout,
 }) {
   return (
     <div className={
@@ -43,6 +44,9 @@ export default function CartPanel({
             </button>
           </div>
         </div>
+
+        {/* Escáner (solo mobile): sigue activo dentro del ticket para agregar productos sin cerrarlo. */}
+        {scanner && mobileOpen && <div className="shrink-0 lg:hidden p-3 border-b border-line">{scanner}</div>}
 
         <div className="shrink-0 bg-gray-50 dark:bg-white/5 p-4 border-b border-line space-y-2">
           <div className="flex items-center justify-between text-xs font-bold text-ink-soft">

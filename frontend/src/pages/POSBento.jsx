@@ -264,9 +264,8 @@ export default function POSBento() {
       <ScanToasts toasts={scanToasts} />
 
       {/* Escáner incrustado arriba: queda fijo mientras se desplaza el catálogo y se cierra con la X.
-          Con el ticket o el cobro abiertos se desmonta (apaga la cámara y la lectura) para que no siga
-          sumando productos por detrás; showScanner se conserva y se reabre al cerrar esa vista. */}
-      {showScanner && !showMobileCart && !showCheckoutModal && (
+          Con el ticket abierto pasa a mostrarse dentro del ticket (una sola cámara a la vez). */}
+      {showScanner && !showMobileCart && (
         <div className="lg:hidden pb-3">
           <BarcodeScanner
             inline
@@ -304,6 +303,13 @@ export default function POSBento() {
           subtotal={subtotal}
           total={total}
           mobileOpen={showMobileCart}
+          scanner={showScanner && (
+            <BarcodeScanner
+              inline
+              onDetect={handleBarcodeScan}
+              onClose={() => { setShowScanner(false); focusBarcodeInput(); }}
+            />
+          )}
           onCloseMobile={() => setShowMobileCart(false)}
           onClear={clearCart}
           onQuantity={updateQuantity}

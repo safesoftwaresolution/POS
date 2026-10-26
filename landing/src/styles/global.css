@@ -311,3 +311,144 @@ html.js .reveal.is-in { opacity: 1; translate: 0 0; }
   .marquee-track[aria-hidden="true"] { display: none; }
   .bento-card, .btn { transition: none; }
 }
+
+/* ---- Demo animada del hero (HeroMock.astro + src/scripts/hero-demo.js) ----------------------------------
+   El HTML de la maqueta es el estado FINAL de una venta. Con html.anim (puesto en <head> solo si no hay
+   prefers-reduced-motion) y sin .is-off, las reglas de abajo llevan cada pieza a su estado inicial y el script
+   las va encendiendo. Sin JS, con movimiento reducido o en pausa no aplican y se ve la venta terminada.
+   Solo se animan opacity, transform y color y el espacio de cada pieza siempre esta reservado: la maqueta
+   nunca cambia de tamano, asi que no hay saltos de layout. */
+.m-num { display: inline-block; }
+.m-empty {
+  display: none;
+  position: absolute;
+  inset: 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  text-align: center;
+  transition: opacity 0.3s ease;
+}
+.m-pay { transition: border-color 0.25s ease, background-color 0.25s ease, color 0.25s ease; }
+.m-pay.is-sel {
+  border-color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+  color: var(--brand-text);
+}
+.m-toggle { transition: background-color 0.3s ease; }
+.m-knob { transition: transform 0.3s cubic-bezier(0.3, 0.7, 0.2, 1); }
+.m-btn-check { display: none; }
+.m-total, .m-num, [data-m="qty"], [data-m="amt"], [data-m="low-count"] { backface-visibility: hidden; }
+.m-toast .t-clock { display: none; }
+.m-toast.is-queued .t-check { display: none; }
+.m-toast.is-queued .t-clock { display: inline-block; }
+.m-toast.is-queued .t-ico { background: rgba(245, 158, 11, 0.16); color: #b45309; }
+html.dark .m-toast.is-queued .t-ico { color: #fbbf24; }
+.m-toast.is-pop .t-ico { animation: m-pop 0.55s cubic-bezier(0.3, 1.4, 0.5, 1); }
+.m-cursor { display: none; }
+.is-bump { animation: m-bump 0.4s ease-out; }
+.m-flash { animation: m-flash 1.1s ease-out; }
+html:not(.anim) [data-mock-toggle] { display: none; }
+
+html.anim [data-mock]:not(.is-off) {
+  .m-empty { display: flex; }
+  .m-empty.is-gone { opacity: 0; pointer-events: none; }
+
+  .m-line {
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.45s ease, transform 0.5s cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+  .m-line.is-in { opacity: 1; transform: none; }
+
+  .m-search { transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease; }
+  .m-search.is-scanning {
+    border-color: var(--color-primary);
+    background: color-mix(in srgb, var(--color-primary) 8%, var(--bg-page));
+    color: var(--text-primary);
+  }
+
+  .m-card {
+    transition: transform 0.25s cubic-bezier(0.2, 0.7, 0.2, 1), border-color 0.25s ease, box-shadow 0.25s ease;
+  }
+  .m-card.is-scan {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 22%, transparent);
+    transform: translateY(-2px);
+  }
+  .m-card.is-scan::after {
+    content: '+1';
+    position: absolute;
+    top: 6px;
+    right: 9px;
+    font-size: 10px;
+    font-weight: 800;
+    color: var(--brand-text);
+    animation: m-plus 0.9s ease-out both;
+  }
+
+  .m-toggle:not(.is-on) { background: var(--border-strong); }
+  .m-toggle:not(.is-on) .m-knob { transform: translateX(-1rem); }
+
+  .m-btn {
+    transition: background-color 0.3s ease, color 0.3s ease, transform 0.15s ease, box-shadow 0.3s ease;
+  }
+  .m-btn.is-disabled { background: var(--border-strong); color: var(--text-muted); }
+  .m-btn.is-pressed { transform: scale(0.97); }
+  .m-btn.is-busy { animation: m-pulse 0.8s ease-in-out infinite; }
+  .m-btn.is-done { background: #10b981; color: #04271b; }
+  .m-btn.is-done .m-btn-check { display: inline-block; }
+
+  .m-low-pan { transition: opacity 0.5s ease, transform 0.5s cubic-bezier(0.2, 0.7, 0.2, 1); }
+  .m-low-pan:not(.is-in) { opacity: 0; transform: translateY(-6px); }
+  .m-spark-last { transition: height 0.9s cubic-bezier(0.2, 0.7, 0.2, 1); }
+
+  .m-toast { transition: opacity 0.45s ease, transform 0.5s cubic-bezier(0.2, 0.7, 0.2, 1); }
+  .m-toast:not(.is-in) { opacity: 0; transform: translateY(14px) scale(0.96); pointer-events: none; }
+
+  .m-cursor {
+    display: block;
+    position: absolute;
+    left: 0;
+    top: 0;
+    z-index: 30;
+    pointer-events: none;
+    opacity: 0;
+    transition: transform 0.85s cubic-bezier(0.45, 0.05, 0.2, 1), opacity 0.3s ease;
+  }
+  .m-cursor.is-visible { opacity: 1; }
+  .m-cursor svg { display: block; margin: -2px 0 0 -2px; filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.35)); }
+  .m-cursor::after {
+    content: '';
+    position: absolute;
+    left: -12px;
+    top: -12px;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: 2px solid var(--color-primary);
+    opacity: 0;
+  }
+  .m-cursor.is-click::after { animation: m-ring 0.55s ease-out; }
+
+  .m-fade { transition: opacity 0.45s ease; }
+  .m-fade.is-fading { opacity: 0; }
+}
+
+/* Reinicio entre ciclos: aplica el estado inicial de golpe, sin transiciones intermedias. */
+[data-mock].is-instant *, [data-mock].is-instant *::after { transition: none !important; animation: none !important; }
+
+@keyframes m-plus {
+  0% { opacity: 0; transform: translateY(4px); }
+  20% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-10px); }
+}
+@keyframes m-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+@keyframes m-bump { 0% { transform: scale(1); } 40% { transform: scale(1.1); } 100% { transform: scale(1); } }
+@keyframes m-flash {
+  0% { color: var(--brand-text); transform: scale(1.35); }
+  100% { transform: none; }
+}
+@keyframes m-pop { 0% { transform: scale(0.6); } 60% { transform: scale(1.18); } 100% { transform: scale(1); } }
+@keyframes m-ring { 0% { opacity: 0.95; transform: scale(0.3); } 100% { opacity: 0; transform: scale(1.5); } }

@@ -263,8 +263,10 @@ export default function POSBento() {
     <div className="relative">
       <ScanToasts toasts={scanToasts} />
 
-      {/* Escáner incrustado arriba: queda fijo mientras se desplaza el catálogo y se cierra con la X. */}
-      {showScanner && (
+      {/* Escáner incrustado arriba: queda fijo mientras se desplaza el catálogo y se cierra con la X.
+          Con el ticket o el cobro abiertos se desmonta (apaga la cámara y la lectura) para que no siga
+          sumando productos por detrás; showScanner se conserva y se reabre al cerrar esa vista. */}
+      {showScanner && !showMobileCart && !showCheckoutModal && (
         <div className="lg:hidden pb-3">
           <BarcodeScanner
             inline

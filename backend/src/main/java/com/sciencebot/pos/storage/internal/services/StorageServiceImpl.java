@@ -11,6 +11,7 @@ import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.UUID;
 
@@ -125,8 +126,8 @@ public class StorageServiceImpl implements StorageFacade {
     }
 
     @Override
-    public void deleteFileByUrl(String publicUrl, String keyPrefix) {
-        if (publicUrl == null || publicUrl.isBlank() || keyPrefix == null || keyPrefix.isBlank()) {
+    public void deleteFileByUrl(String publicUrl, String... keyPrefixes) {
+        if (publicUrl == null || publicUrl.isBlank() || keyPrefixes == null) {
             return;
         }
         String base = properties.getPublicUrl() == null ? "" : properties.getPublicUrl().replaceAll("/+$", "");
@@ -135,7 +136,8 @@ public class StorageServiceImpl implements StorageFacade {
             return;
         }
         String key = url.substring(base.length() + 1);
-        if (key.contains("..") || !key.startsWith(keyPrefix)) {
+        boolean allowed = Arrays.stream(keyPrefixes).anyMatch(prefix -> prefix != null && !prefix.isBlank() && key.startsWith(prefix));
+        if (key.contains("..") || !allowed) {
             return;
         }
         deleteFile(key);

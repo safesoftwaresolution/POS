@@ -74,7 +74,7 @@ El detalle por operación está en el `spec.md` de cada módulo. Salvo los endpo
 Cada solicitud lleva el `storeId` en `TenantContext`. El aislamiento es manual en cada servicio (no hay `@Filter` de Hibernate ni RLS). Reglas vigentes:
 - Un recurso de otro local se trata como inexistente (404), no como prohibido.
 - Las operaciones de facturación y archivos **exigen** local; no existe respaldo al local 1.
-- Los archivos de R2 subidos por el endpoint HTTP van bajo `tienda-{storeId}/` y solo se borran claves de ese prefijo.
+- Los archivos de R2 subidos por el endpoint HTTP van bajo `{carpeta}/tienda-{storeId}/` (ej. `imagenes-productos/tienda-4/`) y solo se borran claves de ese prefijo (o del prefijo antiguo `tienda-{storeId}/`).
 
 ## Datos sembrados
 `DatabaseSeeder` ya no crea cuentas con contraseña conocida en producción: el `SUPER_ADMIN` solo se siembra si se define `SEED_SUPERADMIN_PASSWORD`, y `admin`/local 1 solo en el perfil `dev`. Cualquier entorno que haya arrancado antes con la versión anterior puede tener `superadmin / SuperAdmin123!` y `admin / Password123`: **rotarlas**.

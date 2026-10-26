@@ -130,8 +130,18 @@ class StorageServiceImplTest {
 
     @Test
     void deleteFileByUrl_OwnKey_DeletesTheObject() {
+        storageService.deleteFileByUrl("https://pub-test.r2.dev/imagenes-productos/tienda-1/abc.jpg",
+                "imagenes-productos/tienda-1/");
+
+        ArgumentCaptor<DeleteObjectRequest> captor = ArgumentCaptor.forClass(DeleteObjectRequest.class);
+        verify(s3Client).deleteObject(captor.capture());
+        assertEquals("imagenes-productos/tienda-1/abc.jpg", captor.getValue().key());
+    }
+
+    @Test
+    void deleteFileByUrl_LegacyLayout_IsDeletedWhenItsPrefixIsAllowed() {
         storageService.deleteFileByUrl("https://pub-test.r2.dev/tienda-1/imagenes-productos/abc.jpg",
-                "tienda-1/imagenes-productos/");
+                "imagenes-productos/tienda-1/", "tienda-1/imagenes-productos/");
 
         ArgumentCaptor<DeleteObjectRequest> captor = ArgumentCaptor.forClass(DeleteObjectRequest.class);
         verify(s3Client).deleteObject(captor.capture());
@@ -140,12 +150,12 @@ class StorageServiceImplTest {
 
     @Test
     void deleteFileByUrl_OtherStoreOtherBucketOrTraversal_DoesNothing() {
-        String prefix = "tienda-1/imagenes-productos/";
-        storageService.deleteFileByUrl("https://pub-test.r2.dev/tienda-2/imagenes-productos/abc.jpg", prefix);
-        storageService.deleteFileByUrl("https://otro-sitio.com/tienda-1/imagenes-productos/abc.jpg", prefix);
-        storageService.deleteFileByUrl("https://pub-test.r2.dev/tienda-1/imagenes-productos/../tienda-2/x.jpg", prefix);
+        String prefix = "imagenes-productos/tienda-1/";
+        storageService.deleteFileByUrl("https://pub-test.r2.dev/imagenes-productos/tienda-2/abc.jpg", prefix);
+        storageService.deleteFileByUrl("https://otro-sitio.com/imagenes-productos/tienda-1/abc.jpg", prefix);
+        storageService.deleteFileByUrl("https://pub-test.r2.dev/imagenes-productos/tienda-1/../tienda-2/x.jpg", prefix);
         storageService.deleteFileByUrl(null, prefix);
-        storageService.deleteFileByUrl("https://pub-test.r2.dev/tienda-1/imagenes-productos/abc.jpg", " ");
+        storageService.deleteFileByUrl("https://pub-test.r2.dev/imagenes-productos/tienda-1/abc.jpg", " ");
 
         verifyNoInteractions(s3Client);
     }

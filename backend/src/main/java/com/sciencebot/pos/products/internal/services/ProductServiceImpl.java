@@ -195,7 +195,9 @@ public class ProductServiceImpl implements ProductFacade, CategoryDeleteValidato
         }
         Runnable delete = () -> {
             try {
-                storageFacade.deleteFileByUrl(previousUrl, "tienda-" + storeId + "/imagenes-productos/");
+                // Estructura actual y la anterior (tienda-N/imagenes-productos/), por las fotos ya subidas.
+                storageFacade.deleteFileByUrl(previousUrl,
+                        "imagenes-productos/tienda-" + storeId + "/", "tienda-" + storeId + "/imagenes-productos/");
             } catch (Exception e) {
                 log.warn("No se pudo borrar la foto anterior del producto {} de R2: {}", product.getId(), e.getMessage());
             }

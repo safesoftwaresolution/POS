@@ -540,9 +540,10 @@ class ProductServiceImplTest {
 
     // ---- foto del producto en R2 ----
 
-    private static final String OLD_URL = "https://pub.r2.dev/tienda-1/imagenes-productos/vieja.jpg";
-    private static final String NEW_URL = "https://pub.r2.dev/tienda-1/imagenes-productos/nueva.jpg";
-    private static final String PREFIX = "tienda-1/imagenes-productos/";
+    private static final String OLD_URL = "https://pub.r2.dev/imagenes-productos/tienda-1/vieja.jpg";
+    private static final String NEW_URL = "https://pub.r2.dev/imagenes-productos/tienda-1/nueva.jpg";
+    private static final String PREFIX = "imagenes-productos/tienda-1/";
+    private static final String LEGACY_PREFIX = "tienda-1/imagenes-productos/";
 
     @Test
     void updateProduct_ReplacingThePhoto_DeletesTheOldOneFromR2() {
@@ -550,7 +551,7 @@ class ProductServiceImplTest {
 
         productService.updateProduct(10L, updateCommand(NEW_URL));
 
-        verify(storageFacade).deleteFileByUrl(OLD_URL, PREFIX);
+        verify(storageFacade).deleteFileByUrl(OLD_URL, PREFIX, LEGACY_PREFIX);
     }
 
     @Test
@@ -559,7 +560,7 @@ class ProductServiceImplTest {
 
         productService.updateProduct(10L, updateCommand(null));
 
-        verify(storageFacade).deleteFileByUrl(OLD_URL, PREFIX);
+        verify(storageFacade).deleteFileByUrl(OLD_URL, PREFIX, LEGACY_PREFIX);
     }
 
     @Test

@@ -42,6 +42,9 @@ class TenantScopedRepositoriesTest {
             "PurchaseRepository.findByIdempotencyKey",
             "SaleRepository.findByIdempotencyKey",
             "SupportTicketRepository.findByTicketNumber",
+            // Job de plataforma (OrphanProductImageCleaner): necesita saber qué fotos usa CUALQUIER local para
+            // no borrar de R2 la foto de otro. Solo devuelve URLs, no se expone por ningún endpoint.
+            "ProductRepository.findAllImageUrls",
             // invoice_seq es una secuencia global a proposito: el numero FACT-%06d es unico en toda la plataforma.
             "SaleRepository.getNextInvoiceSeq",
             // Se invocan solo despues de validar la venta/factura del local actual (id ya verificado).

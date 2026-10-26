@@ -11,9 +11,14 @@ import org.springframework.mock.web.MockMultipartFile;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
+import software.amazon.awssdk.services.s3.model.S3Object;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import java.io.IOException;
+import java.time.Instant;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -157,6 +162,32 @@ class StorageServiceImplTest {
         storageService.deleteFileByUrl(null, prefix);
         storageService.deleteFileByUrl("https://pub-test.r2.dev/imagenes-productos/tienda-1/abc.jpg", " ");
 
+        verifyNoInteractions(s3Client);
+    }
+
+    @Test
+    void listFiles_ReadsEveryPage() {
+        Instant t = Instant.parse("2026-10-01T00:00:00Z");
+        when(s3Client.listObjectsV2(any(ListObjectsV2Request.class)))
+                .thenReturn(ListObjectsV2Response.builder()
+                        .contents(S3Object.builder().key("imagenes-productos/tienda-1/a.jpg").lastModified(t).build())
+                        .isTruncated(true).nextContinuationToken("t2").build())
+                .thenReturn(ListObjectsV2Response.builder()
+                        .contents(S3Object.builder().key("imagenes-productos/tienda-1/b.jpg").lastModified(t).build())
+                        .isTruncated(false).build());
+
+        List<StoredFile> files = storageService.listFiles("imagenes-productos/");
+
+        assertEquals(2, files.size());
+        assertEquals("https://pub-test.r2.dev/imagenes-productos/tienda-1/a.jpg", files.get(0).url());
+        assertEquals(t, files.get(1).lastModified());
+    }
+
+    @Test
+    void listFiles_WithoutCredentials_DoesNotCallR2() {
+        properties.setAccessKeyId("");
+
+        assertTrue(storageService.listFiles("imagenes-productos/").isEmpty());
         verifyNoInteractions(s3Client);
     }
 }

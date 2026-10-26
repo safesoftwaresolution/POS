@@ -49,6 +49,10 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
     boolean existsByStoreIdAndBarcode(Long storeId, String barcode);
     boolean existsByStoreIdAndImageUrl(Long storeId, String imageUrl);
 
+    /** URLs de foto en uso por cualquier producto (activo o no) de cualquier local. */
+    @Query("select distinct p.imageUrl from Product p where p.imageUrl is not null")
+    List<String> findAllImageUrls();
+
     // Nota: intencionalmente NO se filtran por local. Las categorias son globales (solo
     // SUPER_ADMIN las administra) y este chequeo se dispara al borrar una categoria global,
     // por lo que debe contar productos con esa categoria en TODOS los locales.

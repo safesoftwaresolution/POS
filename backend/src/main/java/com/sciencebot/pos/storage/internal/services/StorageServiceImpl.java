@@ -2,16 +2,21 @@ package com.sciencebot.pos.storage.internal.services;
 
 import com.sciencebot.pos.storage.StorageFacade;
 import com.sciencebot.pos.storage.StorageUploadResult;
+import com.sciencebot.pos.storage.StoredFile;
 import com.sciencebot.pos.storage.internal.config.R2StorageProperties;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -141,6 +146,29 @@ public class StorageServiceImpl implements StorageFacade {
             return;
         }
         deleteFile(key);
+    }
+
+    @Override
+    public List<StoredFile> listFiles(String prefix) {
+        if (properties.getAccessKeyId() == null || properties.getAccessKeyId().isBlank()) {
+            return List.of();
+        }
+        List<StoredFile> files = new ArrayList<>();
+        String token = null;
+        try {
+            do {
+                ListObjectsV2Response page = s3Client.listObjectsV2(ListObjectsV2Request.builder()
+                        .bucket(properties.getBucketName())
+                        .prefix(prefix)
+                        .continuationToken(token)
+                        .build());
+                page.contents().forEach(o -> files.add(new StoredFile(o.key(), buildPublicUrl(o.key()), o.lastModified())));
+                token = Boolean.TRUE.equals(page.isTruncated()) ? page.nextContinuationToken() : null;
+            } while (token != null);
+        } catch (Exception e) {
+            throw new IllegalStateException("Error al listar archivos de Cloudflare R2: " + e.getMessage(), e);
+        }
+        return files;
     }
 
     private String getFileExtension(String filename) {

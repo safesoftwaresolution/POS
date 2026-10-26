@@ -40,4 +40,12 @@ public interface StorageFacade {
      * @param keyPrefixes Prefijos de clave permitidos; el objeto debe cumplir al menos uno para poder borrarse
      */
     void deleteFileByUrl(String publicUrl, String... keyPrefixes);
+
+    /**
+     * Lista todos los objetos cuya clave empieza por {@code prefix} (recorre todas las paginas de R2).
+     * Si el almacenamiento no esta configurado devuelve una lista vacia en vez de intentar conectarse.
+     *
+     * @param prefix Prefijo de clave (ej: "imagenes-productos/")
+     */
+    java.util.List<StoredFile> listFiles(String prefix);
 }

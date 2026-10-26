@@ -78,7 +78,7 @@ export default function LoginBento() {
                 type="button"
                 onClick={handleResend}
                 disabled={!resendEmail.trim() || resendState === 'sending'}
-                className="px-3 py-2 bg-solid hover:bg-solid-hover text-white rounded-xl text-xs font-black cursor-pointer disabled:opacity-50"
+                className="px-3 py-2 bg-solid hover:bg-solid-hover text-solid-ink rounded-xl text-xs font-black cursor-pointer disabled:opacity-50"
               >
                 {resendState === 'sending' ? 'Enviando...' : 'Reenviar'}
               </button>
@@ -136,7 +136,7 @@ export default function LoginBento() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3.5 bg-solid hover:bg-solid-hover text-white font-black text-xs rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-[#0A0A0A]/10 active:scale-98 transition-all cursor-pointer disabled:opacity-50"
+            className="w-full py-3.5 bg-solid hover:bg-solid-hover text-solid-ink font-black text-xs rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-[#0A0A0A]/10 active:scale-98 transition-all cursor-pointer disabled:opacity-50"
           >
             <span>{loading ? 'Autenticando...' : 'Ingresar al Sistema'}</span>
             <ArrowRight className="w-4 h-4" />

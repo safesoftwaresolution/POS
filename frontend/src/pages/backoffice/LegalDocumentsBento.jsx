@@ -92,7 +92,7 @@ export default function LegalDocumentsBento() {
 
         <button
           onClick={openCreate}
-          className="px-4 py-2.5 bg-solid hover:bg-solid-hover text-white rounded-2xl text-xs font-bold flex items-center gap-2 shadow-md shadow-[#0A0A0A]/10 cursor-pointer"
+          className="px-4 py-2.5 bg-solid hover:bg-solid-hover text-solid-ink rounded-2xl text-xs font-bold flex items-center gap-2 shadow-md shadow-[#0A0A0A]/10 cursor-pointer"
         >
           <Plus className="w-4 h-4" /> Nuevo Documento
         </button>
@@ -268,7 +268,7 @@ export default function LegalDocumentsBento() {
               </button>
               <button
                 type="submit"
-                className="w-1/2 py-3 bg-solid hover:bg-solid-hover text-white rounded-2xl text-xs font-extrabold cursor-pointer shadow-md shadow-[#0A0A0A]/10"
+                className="w-1/2 py-3 bg-solid hover:bg-solid-hover text-solid-ink rounded-2xl text-xs font-extrabold cursor-pointer shadow-md shadow-[#0A0A0A]/10"
               >
                 {form.id ? 'Guardar Cambios' : 'Crear Documento'}
               </button>

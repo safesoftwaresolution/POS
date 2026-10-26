@@ -57,7 +57,7 @@ function ProductCard({ product, onAdd }) {
 
         <div className="mt-2 pt-2 border-t border-[#F5F5F3] dark:border-line flex items-center justify-between">
           <span className="text-lg font-extrabold text-ink font-mono tracking-tight">${priceVal.toLocaleString('es-CO')}</span>
-          <div className="w-8 h-8 rounded-xl bg-page group-hover:bg-solid group-hover:text-white flex items-center justify-center transition-colors shrink-0">
+          <div className="w-8 h-8 rounded-xl bg-page group-hover:bg-solid group-hover:text-solid-ink flex items-center justify-center transition-colors shrink-0">
             <Plus className="w-3.5 h-3.5" />
           </div>
         </div>
@@ -100,7 +100,7 @@ export default function ProductCatalog({
           type="button"
           onClick={onOpenScanner}
           aria-label="Escanear con la cámara"
-          className="lg:hidden h-12 w-12 shrink-0 rounded-2xl bg-solid text-white flex items-center justify-center active:scale-95 transition-all cursor-pointer"
+          className="lg:hidden h-12 w-12 shrink-0 rounded-2xl bg-solid text-solid-ink flex items-center justify-center active:scale-95 transition-all cursor-pointer"
         >
           <ScanLine className="w-5 h-5" />
         </button>
@@ -114,7 +114,7 @@ export default function ProductCatalog({
             onClick={() => onSelectCategory(cat)}
             className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all duration-150 border cursor-pointer ${
               selectedCategory === cat
-                ? 'bg-solid text-white border-transparent shadow-sm'
+                ? 'bg-solid text-solid-ink border-transparent shadow-sm'
                 : 'bg-card text-ink-soft border-line hover:border-line-strong hover:text-ink'
             }`}
           >

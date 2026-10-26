@@ -80,11 +80,11 @@ export default function InstallPrompt() {
 
   return (
     <>
-      <div className="fixed left-3 right-3 bottom-3 z-120 max-w-md mx-auto flex items-center gap-3 p-3 rounded-2xl bg-solid text-white shadow-2xl" role="dialog" aria-label="Instalar BentoPOS">
+      <div className="fixed left-3 right-3 bottom-3 z-120 max-w-md mx-auto flex items-center gap-3 p-3 rounded-2xl bg-solid text-solid-ink shadow-2xl" role="dialog" aria-label="Instalar BentoPOS">
         <img src="/icons/icon-192.png" alt="" className="w-11 h-11 rounded-xl shrink-0" />
         <div className="flex-1 min-w-0">
           <p className="text-sm font-extrabold">Instala BentoPOS</p>
-          <p className="text-[11px] text-white/70 leading-tight">
+          <p className="text-[11px] opacity-70 leading-tight">
             {iosMode ? 'Añádela a tu pantalla de inicio' : 'Acceso directo en tu pantalla de inicio'}
           </p>
         </div>
@@ -96,7 +96,7 @@ export default function InstallPrompt() {
           {!iosMode && <Download className="w-3.5 h-3.5" />}
           {iosMode ? 'Cómo' : 'Instalar'}
         </button>
-        <button type="button" onClick={close} aria-label="Cerrar" className="shrink-0 p-1 text-white/70 cursor-pointer">
+        <button type="button" onClick={close} aria-label="Cerrar" className="shrink-0 p-1 opacity-70 cursor-pointer">
           <X className="w-5 h-5" />
         </button>
       </div>
@@ -134,7 +134,7 @@ export default function InstallPrompt() {
                 </>
               )}
             </ol>
-            <button type="button" onClick={close} className="w-full py-3 rounded-2xl bg-solid text-white text-sm font-black cursor-pointer">
+            <button type="button" onClick={close} className="w-full py-3 rounded-2xl bg-solid text-solid-ink text-sm font-black cursor-pointer">
               Entendido
             </button>
           </div>
@@ -147,7 +147,7 @@ export default function InstallPrompt() {
 function Step({ n, icon, children }) {
   return (
     <li className="flex items-center gap-3">
-      <span className="shrink-0 w-6 h-6 rounded-full bg-solid text-white text-[11px] font-black flex items-center justify-center">{n}</span>
+      <span className="shrink-0 w-6 h-6 rounded-full bg-solid text-solid-ink text-[11px] font-black flex items-center justify-center">{n}</span>
       <span className="shrink-0 w-10 h-10 rounded-xl bg-page border border-line flex items-center justify-center text-brand">{icon}</span>
       <span className="text-xs leading-snug">{children}</span>
     </li>

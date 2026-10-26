@@ -75,10 +75,10 @@ export function ModalProvider({ children }) {
                 <button
                   type="button"
                   onClick={() => close(true)}
-                  className={`w-1/2 py-2.5 text-white rounded-2xl text-xs font-extrabold cursor-pointer transition-all shadow-md ${
+                  className={`w-1/2 py-2.5 rounded-2xl text-xs font-extrabold cursor-pointer transition-all shadow-md ${
                     modal.danger
-                      ? 'bg-red-500 hover:bg-red-600 shadow-red-500/20'
-                      : 'bg-solid hover:bg-solid-hover shadow-[#0A0A0A]/10'
+                      ? 'bg-red-500 hover:bg-red-600 text-white shadow-red-500/20'
+                      : 'bg-solid hover:bg-solid-hover text-solid-ink shadow-[#0A0A0A]/10'
                   }`}
                 >
                   {modal.confirmText}
@@ -89,7 +89,7 @@ export function ModalProvider({ children }) {
                 <button
                   type="button"
                   onClick={() => close()}
-                  className="w-full py-2.5 bg-solid hover:bg-solid-hover text-white rounded-2xl text-xs font-extrabold cursor-pointer transition-all shadow-lg shadow-[#0A0A0A]/10"
+                  className="w-full py-2.5 bg-solid hover:bg-solid-hover text-solid-ink rounded-2xl text-xs font-extrabold cursor-pointer transition-all shadow-lg shadow-[#0A0A0A]/10"
                 >
                   {modal.confirmText}
                 </button>

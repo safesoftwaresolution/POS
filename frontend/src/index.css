@@ -52,9 +52,11 @@
     --text-secondary: #A0A0AB;
     --text-muted: #787885;
     --border-strong: #2C2C36;
-    --solid: #262630;
-    --solid-hover: #31313E;
-    --solid-text: #FFFFFF;
+    /* Botones y píldoras principales: en oscuro son claros con texto oscuro; un gris oscuro (#262630) apenas se
+       distinguía del fondo (contraste 1,2:1). El texto va con text-solid-ink, no con text-white. */
+    --solid: #F4F4F6;
+    --solid-hover: #FFFFFF;
+    --solid-text: #0A0A0A;
     --color-primary: #FF5520;
     --color-primary-hover: #E64712;
   }

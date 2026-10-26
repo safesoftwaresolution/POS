@@ -94,7 +94,7 @@ export default function SuppliersBento() {
 
         <button
           onClick={openCreate}
-          className="px-4 py-2.5 bg-solid hover:bg-solid-hover text-white rounded-2xl text-xs font-bold flex items-center gap-2 shadow-md shadow-[#0A0A0A]/10 cursor-pointer transition-all"
+          className="px-4 py-2.5 bg-solid hover:bg-solid-hover text-solid-ink rounded-2xl text-xs font-bold flex items-center gap-2 shadow-md shadow-[#0A0A0A]/10 cursor-pointer transition-all"
         >
           <Plus className="w-4 h-4" /> Nuevo Proveedor
         </button>
@@ -128,7 +128,7 @@ export default function SuppliersBento() {
             </div>
             <button
               onClick={openCreate}
-              className="px-4 py-2 bg-solid text-white rounded-xl text-xs font-extrabold shadow-sm hover:bg-solid-hover cursor-pointer"
+              className="px-4 py-2 bg-solid text-solid-ink rounded-xl text-xs font-extrabold shadow-sm hover:bg-solid-hover cursor-pointer"
             >
               + Registrar Primer Proveedor
             </button>
@@ -267,7 +267,7 @@ export default function SuppliersBento() {
               </button>
               <button
                 type="submit"
-                className="w-1/2 py-3 bg-solid hover:bg-solid-hover text-white rounded-2xl text-xs font-extrabold shadow-md shadow-[#0A0A0A]/10 cursor-pointer"
+                className="w-1/2 py-3 bg-solid hover:bg-solid-hover text-solid-ink rounded-2xl text-xs font-extrabold shadow-md shadow-[#0A0A0A]/10 cursor-pointer"
               >
                 {form.id ? 'Guardar Cambios' : 'Crear Proveedor'}
               </button>

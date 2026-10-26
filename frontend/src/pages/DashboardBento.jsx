@@ -169,7 +169,7 @@ export default function DashboardBento() {
                 type="button"
                 onClick={() => setDays(r.days)}
                 className={`px-3.5 py-1 text-xs font-bold rounded-full cursor-pointer transition-colors ${
-                  days === r.days ? 'bg-solid dark:bg-white text-white dark:text-gray-950' : 'text-ink-soft hover:text-ink'
+                  days === r.days ? 'bg-solid dark:bg-white text-solid-ink dark:text-gray-950' : 'text-ink-soft hover:text-ink'
                 }`}
               >
                 {r.label}

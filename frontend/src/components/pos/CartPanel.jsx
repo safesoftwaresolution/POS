@@ -123,7 +123,7 @@ export default function CartPanel({
             className={`w-full py-3.5 rounded-2xl font-black text-sm flex items-center justify-center gap-2 shadow-lg transition-all ${
               cart.length === 0
                 ? 'bg-gray-200 dark:bg-gray-800 text-ink-muted cursor-not-allowed'
-                : 'bg-solid hover:bg-solid-hover text-white shadow-[#0A0A0A]/10 active:scale-98 cursor-pointer'
+                : 'bg-solid hover:bg-solid-hover text-solid-ink shadow-[#0A0A0A]/10 active:scale-98 cursor-pointer'
             }`}
           >
             <Banknote className="w-5 h-5" />

@@ -125,7 +125,7 @@ export default function ParametersBento() {
 
         <button
           onClick={() => { setTopicForm(EMPTY_TOPIC_FORM); setTopicError(''); setShowTopicForm(true); }}
-          className="px-4 py-2.5 bg-solid hover:bg-solid-hover text-white rounded-2xl text-xs font-bold flex items-center gap-2 shadow-md shadow-[#0A0A0A]/10 cursor-pointer"
+          className="px-4 py-2.5 bg-solid hover:bg-solid-hover text-solid-ink rounded-2xl text-xs font-bold flex items-center gap-2 shadow-md shadow-[#0A0A0A]/10 cursor-pointer"
         >
           <Plus className="w-4 h-4" /> Nuevo Tema
         </button>
@@ -147,17 +147,17 @@ export default function ParametersBento() {
                   onClick={() => selectTopic(t)}
                   className={`w-full text-left p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-2 ${
                     selectedTopic?.code === t.code
-                      ? 'bg-solid border-line-strong text-white'
+                      ? 'bg-solid border-line-strong text-solid-ink'
                       : 'bg-gray-50/60 dark:bg-white/5 border-line hover:border-line-strong'
                   }`}
                 >
                   <div className="min-w-0">
-                    <p className={`text-xs font-extrabold truncate ${selectedTopic?.code === t.code ? 'text-white' : 'text-ink'}`}>{t.name}</p>
-                    <p className={`text-[10px] font-mono truncate ${selectedTopic?.code === t.code ? 'text-white/70' : 'text-ink-muted'}`}>{t.code}</p>
+                    <p className={`text-xs font-extrabold truncate ${selectedTopic?.code === t.code ? 'text-solid-ink' : 'text-ink'}`}>{t.name}</p>
+                    <p className={`text-[10px] font-mono truncate ${selectedTopic?.code === t.code ? 'text-solid-ink/70' : 'text-ink-muted'}`}>{t.code}</p>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
-                    {t.isSystem && <Lock className={`w-3 h-3 ${selectedTopic?.code === t.code ? 'text-white/70' : 'text-ink-muted'}`} />}
-                    <ChevronRight className={`w-4 h-4 ${selectedTopic?.code === t.code ? 'text-white' : 'text-gray-300 dark:text-gray-600'}`} />
+                    {t.isSystem && <Lock className={`w-3 h-3 ${selectedTopic?.code === t.code ? 'text-solid-ink/70' : 'text-ink-muted'}`} />}
+                    <ChevronRight className={`w-4 h-4 ${selectedTopic?.code === t.code ? 'text-solid-ink' : 'text-gray-300 dark:text-gray-600'}`} />
                   </div>
                 </button>
               ))}
@@ -190,7 +190,7 @@ export default function ParametersBento() {
                 </div>
                 <button
                   onClick={openAddValue}
-                  className="px-3 py-1.5 bg-solid hover:bg-solid-hover text-white rounded-xl text-[11px] font-bold flex items-center gap-1 shrink-0 cursor-pointer shadow-sm shadow-[#0A0A0A]/10"
+                  className="px-3 py-1.5 bg-solid hover:bg-solid-hover text-solid-ink rounded-xl text-[11px] font-bold flex items-center gap-1 shrink-0 cursor-pointer shadow-sm shadow-[#0A0A0A]/10"
                 >
                   <Plus className="w-3.5 h-3.5" /> Nuevo Valor
                 </button>
@@ -310,7 +310,7 @@ export default function ParametersBento() {
               <button type="button" onClick={() => setShowTopicForm(false)} className="w-1/2 py-3 bg-gray-100 dark:bg-line hover:bg-gray-200 dark:hover:bg-line-strong text-gray-700 dark:text-gray-300 rounded-2xl text-xs font-bold cursor-pointer">
                 Cancelar
               </button>
-              <button type="submit" className="w-1/2 py-3 bg-solid hover:bg-solid-hover text-white rounded-2xl text-xs font-extrabold cursor-pointer shadow-md shadow-[#0A0A0A]/10">
+              <button type="submit" className="w-1/2 py-3 bg-solid hover:bg-solid-hover text-solid-ink rounded-2xl text-xs font-extrabold cursor-pointer shadow-md shadow-[#0A0A0A]/10">
                 Crear Tema
               </button>
             </div>
@@ -388,7 +388,7 @@ export default function ParametersBento() {
               <button type="button" onClick={() => setShowValueForm(false)} className="w-1/2 py-3 bg-gray-100 dark:bg-line hover:bg-gray-200 dark:hover:bg-line-strong text-gray-700 dark:text-gray-300 rounded-2xl text-xs font-bold cursor-pointer">
                 Cancelar
               </button>
-              <button type="submit" className="w-1/2 py-3 bg-solid hover:bg-solid-hover text-white rounded-2xl text-xs font-extrabold cursor-pointer shadow-md shadow-[#0A0A0A]/10">
+              <button type="submit" className="w-1/2 py-3 bg-solid hover:bg-solid-hover text-solid-ink rounded-2xl text-xs font-extrabold cursor-pointer shadow-md shadow-[#0A0A0A]/10">
                 {valueForm.id ? 'Guardar Cambios' : 'Agregar Valor'}
               </button>
             </div>

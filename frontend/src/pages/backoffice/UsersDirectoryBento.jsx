@@ -219,7 +219,7 @@ export default function UsersDirectoryBento() {
                     <td data-label="Acciones" className="px-2 py-3 text-right">
                       <button
                         onClick={() => openAssign(s)}
-                        className="px-3 py-1.5 bg-solid hover:bg-solid-hover text-white rounded-xl text-[11px] font-bold inline-flex items-center gap-1 cursor-pointer"
+                        className="px-3 py-1.5 bg-solid hover:bg-solid-hover text-solid-ink rounded-xl text-[11px] font-bold inline-flex items-center gap-1 cursor-pointer"
                       >
                         <UserPlus className="w-3.5 h-3.5" /> Asignar usuario
                       </button>
@@ -500,7 +500,7 @@ export default function UsersDirectoryBento() {
                 <button
                   onClick={confirmAssign}
                   disabled={!selectedUserId || assignBusy}
-                  className="px-4 py-2 bg-solid hover:bg-solid-hover disabled:opacity-50 text-white rounded-xl text-xs font-bold cursor-pointer"
+                  className="px-4 py-2 bg-solid hover:bg-solid-hover disabled:opacity-50 text-solid-ink rounded-xl text-xs font-bold cursor-pointer"
                 >
                   {assignBusy ? 'Asignando...' : 'Asignar'}
                 </button>

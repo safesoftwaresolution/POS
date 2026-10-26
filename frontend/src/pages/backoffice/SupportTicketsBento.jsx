@@ -377,7 +377,7 @@ export default function SupportTicketsBento() {
                     type="button"
                     onClick={handleSaveDetail}
                     disabled={savingDetail}
-                    className="w-1/2 py-3 bg-solid hover:bg-solid-hover disabled:opacity-50 text-white rounded-2xl text-xs font-extrabold cursor-pointer shadow-md shadow-[#0A0A0A]/10"
+                    className="w-1/2 py-3 bg-solid hover:bg-solid-hover disabled:opacity-50 text-solid-ink rounded-2xl text-xs font-extrabold cursor-pointer shadow-md shadow-[#0A0A0A]/10"
                   >
                     {savingDetail ? 'Guardando...' : 'Guardar Cambios'}
                   </button>

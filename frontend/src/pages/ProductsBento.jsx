@@ -297,7 +297,7 @@ export default function ProductsBento() {
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={`px-4 py-2 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-                activeTab === tab.id ? 'bg-solid text-white shadow-xs' : 'text-ink-soft hover:text-brand'
+                activeTab === tab.id ? 'bg-solid text-solid-ink shadow-xs' : 'text-ink-soft hover:text-brand'
               }`}
             >
               <Icon className="w-4 h-4" /> {tab.label}
@@ -323,7 +323,7 @@ export default function ProductsBento() {
               <button
                 onClick={toggleInactive}
                 className={`px-3 py-1.5 rounded-full text-[11px] font-bold cursor-pointer border transition-colors ${
-                  showInactive ? 'bg-solid text-white border-transparent' : 'border-line text-ink-soft hover:border-line-strong'
+                  showInactive ? 'bg-solid text-solid-ink border-transparent' : 'border-line text-ink-soft hover:border-line-strong'
                 }`}
               >
                 {showInactive ? 'Viendo inactivos' : 'Ver inactivos'}

@@ -369,7 +369,7 @@ export default function SettingsBento() {
 
             <button
               type="submit"
-              className="w-full py-3.5 bg-solid hover:bg-solid-hover text-white font-extrabold text-xs rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-[#0A0A0A]/10 cursor-pointer transition-all active:scale-[0.99]"
+              className="w-full py-3.5 bg-solid hover:bg-solid-hover text-solid-ink font-extrabold text-xs rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-[#0A0A0A]/10 cursor-pointer transition-all active:scale-[0.99]"
             >
               <Save className="w-4 h-4" /> Guardar Datos de Facturas y Tickets
             </button>

@@ -262,7 +262,7 @@ export default function StoresBento() {
 
         <button
           onClick={openCreateStore}
-          className="px-4 py-2.5 bg-solid hover:bg-solid-hover text-white rounded-2xl text-xs font-bold flex items-center gap-2 shadow-md shadow-[#0A0A0A]/10 cursor-pointer"
+          className="px-4 py-2.5 bg-solid hover:bg-solid-hover text-solid-ink rounded-2xl text-xs font-bold flex items-center gap-2 shadow-md shadow-[#0A0A0A]/10 cursor-pointer"
         >
           <Plus className="w-4 h-4" /> Nuevo Local
         </button>
@@ -302,7 +302,7 @@ export default function StoresBento() {
           <div className="flex items-center gap-2 flex-wrap">
             <button
               onClick={() => setStatusFilter('ALL')}
-              className={`px-3 py-1.5 rounded-full text-[11px] font-bold cursor-pointer ${statusFilter === 'ALL' ? 'bg-solid text-white' : 'bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300'}`}
+              className={`px-3 py-1.5 rounded-full text-[11px] font-bold cursor-pointer ${statusFilter === 'ALL' ? 'bg-solid text-solid-ink' : 'bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300'}`}
             >
               Todos
             </button>
@@ -310,7 +310,7 @@ export default function StoresBento() {
               <button
                 key={s}
                 onClick={() => setStatusFilter(s)}
-                className={`px-3 py-1.5 rounded-full text-[11px] font-bold cursor-pointer ${statusFilter === s ? 'bg-solid text-white' : 'bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300'}`}
+                className={`px-3 py-1.5 rounded-full text-[11px] font-bold cursor-pointer ${statusFilter === s ? 'bg-solid text-solid-ink' : 'bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300'}`}
               >
                 {STATUS_LABELS[s]}
               </button>
@@ -595,7 +595,7 @@ export default function StoresBento() {
               </button>
               <button
                 type="submit"
-                className="w-1/2 py-3 bg-solid hover:bg-solid-hover text-white rounded-2xl text-xs font-extrabold cursor-pointer shadow-md shadow-[#0A0A0A]/10"
+                className="w-1/2 py-3 bg-solid hover:bg-solid-hover text-solid-ink rounded-2xl text-xs font-extrabold cursor-pointer shadow-md shadow-[#0A0A0A]/10"
               >
                 {editingStore ? 'Guardar Cambios' : 'Crear Local'}
               </button>
@@ -680,7 +680,7 @@ export default function StoresBento() {
                           <button
                             type="button"
                             onClick={() => handleApproveDoc(doc)}
-                            className="flex-1 py-1.5 bg-solid hover:bg-solid-hover text-white rounded-xl text-[11px] font-extrabold flex items-center justify-center gap-1 cursor-pointer shadow-sm shadow-[#0A0A0A]/10"
+                            className="flex-1 py-1.5 bg-solid hover:bg-solid-hover text-solid-ink rounded-xl text-[11px] font-extrabold flex items-center justify-center gap-1 cursor-pointer shadow-sm shadow-[#0A0A0A]/10"
                           >
                             <Check className="w-3.5 h-3.5" /> Aprobar
                           </button>

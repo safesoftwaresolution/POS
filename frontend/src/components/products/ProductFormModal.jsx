@@ -78,7 +78,7 @@ export default function ProductFormModal({
                   type="button"
                   onClick={() => setCreatingSubcategory(true)}
                   title="Crear nueva subcategoría"
-                  className="shrink-0 w-9 h-9 rounded-2xl bg-brand/10 dark:bg-brand/20 text-brand hover:bg-solid hover:text-white flex items-center justify-center cursor-pointer transition-colors"
+                  className="shrink-0 w-9 h-9 rounded-2xl bg-brand/10 dark:bg-brand/20 text-brand hover:bg-solid hover:text-solid-ink flex items-center justify-center cursor-pointer transition-colors"
                 >
                   <Plus className="w-4 h-4" />
                 </button>
@@ -119,7 +119,7 @@ export default function ProductFormModal({
                 onClick={() => setScanning(true)}
                 aria-label="Escanear código de barras con la cámara"
                 title="Escanear con la cámara"
-                className="lg:hidden absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-xl bg-solid text-white flex items-center justify-center active:scale-95 transition-all cursor-pointer"
+                className="lg:hidden absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-xl bg-solid text-solid-ink flex items-center justify-center active:scale-95 transition-all cursor-pointer"
               >
                 <ScanLine className="w-4 h-4" />
               </button>

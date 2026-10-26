@@ -2,7 +2,7 @@ import React from 'react';
 import { cx } from './cx';
 
 const VARIANTS = {
-  solid: 'bg-solid hover:bg-solid-hover text-white shadow-md shadow-[#0A0A0A]/10',
+  solid: 'bg-solid hover:bg-solid-hover text-solid-ink shadow-md shadow-[#0A0A0A]/10',
   brand: 'bg-brand hover:bg-brand-hover text-white shadow-md shadow-brand/20',
   soft: 'bg-gray-100 dark:bg-line hover:bg-gray-200 dark:hover:bg-line-strong text-gray-700 dark:text-gray-300',
   outline: 'border border-line hover:border-line-strong text-ink bg-card',

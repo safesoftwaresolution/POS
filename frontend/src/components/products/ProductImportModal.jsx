@@ -234,7 +234,7 @@ function ImportPreview({ preview, onlyIssues, setOnlyIssues }) {
             type="button"
             onClick={() => setOnlyIssues(!onlyIssues)}
             className={`ml-auto px-3 py-1 rounded-full text-[11px] font-bold cursor-pointer border transition-colors ${
-              onlyIssues ? 'bg-solid text-white border-transparent' : 'border-line text-ink-soft hover:border-line-strong'
+              onlyIssues ? 'bg-solid text-solid-ink border-transparent' : 'border-line text-ink-soft hover:border-line-strong'
             }`}
           >
             {onlyIssues ? 'Viendo solo errores y avisos' : 'Ver solo errores y avisos'}

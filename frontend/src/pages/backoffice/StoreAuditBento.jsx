@@ -82,7 +82,7 @@ export default function StoreAuditBento() {
               key={f.value}
               onClick={() => changeStatus(f.value)}
               className={`px-3 py-1.5 rounded-xl text-[11px] font-bold cursor-pointer ${
-                status === f.value ? 'bg-solid text-white' : 'bg-gray-100 dark:bg-line text-gray-600 dark:text-gray-300'
+                status === f.value ? 'bg-solid text-solid-ink' : 'bg-gray-100 dark:bg-line text-gray-600 dark:text-gray-300'
               }`}
             >
               {f.label}

@@ -64,7 +64,7 @@ function DocumentCard({ type, latestDoc, uploading, onUpload }) {
           type="button"
           disabled={uploading}
           onClick={() => inputRef.current?.click()}
-          className="flex-1 py-2 bg-solid hover:bg-solid-hover disabled:opacity-50 text-white rounded-2xl text-[11px] font-extrabold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm shadow-[#0A0A0A]/10"
+          className="flex-1 py-2 bg-solid hover:bg-solid-hover disabled:opacity-50 text-solid-ink rounded-2xl text-[11px] font-extrabold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm shadow-[#0A0A0A]/10"
         >
           <Upload className="w-3.5 h-3.5" /> {uploading ? 'Subiendo...' : latestDoc ? 'Reemplazar' : 'Subir'}
         </button>

@@ -151,7 +151,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
                     className={({ isActive }) =>
                       `relative rounded-2xl flex items-center transition-all duration-200 cursor-pointer ${
                         isActive
-                          ? 'bg-solid text-white shadow-md shadow-[#0A0A0A]/10 font-bold'
+                          ? 'bg-solid text-solid-ink shadow-md shadow-[#0A0A0A]/10 font-bold'
                           : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-line hover:text-brand dark:hover:text-brand'
                       } ${
                         isCollapsed && !isOpen
@@ -168,7 +168,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
                             <span className="truncate">{item.label}</span>
                             {item.badge != null && (
                               <span className={`ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
-                                isActive ? 'bg-white/20 text-white' : 'bg-brand text-white'
+                                'bg-brand text-white'
                               }`}>
                                 {item.badge}
                               </span>
@@ -196,7 +196,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
             className={`flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-line transition-colors cursor-pointer text-left ${isCollapsed && !isOpen ? 'justify-center' : ''}`}
           >
             <div className="relative shrink-0">
-              <div className="w-9 h-9 rounded-full bg-solid text-white flex items-center justify-center font-bold text-xs ring-1 ring-[#EAEAEA] dark:ring-line">
+              <div className="w-9 h-9 rounded-full bg-solid text-solid-ink flex items-center justify-center font-bold text-xs ring-1 ring-[#EAEAEA] dark:ring-line">
                 {getInitials(user?.fullName || user?.username)}
               </div>
               <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-brand ring-2 ring-white dark:ring-card" />
@@ -246,7 +246,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
             <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-line">
               <div className="flex items-center gap-4 min-w-0">
                 <div className="relative shrink-0">
-                  <div className="w-14 h-14 rounded-2xl bg-solid text-white flex items-center justify-center font-bold text-lg ring-2 ring-[#EAEAEA] dark:ring-line">
+                  <div className="w-14 h-14 rounded-2xl bg-solid text-solid-ink flex items-center justify-center font-bold text-lg ring-2 ring-[#EAEAEA] dark:ring-line">
                     {getInitials(user?.fullName || user?.username)}
                   </div>
                   <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full bg-brand ring-2 ring-white dark:ring-card" />

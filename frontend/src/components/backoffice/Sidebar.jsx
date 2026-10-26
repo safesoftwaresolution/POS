@@ -123,7 +123,7 @@ export default function BackofficeSidebar({ isOpen, onClose, isCollapsed, onTogg
                     className={({ isActive }) =>
                       `rounded-2xl flex items-center transition-all duration-200 cursor-pointer ${
                         isActive
-                          ? 'bg-solid text-white shadow-md shadow-[#0A0A0A]/10 font-bold'
+                          ? 'bg-solid text-solid-ink shadow-md shadow-[#0A0A0A]/10 font-bold'
                           : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-line hover:text-brand dark:hover:text-brand'
                       } ${
                         isCollapsed && !isOpen
@@ -148,7 +148,7 @@ export default function BackofficeSidebar({ isOpen, onClose, isCollapsed, onTogg
         <div className="shrink-0 flex flex-col gap-2 w-full px-3 pt-3 border-t border-line">
           {/* User Card */}
           <div className={`flex items-center gap-2.5 p-2.5 rounded-xl ${isCollapsed && !isOpen ? 'justify-center' : ''}`}>
-            <div className="w-9 h-9 rounded-full bg-solid text-white flex items-center justify-center font-bold text-xs shrink-0 ring-1 ring-[#EAEAEA] dark:ring-line">
+            <div className="w-9 h-9 rounded-full bg-solid text-solid-ink flex items-center justify-center font-bold text-xs shrink-0 ring-1 ring-[#EAEAEA] dark:ring-line">
               {getInitials(user?.fullName || user?.username)}
             </div>
             {(!isCollapsed || isOpen) && (

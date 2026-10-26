@@ -158,7 +158,7 @@ export default function SupportPage() {
               type="button"
               onClick={() => setTab(id)}
               className={`px-4 py-2 rounded-full text-xs font-bold cursor-pointer transition-colors ${
-                tab === id ? 'bg-solid text-white' : 'text-ink-soft border border-line hover:border-line-strong'
+                tab === id ? 'bg-solid text-solid-ink' : 'text-ink-soft border border-line hover:border-line-strong'
               }`}
             >
               {label}

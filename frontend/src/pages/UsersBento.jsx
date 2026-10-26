@@ -246,7 +246,7 @@ export default function UsersBento() {
                     <tr key={u.id} className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
                       <td data-label="" className="py-3 px-6">
                         <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-full bg-solid text-white flex items-center justify-center font-bold text-[11px] shrink-0">
+                          <div className="w-9 h-9 rounded-full bg-solid text-solid-ink flex items-center justify-center font-bold text-[11px] shrink-0">
                             {(u.fullName || u.username || '?').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
                           </div>
                           <div className="min-w-0">

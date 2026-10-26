@@ -164,7 +164,7 @@ export default function ActivationTab({ role, activation, ranges, rangesLoading,
               type="button"
               onClick={handleRequestActivation}
               disabled={requesting}
-              className="px-4 py-2.5 bg-solid hover:bg-solid-hover disabled:opacity-50 text-white rounded-2xl text-xs font-bold cursor-pointer"
+              className="px-4 py-2.5 bg-solid hover:bg-solid-hover disabled:opacity-50 text-solid-ink rounded-2xl text-xs font-bold cursor-pointer"
             >
               {requesting ? 'Enviando...' : 'Solicitar activación'}
             </button>
@@ -188,7 +188,7 @@ export default function ActivationTab({ role, activation, ranges, rangesLoading,
               <button
                 type="button"
                 onClick={() => setShowCreateForm(v => !v)}
-                className="px-3.5 py-2 bg-solid hover:bg-solid-hover text-white rounded-xl text-[11px] font-bold flex items-center gap-1.5 cursor-pointer"
+                className="px-3.5 py-2 bg-solid hover:bg-solid-hover text-solid-ink rounded-xl text-[11px] font-bold flex items-center gap-1.5 cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" /> Registrar rango
               </button>
@@ -235,7 +235,7 @@ export default function ActivationTab({ role, activation, ranges, rangesLoading,
             </div>
             <div className="flex gap-2">
               <button type="button" onClick={() => setShowCreateForm(false)} className="flex-1 py-2.5 bg-gray-100 dark:bg-line text-gray-700 dark:text-gray-300 rounded-xl text-[11px] font-bold cursor-pointer">Cancelar</button>
-              <button type="submit" disabled={creating} className="flex-1 py-2.5 bg-solid hover:bg-solid-hover disabled:opacity-50 text-white rounded-xl text-[11px] font-extrabold cursor-pointer">
+              <button type="submit" disabled={creating} className="flex-1 py-2.5 bg-solid hover:bg-solid-hover disabled:opacity-50 text-solid-ink rounded-xl text-[11px] font-extrabold cursor-pointer">
                 {creating ? 'Registrando...' : 'Registrar'}
               </button>
             </div>

@@ -67,7 +67,7 @@ export function AreaChart({ data, compare, formatValue, className = 'h-52' }) {
               style={{ left: `${activePoint.x}%`, top: `${activePoint.y}%` }}
             />
             <div
-              className={`absolute -top-1 ${alignClass} -translate-y-full z-10 pointer-events-none bg-solid dark:bg-white text-white dark:text-gray-950 rounded-xl px-3 py-1.5 shadow-lg whitespace-nowrap`}
+              className={`absolute -top-1 ${alignClass} -translate-y-full z-10 pointer-events-none bg-solid dark:bg-white text-solid-ink dark:text-gray-950 rounded-xl px-3 py-1.5 shadow-lg whitespace-nowrap`}
               style={{ left: `${activePoint.x}%` }}
             >
               <div className="text-[10px] font-semibold opacity-70 first-letter:uppercase">{data[active].detail}</div>

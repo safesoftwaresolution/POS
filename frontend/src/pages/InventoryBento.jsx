@@ -85,7 +85,7 @@ export default function InventoryBento() {
                 </button>
                 <button
                   onClick={() => setMoveModal({ product: null })}
-                  className="px-4 py-2.5 bg-solid hover:bg-solid-hover text-white rounded-2xl text-xs font-bold flex items-center gap-2 shadow-md shadow-[#0A0A0A]/10 cursor-pointer transition-all"
+                  className="px-4 py-2.5 bg-solid hover:bg-solid-hover text-solid-ink rounded-2xl text-xs font-bold flex items-center gap-2 shadow-md shadow-[#0A0A0A]/10 cursor-pointer transition-all"
                 >
                   <ArrowLeftRight className="w-4 h-4" /> Mover stock
                 </button>
@@ -233,7 +233,7 @@ export default function InventoryBento() {
                           {canMoveStock && (
                             <button
                               onClick={() => setMoveModal({ product: item })}
-                              className="px-2.5 py-1 bg-brand/10 dark:bg-brand/20 hover:bg-solid hover:text-white text-brand dark:text-brand rounded-xl text-[11px] font-bold transition-all cursor-pointer"
+                              className="px-2.5 py-1 bg-brand/10 dark:bg-brand/20 hover:bg-solid hover:text-solid-ink text-brand dark:text-brand rounded-xl text-[11px] font-bold transition-all cursor-pointer"
                             >
                               Mover stock
                             </button>

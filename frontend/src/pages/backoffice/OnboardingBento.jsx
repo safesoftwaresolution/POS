@@ -181,7 +181,7 @@ export default function OnboardingBento() {
                       <button
                         onClick={() => handleResend(u)}
                         disabled={resendingId === u.id}
-                        className="px-3 py-1.5 bg-solid hover:bg-solid-hover disabled:opacity-50 text-white rounded-xl text-[11px] font-bold inline-flex items-center gap-1 cursor-pointer"
+                        className="px-3 py-1.5 bg-solid hover:bg-solid-hover disabled:opacity-50 text-solid-ink rounded-xl text-[11px] font-bold inline-flex items-center gap-1 cursor-pointer"
                       >
                         <Send className="w-3.5 h-3.5" /> {resendingId === u.id ? 'Enviando...' : 'Reenviar correo'}
                       </button>
@@ -279,7 +279,7 @@ export default function OnboardingBento() {
                     <td data-label="Acciones" className="px-2 py-3 text-right space-x-2">
                       <button
                         onClick={() => handleApprove(s)}
-                        className="px-3 py-1.5 bg-solid hover:bg-solid-hover text-white rounded-xl text-[11px] font-bold inline-flex items-center gap-1 cursor-pointer shadow-sm shadow-[#0A0A0A]/10"
+                        className="px-3 py-1.5 bg-solid hover:bg-solid-hover text-solid-ink rounded-xl text-[11px] font-bold inline-flex items-center gap-1 cursor-pointer shadow-sm shadow-[#0A0A0A]/10"
                       >
                         <Check className="w-3.5 h-3.5" /> Aprobar
                       </button>

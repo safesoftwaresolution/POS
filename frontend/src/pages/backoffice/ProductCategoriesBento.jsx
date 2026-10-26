@@ -71,7 +71,7 @@ export default function ProductCategoriesBento() {
 
         <button
           onClick={openCreate}
-          className="px-4 py-2.5 bg-solid hover:bg-solid-hover text-white rounded-2xl text-xs font-bold flex items-center gap-2 shadow-md shadow-[#0A0A0A]/10 cursor-pointer"
+          className="px-4 py-2.5 bg-solid hover:bg-solid-hover text-solid-ink rounded-2xl text-xs font-bold flex items-center gap-2 shadow-md shadow-[#0A0A0A]/10 cursor-pointer"
         >
           <Plus className="w-4 h-4" /> Nueva Categoría
         </button>
@@ -93,7 +93,7 @@ export default function ProductCategoriesBento() {
             </div>
             <button
               onClick={openCreate}
-              className="px-4 py-2 bg-solid text-white rounded-xl text-xs font-extrabold shadow-sm hover:bg-solid-hover cursor-pointer"
+              className="px-4 py-2 bg-solid text-solid-ink rounded-xl text-xs font-extrabold shadow-sm hover:bg-solid-hover cursor-pointer"
             >
               + Crear Primera Categoría
             </button>
@@ -101,7 +101,7 @@ export default function ProductCategoriesBento() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {categories.map(cat => (
-              <div key={cat.id} className="p-5 bg-gray-50/60 dark:bg-white/5 rounded-2xl border border-line space-y-3 flex flex-col justify-between hover:bg-white dark:hover:bg-solid hover:border-line-strong transition-all shadow-xs">
+              <div key={cat.id} className="p-5 bg-gray-50/60 dark:bg-white/5 rounded-2xl border border-line space-y-3 flex flex-col justify-between hover:bg-white dark:hover:bg-white/10 hover:border-line-strong transition-all shadow-xs">
                 <div>
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-extrabold">
@@ -191,7 +191,7 @@ export default function ProductCategoriesBento() {
               </button>
               <button
                 type="submit"
-                className="w-1/2 py-3 bg-solid hover:bg-solid-hover text-white rounded-2xl text-xs font-extrabold cursor-pointer shadow-md shadow-[#0A0A0A]/10"
+                className="w-1/2 py-3 bg-solid hover:bg-solid-hover text-solid-ink rounded-2xl text-xs font-extrabold cursor-pointer shadow-md shadow-[#0A0A0A]/10"
               >
                 {form.id ? 'Guardar Cambios' : 'Crear Categoría'}
               </button>

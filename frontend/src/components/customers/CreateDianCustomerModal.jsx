@@ -162,7 +162,7 @@ export default function CreateDianCustomerModal({ onClose, onCreated, initialNam
                     onClick={() => selectPersonType(t.id)}
                     className={`p-3 rounded-2xl border flex items-center gap-2.5 font-bold transition-all cursor-pointer ${
                       active
-                        ? 'bg-solid text-white border-line-strong shadow-sm'
+                        ? 'bg-solid text-solid-ink border-line-strong shadow-sm'
                         : 'bg-white dark:bg-page text-gray-600 dark:text-gray-300 border-line hover:border-line-strong'
                     }`}
                   >
@@ -305,7 +305,7 @@ export default function CreateDianCustomerModal({ onClose, onCreated, initialNam
           <button
             type="submit"
             disabled={saving}
-            className="w-1/2 py-3 bg-solid hover:bg-solid-hover disabled:opacity-50 text-white rounded-2xl text-xs font-extrabold flex items-center justify-center gap-2 shadow-md shadow-[#0A0A0A]/10 cursor-pointer"
+            className="w-1/2 py-3 bg-solid hover:bg-solid-hover disabled:opacity-50 text-solid-ink rounded-2xl text-xs font-extrabold flex items-center justify-center gap-2 shadow-md shadow-[#0A0A0A]/10 cursor-pointer"
           >
             <CheckCircle2 className="w-4 h-4 text-brand" />
             {saving ? 'Guardando...' : isEdit ? 'Guardar Cambios' : 'Guardar Cliente DIAN'}

@@ -235,7 +235,7 @@ export default function Header({ onToggleMobileMenu }) {
         {!isOnPos && (
           <button
             onClick={() => navigate('/pos')}
-            className="flex items-center gap-1.5 bg-solid hover:bg-solid-hover text-white font-bold text-xs rounded-xl px-4 py-2.5 transition-all shadow-md shadow-[#0A0A0A]/10 cursor-pointer"
+            className="flex items-center gap-1.5 bg-solid hover:bg-solid-hover text-solid-ink font-bold text-xs rounded-xl px-4 py-2.5 transition-all shadow-md shadow-[#0A0A0A]/10 cursor-pointer"
           >
             <ShoppingBag className="w-4 h-4 text-brand" />
             <span className="hidden sm:inline">Nueva Venta</span>

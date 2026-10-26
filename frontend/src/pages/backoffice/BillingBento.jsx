@@ -203,7 +203,7 @@ export default function BillingBento() {
             <button
               key={s}
               onClick={() => setStatusFilter(s)}
-              className={`px-3 py-1.5 rounded-full text-[11px] font-bold cursor-pointer ${statusFilter === s ? 'bg-solid text-white' : 'bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300'}`}
+              className={`px-3 py-1.5 rounded-full text-[11px] font-bold cursor-pointer ${statusFilter === s ? 'bg-solid text-solid-ink' : 'bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300'}`}
             >
               {STATUS_LABELS[s]}
             </button>
@@ -341,7 +341,7 @@ export default function BillingBento() {
                           className={`px-3 py-1.5 rounded-xl text-[11px] font-extrabold cursor-pointer disabled:opacity-50 flex items-center gap-1.5 ${
                             target === 'REJECTED' || target === 'SUSPENDED'
                               ? 'bg-white dark:bg-line border border-red-200 dark:border-red-800/40 text-red-600 dark:text-red-400'
-                              : 'bg-solid hover:bg-solid-hover text-white shadow-sm shadow-[#0A0A0A]/10'
+                              : 'bg-solid hover:bg-solid-hover text-solid-ink shadow-sm shadow-[#0A0A0A]/10'
                           }`}
                         >
                           {target === 'REJECTED' && <Ban size={14} />}
@@ -389,7 +389,7 @@ export default function BillingBento() {
                         key={env}
                         type="button"
                         onClick={() => { setEnvTab(env); setCredentialsForm(EMPTY_CREDENTIALS); setTestResult(null); }}
-                        className={`px-3 py-1.5 rounded-full text-[11px] font-bold cursor-pointer ${envTab === env ? 'bg-solid text-white' : 'bg-white dark:bg-white/10 text-gray-600 dark:text-gray-300'}`}
+                        className={`px-3 py-1.5 rounded-full text-[11px] font-bold cursor-pointer ${envTab === env ? 'bg-solid text-solid-ink' : 'bg-white dark:bg-white/10 text-gray-600 dark:text-gray-300'}`}
                       >
                         {env} {env === 'SANDBOX' ? (detail.sandboxConfigured ? '✓' : '') : (detail.productionConfigured ? '✓' : '')}
                       </button>
@@ -464,7 +464,7 @@ export default function BillingBento() {
                       <button
                         type="submit"
                         disabled={savingCredentials}
-                        className="flex-1 py-2 bg-solid hover:bg-solid-hover disabled:opacity-50 text-white rounded-xl text-[11px] font-extrabold cursor-pointer shadow-sm shadow-[#0A0A0A]/10"
+                        className="flex-1 py-2 bg-solid hover:bg-solid-hover disabled:opacity-50 text-solid-ink rounded-xl text-[11px] font-extrabold cursor-pointer shadow-sm shadow-[#0A0A0A]/10"
                       >
                         {savingCredentials ? 'Guardando...' : `Guardar Credenciales ${envTab}`}
                       </button>

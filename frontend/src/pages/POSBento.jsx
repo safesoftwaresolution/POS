@@ -319,7 +319,7 @@ export default function POSBento() {
         {cart.length > 0 && (
           <span
             key={cart.length}
-            className="absolute -top-1 -right-1 min-w-6 h-6 px-1.5 rounded-full bg-solid text-white text-xs font-black tabular-nums flex items-center justify-center ring-2 ring-white dark:ring-page animate-bounce-once"
+            className="absolute -top-1 -right-1 min-w-6 h-6 px-1.5 rounded-full bg-solid text-solid-ink text-xs font-black tabular-nums flex items-center justify-center ring-2 ring-white dark:ring-page animate-bounce-once"
           >
             {cart.length}
           </span>

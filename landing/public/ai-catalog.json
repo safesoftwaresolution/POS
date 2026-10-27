@@ -1,13 +1,11 @@
 {
   "specVersion": "1.0",
   "host": {
-    "displayName": "PosBento",
-    "url": "https://posbento.com",
-    "description": "Punto de venta, inventario en tiempo real y facturación electrónica DIAN para comercios en Colombia."
+    "displayName": "PosBento"
   },
   "entries": [
     {
-      "identifier": "urn:ai:posbento.com:llms-txt",
+      "identifier": "urn:air:posbento.com:llms-txt",
       "displayName": "PosBento: resumen para modelos de lenguaje",
       "type": "text/markdown",
       "url": "https://posbento.com/llms.txt",

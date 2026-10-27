@@ -20,15 +20,11 @@ import {
 import useAuth from '../../hooks/useAuth';
 import BentoIcon from '../BentoIcon';
 import BrandLogo from '../BrandLogo';
+import Avatar from '../ui/Avatar';
 
 export default function BackofficeSidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }) {
   const { logout, user } = useAuth();
   const navigate = useNavigate();
-
-  const getInitials = (name) => {
-    if (!name) return 'SA';
-    return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-  };
 
   const navGroups = [
     {
@@ -148,9 +144,11 @@ export default function BackofficeSidebar({ isOpen, onClose, isCollapsed, onTogg
         <div className="shrink-0 flex flex-col gap-2 w-full px-3 pt-3 border-t border-line">
           {/* User Card */}
           <div className={`flex items-center gap-2.5 p-2.5 rounded-xl ${isCollapsed && !isOpen ? 'justify-center' : ''}`}>
-            <div className="w-9 h-9 rounded-full bg-solid text-solid-ink flex items-center justify-center font-bold text-xs shrink-0 ring-1 ring-[#EAEAEA] dark:ring-line">
-              {getInitials(user?.fullName || user?.username)}
-            </div>
+            <Avatar
+              name={user?.fullName || user?.username}
+              src={user?.avatarUrl}
+              className="w-9 h-9 rounded-full text-xs ring-1 ring-[#EAEAEA] dark:ring-line"
+            />
             {(!isCollapsed || isOpen) && (
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-bold text-ink truncate">{user?.fullName || user?.username}</p>

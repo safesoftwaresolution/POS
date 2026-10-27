@@ -4,6 +4,7 @@ import {
   getUsersApi, getUserQuotaApi, createUserApi, updateUserApi, changeUserStatusApi, changeUserPasswordApi, deleteUserApi,
 } from '../services/usersApi';
 import useAuth from '../hooks/useAuth';
+import Avatar from '../components/ui/Avatar';
 import useModal from '../hooks/useModal';
 import { Button, Badge, Card, EmptyState, Input, Modal, PageHeader, Select } from '../components/ui';
 import useLoad from '../hooks/useLoad';
@@ -246,9 +247,7 @@ export default function UsersBento() {
                     <tr key={u.id} className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
                       <td data-label="" className="py-3 px-6">
                         <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-full bg-solid text-solid-ink flex items-center justify-center font-bold text-[11px] shrink-0">
-                            {(u.fullName || u.username || '?').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
-                          </div>
+                          <Avatar name={u.fullName || u.username} src={u.avatarUrl} className="w-9 h-9 rounded-full text-[11px]" />
                           <div className="min-w-0">
                             <span className="font-bold text-sm text-ink block truncate">
                               {u.fullName} {isMe && <span className="text-[10px] text-brand font-extrabold">(tú)</span>}

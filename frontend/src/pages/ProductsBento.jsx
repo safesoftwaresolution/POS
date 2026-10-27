@@ -250,6 +250,13 @@ export default function ProductsBento() {
     }
   };
 
+  // Quita la foto del formulario. Si era una recién subida sin guardar se borra de R2 ya; si ya estaba
+  // guardada en el producto, el backend la borra de R2 al guardar el formulario sin foto.
+  const handleImageRemove = () => {
+    discardUnsavedUpload();
+    setNewProduct(prev => ({ ...prev, imageUrl: '' }));
+  };
+
   const toggleInactive = () => setShowInactive((v) => !v);
 
   const handleToggleStatus = async (p) => {
@@ -401,6 +408,7 @@ export default function ProductsBento() {
           onLotsChanged={() => loadProducts(showInactive, { silent: true })}
           uploadingImage={uploadingImage}
           onImageChange={handleImageChange}
+          onImageRemove={handleImageRemove}
           creatingSubcategory={showNewSubcategory}
           setCreatingSubcategory={setShowNewSubcategory}
           newSubcategoryName={newSubcategoryName}

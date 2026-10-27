@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Save, Store, Key, AlertCircle, ImagePlus, Mail, Phone, MapPin, Hash, Globe, IdCard } from 'lucide-react';
 import { getSettingsApi, updateSettingsApi, uploadCompanyLogoApi } from '../services/settingsApi';
+import { BRANDING_CHANGED_EVENT } from '../hooks/useBranding';
 import { getOwnStoreApi, updateOwnStoreApi } from '../services/storesApi';
 
 const EMPTY_CONFIG = { businessName: '', taxId: '', address: '', phone: '', email: '', logoUrl: '' };
@@ -81,6 +82,7 @@ export default function SettingsBento() {
     setErrorMsg('');
     try {
       await updateSettingsApi(config);
+      window.dispatchEvent(new Event(BRANDING_CHANGED_EVENT));
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (err) {
@@ -111,6 +113,7 @@ export default function SettingsBento() {
     try {
       const result = await uploadCompanyLogoApi(file);
       setConfig(prev => ({ ...prev, logoUrl: result.logoUrl }));
+      window.dispatchEvent(new Event(BRANDING_CHANGED_EVENT));
       setLogoNotice(result.message || '');
     } catch (err) {
       setErrorMsg(err.message || 'Error al subir el logo. Intenta nuevamente.');

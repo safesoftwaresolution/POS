@@ -12,7 +12,8 @@ import {
   ShoppingBag
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import useAuth from '../../hooks/useAuth';
+import useBranding from '../../hooks/useBranding';
+import Avatar from '../ui/Avatar';
 import useNow from '../../hooks/useNow';
 import useUnreadNotifications from '../../hooks/useUnreadNotifications';
 import useTheme from '../../hooks/useTheme';
@@ -64,7 +65,7 @@ function formatRelativeTime(isoDate) {
 export default function Header({ onToggleMobileMenu }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user } = useAuth();
+  const { data: branding } = useBranding();
   const { darkMode, toggleTheme } = useTheme();
   const pageInfo = PAGE_TITLES[location.pathname] || { title: 'PosBento', subtitle: 'Tu negocio, en equilibrio' };
   const isOnPos = location.pathname === '/pos';
@@ -74,11 +75,6 @@ export default function Header({ onToggleMobileMenu }) {
   const [unreadCount, setUnreadCount] = useUnreadNotifications();
   const now = useNow();
   const notifRef = useRef(null);
-
-  const getInitials = (name) => {
-    if (!name) return 'US';
-    return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-  };
 
   useEffect(() => {
     function handleClickOutside(e) {
@@ -242,9 +238,13 @@ export default function Header({ onToggleMobileMenu }) {
           </button>
         )}
 
-        {/* User Profile Avatar */}
-        <div className="w-10 h-10 rounded-full bg-solid dark:bg-line text-white flex items-center justify-center font-bold text-xs shadow-sm border-2 border-white dark:border-line-strong cursor-pointer" title={user?.fullName || user?.username}>
-          {getInitials(user?.fullName || user?.username)}
+        {/* Logo del negocio (Configuración → Identidad del negocio); la foto de la persona va en la sidebar. */}
+        <div title={branding?.businessName || 'Mi negocio'}>
+          <Avatar
+            name={branding?.businessName}
+            src={branding?.logoUrl}
+            className="w-10 h-10 rounded-xl text-xs shadow-sm border-2 border-white dark:border-line-strong"
+          />
         </div>
       </div>
 

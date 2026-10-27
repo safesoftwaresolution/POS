@@ -36,7 +36,8 @@ export function AuthProvider({ children }) {
       username: data.username || fallbackUsername,
       role: data.role || 'ADMINISTRATOR',
       fullName: data.fullName || (data.username === 'admin' ? 'Administrador Principal' : data.username || fallbackUsername),
-      storeId: data.storeId ?? null
+      storeId: data.storeId ?? null,
+      avatarUrl: data.avatarUrl ?? null
     };
     setAuthToken(data.token);
     localStorage.setItem('pos_user', JSON.stringify(userData));
@@ -68,6 +69,16 @@ export function AuthProvider({ children }) {
     return applySession(data, user?.username);
   };
 
+  // Refleja al instante un cambio de perfil (ej. la foto) sin pedir otra sesión.
+  const updateUser = (patch) => {
+    setUser((current) => {
+      if (!current) return current;
+      const next = { ...current, ...patch };
+      localStorage.setItem('pos_user', JSON.stringify(next));
+      return next;
+    });
+  };
+
   const logout = async () => {
     setLoading(true);
     await logoutApi();
@@ -77,7 +88,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading, isAuthenticated: !!user, setSessionFromResponse, refreshSession }}>
+    <AuthContext.Provider value={{ user, login, logout, loading, isAuthenticated: !!user, setSessionFromResponse, refreshSession, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

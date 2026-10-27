@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { AlertCircle, Camera, ImagePlus, Images, Plus, ScanLine } from 'lucide-react';
+import { AlertCircle, Camera, ImagePlus, Images, Plus, ScanLine, Trash2 } from 'lucide-react';
 import { Button, Field, Input, Modal, MoneyInput, Select, inputClass } from '../ui';
 import { BarcodeScanner } from '../scanner';
 import ProductLotsSection from './ProductLotsSection';
@@ -11,7 +11,7 @@ import ProductLotsSection from './ProductLotsSection';
  */
 export default function ProductFormModal({
   product, setProduct, categories, subcategories, errorMsg, canManageLots = false, onLotsChanged,
-  uploadingImage, onImageChange,
+  uploadingImage, onImageChange, onImageRemove,
   creatingSubcategory, setCreatingSubcategory, newSubcategoryName, setNewSubcategoryName, onCreateSubcategory,
   onSubmit, onClose,
 }) {
@@ -74,6 +74,12 @@ export default function ProductFormModal({
               <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={onImageChange} />
               <input ref={galleryInputRef} type="file" accept="image/*" className="hidden" onChange={onImageChange} />
             </div>
+
+            {product.imageUrl && (
+              <Button size="sm" variant="soft" icon={Trash2} disabled={uploadingImage} onClick={onImageRemove}>
+                Quitar imagen
+              </Button>
+            )}
           </div>
         </div>
 

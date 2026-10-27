@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -18,7 +18,8 @@ import {
   ChevronRight,
   X,
   Moon,
-  Bell
+  Bell,
+  Camera
 } from 'lucide-react';
 import useAuth from '../../hooks/useAuth';
 import useTheme from '../../hooks/useTheme';
@@ -29,9 +30,12 @@ import asList from '../../utils/asList';
 import { ROLE_LABELS } from '../../constants/roles';
 import BentoIcon from '../BentoIcon';
 import BrandLogo from '../BrandLogo';
+import Avatar from '../ui/Avatar';
+import { prepareAvatarForUpload } from '../../utils/image';
+import { uploadMyAvatarApi, removeMyAvatarApi } from '../../services/usersApi';
 
 export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }) {
-  const { logout, user } = useAuth();
+  const { logout, user, updateUser } = useAuth();
   const { darkMode, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [profileOpen, setProfileOpen] = useState(false);
@@ -45,9 +49,37 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
     { initial: 0 },
   );
 
-  const getInitials = (name) => {
-    if (!name) return 'US';
-    return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+  const avatarInputRef = useRef(null);
+  const [avatarBusy, setAvatarBusy] = useState(false);
+  const [avatarError, setAvatarError] = useState('');
+
+  const handleAvatarFile = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setAvatarError('');
+    setAvatarBusy(true);
+    try {
+      const updated = await uploadMyAvatarApi(await prepareAvatarForUpload(file));
+      updateUser({ avatarUrl: updated.avatarUrl ?? null });
+    } catch (err) {
+      setAvatarError(err.message || 'No se pudo subir la foto.');
+    } finally {
+      setAvatarBusy(false);
+    }
+  };
+
+  const handleAvatarRemove = async () => {
+    setAvatarError('');
+    setAvatarBusy(true);
+    try {
+      await removeMyAvatarApi();
+      updateUser({ avatarUrl: null });
+    } catch (err) {
+      setAvatarError(err.message || 'No se pudo quitar la foto.');
+    } finally {
+      setAvatarBusy(false);
+    }
   };
 
   // Agrupado por área de trabajo para que el menú sea más fácil de escanear.
@@ -196,9 +228,11 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
             className={`flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-line transition-colors cursor-pointer text-left ${isCollapsed && !isOpen ? 'justify-center' : ''}`}
           >
             <div className="relative shrink-0">
-              <div className="w-9 h-9 rounded-full bg-solid text-solid-ink flex items-center justify-center font-bold text-xs ring-1 ring-[#EAEAEA] dark:ring-line">
-                {getInitials(user?.fullName || user?.username)}
-              </div>
+              <Avatar
+                name={user?.fullName || user?.username}
+                src={user?.avatarUrl}
+                className="w-9 h-9 rounded-full text-xs ring-1 ring-[#EAEAEA] dark:ring-line"
+              />
               <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-brand ring-2 ring-white dark:ring-card" />
             </div>
             {(!isCollapsed || isOpen) && (
@@ -246,10 +280,28 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
             <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-line">
               <div className="flex items-center gap-4 min-w-0">
                 <div className="relative shrink-0">
-                  <div className="w-14 h-14 rounded-2xl bg-solid text-solid-ink flex items-center justify-center font-bold text-lg ring-2 ring-[#EAEAEA] dark:ring-line">
-                    {getInitials(user?.fullName || user?.username)}
-                  </div>
-                  <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full bg-brand ring-2 ring-white dark:ring-card" />
+                  <Avatar
+                    name={user?.fullName || user?.username}
+                    src={user?.avatarUrl}
+                    className={`w-14 h-14 rounded-2xl text-lg ring-2 ring-[#EAEAEA] dark:ring-line ${avatarBusy ? 'opacity-50' : ''}`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => avatarInputRef.current?.click()}
+                    disabled={avatarBusy}
+                    aria-label="Cambiar foto de perfil"
+                    title="Cambiar foto de perfil"
+                    className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-brand text-white flex items-center justify-center ring-2 ring-white dark:ring-card cursor-pointer disabled:cursor-wait"
+                  >
+                    <Camera className="w-3 h-3" />
+                  </button>
+                  <input
+                    ref={avatarInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg"
+                    className="hidden"
+                    onChange={handleAvatarFile}
+                  />
                 </div>
                 <div className="min-w-0">
                   <p className="text-base font-extrabold text-ink truncate leading-tight">
@@ -272,6 +324,22 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
                 <X className="w-4 h-4" />
               </button>
             </div>
+
+            {(avatarError || user?.avatarUrl) && (
+              <div className="px-5 pt-3 flex items-center justify-between gap-3 text-[11px]">
+                <span className="text-red-600 dark:text-red-400 font-semibold">{avatarError}</span>
+                {user?.avatarUrl && (
+                  <button
+                    type="button"
+                    onClick={handleAvatarRemove}
+                    disabled={avatarBusy}
+                    className="shrink-0 font-bold text-ink-soft hover:text-red-600 cursor-pointer disabled:opacity-50"
+                  >
+                    Quitar foto
+                  </button>
+                )}
+              </div>
+            )}
 
             {/* Menu Items */}
             <div className="px-3 py-3 flex flex-col gap-1">

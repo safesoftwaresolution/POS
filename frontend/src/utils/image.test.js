@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { fitWithin, prepareImageForUpload } from './image';
+import { centerSquare, fitWithin, prepareImageForUpload } from './image';
 
 describe('fitWithin', () => {
   it('reduce manteniendo la proporción', () => {
@@ -26,5 +26,19 @@ describe('prepareImageForUpload', () => {
     } finally {
       vi.unstubAllGlobals();
     }
+  });
+});
+
+describe('centerSquare', () => {
+  it('recorta el cuadrado central de una foto horizontal', () => {
+    expect(centerSquare(4000, 3000)).toEqual({ sx: 500, sy: 0, side: 3000 });
+  });
+
+  it('recorta el cuadrado central de una foto vertical', () => {
+    expect(centerSquare(3000, 4000)).toEqual({ sx: 0, sy: 500, side: 3000 });
+  });
+
+  it('deja intacta una imagen ya cuadrada', () => {
+    expect(centerSquare(500, 500)).toEqual({ sx: 0, sy: 0, side: 500 });
   });
 });

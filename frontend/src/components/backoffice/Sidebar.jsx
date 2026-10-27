@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   Store,
@@ -21,10 +21,12 @@ import useAuth from '../../hooks/useAuth';
 import BentoIcon from '../BentoIcon';
 import BrandLogo from '../BrandLogo';
 import Avatar from '../ui/Avatar';
+import ProfileModal from '../profile/ProfileModal';
 
 export default function BackofficeSidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }) {
   const { logout, user } = useAuth();
   const navigate = useNavigate();
+  const [profileOpen, setProfileOpen] = useState(false);
 
   const navGroups = [
     {
@@ -143,7 +145,12 @@ export default function BackofficeSidebar({ isOpen, onClose, isCollapsed, onTogg
 
         <div className="shrink-0 flex flex-col gap-2 w-full px-3 pt-3 border-t border-line">
           {/* User Card */}
-          <div className={`flex items-center gap-2.5 p-2.5 rounded-xl ${isCollapsed && !isOpen ? 'justify-center' : ''}`}>
+          <button
+            type="button"
+            onClick={() => setProfileOpen(true)}
+            title="Mi perfil"
+            className={`flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-line transition-colors cursor-pointer text-left ${isCollapsed && !isOpen ? 'justify-center' : ''}`}
+          >
             <Avatar
               name={user?.fullName || user?.username}
               src={user?.avatarUrl}
@@ -155,7 +162,7 @@ export default function BackofficeSidebar({ isOpen, onClose, isCollapsed, onTogg
                 <p className="text-[11px] text-ink-muted truncate">Super Admin</p>
               </div>
             )}
-          </div>
+          </button>
 
           <button
             onClick={onToggleCollapse}
@@ -186,6 +193,8 @@ export default function BackofficeSidebar({ isOpen, onClose, isCollapsed, onTogg
           </button>
         </div>
       </aside>
+
+      {profileOpen && <ProfileModal onClose={() => setProfileOpen(false)} />}
     </>
   );
 }

@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -31,11 +31,10 @@ import { ROLE_LABELS } from '../../constants/roles';
 import BentoIcon from '../BentoIcon';
 import BrandLogo from '../BrandLogo';
 import Avatar from '../ui/Avatar';
-import { prepareAvatarForUpload } from '../../utils/image';
-import { uploadMyAvatarApi, removeMyAvatarApi } from '../../services/usersApi';
+import useAvatarUpload from '../../hooks/useAvatarUpload';
 
 export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }) {
-  const { logout, user, updateUser } = useAuth();
+  const { logout, user } = useAuth();
   const { darkMode, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [profileOpen, setProfileOpen] = useState(false);
@@ -49,38 +48,9 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
     { initial: 0 },
   );
 
-  const avatarInputRef = useRef(null);
-  const [avatarBusy, setAvatarBusy] = useState(false);
-  const [avatarError, setAvatarError] = useState('');
-
-  const handleAvatarFile = async (e) => {
-    const file = e.target.files?.[0];
-    e.target.value = '';
-    if (!file) return;
-    setAvatarError('');
-    setAvatarBusy(true);
-    try {
-      const updated = await uploadMyAvatarApi(await prepareAvatarForUpload(file));
-      updateUser({ avatarUrl: updated.avatarUrl ?? null });
-    } catch (err) {
-      setAvatarError(err.message || 'No se pudo subir la foto.');
-    } finally {
-      setAvatarBusy(false);
-    }
-  };
-
-  const handleAvatarRemove = async () => {
-    setAvatarError('');
-    setAvatarBusy(true);
-    try {
-      await removeMyAvatarApi();
-      updateUser({ avatarUrl: null });
-    } catch (err) {
-      setAvatarError(err.message || 'No se pudo quitar la foto.');
-    } finally {
-      setAvatarBusy(false);
-    }
-  };
+  const {
+    inputRef: avatarInputRef, busy: avatarBusy, error: avatarError, onFile: handleAvatarFile, remove: handleAvatarRemove,
+  } = useAvatarUpload();
 
   // Agrupado por área de trabajo para que el menú sea más fácil de escanear.
   const navGroups = [

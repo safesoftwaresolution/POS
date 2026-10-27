@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import useAuth from '../../hooks/useAuth';
 import BentoIcon from '../BentoIcon';
+import BrandLogo from '../BrandLogo';
 
 export default function BackofficeSidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }) {
   const { logout, user } = useAuth();
@@ -89,14 +90,13 @@ export default function BackofficeSidebar({ isOpen, onClose, isCollapsed, onTogg
           isCollapsed ? 'px-3 justify-center' : 'px-5 justify-between'
         }`}>
           <div className="flex items-center gap-3 min-w-0">
-            <BentoIcon />
-            {(!isCollapsed || isOpen) && (
-              <div className="truncate">
-                <h1 className="font-black text-lg leading-tight tracking-tight text-ink truncate flex items-center gap-1">
-                  <span>Bento</span><span className="text-brand">POS</span>
-                </h1>
-                <p className="text-[10px] text-gray-400 font-semibold tracking-wide">Backoffice SaaS</p>
+            {(!isCollapsed || isOpen) ? (
+              <div className="min-w-0 space-y-1">
+                <BrandLogo className="h-10" />
+                <p className="text-[10px] text-gray-400 font-semibold tracking-wide truncate">Backoffice SaaS</p>
               </div>
+            ) : (
+              <BentoIcon />
             )}
           </div>
         </div>

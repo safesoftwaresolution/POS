@@ -47,7 +47,7 @@ export default function CustomersBento() {
     <div className="space-y-6 select-none">
       <PageHeader
         title="Directorio de Clientes"
-        subtitle="Gestión de clientes para emisión y facturación electrónica DIAN en BentoPOS"
+        subtitle="Gestión de clientes para emisión y facturación electrónica DIAN en PosBento"
         actions={<Button icon={UserPlus} onClick={() => setModal({})}>Registrar Nuevo Cliente</Button>}
       />
 

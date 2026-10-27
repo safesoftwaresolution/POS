@@ -31,7 +31,7 @@ function detectIosSafari() {
 }
 
 /**
- * Invita a instalar BentoPOS en el teléfono. Android/Chrome usa `beforeinstallprompt`;
+ * Invita a instalar PosBento en el teléfono. Android/Chrome usa `beforeinstallprompt`;
  * iOS Safari no permite instalar desde código, así que se muestran los pasos de "Añadir a inicio".
  * Solo aparece en móvil y si la app no está ya instalada.
  */
@@ -80,10 +80,10 @@ export default function InstallPrompt() {
 
   return (
     <>
-      <div className="fixed left-3 right-3 bottom-3 z-120 max-w-md mx-auto flex items-center gap-3 p-3 rounded-2xl bg-solid text-solid-ink shadow-2xl" role="dialog" aria-label="Instalar BentoPOS">
+      <div className="fixed left-3 right-3 bottom-3 z-120 max-w-md mx-auto flex items-center gap-3 p-3 rounded-2xl bg-solid text-solid-ink shadow-2xl" role="dialog" aria-label="Instalar PosBento">
         <img src="/icons/icon-192.png" alt="" className="w-11 h-11 rounded-xl shrink-0" />
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-extrabold">Instala BentoPOS</p>
+          <p className="text-sm font-extrabold">Instala PosBento</p>
           <p className="text-[11px] opacity-70 leading-tight">
             {iosMode ? 'Añádela a tu pantalla de inicio' : 'Acceso directo en tu pantalla de inicio'}
           </p>
@@ -111,7 +111,7 @@ export default function InstallPrompt() {
           <div className="w-full max-w-sm bg-card text-ink rounded-3xl p-5 shadow-2xl space-y-4">
             <div>
               <h2 className="text-base font-black">
-                {safari ? 'Instala BentoPOS en tu iPhone' : 'Ábrela en Safari para instalarla'}
+                {safari ? 'Instala PosBento en tu iPhone' : 'Ábrela en Safari para instalarla'}
               </h2>
               <p className="text-xs text-ink-soft mt-1">
                 {safari

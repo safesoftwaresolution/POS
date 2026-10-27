@@ -70,7 +70,7 @@ export default function InventoryBento() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-ink">Inventario</h1>
-          <p className="text-xs text-ink-soft font-medium">Stock, movimientos, devoluciones y proveedores en un solo módulo de BentoPOS</p>
+          <p className="text-xs text-ink-soft font-medium">Stock, movimientos, devoluciones y proveedores en un solo módulo de PosBento</p>
         </div>
 
         {activeTab === 'stock' && (

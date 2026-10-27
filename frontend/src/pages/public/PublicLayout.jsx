@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import BentoIcon from '../../components/BentoIcon';
+import BrandLogo from '../../components/BrandLogo';
 import useAuth from '../../hooks/useAuth';
 
 const LEGAL_LINKS = [
@@ -16,11 +16,8 @@ export default function PublicLayout({ children }) {
     <div className="min-h-screen bg-page text-ink flex flex-col">
       <header className="border-b border-line bg-card">
         <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2.5">
-            <BentoIcon size="w-9 h-9" rounded="rounded-xl" />
-            <span className="font-black text-lg tracking-tight">
-              Bento<span className="text-brand">POS</span>
-            </span>
+          <Link to="/" aria-label="PosBento" className="flex items-center">
+            <BrandLogo className="h-10" />
           </Link>
           <Link to={isAuthenticated ? '/' : '/login'} className="text-xs font-bold text-ink-soft hover:text-ink">
             {isAuthenticated ? 'Volver al sistema' : 'Iniciar sesión'}

@@ -11,7 +11,7 @@ public class R2StorageProperties {
     private String accessKeyId = "";
     private String secretAccessKey = "";
     private String bucketName = "pos-storage";
-    private String publicUrl = "https://pub-example.r2.dev";
+    private String publicUrl = "";
 
     public String getAccountId() {
         return accountId;
@@ -51,6 +51,14 @@ public class R2StorageProperties {
 
     public void setPublicUrl(String publicUrl) {
         this.publicUrl = publicUrl;
+    }
+
+    /**
+     * Hay una URL publica real para armar los enlaces de los archivos. Vacia o con el valor de ejemplo
+     * (pub-example.r2.dev) los archivos se subirian al bucket pero su enlace guardado no abriria nunca.
+     */
+    public boolean hasPublicUrl() {
+        return publicUrl != null && !publicUrl.isBlank() && !publicUrl.contains("pub-example");
     }
 
     public boolean isConfigured() {

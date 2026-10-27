@@ -15,6 +15,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Map;
 
@@ -176,6 +177,36 @@ public class UserController {
             @PathVariable Long id) {
         userFacade.deleteUser(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping(path = "/me/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("isAuthenticated()")
+    @Operation(
+            summary = "Subir mi foto de perfil",
+            description = "Sube o reemplaza la foto del usuario autenticado (cualquier rol). PNG o JPG, hasta 512 KB y 512x512 px."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Foto actualizada",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = UserDto.class))),
+            @ApiResponse(responseCode = "400", description = "Archivo inválido", content = @Content),
+            @ApiResponse(responseCode = "401", description = "No autenticado", content = @Content)
+    })
+    public ResponseEntity<UserDto> uploadMyAvatar(@RequestPart("file") MultipartFile file) {
+        return ResponseEntity.ok(userFacade.updateMyAvatar(file));
+    }
+
+    @DeleteMapping("/me/avatar")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Quitar mi foto de perfil", description = "Elimina la foto del usuario autenticado.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Foto eliminada",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = UserDto.class))),
+            @ApiResponse(responseCode = "401", description = "No autenticado", content = @Content)
+    })
+    public ResponseEntity<UserDto> removeMyAvatar() {
+        return ResponseEntity.ok(userFacade.removeMyAvatar());
     }
 
     @PatchMapping("/{id}/password")

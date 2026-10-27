@@ -44,6 +44,13 @@ public interface UserFacade {
     Page<UserDto> listVerifiedOwners(Pageable pageable);
     /** Uso de usuarios del local del llamador frente al tope de su plan; vacío si no hay local o tope. */
     Optional<UserQuotaStatusDto> getQuotaStatus();
+    /**
+     * Sube (o reemplaza) la foto de perfil del usuario autenticado: PNG/JPG, hasta 512 KB y 512x512 px. La foto
+     * anterior se borra del almacenamiento una vez confirmada la transacción.
+     */
+    UserDto updateMyAvatar(org.springframework.web.multipart.MultipartFile file);
+    /** Quita la foto de perfil del usuario autenticado (vuelven las iniciales). */
+    UserDto removeMyAvatar();
     /** Usuarios activos de un local con alguno de los roles dados (ej. destinatarios de alertas). */
     List<UserDto> listActiveByStoreAndRoles(Long storeId, List<String> roles);
 }

@@ -242,7 +242,9 @@ public class AuthService implements AuthFacade {
                 user.username(),
                 user.role(),
                 user.storeId(),
-                jwtService.getExpirationTime()
+                jwtService.getExpirationTime(),
+                user.fullName(),
+                user.avatarUrl()
         );
     }
 
@@ -290,9 +292,9 @@ public class AuthService implements AuthFacade {
             storeId = posUserDetails.getStoreId();
         }
 
-        Long userId = userFacade.findByUsername(userDetails.getUsername())
-                .map(UserDto::id)
+        UserDto account = userFacade.findByUsername(userDetails.getUsername())
                 .orElseThrow(() -> new BadCredentialsException("Usuario o contrasena incorrectos"));
+        Long userId = account.id();
 
         String token = jwtService.generateToken(userDetails, role, storeId);
         String refreshToken = refreshTokenService.issue(userId);
@@ -303,7 +305,9 @@ public class AuthService implements AuthFacade {
                 userDetails.getUsername(),
                 role,
                 storeId,
-                jwtService.getExpirationTime()
+                jwtService.getExpirationTime(),
+                account.fullName(),
+                account.avatarUrl()
         );
     }
 
@@ -335,7 +339,9 @@ public class AuthService implements AuthFacade {
                 user.username(),
                 user.role(),
                 user.storeId(),
-                jwtService.getExpirationTime()
+                jwtService.getExpirationTime(),
+                user.fullName(),
+                user.avatarUrl()
         );
     }
 

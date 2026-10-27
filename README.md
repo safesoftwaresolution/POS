@@ -335,7 +335,7 @@ Puedes personalizar la configuración del backend mediante variables de entorno 
 | `R2_ACCESS_KEY_ID` | *(vacío)* | Access Key ID del token API de Cloudflare R2. |
 | `R2_SECRET_ACCESS_KEY` | *(vacío)* | Secret Access Key del token API de Cloudflare R2. |
 | `R2_BUCKET_NAME` | `pos-storage` | Nombre del bucket de R2. Dentro conviven las carpetas `documentos`, `imagenes-productos` e `imagenes-logos`. |
-| `R2_PUBLIC_URL` | `https://pub-example.r2.dev` | URL pública del bucket (Public Development URL o dominio propio conectado en R2) usada para armar la URL de cada archivo subido. |
+| `R2_PUBLIC_URL` | *(vacío)* | **Obligatoria para subir archivos.** URL pública del bucket (Public Development URL o dominio propio conectado en R2) con la que se arma la URL de cada archivo. Si falta (o conserva el valor de ejemplo `pub-example.r2.dev`), la subida falla con un error claro en vez de guardar un enlace roto. |
 
 > **Credenciales de Factus**: no se configuran por variable de entorno. El `SUPER_ADMIN` las carga **por local**
 > desde `PUT /api/v1/backoffice/stores/{storeId}/billing/credentials` y quedan cifradas en la tabla

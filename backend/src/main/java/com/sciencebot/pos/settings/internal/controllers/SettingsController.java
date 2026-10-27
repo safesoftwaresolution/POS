@@ -1,5 +1,6 @@
 package com.sciencebot.pos.settings.internal.controllers;
 
+import com.sciencebot.pos.settings.BrandingDto;
 import com.sciencebot.pos.settings.SettingsDto;
 import com.sciencebot.pos.settings.SettingsFacade;
 import com.sciencebot.pos.settings.UpdateSettingsCommand;
@@ -45,6 +46,23 @@ public class SettingsController {
     })
     public ResponseEntity<SettingsDto> getSettings() {
         return ResponseEntity.ok(settingsFacade.getSettings());
+    }
+
+    @GetMapping("/branding")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(
+            summary = "Obtener nombre y logo del negocio",
+            description = "Solo el nombre comercial y el logo, para mostrarlos en la cabecera. Accesible para cualquier usuario del local."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Identidad del negocio",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = BrandingDto.class))),
+            @ApiResponse(responseCode = "401", description = "No autenticado", content = @Content)
+    })
+    public ResponseEntity<BrandingDto> getBranding() {
+        SettingsDto settings = settingsFacade.getSettings();
+        return ResponseEntity.ok(new BrandingDto(settings.businessName(), settings.logoUrl()));
     }
 
     @PutMapping

@@ -93,7 +93,7 @@ class CompanyLogoServiceTest {
                 pngBytes
         );
 
-        when(storageFacade.uploadFile(eq(file), eq("logos"))).thenReturn(
+        when(storageFacade.uploadFile(eq(file), eq("imagenes-logos/tienda-" + STORE_ID))).thenReturn(
                 new StorageUploadResult("logos/logo123.png", "https://pub.r2.dev/logos/logo123.png", "mi_empresa_logo.png", file.getSize(), "image/png")
         );
 
@@ -118,11 +118,37 @@ class CompanyLogoServiceTest {
     }
 
     @Test
+    void updateLogo_deletesThePreviousLogoFromStorage() throws Exception {
+        when(factusTokenManager.getAccessToken())
+                .thenThrow(new com.sciencebot.pos.billing.exception.BillingNotEnabledException("no activo"));
+        mockSetting.setLogoUrl("https://pub.r2.dev/imagenes-logos/tienda-10/viejo.png");
+        MockMultipartFile file = new MockMultipartFile("file", "logo.png", "image/png", createImageBytes(100, 100, "png"));
+        when(storageFacade.uploadFile(eq(file), eq("imagenes-logos/tienda-" + STORE_ID))).thenReturn(
+                new StorageUploadResult("k", "https://pub.r2.dev/imagenes-logos/tienda-10/nuevo.png", "logo.png", file.getSize(), "image/png"));
+
+        companyLogoService.updateLogo(file);
+
+        verify(storageFacade).deleteFileByUrl("https://pub.r2.dev/imagenes-logos/tienda-10/viejo.png", "imagenes-logos/", "logos/");
+    }
+
+    @Test
+    void updateLogo_whenStorageFails_keepsThePreviousLogoAndReportsTheError() throws Exception {
+        mockSetting.setLogoUrl("https://pub.r2.dev/imagenes-logos/tienda-10/viejo.png");
+        MockMultipartFile file = new MockMultipartFile("file", "logo.png", "image/png", createImageBytes(100, 100, "png"));
+        when(storageFacade.uploadFile(eq(file), any())).thenThrow(new IllegalStateException("R2 caido"));
+
+        assertThrows(IllegalStateException.class, () -> companyLogoService.updateLogo(file));
+
+        assertEquals("https://pub.r2.dev/imagenes-logos/tienda-10/viejo.png", mockSetting.getLogoUrl());
+        verify(storageFacade, never()).deleteFileByUrl(any(), any());
+    }
+
+    @Test
     void updateLogo_savesLocallyWithoutCallingFactus_whenStoreBillingIsNotActive() throws Exception {
         when(factusTokenManager.getAccessToken())
                 .thenThrow(new com.sciencebot.pos.billing.exception.BillingNotEnabledException("no activo"));
         MockMultipartFile file = new MockMultipartFile("file", "logo.png", "image/png", createImageBytes(100, 100, "png"));
-        when(storageFacade.uploadFile(eq(file), eq("logos"))).thenReturn(
+        when(storageFacade.uploadFile(eq(file), eq("imagenes-logos/tienda-" + STORE_ID))).thenReturn(
                 new StorageUploadResult("logos/l.png", "https://pub.r2.dev/logos/l.png", "logo.png", file.getSize(), "image/png"));
 
         CompanyLogoResponseDto response = companyLogoService.updateLogo(file);
@@ -137,7 +163,7 @@ class CompanyLogoServiceTest {
     void updateLogo_doesNotSyncWithFactus_whenTheConfiguredProviderIsNotFactus() throws Exception {
         org.springframework.test.util.ReflectionTestUtils.setField(companyLogoService, "billingProvider", "mock");
         MockMultipartFile file = new MockMultipartFile("file", "logo.png", "image/png", createImageBytes(100, 100, "png"));
-        when(storageFacade.uploadFile(eq(file), eq("logos"))).thenReturn(
+        when(storageFacade.uploadFile(eq(file), eq("imagenes-logos/tienda-" + STORE_ID))).thenReturn(
                 new StorageUploadResult("logos/l.png", "https://pub.r2.dev/logos/l.png", "logo.png", file.getSize(), "image/png"));
 
         CompanyLogoResponseDto response = companyLogoService.updateLogo(file);
@@ -155,7 +181,7 @@ class CompanyLogoServiceTest {
     void updateLogo_syncsWithFactus_whenTheConfiguredProviderIsFactusIgnoringCaseAndSpaces() throws Exception {
         org.springframework.test.util.ReflectionTestUtils.setField(companyLogoService, "billingProvider", " Factus ");
         MockMultipartFile file = new MockMultipartFile("file", "logo.png", "image/png", createImageBytes(100, 100, "png"));
-        when(storageFacade.uploadFile(eq(file), eq("logos"))).thenReturn(
+        when(storageFacade.uploadFile(eq(file), eq("imagenes-logos/tienda-" + STORE_ID))).thenReturn(
                 new StorageUploadResult("logos/l.png", "https://pub.r2.dev/logos/l.png", "logo.png", file.getSize(), "image/png"));
         mockServer.expect(requestTo(FACTUS_URL + "/v2/companies/logo"))
                 .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
@@ -170,7 +196,7 @@ class CompanyLogoServiceTest {
     void updateLogo_usesTheFactusUrlOfTheStoreEnvironment() throws Exception {
         when(factusTokenManager.getBaseUrl()).thenReturn("https://api.factus.com.co/");
         MockMultipartFile file = new MockMultipartFile("file", "logo.png", "image/png", createImageBytes(100, 100, "png"));
-        when(storageFacade.uploadFile(eq(file), eq("logos"))).thenReturn(
+        when(storageFacade.uploadFile(eq(file), eq("imagenes-logos/tienda-" + STORE_ID))).thenReturn(
                 new StorageUploadResult("logos/l.png", "https://pub.r2.dev/logos/l.png", "logo.png", file.getSize(), "image/png"));
         mockServer.expect(requestTo("https://api.factus.com.co/v2/companies/logo"))
                 .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
@@ -190,6 +216,8 @@ class CompanyLogoServiceTest {
                 "image/jpeg",
                 jpgBytes
         );
+        when(storageFacade.uploadFile(eq(file), any())).thenReturn(
+                new StorageUploadResult("k", "https://pub.r2.dev/imagenes-logos/tienda-10/l.png", "logo", 1L, "image/png"));
 
         mockServer.expect(requestTo(FACTUS_URL + "/v2/companies/logo"))
                 .andExpect(method(HttpMethod.POST))
@@ -303,6 +331,8 @@ class CompanyLogoServiceTest {
     void updateLogo_fails_whenFactusReturnsServerError() throws Exception {
         byte[] pngBytes = createImageBytes(150, 150, "png");
         MockMultipartFile file = new MockMultipartFile("file", "logo.png", "image/png", pngBytes);
+        when(storageFacade.uploadFile(eq(file), any())).thenReturn(
+                new StorageUploadResult("k", "https://pub.r2.dev/imagenes-logos/tienda-10/l.png", "logo", 1L, "image/png"));
 
         mockServer.expect(requestTo(FACTUS_URL + "/v2/companies/logo"))
                 .andExpect(method(HttpMethod.POST))

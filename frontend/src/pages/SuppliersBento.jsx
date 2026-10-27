@@ -89,7 +89,7 @@ export default function SuppliersBento() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-ink">Proveedores</h1>
-          <p className="text-xs text-ink-soft font-medium">Directorio de proveedores para registrar compras y cargas de stock en BentoPOS</p>
+          <p className="text-xs text-ink-soft font-medium">Directorio de proveedores para registrar compras y cargas de stock en PosBento</p>
         </div>
 
         <button

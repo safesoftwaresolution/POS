@@ -66,7 +66,7 @@ export default function Header({ onToggleMobileMenu }) {
   const location = useLocation();
   const { user } = useAuth();
   const { darkMode, toggleTheme } = useTheme();
-  const pageInfo = PAGE_TITLES[location.pathname] || { title: 'BentoPOS', subtitle: 'Tu negocio, en equilibrio' };
+  const pageInfo = PAGE_TITLES[location.pathname] || { title: 'PosBento', subtitle: 'Tu negocio, en equilibrio' };
   const isOnPos = location.pathname === '/pos';
 
   const [notifOpen, setNotifOpen] = useState(false);

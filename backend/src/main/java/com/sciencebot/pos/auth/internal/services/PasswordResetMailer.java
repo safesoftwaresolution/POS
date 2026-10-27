@@ -37,13 +37,14 @@ public class PasswordResetMailer {
             String link = frontendUrl + "/reset-password?token=" + rawToken;
             emailSender.send(
                     user.email(),
-                    "Restablece tu contraseña - BentoPOS",
+                    "Restablece tu contraseña - PosBento",
                     EmailTemplate.render(
-                            "Crea una nueva contraseña para tu cuenta de BentoPOS.",
+                            frontendUrl,
+                            "Crea una nueva contraseña para tu cuenta de PosBento.",
                             "Restablece tu contraseña",
                             "<p style=\"margin:0 0 14px;\">Hola <strong>" + EmailTemplate.escape(user.fullName()) + "</strong>,</p>"
                                     + "<p style=\"margin:0;\">Recibimos una solicitud para restablecer la contraseña de tu cuenta de "
-                                    + "BentoPOS. El enlace vence en <strong>1 hora</strong> y solo se puede usar una vez.</p>",
+                                    + "PosBento. El enlace vence en <strong>1 hora</strong> y solo se puede usar una vez.</p>",
                             "Restablecer mi contraseña",
                             link,
                             "Si no fuiste tú, ignora este mensaje: tu contraseña no cambiará."));

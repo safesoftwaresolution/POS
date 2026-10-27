@@ -294,7 +294,7 @@ export default function ProductsBento() {
     <div className="space-y-6 select-none">
       <PageHeader
         title="Productos"
-        subtitle="Catálogo y subcategorías de tu tienda en BentoPOS"
+        subtitle="Catálogo y subcategorías de tu tienda en PosBento"
         actions={
           activeTab === 'catalog' && canManageProducts ? (
             <>

@@ -39,7 +39,7 @@ export default function StoreOnboardingBento() {
           </div>
           <h1 className="text-xl font-black tracking-tight">Registra tu local</h1>
           <p className="text-xs text-ink-soft font-semibold">
-            Un último paso: cuéntanos sobre tu negocio para activar BentoPOS.
+            Un último paso: cuéntanos sobre tu negocio para activar PosBento.
           </p>
         </div>
 

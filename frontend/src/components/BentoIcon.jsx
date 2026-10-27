@@ -5,7 +5,7 @@ export default function BentoIcon({ size = 'w-10 h-10' }) {
   return (
     <img
       src="/isotipo-color.svg"
-      alt="BentoPOS"
+      alt="PosBento"
       className={`${size} shrink-0 object-contain`}
       draggable={false}
     />

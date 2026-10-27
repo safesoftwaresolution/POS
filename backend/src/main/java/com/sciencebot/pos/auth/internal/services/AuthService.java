@@ -215,12 +215,13 @@ public class AuthService implements AuthFacade {
         String link = frontendUrl + "/verify-email?token=" + rawToken;
         emailSender.send(
                 user.email(),
-                "Verifica tu correo - BentoPOS",
+                "Verifica tu correo - PosBento",
                 EmailTemplate.render(
-                        "Confirma tu correo para activar tu cuenta de BentoPOS.",
+                        frontendUrl,
+                        "Confirma tu correo para activar tu cuenta de PosBento.",
                         "Confirma tu correo",
                         "<p style=\"margin:0 0 14px;\">Hola <strong>" + EmailTemplate.escape(user.fullName()) + "</strong>,</p>"
-                                + "<p style=\"margin:0;\">Gracias por registrarte en BentoPOS. Confirma tu correo para activar tu cuenta "
+                                + "<p style=\"margin:0;\">Gracias por registrarte en PosBento. Confirma tu correo para activar tu cuenta "
                                 + "y continuar con el registro de tu local.</p>",
                         "Verificar mi correo",
                         link,

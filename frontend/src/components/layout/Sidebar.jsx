@@ -28,6 +28,7 @@ import useUnreadNotifications from '../../hooks/useUnreadNotifications';
 import asList from '../../utils/asList';
 import { ROLE_LABELS } from '../../constants/roles';
 import BentoIcon from '../BentoIcon';
+import BrandLogo from '../BrandLogo';
 
 export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }) {
   const { logout, user } = useAuth();
@@ -117,14 +118,13 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
           isCollapsed ? 'px-3 justify-center' : 'px-5 justify-between'
         }`}>
           <div className="flex items-center gap-3 min-w-0">
-            <BentoIcon />
-            {(!isCollapsed || isOpen) && (
-              <div className="truncate">
-                <h1 className="font-black text-lg leading-tight tracking-tight text-ink truncate flex items-center gap-1">
-                  <span>Bento</span><span className="text-brand">POS</span>
-                </h1>
-                <p className="text-[10px] text-gray-400 font-semibold tracking-wide">Tu negocio, en equilibrio</p>
+            {(!isCollapsed || isOpen) ? (
+              <div className="min-w-0 space-y-1">
+                <BrandLogo className="h-10" />
+                <p className="text-[10px] text-gray-400 font-semibold tracking-wide truncate">Tu negocio, en equilibrio</p>
               </div>
+            ) : (
+              <BentoIcon />
             )}
           </div>
         </div>
@@ -260,7 +260,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
                       {ROLE_LABELS[user?.role] || user?.role}
                     </span>
                     <span className="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#FFF0EB] text-brand border border-[#FFD5C8]">
-                      BentoPOS Pro
+                      PosBento Pro
                     </span>
                   </div>
                 </div>

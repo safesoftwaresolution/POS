@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { User, Mail, KeyRound, IdCard, ArrowRight, AlertCircle, MailCheck } from 'lucide-react';
 import { registerApi, resendVerificationApi } from '../services/authApi';
-import BentoIcon from '../components/BentoIcon';
 import { LANDING_URL } from '../constants/site';
 
 const EMPTY_FORM = { fullName: '', username: '', email: '', password: '' };
@@ -46,15 +45,11 @@ export default function RegisterBento() {
       <div className="max-w-md w-full bento-card bg-[#17171B] border-[#272730] p-8 rounded-3xl shadow-2xl space-y-6 relative z-10">
 
         <div className="text-center space-y-3">
-          <a href={LANDING_URL} aria-label="BentoPOS, ir al sitio" className="block space-y-3">
-            <BentoIcon size="w-16 h-16 mx-auto" rounded="rounded-3xl" />
-            <div className="flex items-baseline justify-center gap-1">
-              <span className="font-black text-2xl tracking-tight text-white">Bento</span>
-              <span className="font-black text-2xl tracking-tight text-brand">POS</span>
-            </div>
+          <a href={LANDING_URL} aria-label="PosBento, ir al sitio" className="block">
+            <img src="/logo-vertical-color-fondo-oscuro.svg" alt="PosBento" className="h-28 mx-auto" draggable={false} />
           </a>
           <p className="text-xs text-gray-400 font-semibold tracking-wide">
-            Crea tu cuenta para registrar tu local en BentoPOS
+            Crea tu cuenta para registrar tu local en PosBento
           </p>
         </div>
 

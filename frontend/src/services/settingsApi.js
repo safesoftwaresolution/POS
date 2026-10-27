@@ -19,8 +19,3 @@ export async function uploadCompanyLogoApi(file) {
   formData.append('file', file);
   return await uploadFileApi('/settings/logo', formData);
 }
-
-// Nombre y logo del negocio para la cabecera. A diferencia de getSettingsApi, lo puede leer cualquier rol del local.
-export async function getBrandingApi() {
-  return await fetchApi('/settings/branding');
-}

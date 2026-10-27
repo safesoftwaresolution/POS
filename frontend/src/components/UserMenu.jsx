@@ -3,11 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { LogOut } from 'lucide-react';
 import useAuth from '../hooks/useAuth';
 import { roleLabel } from '../constants/roles';
-
-const getInitials = (name) => {
-  if (!name) return 'US';
-  return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-};
+import Avatar from './ui/Avatar';
 
 /**
  * Avatar del encabezado: al hacer clic abre la ficha de la persona con su correo, su rol, los accesos que
@@ -47,7 +43,6 @@ export default function UserMenu({ items = [] }) {
   };
 
   const name = user?.fullName || user?.username;
-  const initials = getInitials(name);
 
   return (
     <div className="relative" ref={ref}>
@@ -57,17 +52,19 @@ export default function UserMenu({ items = [] }) {
         aria-haspopup="menu"
         aria-expanded={open}
         title={name}
-        className="w-10 h-10 rounded-full bg-solid dark:bg-line text-white flex items-center justify-center font-bold text-xs shadow-sm border-2 border-white dark:border-line-strong cursor-pointer transition-transform hover:scale-105 focus-visible:outline-2 focus-visible:outline-brand"
+        className="rounded-full cursor-pointer transition-transform hover:scale-105 focus-visible:outline-2 focus-visible:outline-brand"
       >
-        {initials}
+        <Avatar
+          name={name}
+          src={user?.avatarUrl}
+          className="w-10 h-10 rounded-full text-xs shadow-sm border-2 border-white dark:border-line-strong"
+        />
       </button>
 
       {open && (
         <div role="menu" className="absolute right-0 mt-2 w-64 bg-card border border-line rounded-2xl shadow-xl z-50 overflow-hidden">
           <div className="flex items-center gap-3 p-4 border-b border-line">
-            <div className="w-11 h-11 rounded-full bg-solid text-solid-ink flex items-center justify-center font-bold text-sm shrink-0">
-              {initials}
-            </div>
+            <Avatar name={name} src={user?.avatarUrl} className="w-11 h-11 rounded-full text-sm" />
             <div className="min-w-0">
               <p className="text-sm font-extrabold text-ink truncate">{name}</p>
               {user?.email && <p className="text-[11px] text-ink-muted truncate">{user.email}</p>}

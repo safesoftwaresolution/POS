@@ -15,8 +15,6 @@ import {
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import useAuth from '../../hooks/useAuth';
-import useBranding from '../../hooks/useBranding';
-import Avatar from '../ui/Avatar';
 import useNow from '../../hooks/useNow';
 import useUnreadNotifications from '../../hooks/useUnreadNotifications';
 import useTheme from '../../hooks/useTheme';
@@ -70,7 +68,6 @@ export default function Header({ onToggleMobileMenu }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
-  const { data: branding } = useBranding();
   const { darkMode, toggleTheme } = useTheme();
   const pageInfo = PAGE_TITLES[location.pathname] || { title: 'PosBento', subtitle: 'Tu negocio, en equilibrio' };
   const isOnPos = location.pathname === '/pos';
@@ -249,14 +246,6 @@ export default function Header({ onToggleMobileMenu }) {
           </button>
         )}
 
-        {/* Logo del negocio (Configuración → Identidad del negocio); la foto de la persona va en la sidebar. */}
-        <div title={branding?.businessName || 'Mi negocio'}>
-          <Avatar
-            name={branding?.businessName}
-            src={branding?.logoUrl}
-            className="w-10 h-10 rounded-xl text-xs shadow-sm border-2 border-white dark:border-line-strong"
-          />
-        </div>
         {/* User Profile Avatar */}
         <UserMenu items={userMenuItems} />
       </div>

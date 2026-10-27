@@ -38,7 +38,8 @@ public class BackofficeStaffController {
     }
 
     @PostMapping
-    @Operation(summary = "Crear un nuevo operador SUPER_ADMIN")
+    @Operation(summary = "Invitar a un nuevo operador SUPER_ADMIN",
+            description = "Crea la cuenta pendiente y envia un correo; queda activa cuando la persona acepta el enlace (vence en 24 h).")
     public ResponseEntity<BackofficeStaffDto> createStaff(@RequestBody CreateBackofficeStaffCommand command) {
         return ResponseEntity.status(HttpStatus.CREATED).body(staffFacade.createStaff(command));
     }
@@ -64,6 +65,13 @@ public class BackofficeStaffController {
     @Operation(summary = "Restablecer la contrasena de un operador")
     public ResponseEntity<Void> changePassword(@PathVariable Long id, @RequestBody ChangePasswordCommand command) {
         staffFacade.changePassword(id, command);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{id}/resend-invitation")
+    @Operation(summary = "Reenviar la invitacion a un operador que aun no la acepto")
+    public ResponseEntity<Void> resendInvitation(@PathVariable Long id) {
+        staffFacade.resendInvitation(id);
         return ResponseEntity.noContent().build();
     }
 

@@ -213,6 +213,25 @@ public class AuthService implements AuthFacade {
     private void sendVerificationEmail(UserDto user) {
         String rawToken = emailVerificationService.issue(user.id());
         String link = frontendUrl + "/verify-email?token=" + rawToken;
+        String greeting = "<p style=\"margin:0 0 14px;\">Hola <strong>" + EmailTemplate.escape(user.fullName()) + "</strong>,</p>";
+        if ("SUPER_ADMIN".equals(user.role())) {
+            // Operador de la plataforma invitado desde el backoffice: al confirmar, la cuenta queda activa.
+            emailSender.send(
+                    user.email(),
+                    "Te invitaron a PosBento como operador",
+                    EmailTemplate.render(
+                            frontendUrl,
+                            "Acepta la invitación para activar tu cuenta de operador de PosBento.",
+                            "Te invitaron como operador",
+                            greeting
+                                    + "<p style=\"margin:0;\">Te invitaron a administrar la plataforma PosBento como operador. "
+                                    + "Tu usuario es <strong>" + EmailTemplate.escape(user.username()) + "</strong>. "
+                                    + "Acepta la invitación para activar tu cuenta; el enlace vence en <strong>24 horas</strong>.</p>",
+                            "Aceptar invitación",
+                            link,
+                            "Si no esperabas esta invitación, puedes ignorar este mensaje: la cuenta no se activará."));
+            return;
+        }
         emailSender.send(
                 user.email(),
                 "Verifica tu correo - PosBento",
@@ -220,7 +239,7 @@ public class AuthService implements AuthFacade {
                         frontendUrl,
                         "Confirma tu correo para activar tu cuenta de PosBento.",
                         "Confirma tu correo",
-                        "<p style=\"margin:0 0 14px;\">Hola <strong>" + EmailTemplate.escape(user.fullName()) + "</strong>,</p>"
+                        greeting
                                 + "<p style=\"margin:0;\">Gracias por registrarte en PosBento. Confirma tu correo para activar tu cuenta "
                                 + "y continuar con el registro de tu local.</p>",
                         "Verificar mi correo",

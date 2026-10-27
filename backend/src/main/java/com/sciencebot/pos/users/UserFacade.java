@@ -9,6 +9,11 @@ public interface UserFacade {
     Optional<UserDto> findByUsername(String username);
     Optional<UserDto> findByEmail(String email);
     UserDto createUser(CreateUserCommand command);
+    /**
+     * Igual que {@link #createUser} pero con el correo sin verificar: la cuenta no puede iniciar sesion hasta que
+     * la persona confirme el enlace que se le envia (invitacion de operadores del backoffice).
+     */
+    UserDto createUnverifiedUser(CreateUserCommand command);
     UserDto updateUser(Long id, UpdateUserCommand command);
     void deleteUser(Long id);
     void changeStatus(Long id, boolean active);

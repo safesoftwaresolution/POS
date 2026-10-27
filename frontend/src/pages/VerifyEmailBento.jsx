@@ -26,7 +26,9 @@ export default function VerifyEmailBento() {
         const data = await verifyEmailApi(token);
         setSessionFromResponse(data);
         setResult({ status: 'success', error: '' });
-        setTimeout(() => navigate('/onboarding/store', { replace: true }), 1200);
+        // Un operador invitado no registra local: entra directo al backoffice.
+        const destination = data.role === 'SUPER_ADMIN' ? '/backoffice' : '/onboarding/store';
+        setTimeout(() => navigate(destination, { replace: true }), 1200);
       } catch (err) {
         setResult({ status: 'error', error: err.message || 'No se pudo verificar tu correo.' });
       }

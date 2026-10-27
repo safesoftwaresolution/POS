@@ -36,6 +36,10 @@ export async function changeBackofficeStaffPasswordApi(id, newPassword, currentP
   });
 }
 
+export async function resendBackofficeStaffInvitationApi(id) {
+  return await fetchApi(`/backoffice/staff/${id}/resend-invitation`, { method: 'POST' });
+}
+
 export async function deleteBackofficeStaffApi(id) {
   return await fetchApi(`/backoffice/staff/${id}`, { method: 'DELETE' });
 }

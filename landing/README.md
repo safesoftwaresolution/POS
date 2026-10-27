@@ -1,4 +1,4 @@
-# BentoPOS — Landing
+# PosBento — Landing
 
 Página pública de `posbento.com`. Es un sitio **estático** (Astro + Tailwind CSS 4) sin lógica de negocio: presenta el producto y lleva al sistema (`app.posbento.com`) con los botones **Ingresar** y **Crear cuenta**.
 

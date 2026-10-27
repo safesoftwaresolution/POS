@@ -1,7 +1,7 @@
 // Origen publico del sistema (POS). Se incrusta al compilar (PUBLIC_APP_URL); por defecto es el subdominio final.
 export const APP_URL = (import.meta.env.PUBLIC_APP_URL ?? 'https://app.posbento.com').replace(/\/+$/, '');
 export const SITE_URL = 'https://posbento.com';
-export const SITE_NAME = 'BentoPOS';
+export const SITE_NAME = 'PosBento';
 
 export const links = {
   login: `${APP_URL}/login`,

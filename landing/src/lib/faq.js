@@ -3,7 +3,7 @@
 export const faq = [
   {
     q: '¿Tengo que instalar algo?',
-    a: 'No. BentoPOS funciona desde el navegador, en computador, tablet o celular. Si quieres, puedes instalarlo como aplicación en el celular desde el mismo navegador.',
+    a: 'No. PosBento funciona desde el navegador, en computador, tablet o celular. Si quieres, puedes instalarlo como aplicación en el celular desde el mismo navegador.',
   },
   {
     q: '¿Puedo usar un lector de código de barras?',
@@ -27,6 +27,6 @@ export const faq = [
   },
   {
     q: '¿Funciona sin internet?',
-    a: 'No. BentoPOS trabaja en línea para mantener tus ventas, tu stock y tus facturas al día en tiempo real, así que necesitas conexión a internet para usarlo.',
+    a: 'No. PosBento trabaja en línea para mantener tus ventas, tu stock y tus facturas al día en tiempo real, así que necesitas conexión a internet para usarlo.',
   },
 ];

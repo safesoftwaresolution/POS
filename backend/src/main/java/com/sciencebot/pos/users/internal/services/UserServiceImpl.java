@@ -81,6 +81,16 @@ public class UserServiceImpl implements UserFacade, UserDetailsService {
     @Override
     @Transactional
     public UserDto createUser(CreateUserCommand command) {
+        return create(command, true);
+    }
+
+    @Override
+    @Transactional
+    public UserDto createUnverifiedUser(CreateUserCommand command) {
+        return create(command, false);
+    }
+
+    private UserDto create(CreateUserCommand command, boolean emailVerified) {
         validateRole(command.role());
         validatePasswordStrength(command.password());
 
@@ -124,6 +134,7 @@ public class UserServiceImpl implements UserFacade, UserDetailsService {
         user.setPassword(passwordEncoder.encode(command.password()));
         user.setRole(effectiveRole);
         user.setActive(true);
+        user.setEmailVerified(emailVerified);
         user.setStoreId(effectiveStoreId);
 
         User saved = userRepository.save(user);

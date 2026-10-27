@@ -1,5 +1,6 @@
 package com.sciencebot.pos.backoffice.internal.services;
 
+import com.sciencebot.pos.auth.AuthFacade;
 import com.sciencebot.pos.backoffice.*;
 import com.sciencebot.pos.users.ChangePasswordCommand;
 import com.sciencebot.pos.users.CreateUserCommand;
@@ -19,9 +20,11 @@ public class BackofficeStaffServiceImpl implements BackofficeStaffFacade {
     private static final String STAFF_ROLE = "SUPER_ADMIN";
 
     private final UserFacade userFacade;
+    private final AuthFacade authFacade;
 
-    public BackofficeStaffServiceImpl(UserFacade userFacade) {
+    public BackofficeStaffServiceImpl(UserFacade userFacade, AuthFacade authFacade) {
         this.userFacade = userFacade;
+        this.authFacade = authFacade;
     }
 
     @Override
@@ -37,9 +40,12 @@ public class BackofficeStaffServiceImpl implements BackofficeStaffFacade {
     @Override
     @Transactional
     public BackofficeStaffDto createStaff(CreateBackofficeStaffCommand command) {
-        UserDto created = userFacade.createUser(new CreateUserCommand(
+        // Se crea como invitacion: no puede entrar hasta aceptar el enlace del correo. Si el correo no sale, se
+        // revierte la creacion (el error llega a quien invita) en vez de dejar una cuenta que nadie puede activar.
+        UserDto created = userFacade.createUnverifiedUser(new CreateUserCommand(
                 command.fullName(), command.username(), command.email(), command.password(), STAFF_ROLE, null
         ));
+        authFacade.resendVerificationToUser(created.id());
         return toStaffDto(created);
     }
 
@@ -72,6 +78,12 @@ public class BackofficeStaffServiceImpl implements BackofficeStaffFacade {
         userFacade.changePassword(id, command);
     }
 
+    @Override
+    public void resendInvitation(Long id) {
+        requireStaff(id);
+        authFacade.resendVerificationToUser(id);
+    }
+
     private UserDto requireStaff(Long id) {
         UserDto user = userFacade.getById(id);
         if (!STAFF_ROLE.equals(user.role())) {
@@ -81,6 +93,6 @@ public class BackofficeStaffServiceImpl implements BackofficeStaffFacade {
     }
 
     private BackofficeStaffDto toStaffDto(UserDto user) {
-        return new BackofficeStaffDto(user.id(), user.fullName(), user.username(), user.email(), user.active());
+        return new BackofficeStaffDto(user.id(), user.fullName(), user.username(), user.email(), user.active(), user.emailVerified());
     }
 }

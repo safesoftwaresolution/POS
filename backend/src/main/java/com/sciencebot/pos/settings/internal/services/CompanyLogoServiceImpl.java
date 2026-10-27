@@ -9,7 +9,6 @@ import com.sciencebot.pos.settings.CompanyLogoService;
 import com.sciencebot.pos.settings.internal.entities.Setting;
 import com.sciencebot.pos.settings.internal.repositories.SettingsRepository;
 import com.sciencebot.pos.storage.StorageFacade;
-import com.sciencebot.pos.storage.StorageUploadResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,6 +18,8 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
@@ -30,7 +31,6 @@ import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Set;
-import java.util.UUID;
 
 @Service
 public class CompanyLogoServiceImpl implements CompanyLogoService {
@@ -38,6 +38,9 @@ public class CompanyLogoServiceImpl implements CompanyLogoService {
     private static final Logger log = LoggerFactory.getLogger(CompanyLogoServiceImpl.class);
 
     private static final String FACTUS_PROVIDER = "factus";
+
+    /** Raiz de los logos en R2; dentro va tienda-N/ igual que las fotos de productos. */
+    private static final String LOGO_ROOT = "imagenes-logos/";
 
     private static final long MAX_FILE_SIZE_BYTES = 200 * 1024; // 200 KB = 204,800 bytes
     private static final int MAX_WIDTH_PX = 300;
@@ -188,26 +191,48 @@ public class CompanyLogoServiceImpl implements CompanyLogoService {
      * y actualiza el campo logoUrl en la entidad Setting de la base de datos.
      */
     private String saveLocally(MultipartFile file, String originalFilename) {
-        String resolvedLogoUrl;
-
-        if (storageFacade != null) {
-            try {
-                StorageUploadResult uploadResult = storageFacade.uploadFile(file, "logos");
-                resolvedLogoUrl = uploadResult.url();
-            } catch (Exception e) {
-                log.warn("No se pudo subir a Cloudflare R2, generando referencia local fallback: {}", e.getMessage());
-                resolvedLogoUrl = "/uploads/logos/" + UUID.randomUUID() + "_" + sanitizeFilename(originalFilename);
-            }
-        } else {
-            resolvedLogoUrl = "/uploads/logos/" + UUID.randomUUID() + "_" + sanitizeFilename(originalFilename);
+        // Sin R2 no hay donde servir el logo: antes se guardaba una ruta /uploads/... que nadie sirve y la
+        // imagen salia rota. Ahora el error llega al usuario y el logo anterior se conserva.
+        if (storageFacade == null) {
+            throw new IllegalStateException("El almacenamiento de archivos no esta configurado.");
         }
 
         Long storeId = TenantContext.getStoreId();
+        String folder = LOGO_ROOT + (storeId != null ? "tienda-" + storeId : "plataforma");
+        String resolvedLogoUrl = storageFacade.uploadFile(file, folder).url();
+
         Setting setting = resolveSetting(storeId);
+        String previousUrl = setting.getLogoUrl();
         setting.setLogoUrl(resolvedLogoUrl);
         settingsRepository.save(setting);
+        releaseReplacedLogo(previousUrl, resolvedLogoUrl);
 
         return resolvedLogoUrl;
+    }
+
+    /** Borra el logo anterior de R2 tras confirmar el guardado; un fallo solo se registra. */
+    private void releaseReplacedLogo(String previousUrl, String currentUrl) {
+        if (previousUrl == null || previousUrl.isBlank() || previousUrl.equals(currentUrl)) {
+            return;
+        }
+        Runnable delete = () -> {
+            try {
+                // Estructura actual y la anterior (logos/), por los logos ya subidos.
+                storageFacade.deleteFileByUrl(previousUrl, LOGO_ROOT, "logos/");
+            } catch (RuntimeException e) {
+                log.warn("No se pudo borrar el logo anterior {} de R2: {}", previousUrl, e.getMessage());
+            }
+        };
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    delete.run();
+                }
+            });
+        } else {
+            delete.run();
+        }
     }
 
     /**
@@ -307,10 +332,5 @@ public class CompanyLogoServiceImpl implements CompanyLogoService {
 
     private boolean isFactusActiveProvider() {
         return billingProvider != null && FACTUS_PROVIDER.equals(billingProvider.trim().toLowerCase());
-    }
-
-    private String sanitizeFilename(String filename) {
-        if (filename == null) return "logo.png";
-        return filename.replaceAll("[^a-zA-Z0-9._-]", "_");
     }
 }

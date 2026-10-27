@@ -20,7 +20,8 @@ public class UserMapper {
                 user.getRole(),
                 user.isActive(),
                 user.getStoreId(),
-                user.isEmailVerified()
+                user.isEmailVerified(),
+                user.getAvatarUrl()
         );
     }
 }

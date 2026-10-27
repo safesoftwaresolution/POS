@@ -46,6 +46,18 @@ class StorageServiceImplTest {
     }
 
     @Test
+    void uploadFile_WithoutPublicUrl_FailsBeforeUploading() {
+        properties.setPublicUrl("");
+        MockMultipartFile file = new MockMultipartFile("file", "a.jpg", "image/jpeg", "x".getBytes());
+
+        assertThrows(IllegalStateException.class, () -> storageService.uploadFile(file, "products"));
+        properties.setPublicUrl("https://pub-example.r2.dev");
+        assertThrows(IllegalStateException.class, () -> storageService.uploadFile(file, "products"));
+
+        verify(s3Client, never()).putObject(any(PutObjectRequest.class), any(RequestBody.class));
+    }
+
+    @Test
     void uploadFile_Success() throws IOException {
         MockMultipartFile file = new MockMultipartFile(
                 "file",

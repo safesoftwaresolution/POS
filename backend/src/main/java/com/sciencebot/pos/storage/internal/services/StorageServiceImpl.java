@@ -49,6 +49,7 @@ public class StorageServiceImpl implements StorageFacade {
         String extension = getFileExtension(originalFilename);
         String contentType = file.getContentType();
         validateUploadType(extension, contentType);
+        requirePublicUrl();
 
         String sanitizedFolder = sanitizeFolder(folder);
         String key = (sanitizedFolder.isEmpty() ? "" : sanitizedFolder + "/") + UUID.randomUUID() + extension;
@@ -84,6 +85,7 @@ public class StorageServiceImpl implements StorageFacade {
             throw new IllegalArgumentException("Los datos a subir no pueden estar vacios");
         }
 
+        requirePublicUrl();
         String extension = getFileExtension(filename);
         String mimeType = (contentType != null && !contentType.isBlank()) ? contentType : "application/octet-stream";
         String sanitizedFolder = sanitizeFolder(folder);
@@ -198,6 +200,14 @@ public class StorageServiceImpl implements StorageFacade {
         String expected = ALLOWED_UPLOAD_TYPES.get(extension);
         if (expected == null || !(expected.equals(mime) || ("image/jpeg".equals(expected) && "image/jpg".equals(mime)))) {
             throw new IllegalArgumentException("Tipo de archivo no permitido. Formatos validos: jpg, png, webp, gif, pdf");
+        }
+    }
+
+    /** Falla antes de subir: sin URL publica el archivo quedaria en el bucket con un enlace que no abre. */
+    private void requirePublicUrl() {
+        if (!properties.hasPublicUrl()) {
+            throw new IllegalStateException(
+                    "R2_PUBLIC_URL no esta configurada: define la URL publica del bucket (Public Development URL o dominio propio de R2).");
         }
     }
 

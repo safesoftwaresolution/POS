@@ -21,6 +21,14 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.sciencebot.pos.storage.StorageFacade;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.web.multipart.MultipartFile;
+
 import jakarta.persistence.EntityNotFoundException;
 import java.util.List;
 import java.util.Optional;
@@ -30,7 +38,14 @@ import java.util.Set;
 @Transactional(readOnly = true)
 public class UserServiceImpl implements UserFacade, UserDetailsService {
 
+    private static final Logger log = LoggerFactory.getLogger(UserServiceImpl.class);
+
     private static final Set<String> ALLOWED_ROLES = Set.of("ADMINISTRATOR", "SUPERVISOR", "SELLER", "SUPER_ADMIN");
+
+    /** Raíz de las fotos de perfil en R2; distinta de imagenes-productos/ para que la limpieza de huérfanas no las toque. */
+    private static final String AVATAR_ROOT = "imagenes-avatares/";
+    private static final long AVATAR_MAX_BYTES = 512 * 1024;
+    private static final int AVATAR_MAX_PX = 512;
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -38,6 +53,7 @@ public class UserServiceImpl implements UserFacade, UserDetailsService {
     private final UserQuotaPolicy userQuotaPolicy;
     private final UserDeletionAuditRepository deletionAuditRepository;
     private final org.springframework.context.ApplicationEventPublisher eventPublisher;
+    private final StorageFacade storageFacade;
 
     public UserServiceImpl(
             UserRepository userRepository,
@@ -45,13 +61,15 @@ public class UserServiceImpl implements UserFacade, UserDetailsService {
             UserMapper userMapper,
             UserQuotaPolicy userQuotaPolicy,
             UserDeletionAuditRepository deletionAuditRepository,
-            org.springframework.context.ApplicationEventPublisher eventPublisher) {
+            org.springframework.context.ApplicationEventPublisher eventPublisher,
+            @Autowired(required = false) StorageFacade storageFacade) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.userMapper = userMapper;
         this.userQuotaPolicy = userQuotaPolicy;
         this.deletionAuditRepository = deletionAuditRepository;
         this.eventPublisher = eventPublisher;
+        this.storageFacade = storageFacade;
     }
 
     @Override
@@ -357,6 +375,7 @@ public class UserServiceImpl implements UserFacade, UserDetailsService {
             userRepository.delete(user);
             userRepository.flush(); // fuerza las llaves foraneas aqui para traducirlas a un mensaje claro
             recordDeletion(user, UserDeletionAudit.KIND_PERMANENT);
+            releaseAvatar(user.getAvatarUrl());
         } catch (org.springframework.dao.DataIntegrityViolationException e) {
             throw new IllegalStateException(
                     "El usuario tiene ventas, compras, movimientos o devoluciones registrados y no se puede eliminar. "
@@ -502,6 +521,100 @@ public class UserServiceImpl implements UserFacade, UserDetailsService {
         }
         if (!hasLetter || !hasDigit) {
             throw new IllegalArgumentException("La contrasena debe contener al menos una letra y un numero");
+        }
+    }
+
+    @Override
+    @Transactional
+    public UserDto updateMyAvatar(MultipartFile file) {
+        User user = currentUser();
+        validateAvatar(file);
+        if (storageFacade == null) {
+            throw new IllegalStateException("El almacenamiento de archivos no está configurado.");
+        }
+        String folder = user.getStoreId() != null
+                ? AVATAR_ROOT + "tienda-" + user.getStoreId()
+                : AVATAR_ROOT + "plataforma";
+        String previous = user.getAvatarUrl();
+        user.setAvatarUrl(storageFacade.uploadFile(file, folder).url());
+        User saved = userRepository.save(user);
+        releaseAvatar(previous);
+        return userMapper.toDto(saved);
+    }
+
+    @Override
+    @Transactional
+    public UserDto removeMyAvatar() {
+        User user = currentUser();
+        String previous = user.getAvatarUrl();
+        user.setAvatarUrl(null);
+        User saved = userRepository.save(user);
+        releaseAvatar(previous);
+        return userMapper.toDto(saved);
+    }
+
+    private User currentUser() {
+        String username = getCurrentUsername();
+        if (username == null) {
+            throw new org.springframework.security.access.AccessDeniedException("No autenticado");
+        }
+        return userRepository.findByUsername(username)
+                .orElseThrow(() -> new EntityNotFoundException("Usuario no encontrado: " + username));
+    }
+
+    private void validateAvatar(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("Debe proporcionar una imagen no vacía.");
+        }
+        String name = file.getOriginalFilename() == null ? "" : file.getOriginalFilename().toLowerCase();
+        String type = file.getContentType() == null ? "" : file.getContentType().toLowerCase().trim();
+        boolean extOk = name.endsWith(".png") || name.endsWith(".jpg") || name.endsWith(".jpeg");
+        boolean typeOk = type.isEmpty() || type.equals("image/png") || type.equals("image/jpeg")
+                || type.equals("image/jpg") || type.equals("image/pjpeg");
+        if (!extOk || !typeOk) {
+            throw new IllegalArgumentException("Formato no permitido. Solo se aceptan imágenes PNG o JPG.");
+        }
+        if (file.getSize() > AVATAR_MAX_BYTES) {
+            throw new IllegalArgumentException(String.format(
+                    "La foto pesa %.0f KB y el máximo permitido es %d KB.", file.getSize() / 1024.0, AVATAR_MAX_BYTES / 1024));
+        }
+        java.awt.image.BufferedImage image;
+        try (java.io.InputStream in = file.getInputStream()) {
+            image = javax.imageio.ImageIO.read(in);
+        } catch (java.io.IOException e) {
+            throw new IllegalArgumentException("No se pudo leer la imagen.", e);
+        }
+        if (image == null) {
+            throw new IllegalArgumentException("El archivo no es una imagen válida o está corrupto.");
+        }
+        if (image.getWidth() > AVATAR_MAX_PX || image.getHeight() > AVATAR_MAX_PX) {
+            throw new IllegalArgumentException(String.format(
+                    "Las dimensiones (%dx%d px) superan el máximo de %dx%d px.",
+                    image.getWidth(), image.getHeight(), AVATAR_MAX_PX, AVATAR_MAX_PX));
+        }
+    }
+
+    /** Borra la foto anterior del almacenamiento tras confirmar la transacción; un fallo solo se registra. */
+    private void releaseAvatar(String previousUrl) {
+        if (previousUrl == null || previousUrl.isBlank() || storageFacade == null) {
+            return;
+        }
+        Runnable delete = () -> {
+            try {
+                storageFacade.deleteFileByUrl(previousUrl, AVATAR_ROOT);
+            } catch (RuntimeException e) {
+                log.warn("No se pudo borrar la foto de perfil anterior {}", previousUrl, e);
+            }
+        };
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    delete.run();
+                }
+            });
+        } else {
+            delete.run();
         }
     }
 

@@ -33,6 +33,7 @@ class UserServiceImplTest {
     @Mock private UserQuotaPolicy userQuotaPolicy;
     @Mock private com.sciencebot.pos.users.internal.repositories.UserDeletionAuditRepository deletionAuditRepository;
     @Mock private org.springframework.context.ApplicationEventPublisher eventPublisher;
+    @Mock private com.sciencebot.pos.storage.StorageFacade storageFacade;
     @InjectMocks private UserServiceImpl userService;
 
     @BeforeEach
@@ -677,5 +678,84 @@ class UserServiceImplTest {
 
         verify(userRepository, times(1)).findAllByStoreIdAndActiveTrue(eq(1L), any());
         verify(userRepository, never()).findAllByActiveTrue(any());
+    }
+
+    // --- Foto de perfil ---
+
+    private User signInAs(String username, Long storeId, String avatarUrl) {
+        Authentication auth = mock(Authentication.class);
+        when(auth.getName()).thenReturn(username);
+        SecurityContext context = mock(SecurityContext.class);
+        when(context.getAuthentication()).thenReturn(auth);
+        SecurityContextHolder.setContext(context);
+        User user = new User();
+        user.setId(9L);
+        user.setUsername(username);
+        user.setStoreId(storeId);
+        user.setAvatarUrl(avatarUrl);
+        when(userRepository.findByUsername(username)).thenReturn(Optional.of(user));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(userMapper.toDto(any(User.class))).thenAnswer(inv -> {
+            User u = inv.getArgument(0);
+            return new UserDto(u.getId(), null, u.getUsername(), null, null, true, u.getStoreId(), true, u.getAvatarUrl());
+        });
+        return user;
+    }
+
+    private static org.springframework.mock.web.MockMultipartFile image(String name, String type, int px) throws Exception {
+        java.awt.image.BufferedImage img = new java.awt.image.BufferedImage(px, px, java.awt.image.BufferedImage.TYPE_INT_RGB);
+        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+        javax.imageio.ImageIO.write(img, name.endsWith("png") ? "png" : "jpg", out);
+        return new org.springframework.mock.web.MockMultipartFile("file", name, type, out.toByteArray());
+    }
+
+    private static com.sciencebot.pos.storage.StorageUploadResult uploaded(String url) {
+        return new com.sciencebot.pos.storage.StorageUploadResult("k", url, "f.png", 1L, "image/png");
+    }
+
+    @Test
+    void updateMyAvatar_UploadsUnderStoreFolderAndDeletesPreviousPhoto() throws Exception {
+        signInAs("ana", 4L, "https://cdn/imagenes-avatares/tienda-4/old.png");
+        var file = image("foto.png", "image/png", 200);
+        when(storageFacade.uploadFile(file, "imagenes-avatares/tienda-4")).thenReturn(uploaded("https://cdn/imagenes-avatares/tienda-4/new.png"));
+
+        UserDto result = userService.updateMyAvatar(file);
+
+        assertEquals("https://cdn/imagenes-avatares/tienda-4/new.png", result.avatarUrl());
+        verify(storageFacade).deleteFileByUrl("https://cdn/imagenes-avatares/tienda-4/old.png", "imagenes-avatares/");
+    }
+
+    @Test
+    void updateMyAvatar_UserWithoutStore_UsesPlatformFolder() throws Exception {
+        signInAs("root", null, null);
+        var file = image("foto.jpg", "image/jpeg", 100);
+        when(storageFacade.uploadFile(file, "imagenes-avatares/plataforma")).thenReturn(uploaded("https://cdn/x.jpg"));
+
+        assertEquals("https://cdn/x.jpg", userService.updateMyAvatar(file).avatarUrl());
+        verify(storageFacade, never()).deleteFileByUrl(any(), any());
+    }
+
+    @Test
+    void updateMyAvatar_RejectsOversizedDimensionsWrongFormatAndEmptyFile() throws Exception {
+        signInAs("ana", 4L, null);
+
+        assertThrows(IllegalArgumentException.class, () -> userService.updateMyAvatar(image("grande.png", "image/png", 600)));
+        assertThrows(IllegalArgumentException.class, () -> userService.updateMyAvatar(
+                new org.springframework.mock.web.MockMultipartFile("file", "x.gif", "image/gif", new byte[]{1, 2})));
+        assertThrows(IllegalArgumentException.class, () -> userService.updateMyAvatar(
+                new org.springframework.mock.web.MockMultipartFile("file", "x.png", "image/png", new byte[]{1, 2, 3})));
+        assertThrows(IllegalArgumentException.class, () -> userService.updateMyAvatar(
+                new org.springframework.mock.web.MockMultipartFile("file", "x.png", "image/png", new byte[0])));
+        verify(storageFacade, never()).uploadFile(any(), any());
+    }
+
+    @Test
+    void removeMyAvatar_ClearsUrlAndDeletesFile() {
+        signInAs("ana", 4L, "https://cdn/imagenes-avatares/tienda-4/old.png");
+
+        UserDto result = userService.removeMyAvatar();
+
+        assertNull(result.avatarUrl());
+        verify(storageFacade).deleteFileByUrl("https://cdn/imagenes-avatares/tienda-4/old.png", "imagenes-avatares/");
     }
 }

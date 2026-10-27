@@ -1,15 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LogOut } from 'lucide-react';
-import useAuth from '../../hooks/useAuth';
+import useAuth from '../hooks/useAuth';
+import { roleLabel } from '../constants/roles';
 
 const getInitials = (name) => {
-  if (!name) return 'SA';
+  if (!name) return 'US';
   return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
 };
 
-/** Avatar del encabezado: al hacer clic abre la ficha de la persona con su correo y el cierre de sesión. */
-export default function UserMenu() {
+/**
+ * Avatar del encabezado: al hacer clic abre la ficha de la persona con su correo, su rol, los accesos que
+ * cada encabezado quiera sumar (`items`: `{ label, icon, to }`) y el cierre de sesión.
+ */
+export default function UserMenu({ items = [] }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
@@ -37,6 +41,11 @@ export default function UserMenu() {
     navigate('/login');
   };
 
+  const goTo = (path) => {
+    setOpen(false);
+    navigate(path);
+  };
+
   const name = user?.fullName || user?.username;
   const initials = getInitials(name);
 
@@ -62,10 +71,22 @@ export default function UserMenu() {
             <div className="min-w-0">
               <p className="text-sm font-extrabold text-ink truncate">{name}</p>
               {user?.email && <p className="text-[11px] text-ink-muted truncate">{user.email}</p>}
-              <p className="text-[11px] font-bold text-brand">Super Admin</p>
+              <p className="text-[11px] font-bold text-brand">{roleLabel(user?.role)}</p>
             </div>
           </div>
-          <div className="p-2">
+          <div className="p-2 flex flex-col gap-0.5">
+            {items.map(({ label, icon: Icon, to }) => (
+              <button
+                key={to}
+                type="button"
+                role="menuitem"
+                onClick={() => goTo(to)}
+                className="w-full flex items-center gap-3 px-3 py-2.5 text-ink-soft hover:bg-page rounded-xl transition-colors cursor-pointer text-xs font-bold"
+              >
+                <Icon className="w-4 h-4 shrink-0 text-ink-muted" />
+                <span>{label}</span>
+              </button>
+            ))}
             <button
               type="button"
               role="menuitem"

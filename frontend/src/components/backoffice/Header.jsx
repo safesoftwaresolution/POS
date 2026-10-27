@@ -1,7 +1,7 @@
 import React from 'react';
 import { Menu, Sun, Moon } from 'lucide-react';
 import useTheme from '../../hooks/useTheme';
-import UserMenu from './UserMenu';
+import UserMenu from '../UserMenu';
 
 export default function BackofficeHeader({ onToggleMobileMenu }) {
   const { darkMode, toggleTheme } = useTheme();

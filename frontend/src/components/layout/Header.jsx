@@ -9,13 +9,16 @@ import {
   Package,
   FileCheck2,
   FileX2,
-  ShoppingBag
+  ShoppingBag,
+  Settings,
+  HelpCircle
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import useAuth from '../../hooks/useAuth';
 import useNow from '../../hooks/useNow';
 import useUnreadNotifications from '../../hooks/useUnreadNotifications';
 import useTheme from '../../hooks/useTheme';
+import UserMenu from '../UserMenu';
 import {
   getNotificationsApi,
   markNotificationReadApi,
@@ -75,10 +78,11 @@ export default function Header({ onToggleMobileMenu }) {
   const now = useNow();
   const notifRef = useRef(null);
 
-  const getInitials = (name) => {
-    if (!name) return 'US';
-    return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-  };
+  // Configuración la ven todos menos el vendedor, igual que en la barra lateral.
+  const userMenuItems = [
+    ...(user?.role !== 'SELLER' ? [{ label: 'Configuración', icon: Settings, to: '/settings' }] : []),
+    { label: 'Ayuda y soporte', icon: HelpCircle, to: '/support' },
+  ];
 
   useEffect(() => {
     function handleClickOutside(e) {
@@ -243,9 +247,7 @@ export default function Header({ onToggleMobileMenu }) {
         )}
 
         {/* User Profile Avatar */}
-        <div className="w-10 h-10 rounded-full bg-solid dark:bg-line text-white flex items-center justify-center font-bold text-xs shadow-sm border-2 border-white dark:border-line-strong cursor-pointer" title={user?.fullName || user?.username}>
-          {getInitials(user?.fullName || user?.username)}
-        </div>
+        <UserMenu items={userMenuItems} />
       </div>
 
     </header>

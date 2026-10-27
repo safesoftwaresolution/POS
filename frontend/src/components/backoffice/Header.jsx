@@ -1,16 +1,10 @@
 import React from 'react';
 import { Menu, Sun, Moon } from 'lucide-react';
-import useAuth from '../../hooks/useAuth';
 import useTheme from '../../hooks/useTheme';
+import UserMenu from './UserMenu';
 
 export default function BackofficeHeader({ onToggleMobileMenu }) {
-  const { user } = useAuth();
   const { darkMode, toggleTheme } = useTheme();
-
-  const getInitials = (name) => {
-    if (!name) return 'SA';
-    return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-  };
 
   return (
     <header className="bg-transparent flex justify-between items-center px-4 sm:px-8 py-4 h-20 w-full z-40 select-none">
@@ -39,12 +33,7 @@ export default function BackofficeHeader({ onToggleMobileMenu }) {
           )}
         </button>
 
-        <div
-          className="w-10 h-10 rounded-full bg-solid dark:bg-line text-white flex items-center justify-center font-bold text-xs shadow-sm border-2 border-white dark:border-line-strong cursor-pointer"
-          title={user?.fullName || user?.username}
-        >
-          {getInitials(user?.fullName || user?.username)}
-        </div>
+        <UserMenu />
       </div>
     </header>
   );

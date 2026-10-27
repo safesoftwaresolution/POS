@@ -1,17 +1,23 @@
 {
   "specVersion": "1.0",
   "host": {
-    "name": "PosBento",
+    "displayName": "PosBento",
     "url": "https://posbento.com",
     "description": "Punto de venta, inventario en tiempo real y facturación electrónica DIAN para comercios en Colombia."
   },
   "entries": [
     {
-      "id": "https://posbento.com/llms.txt",
-      "name": "PosBento: resumen para modelos de lenguaje",
+      "identifier": "urn:ai:posbento.com:llms-txt",
+      "displayName": "PosBento: resumen para modelos de lenguaje",
       "type": "text/markdown",
       "url": "https://posbento.com/llms.txt",
-      "description": "Descripción del producto y enlaces a sus páginas públicas."
+      "description": "Descripción del producto y enlaces a sus páginas públicas.",
+      "representativeQueries": [
+        "software de punto de venta con facturación electrónica DIAN en Colombia",
+        "cómo funciona la facturación electrónica en un POS para tiendas",
+        "sistema de inventario en tiempo real para varios locales",
+        "POS web con lector de código de barras y roles de empleados"
+      ]
     }
   ]
 }

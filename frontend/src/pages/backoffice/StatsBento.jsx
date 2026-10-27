@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AlertCircle, CheckCircle2, Gauge, Store, UserPlus, Users } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Gauge, Store, Trophy, UserPlus, Users } from 'lucide-react';
 import { getBackofficeStatsOverviewApi } from '../../services/backoffice/statsApi';
 import useLoad from '../../hooks/useLoad';
 import useCountUp from '../../hooks/useCountUp';
@@ -196,11 +196,14 @@ export default function StatsBento() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          <div className="lg:col-span-7 bento-card hover:transform-none p-6 card-rise" style={{ '--d': '160ms' }}>
-            <div className="flex flex-col gap-3 mb-5">
-              <div>
-                <h3 className="text-sm font-extrabold text-ink">Lo que más pesa en la plataforma</h3>
-                <p className="text-[11px] text-ink-soft font-medium">{subtitles[tab]}</p>
+          <div className="lg:col-span-7 bento-card hover:transform-none p-6 sm:p-7 border-brand/30 ring-1 ring-brand/10 card-rise" style={{ '--d': '160ms' }}>
+            <div className="flex flex-col gap-4 mb-6">
+              <div className="flex items-center gap-3.5">
+                <div className="w-12 h-12 rounded-2xl bg-brand text-white flex items-center justify-center shrink-0 shadow-lg shadow-brand/30"><Trophy className="w-6 h-6" /></div>
+                <div className="min-w-0">
+                  <h3 className="text-xl sm:text-2xl font-black tracking-tight text-ink leading-tight">Ranking</h3>
+                  <p className="text-xs text-ink-soft font-semibold">{subtitles[tab]}</p>
+                </div>
               </div>
               <SegmentedControl options={TABS} value={tab} onChange={setTab} ariaLabel="Detalle de la plataforma" scrollable equal={false} className="sm:w-fit" />
             </div>

@@ -1,0 +1,21 @@
+{
+  "specVersion": "1.0",
+  "host": {
+    "displayName": "PosBento"
+  },
+  "entries": [
+    {
+      "identifier": "urn:air:posbento.com:llms-txt",
+      "displayName": "PosBento: resumen para modelos de lenguaje",
+      "type": "text/markdown",
+      "url": "https://posbento.com/llms.txt",
+      "description": "Descripción del producto y enlaces a sus páginas públicas.",
+      "representativeQueries": [
+        "software de punto de venta con facturación electrónica DIAN en Colombia",
+        "cómo funciona la facturación electrónica en un POS para tiendas",
+        "sistema de inventario en tiempo real para varios locales",
+        "POS web con lector de código de barras y roles de empleados"
+      ]
+    }
+  ]
+}

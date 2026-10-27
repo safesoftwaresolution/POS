@@ -1,11 +1,9 @@
 import React from 'react';
 import { Menu, Sun, Moon } from 'lucide-react';
-import useAuth from '../../hooks/useAuth';
-import Avatar from '../ui/Avatar';
 import useTheme from '../../hooks/useTheme';
+import UserMenu from '../UserMenu';
 
 export default function BackofficeHeader({ onToggleMobileMenu }) {
-  const { user } = useAuth();
   const { darkMode, toggleTheme } = useTheme();
 
   return (
@@ -35,13 +33,7 @@ export default function BackofficeHeader({ onToggleMobileMenu }) {
           )}
         </button>
 
-        <div title={user?.fullName || user?.username}>
-          <Avatar
-            name={user?.fullName || user?.username}
-            src={user?.avatarUrl}
-            className="w-10 h-10 rounded-full text-xs shadow-sm border-2 border-white dark:border-line-strong"
-          />
-        </div>
+        <UserMenu />
       </div>
     </header>
   );

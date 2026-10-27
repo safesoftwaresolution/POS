@@ -9,14 +9,18 @@ import {
   Package,
   FileCheck2,
   FileX2,
-  ShoppingBag
+  ShoppingBag,
+  Settings,
+  HelpCircle
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import useAuth from '../../hooks/useAuth';
 import useBranding from '../../hooks/useBranding';
 import Avatar from '../ui/Avatar';
 import useNow from '../../hooks/useNow';
 import useUnreadNotifications from '../../hooks/useUnreadNotifications';
 import useTheme from '../../hooks/useTheme';
+import UserMenu from '../UserMenu';
 import {
   getNotificationsApi,
   markNotificationReadApi,
@@ -65,6 +69,7 @@ function formatRelativeTime(isoDate) {
 export default function Header({ onToggleMobileMenu }) {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useAuth();
   const { data: branding } = useBranding();
   const { darkMode, toggleTheme } = useTheme();
   const pageInfo = PAGE_TITLES[location.pathname] || { title: 'PosBento', subtitle: 'Tu negocio, en equilibrio' };
@@ -75,6 +80,12 @@ export default function Header({ onToggleMobileMenu }) {
   const [unreadCount, setUnreadCount] = useUnreadNotifications();
   const now = useNow();
   const notifRef = useRef(null);
+
+  // Configuración la ven todos menos el vendedor, igual que en la barra lateral.
+  const userMenuItems = [
+    ...(user?.role !== 'SELLER' ? [{ label: 'Configuración', icon: Settings, to: '/settings' }] : []),
+    { label: 'Ayuda y soporte', icon: HelpCircle, to: '/support' },
+  ];
 
   useEffect(() => {
     function handleClickOutside(e) {
@@ -246,6 +257,8 @@ export default function Header({ onToggleMobileMenu }) {
             className="w-10 h-10 rounded-xl text-xs shadow-sm border-2 border-white dark:border-line-strong"
           />
         </div>
+        {/* User Profile Avatar */}
+        <UserMenu items={userMenuItems} />
       </div>
 
     </header>

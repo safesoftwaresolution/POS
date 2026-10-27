@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { ShieldCheck, Plus, Edit3, KeyRound, Ban, CheckCircle2, X, AlertCircle, UserCog } from 'lucide-react';
+import { ShieldCheck, Plus, Edit3, KeyRound, Ban, CheckCircle2, X, AlertCircle, UserCog, Send } from 'lucide-react';
 import {
   getBackofficeStaffApi,
   createBackofficeStaffApi,
+  resendBackofficeStaffInvitationApi,
   updateBackofficeStaffApi,
   changeBackofficeStaffStatusApi,
   changeBackofficeStaffPasswordApi,
@@ -23,6 +24,7 @@ export default function StaffBento() {
     { initial: [], autoRefresh: true },
   );
   const [errorMsg, setErrorMsg] = useState('');
+  const [infoMsg, setInfoMsg] = useState('');
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createForm, setCreateForm] = useState(EMPTY_STAFF_FORM);
@@ -40,6 +42,7 @@ export default function StaffBento() {
 
   // ---------- Create ----------
   const openCreate = () => {
+    setInfoMsg('');
     setCreateForm(EMPTY_STAFF_FORM);
     setCreateError('');
     setShowCreateModal(true);
@@ -51,6 +54,7 @@ export default function StaffBento() {
     try {
       await createBackofficeStaffApi(createForm);
       setShowCreateModal(false);
+      setInfoMsg(`Invitación enviada a ${createForm.email}. La cuenta se activa cuando la acepte (el enlace vence en 24 horas).`);
       reload();
     } catch (err) {
       setCreateError(err.message || 'Error al crear el operador.');
@@ -83,6 +87,17 @@ export default function StaffBento() {
       reload();
     } catch (err) {
       setErrorMsg(err.message || 'Error al cambiar el estado del operador.');
+    }
+  };
+
+  const handleResendInvitation = async (member) => {
+    setErrorMsg('');
+    setInfoMsg('');
+    try {
+      await resendBackofficeStaffInvitationApi(member.id);
+      setInfoMsg(`Invitación reenviada a ${member.email}.`);
+    } catch (err) {
+      setErrorMsg(err.message || 'No se pudo reenviar la invitación.');
     }
   };
 
@@ -135,6 +150,13 @@ export default function StaffBento() {
         </button>
       </div>
 
+      {infoMsg && (
+        <div className="p-3 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/40 rounded-xl text-xs font-bold flex items-center gap-2">
+          <CheckCircle2 className="w-4 h-4 shrink-0" />
+          <span>{infoMsg}</span>
+        </div>
+      )}
+
       {errorMsg && (
         <div className="p-3 bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800/40 rounded-xl text-xs font-bold flex items-center gap-2">
           <AlertCircle className="w-4 h-4 shrink-0" />
@@ -183,15 +205,26 @@ export default function StaffBento() {
                       <td data-label="Correo" className="px-2 py-3 text-ink-soft">{member.email}</td>
                       <td data-label="Estado" className="px-2 py-3">
                         <span className={`text-[10px] px-2 py-0.5 rounded-full font-extrabold ${
-                          member.active
+                          !member.emailVerified
+                            ? 'bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400'
+                            : member.active
                             ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
                             : 'bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400'
                         }`}>
-                          {member.active ? 'Activo' : 'Inactivo'}
+                          {!member.emailVerified ? 'Invitación pendiente' : (member.active ? 'Activo' : 'Inactivo')}
                         </span>
                       </td>
                       <td data-label="Acciones" className="px-2 py-3">
                         <div className="flex items-center justify-end gap-1">
+                          {!member.emailVerified && (
+                            <button
+                              onClick={() => handleResendInvitation(member)}
+                              title="Reenviar invitación"
+                              className="p-1.5 text-ink-muted hover:text-brand rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer"
+                            >
+                              <Send className="w-4 h-4" />
+                            </button>
+                          )}
                           <button
                             onClick={() => openPasswordReset(member)}
                             title="Restablecer contraseña"
@@ -303,6 +336,10 @@ export default function StaffBento() {
               </div>
             </div>
 
+            <p className="text-[11px] text-ink-soft font-medium">
+              Le enviaremos una invitación por correo. La cuenta queda activa cuando la persona la acepte; el enlace vence en 24 horas.
+            </p>
+
             <div className="flex gap-2 pt-2">
               <button
                 type="button"
@@ -315,7 +352,7 @@ export default function StaffBento() {
                 type="submit"
                 className="w-1/2 py-3 bg-solid hover:bg-solid-hover text-solid-ink rounded-2xl text-xs font-extrabold cursor-pointer shadow-md shadow-[#0A0A0A]/10"
               >
-                Crear Operador
+                Enviar invitación
               </button>
             </div>
           </form>

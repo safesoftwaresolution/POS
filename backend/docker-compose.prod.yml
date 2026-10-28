@@ -6,6 +6,18 @@ services:
       POSTGRES_DB: ${DB_NAME:-app_db}
       POSTGRES_USER: ${DB_USER:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD:?Define DB_PASSWORD}
+    # Valores conservadores para un VPS de 8 GB compartido con el backend (ver docs/_deployment.md).
+    command:
+      - postgres
+      - -c
+      - shared_buffers=256MB
+      - -c
+      - effective_cache_size=2GB
+      - -c
+      - work_mem=8MB
+      - -c
+      - max_connections=100
+    mem_limit: 1g
     volumes:
       - pgdata-prod:/var/lib/postgresql/data
     restart: always
@@ -58,6 +70,8 @@ services:
       R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY:-}
       R2_BUCKET_NAME: ${R2_BUCKET_NAME:-pos-storage}
       R2_PUBLIC_URL: ${R2_PUBLIC_URL:-}
+    # Heap ~1,1 GB con -XX:MaxRAMPercentage=75; el resto cubre metaspace, hilos y buffers.
+    mem_limit: 1536m
     restart: always
     depends_on:
       db:

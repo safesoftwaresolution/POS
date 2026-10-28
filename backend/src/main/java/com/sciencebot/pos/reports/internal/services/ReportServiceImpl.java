@@ -28,6 +28,7 @@ public class ReportServiceImpl implements ReportService {
     private static final int MAX_EXPIRING_ROWS = 500;
 
     private final ReportDao reportDao;
+    private final ExpiringReportPdfRenderer expiringPdf = new ExpiringReportPdfRenderer();
 
     public ReportServiceImpl(ReportDao reportDao) {
         this.reportDao = reportDao;
@@ -73,7 +74,7 @@ public class ReportServiceImpl implements ReportService {
 
     @Override
     public List<ExpiringProductDto> getExpiringProductsReport(Integer days) {
-        int window = (days == null) ? DEFAULT_EXPIRING_DAYS : Math.min(Math.max(days, 1), MAX_EXPIRING_DAYS);
+        int window = expiringWindow(days);
         LocalDate today = LocalDate.now();
 
         return reportDao.findExpiringProducts(requireCurrentStoreId(), today.plusDays(window), MAX_EXPIRING_ROWS).stream()
@@ -85,6 +86,15 @@ public class ReportServiceImpl implements ReportService {
                             row.quantityAvailable(), status);
                 })
                 .toList();
+    }
+
+    @Override
+    public byte[] getExpiringProductsReportPdf(Integer days) {
+        return expiringPdf.render(getExpiringProductsReport(days), expiringWindow(days), LocalDate.now());
+    }
+
+    private static int expiringWindow(Integer days) {
+        return (days == null) ? DEFAULT_EXPIRING_DAYS : Math.min(Math.max(days, 1), MAX_EXPIRING_DAYS);
     }
 
     @Override

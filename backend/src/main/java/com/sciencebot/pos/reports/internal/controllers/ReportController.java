@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -164,6 +165,32 @@ public class ReportController {
             @RequestParam(required = false) Integer days
     ) {
         return ResponseEntity.ok(reportService.getExpiringProductsReport(days));
+    }
+
+    @GetMapping(value = "/expiring/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'SUPERVISOR')")
+    @Operation(
+            summary = "Vencimientos en PDF",
+            description = """
+                    Mismo contenido que `GET /reports/expiring` (lotes vencidos y por vencer con sus cantidades),
+                    como archivo PDF. `days` por defecto 30 (entre 1 y 365).
+
+                    Accesible para **ADMINISTRATOR** y **SUPERVISOR**.
+                    """
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "PDF generado", content = @Content(mediaType = MediaType.APPLICATION_PDF_VALUE)),
+            @ApiResponse(responseCode = "401", description = "No autenticado", content = @Content),
+            @ApiResponse(responseCode = "403", description = "Sin permisos suficientes", content = @Content)
+    })
+    public ResponseEntity<byte[]> getExpiringProductsReportPdf(
+            @Parameter(description = "Ventana en días hacia adelante (1 a 365)", example = "30")
+            @RequestParam(required = false) Integer days
+    ) {
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"vencimientos.pdf\"")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(reportService.getExpiringProductsReportPdf(days));
     }
 
     @GetMapping("/profitability")

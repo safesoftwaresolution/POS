@@ -71,4 +71,25 @@ class ReportExpiringControllerTest {
 
         verifyNoInteractions(reportService);
     }
+
+    @Test
+    @WithMockUser(roles = "SUPERVISOR")
+    void supervisor_downloadsThePdf() throws Exception {
+        when(reportService.getExpiringProductsReportPdf(15)).thenReturn("%PDF-1.4".getBytes());
+
+        mockMvc.perform(get("/api/v1/reports/expiring/pdf").param("days", "15"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType("application/pdf"))
+                .andExpect(header().string("Content-Disposition", "inline; filename=\"vencimientos.pdf\""))
+                .andExpect(content().bytes("%PDF-1.4".getBytes()));
+    }
+
+    @Test
+    @WithMockUser(roles = "SELLER")
+    void seller_cannotDownloadThePdf() throws Exception {
+        mockMvc.perform(get("/api/v1/reports/expiring/pdf"))
+                .andExpect(status().isForbidden());
+
+        verifyNoInteractions(reportService);
+    }
 }

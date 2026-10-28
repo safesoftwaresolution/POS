@@ -71,6 +71,11 @@ Este módulo no define reglas de negocio propias. Solo consulta datos de otros m
 - **Query params**: days (opcional, 1..365, default 30)
 - **Response 200**: `[{ "productId": 1, "productName": "Leche entera 1L", "internalCode": "PROD-001", "lotId": 7, "lotCode": "L-2210", "expirationDate": "2026-11-15", "daysToExpire": 12, "lotRemaining": 24, "quantityAvailable": 60, "status": "EXPIRING" }]`. La UI vive en el Dashboard (tarjeta "Próximos a vencer").
 
+### GET /api/v1/reports/expiring/pdf
+- **Permisos**: Admin, Supervisor
+- **Query params**: days (opcional, 1..365, default 30)
+- **Response 200**: `application/pdf` (`Content-Disposition: inline; filename="vencimientos.pdf"`). Mismo contenido que `/expiring`: una fila por lote con producto, código, lote, fecha, estado, unidades que quedan del lote y stock total del producto; vencidos en rojo y los que vencen en 7 días o menos en ámbar. Sin lotes en la ventana, el PDF lo dice. Se dibuja con OpenPDF en `ExpiringReportPdfRenderer` (sin datos propios: reutiliza `getExpiringProductsReport`). La UI es el botón «Vencimientos (PDF)» de Inventario → Stock (Admin y Supervisor), con ventana de 30, 60 o 90 días.
+
 ### GET /api/v1/reports/profitability
 - **Permisos**: Admin
 - **Query params**: dateFrom, dateTo

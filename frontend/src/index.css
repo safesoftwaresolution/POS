@@ -163,21 +163,14 @@
 #barcode-print-sheet { display: none; }
 
 @media print {
-  body * {
-    visibility: hidden;
+  /* display:none (no visibility) para que la app no ocupe espacio ni genere hojas vacías */
+  #root {
+    display: none !important;
   }
-  #barcode-print-sheet,
-  #barcode-print-sheet * {
-    visibility: visible;
-  }
-  /* absolute (no fixed): un elemento fixed se repite en cada página y obligaba a una etiqueta por hoja */
   #barcode-print-sheet {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 4mm;
-    position: absolute;
-    top: 0;
-    left: 0;
     width: 100%;
     padding: 8mm;
     background: #ffffff;

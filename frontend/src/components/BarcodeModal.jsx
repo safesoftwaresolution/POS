@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import JsBarcode from 'jsbarcode';
 import { X, Printer } from 'lucide-react';
 
@@ -82,13 +83,17 @@ export default function BarcodeModal({ product, onClose }) {
                 className="w-24 px-3 py-2 rounded-xl border border-line bg-card text-ink text-right"
               />
             </label>
-            <div id="barcode-print-sheet" aria-hidden="true">
-              {Array.from({ length: count }, (_, i) => (
-                <div key={i} className="barcode-label">
-                  <img src={labelSrc} alt="" />
-                </div>
-              ))}
-            </div>
+            {/* Portal al body: así, al imprimir, #root se oculta con display:none y no genera hojas vacías */}
+            {createPortal(
+              <div id="barcode-print-sheet" aria-hidden="true">
+                {Array.from({ length: count }, (_, i) => (
+                  <div key={i} className="barcode-label">
+                    <img src={labelSrc} alt="" />
+                  </div>
+                ))}
+              </div>,
+              document.body,
+            )}
           </>
         ) : (
           <div className="py-8 text-center bg-gray-50 dark:bg-white/5 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700">

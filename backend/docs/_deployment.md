@@ -86,8 +86,50 @@ docker compose -f docker-compose.prod.yml down
 2. **Variables de entorno**: define al menos `SPRING_PROFILES_ACTIVE=prod`, `DB_*`, `JWT_SECRET`, `JWT_COOKIE_SECURE=true`, `APP_FRONTEND_URL`, `EMAIL_PROVIDER=smtp` + `SMTP_*`, `BILLING_ENCRYPTION_KEY`, `R2_*` y `SEED_SUPERADMIN_PASSWORD`.
 3. **Hibernate**: `validate` en todos los entornos; el esquema solo cambia con migraciones Flyway.
 4. **Sirve el SPA detrás de HTTPS** (proxy inverso): las cookies de sesión y el CORS dependen de ello.
-5. La imagen `prod` fija la zona horaria `America/Bogota` (`TZ` y `-Duser.timezone`), trae un `HEALTHCHECK` TCP y limita la JVM con `-XX:MaxRAMPercentage=75`.
+5. La imagen `prod` fija la zona horaria `America/Bogota` (`TZ` y `-Duser.timezone`), trae un `HEALTHCHECK` TCP y limita la JVM con `-XX:MaxRAMPercentage=75` (ver «Capacidad y límites»).
 6. CI: `.github/workflows/ci.yml` corre `mvnw verify`, lint + build del frontend y la validación del arnés en cada push a `develop`/`main` y en cada PR.
+
+## Capacidad y límites
+
+Referencia: VPS de ~2 vCPU / 8 GB / 100 GB (Dokploy). Orden de riesgo al crecer: *disco → pool de conexiones/reportes → CPU en picos y deploys → RAM*. Las cifras de clientes son **estimaciones no medidas** hasta correr `backend/loadtest/` (ver su README).
+
+| Estimación (sin medir) | Lectura |
+|---|---|
+| ~100 locales | cómodo |
+| 100-200 locales | amarillo: vigilar pool y CPU |
+| > 200 locales | rediseñar (Postgres aparte, réplicas) |
+
+### Configuración aplicada (perfil `prod` y `docker-compose.prod.yml`)
+- **Hikari**: `maximum-pool-size=20` (`HIKARI_MAX_POOL_SIZE`), `connection-timeout=10000`, `leak-detection-threshold` apagado (`HIKARI_LEAK_DETECTION_MS` solo para depurar). Postgres trae `max_connections=100` (fijado explícitamente en el compose): cubre pool × réplicas hasta ~4 réplicas.
+- **Timeout de consultas**: `spring.jdbc.template.query-timeout=30`. `JdbcClient` lo hereda porque se crea sobre el `JdbcTemplate` autoconfigurado, así que cubre los reportes (`ReportDaoJdbc`) y las consultas de back-office.
+- **`spring.jpa.open-in-view=false`** (todos los perfiles): la conexión se libera al cerrar la transacción, no al terminar la respuesta HTTP.
+- **Memoria**: backend `mem_limit: 1536m` (heap ≈ 1,1 GB con `MaxRAMPercentage=75`); Postgres `mem_limit: 1g`. Si Dokploy no usa el compose, fijar lo mismo en *Advanced → Resources*.
+- **Postgres**: `shared_buffers=256MB`, `effective_cache_size=2GB`, `work_mem=8MB` (conservadores para 8 GB compartidos).
+
+### Disco
+- Dokploy → Settings → Web Server: activar *Daily Docker Cleanup*.
+- Una vez por SSH: `docker builder prune -f && docker image prune -f`; luego revisar *Monitoring → Docker Disk Usage* (objetivo: Build Cache < 5 GB).
+- Registrar el tamaño del volumen de Postgres como línea base de crecimiento.
+
+### Backups de Postgres
+1. Dokploy → servicio Postgres → *Backups*: dump diario a un bucket R2/S3 **distinto** del de imágenes, retención 14-30 días.
+2. Restauración (probar al menos una vez en una BD temporal, nunca sobre producción):
+   ```bash
+   createdb -U postgres app_restore_test
+   pg_restore -U postgres -d app_restore_test --no-owner backup.dump   # o: psql ... < backup.sql si es SQL plano
+   psql -U postgres -d app_restore_test -c "SELECT count(*) FROM sales;"
+   dropdb -U postgres app_restore_test
+   ```
+3. Anotar aquí la fecha de la última restauración probada: _pendiente_.
+
+### Imagen del backend construida en CI
+El job `backend-image` de `ci.yml` (solo push a `main`, tras pasar backend/frontend/harness) construye el target `prod` y lo publica en `ghcr.io/<owner>/<repo>-backend` con tags `latest` y `<sha>`, con caché de capas `gha`. En Dokploy, cambiar el origen del backend de *Git build* a *Docker image* (GHCR, con credenciales de lectura de paquetes) y redeploy por webhook tras la publicación. El VPS deja de compilar Maven.
+
+### Reglas operativas
+- No desplegar en picos: quincena (15/30), viernes y 5-7 pm.
+- Alertas sugeridas (Dokploy notifications / uptime externo): disco > 70 %, RAM > 75 % sostenida, CPU > 70 % durante 10 min, healthcheck caído.
+- Subir a 4 vCPU / 16 GB si: p95 de `POST /api/v1/sales` > 800 ms en pico, conexiones pendientes del pool > 0 de forma recurrente, o CPU > 70 % sostenida. Pasados ~100-150 locales: Postgres en servidor propio y evaluar segunda réplica del backend (JWT sin estado) y réplica de lectura para reportes.
+- Pendiente opcional: `spring-boot-starter-actuator` (solo health + métricas Hikari, protegido) para ver el pool; hoy el healthcheck es TCP.
 
 ## Distribución de dominios (producción)
 

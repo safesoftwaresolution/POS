@@ -1,4 +1,4 @@
-import { fetchApi } from './http';
+import { fetchApi, downloadFileApi } from './http';
 
 function dateParams(dateFrom, dateTo) {
   const params = new URLSearchParams();
@@ -40,4 +40,9 @@ export async function getPurchasesReportApi(dateFrom, dateTo) {
 
 export async function getCashClosingReportApi(dateFrom, dateTo) {
   return await fetchApi(`/reports/cash-closing?${dateParams(dateFrom, dateTo)}`);
+}
+
+/** Informe de vencimientos como PDF (Blob), con la misma ventana en días que `getExpiringReportApi`. */
+export async function downloadExpiringReportPdfApi(days = 30) {
+  return await downloadFileApi(`/reports/expiring/pdf?days=${days}`);
 }

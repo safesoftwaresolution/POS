@@ -21,6 +21,7 @@ import { SegmentedControl } from '../components/ui';
 import BarcodeModal from '../components/BarcodeModal';
 import ProductImportModal from '../components/products/ProductImportModal';
 import ExpiryBadge from '../components/products/ExpiryBadge';
+import ExpiringPdfButton from '../components/inventory/ExpiringPdfButton';
 import StockMovementModal from '../components/inventory/StockMovementModal';
 import MovementsPanel from '../components/inventory/MovementsPanel';
 import ReturnsBento from './ReturnsBento';
@@ -77,6 +78,7 @@ export default function InventoryBento() {
           <div className="flex items-center gap-2">
             {canMoveStock && (
               <>
+                <ExpiringPdfButton />
                 <button
                   onClick={() => setShowCountModal(true)}
                   className="px-4 py-2.5 border border-line hover:border-line-strong text-ink bg-card rounded-2xl text-xs font-bold flex items-center gap-2 cursor-pointer transition-all"

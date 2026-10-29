@@ -27,6 +27,7 @@
 
 ### RN-SALE-005 — Un Vendedor Solo Ve sus Ventas
 - Un usuario con rol `SELLER` solo consulta las ventas que **él registró** (`sales.user_id`): `GET /sales` las filtra en la consulta, y `GET /sales/{id}`, `GET /sales/{id}/returns` y `POST /sales/{id}/returns` responden 404 si la venta es de otro vendedor. `ADMINISTRATOR` y `SUPERVISOR` ven las de todo el local.
+- El Dashboard del vendedor se calcula solo con esas ventas (total, transacciones, ticket promedio, métodos de pago, ventas recientes y facturas validadas propias); no muestra stock, compras, vencimientos ni rankings. Al no tener reportes agregados, suma las ventas cargadas (hasta 1000 por período).
 - Lo decide el backend por el rol de la sesión (`SaleFacade.restrictedSellerId()`), no la interfaz. Las facturas electrónicas siguen la misma regla (`billing/spec.md`, RN-BILL-020).
 
 ### RN-INV-001 (ref: inventory/spec.md)

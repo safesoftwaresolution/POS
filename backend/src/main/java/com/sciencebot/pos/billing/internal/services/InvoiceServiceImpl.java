@@ -146,6 +146,7 @@ public class InvoiceServiceImpl implements InvoiceService {
     public void sendInvoiceEmail(Long saleId, String email) {
         Objects.requireNonNull(saleId, "El ID de la venta es obligatorio");
         Objects.requireNonNull(email, "El correo electrónico es obligatorio");
+        assertSaleVisible(saleId);
 
         ElectronicInvoice einvoice = repository.findBySaleIdAndStoreId(saleId, requireStoreId())
                 .orElseThrow(() -> new IllegalArgumentException("No existe factura electrónica registrada para la venta ID: " + saleId));
@@ -166,6 +167,20 @@ public class InvoiceServiceImpl implements InvoiceService {
         if (storeId == null) {
             return org.springframework.data.domain.Page.empty();
         }
+        Optional<Long> sellerId = saleFacade.restrictedSellerId();
+        if (sellerId.isPresent()) {
+            // Un vendedor solo ve las facturas de sus ventas (RN-SALE-005); el orden es fijo.
+            var unsorted = org.springframework.data.domain.PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
+            if (status != null && !status.isBlank()) {
+                try {
+                    String statusName = ElectronicInvoiceStatus.valueOf(status.trim().toUpperCase()).name();
+                    return repository.findByStoreIdAndStatusAndSeller(storeId, statusName, sellerId.get(), unsorted).map(invoiceMapper::toDto);
+                } catch (IllegalArgumentException ex) {
+                    return org.springframework.data.domain.Page.empty();
+                }
+            }
+            return repository.findByStoreIdAndSeller(storeId, sellerId.get(), unsorted).map(invoiceMapper::toDto);
+        }
         org.springframework.data.domain.Page<ElectronicInvoice> page;
         if (status != null && !status.isBlank()) {
             try {
@@ -183,6 +198,7 @@ public class InvoiceServiceImpl implements InvoiceService {
     @Override
     @Transactional(readOnly = true)
     public byte[] downloadInvoicePDF(Long saleId) {
+        assertSaleVisible(saleId);
         ElectronicInvoice einvoice = repository.findBySaleIdAndStoreId(saleId, requireStoreId())
                 .orElseThrow(() -> new IllegalArgumentException("Factura no encontrada para la venta: " + saleId));
 
@@ -195,6 +211,7 @@ public class InvoiceServiceImpl implements InvoiceService {
     @Override
     @Transactional(readOnly = true)
     public byte[] downloadInvoiceXML(Long saleId) {
+        assertSaleVisible(saleId);
         ElectronicInvoice einvoice = repository.findBySaleIdAndStoreId(saleId, requireStoreId())
                 .orElseThrow(() -> new IllegalArgumentException("Factura no encontrada para la venta: " + saleId));
 
@@ -202,6 +219,13 @@ public class InvoiceServiceImpl implements InvoiceService {
 
         InvoiceProvider provider = resolveProvider();
         return provider.downloadInvoiceXML(einvoice.getFactusNumber());
+    }
+
+    /** Un vendedor no puede operar la factura de una venta ajena: responde como si no existiera. */
+    private void assertSaleVisible(Long saleId) {
+        if (saleFacade.restrictedSellerId().isPresent() && saleFacade.getById(saleId).isEmpty()) {
+            throw new IllegalArgumentException("Factura no encontrada para la venta: " + saleId);
+        }
     }
 
     private ElectronicInvoice lockOrCreateInvoice(Long saleId, Long storeId) {

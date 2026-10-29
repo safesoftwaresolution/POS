@@ -212,6 +212,7 @@ public class SaleServiceImpl implements SaleFacade {
     public Optional<SaleDto> getById(Long id) {
         return saleRepository.findById(id)
                 .filter(s -> s.getStoreId().equals(TenantContext.getStoreId()))
+                .filter(s -> isVisibleToCurrentUser(s))
                 .map(saleMapper::toDto);
     }
 
@@ -286,7 +287,7 @@ public class SaleServiceImpl implements SaleFacade {
             LocalDateTime dateTo,
             Pageable pageable
     ) {
-        return saleRepository.searchSales(requireCurrentStoreId(), customerId, dateFrom, dateTo, pageable)
+        return saleRepository.searchSales(requireCurrentStoreId(), restrictedSellerId().orElse(null), customerId, dateFrom, dateTo, pageable)
                 .map(saleMapper::toDto);
     }
 
@@ -296,6 +297,7 @@ public class SaleServiceImpl implements SaleFacade {
         Long storeId = requireCurrentStoreId();
         Sale sale = saleRepository.findById(saleId)
                 .filter(s -> s.getStoreId().equals(storeId))
+                .filter(this::isVisibleToCurrentUser)
                 .orElseThrow(() -> new EntityNotFoundException("Venta no encontrada con ID: " + saleId));
 
         if (command.items() == null || command.items().isEmpty()) {
@@ -373,11 +375,28 @@ public class SaleServiceImpl implements SaleFacade {
         Long storeId = requireCurrentStoreId();
         Sale sale = saleRepository.findById(saleId)
                 .filter(s -> s.getStoreId().equals(storeId))
+                .filter(this::isVisibleToCurrentUser)
                 .orElseThrow(() -> new EntityNotFoundException("Venta no encontrada con ID: " + saleId));
 
         return saleReturnRepository.findAllBySaleIdOrderByCreatedAtDesc(saleId).stream()
                 .map(r -> saleReturnMapper.toDto(r, sale.getInvoiceNumber()))
                 .toList();
+    }
+
+    /** Un SELLER solo ve las ventas que él registró (RN-SALE-005); los demás roles ven las de todo el local. */
+    @Override
+    public Optional<Long> restrictedSellerId() {
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || auth.getAuthorities().stream().noneMatch(a -> "ROLE_SELLER".equals(a.getAuthority()))) {
+            return Optional.empty();
+        }
+        return Optional.of(userFacade.findByUsername(auth.getName())
+                .map(u -> u.id())
+                .orElseThrow(() -> new IllegalStateException("No se pudo identificar al usuario autenticado")));
+    }
+
+    private boolean isVisibleToCurrentUser(Sale sale) {
+        return restrictedSellerId().map(userId -> userId.equals(sale.getUserId())).orElse(true);
     }
 
     private static Long requireCurrentStoreId() {

@@ -359,6 +359,122 @@ class SaleServiceImplTest {
         assertTrue(ex.getMessage().contains("no pertenece"));
     }
 
+    private void loginAs(String username, Long userId, String role) {
+        com.sciencebot.pos.users.UserDto user = mock(com.sciencebot.pos.users.UserDto.class);
+        when(user.id()).thenReturn(userId);
+        when(userFacade.findByUsername(username)).thenReturn(Optional.of(user));
+        org.springframework.security.core.context.SecurityContextHolder.getContext().setAuthentication(
+                new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
+                        username, null, List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_" + role))));
+    }
+
+    @Test
+    void getById_SellerSeesOwnSale() {
+        loginAs("ana", 7L, "SELLER");
+        try {
+            Sale own = saleOfStore(100L, STORE_ID);
+            own.setUserId(7L);
+            when(saleRepository.findById(100L)).thenReturn(Optional.of(own));
+            when(saleMapper.toDto(own)).thenReturn(mock(SaleDto.class));
+
+            assertTrue(saleService.getById(100L).isPresent());
+        } finally {
+            org.springframework.security.core.context.SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
+    void getById_SellerCannotSeeAnotherSellersSale() {
+        loginAs("ana", 7L, "SELLER");
+        try {
+            Sale other = saleOfStore(100L, STORE_ID);
+            other.setUserId(8L);
+            when(saleRepository.findById(100L)).thenReturn(Optional.of(other));
+
+            assertTrue(saleService.getById(100L).isEmpty());
+            verify(saleMapper, never()).toDto(any(Sale.class));
+        } finally {
+            org.springframework.security.core.context.SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
+    void getById_AdministratorSeesAnyonesSale() {
+        loginAs("boss", 1L, "ADMINISTRATOR");
+        try {
+            Sale other = saleOfStore(100L, STORE_ID);
+            other.setUserId(8L);
+            when(saleRepository.findById(100L)).thenReturn(Optional.of(other));
+            when(saleMapper.toDto(other)).thenReturn(mock(SaleDto.class));
+
+            assertTrue(saleService.getById(100L).isPresent());
+        } finally {
+            org.springframework.security.core.context.SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
+    void searchSales_SellerQueryIsLimitedToTheirUserId() {
+        loginAs("ana", 7L, "SELLER");
+        try {
+            var pageable = org.springframework.data.domain.PageRequest.of(0, 20);
+            when(saleRepository.searchSales(eq(STORE_ID), eq(7L), any(), any(), any(), eq(pageable)))
+                    .thenReturn(org.springframework.data.domain.Page.empty());
+
+            saleService.searchSales(null, null, null, pageable);
+
+            verify(saleRepository).searchSales(STORE_ID, 7L, null, null, null, pageable);
+        } finally {
+            org.springframework.security.core.context.SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
+    void searchSales_AdministratorQueryIsNotLimited() {
+        loginAs("boss", 1L, "ADMINISTRATOR");
+        try {
+            var pageable = org.springframework.data.domain.PageRequest.of(0, 20);
+            when(saleRepository.searchSales(any(), any(), any(), any(), any(), any()))
+                    .thenReturn(org.springframework.data.domain.Page.empty());
+
+            saleService.searchSales(null, null, null, pageable);
+
+            verify(saleRepository).searchSales(STORE_ID, null, null, null, null, pageable);
+        } finally {
+            org.springframework.security.core.context.SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
+    void registerReturn_SellerCannotReturnAnotherSellersSale() {
+        loginAs("ana", 7L, "SELLER");
+        try {
+            Sale other = saleOfStore(100L, STORE_ID);
+            other.setUserId(8L);
+            when(saleRepository.findById(100L)).thenReturn(Optional.of(other));
+            CreateSaleReturnCommand command = new CreateSaleReturnCommand(null,
+                    List.of(new CreateSaleReturnItemCommand(1L, 1)));
+
+            assertThrows(EntityNotFoundException.class, () -> saleService.registerReturn(100L, command));
+        } finally {
+            org.springframework.security.core.context.SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
+    void getReturnsBySale_SellerCannotSeeAnotherSellersSale() {
+        loginAs("ana", 7L, "SELLER");
+        try {
+            Sale other = saleOfStore(100L, STORE_ID);
+            other.setUserId(8L);
+            when(saleRepository.findById(100L)).thenReturn(Optional.of(other));
+
+            assertThrows(EntityNotFoundException.class, () -> saleService.getReturnsBySale(100L));
+        } finally {
+            org.springframework.security.core.context.SecurityContextHolder.clearContext();
+        }
+    }
+
     @Test
     void registerReturn_SaleFromAnotherStore_ThrowsNotFound() {
         Sale sale = saleOfStore(100L, 2L); // otro local

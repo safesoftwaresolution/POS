@@ -17,11 +17,13 @@ public interface SaleRepository extends JpaRepository<Sale, Long> {
     Optional<Sale> findByIdempotencyKey(String idempotencyKey);
 
     @Query("SELECT s FROM Sale s WHERE s.storeId = :storeId AND " +
+           "(:userId IS NULL OR s.userId = :userId) AND " +
            "(:customerId IS NULL OR s.customerId = :customerId) AND " +
            "(cast(:dateFrom as timestamp) IS NULL OR s.createdAt >= :dateFrom) AND " +
            "(cast(:dateTo as timestamp) IS NULL OR s.createdAt <= :dateTo)")
     Page<Sale> searchSales(
             @Param("storeId") Long storeId,
+            @Param("userId") Long userId,
             @Param("customerId") Long customerId,
             @Param("dateFrom") LocalDateTime dateFrom,
             @Param("dateTo") LocalDateTime dateTo,

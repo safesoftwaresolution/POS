@@ -193,6 +193,61 @@ class InvoiceServiceImplTest {
     }
 
     @Test
+    void listInvoices_Seller_UsesTheSellerScopedQuery() {
+        when(saleFacade.restrictedSellerId()).thenReturn(Optional.of(7L));
+        var page = org.springframework.data.domain.PageRequest.of(2, 10, org.springframework.data.domain.Sort.by("createdAt"));
+        var unsorted = org.springframework.data.domain.PageRequest.of(2, 10);
+        when(repository.findByStoreIdAndSeller(1L, 7L, unsorted)).thenReturn(org.springframework.data.domain.Page.empty());
+
+        invoiceService.listInvoices(page, null);
+
+        verify(repository).findByStoreIdAndSeller(1L, 7L, unsorted);
+        verify(repository, never()).findByStoreId(any(), any());
+    }
+
+    @Test
+    void listInvoices_SellerWithStatus_UsesTheSellerScopedStatusQuery() {
+        when(saleFacade.restrictedSellerId()).thenReturn(Optional.of(7L));
+        var unsorted = org.springframework.data.domain.PageRequest.of(0, 20);
+        when(repository.findByStoreIdAndStatusAndSeller(1L, "VALIDATED", 7L, unsorted))
+                .thenReturn(org.springframework.data.domain.Page.empty());
+
+        invoiceService.listInvoices(unsorted, "validated");
+
+        verify(repository).findByStoreIdAndStatusAndSeller(1L, "VALIDATED", 7L, unsorted);
+        verify(repository, never()).findByStoreIdAndStatus(any(), any(), any());
+    }
+
+    @Test
+    void listInvoices_NonSeller_ListsTheWholeStore() {
+        var pageable = org.springframework.data.domain.PageRequest.of(0, 20);
+        when(repository.findByStoreId(1L, pageable)).thenReturn(org.springframework.data.domain.Page.empty());
+
+        invoiceService.listInvoices(pageable, null);
+
+        verify(repository).findByStoreId(1L, pageable);
+        verify(repository, never()).findByStoreIdAndSeller(any(), any(), any());
+    }
+
+    @Test
+    void downloadInvoicePDF_SellerOnAnotherSellersSale_IsRefused() {
+        when(saleFacade.restrictedSellerId()).thenReturn(Optional.of(7L));
+        when(saleFacade.getById(5L)).thenReturn(Optional.empty());
+
+        assertThrows(IllegalArgumentException.class, () -> invoiceService.downloadInvoicePDF(5L));
+        verify(repository, never()).findBySaleIdAndStoreId(any(), any());
+    }
+
+    @Test
+    void sendInvoiceEmail_SellerOnAnotherSellersSale_IsRefused() {
+        when(saleFacade.restrictedSellerId()).thenReturn(Optional.of(7L));
+        when(saleFacade.getById(5L)).thenReturn(Optional.empty());
+
+        assertThrows(IllegalArgumentException.class, () -> invoiceService.sendInvoiceEmail(5L, "a@a.com"));
+        verify(repository, never()).findBySaleIdAndStoreId(any(), any());
+    }
+
+    @Test
     void downloadInvoicePDF_WithoutStore_IsRefused() {
         TenantContext.clear();
 

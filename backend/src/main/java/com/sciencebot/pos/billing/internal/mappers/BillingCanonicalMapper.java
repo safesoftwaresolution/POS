@@ -157,7 +157,14 @@ public class BillingCanonicalMapper {
                 BigDecimal netSubtotal = netUnitPrice.multiply(BigDecimal.valueOf(item.quantity()));
 
                 String standardCode = "999";
-                if (item.productId() != null && productFacade != null) {
+                String unitMeasureCode = "94";  // 94 = Unidad estándar DIAN
+                if (item.unitMeasureCode() != null && !item.unitMeasureCode().isBlank()) {
+                    unitMeasureCode = item.unitMeasureCode().trim();
+                }
+                if (item.unspscCode() != null && !item.unspscCode().isBlank()) {
+                    // La venta guardó el código con que se facturó (servicios): no se consulta el catálogo.
+                    standardCode = item.unspscCode().trim();
+                } else if (item.productId() != null && productFacade != null) {
                     try {
                         Optional<ProductDto> prodOpt = productFacade.getById(item.productId());
                         if (prodOpt.isPresent() && prodOpt.get().unspscCode() != null && !prodOpt.get().unspscCode().isBlank()) {
@@ -175,7 +182,7 @@ public class BillingCanonicalMapper {
                         netUnitPrice,
                         taxRate,
                         netSubtotal,
-                        "94",  // 94 = Unidad estándar DIAN
+                        unitMeasureCode,
                         standardCode,
                         "01",  // 01 = IVA estándar DIAN
                         BigDecimal.ZERO,

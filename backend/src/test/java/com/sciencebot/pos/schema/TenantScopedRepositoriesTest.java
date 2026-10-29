@@ -66,6 +66,7 @@ class TenantScopedRepositoriesTest {
             "SubcategoryRepository.existsByCategoryId",
             "ProductRepository.countByCategoryIdAndActiveTrue",
             "ProductRepository.existsByCategoryIdAndActiveTrue",
+            "ServiceItemRepository.existsByCategoryIdAndActiveTrue",
             "ProductRepository.countBySubcategoryIdAndActiveTrue",
             "ProductRepository.existsBySubcategoryIdAndActiveTrue",
             // Usuarios: login/unicidad globales (username y email son UNIQUE en toda la plataforma) y listados

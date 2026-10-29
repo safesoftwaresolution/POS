@@ -14,6 +14,8 @@ import com.sciencebot.pos.customers.CustomerDto;
 import com.sciencebot.pos.customers.CustomerFacade;
 import com.sciencebot.pos.products.ProductDto;
 import com.sciencebot.pos.products.ProductFacade;
+import com.sciencebot.pos.services.ServiceDto;
+import com.sciencebot.pos.services.ServiceFacade;
 import com.sciencebot.pos.inventory.InventoryFacade;
 import com.sciencebot.pos.users.UserFacade;
 import jakarta.persistence.EntityNotFoundException;
@@ -55,6 +57,9 @@ class SaleServiceImplTest {
 
     @Mock
     private ProductFacade productFacade;
+
+    @Mock
+    private ServiceFacade serviceFacade;
 
     @Mock
     private InventoryFacade inventoryFacade;
@@ -156,6 +161,122 @@ class SaleServiceImplTest {
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
                 () -> saleService.registerSale(command));
         assertTrue(ex.getMessage().contains("efectivo recibido"));
+    }
+
+    // --- Servicios ---
+
+    private void stubSaleBasics() {
+        CustomerDto customer = new CustomerDto(1L, "Maria Lopez", "123", "a@a.com", "123", "Calle", true);
+        when(customerFacade.getById(1L)).thenReturn(Optional.of(customer));
+        when(saleRepository.getNextInvoiceSeq()).thenReturn(1L);
+        when(saleRepository.saveAndFlush(any(Sale.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(saleMapper.toDto(any(Sale.class))).thenReturn(mock(SaleDto.class));
+    }
+
+    private ServiceDto serviceOf(boolean active) {
+        return new ServiceDto(2L, "SRV-1", "Masaje 60 min", null, 3L, "Spa", BigDecimal.valueOf(119000.00),
+                BigDecimal.valueOf(19.00), "90111500", "HUR", 60, active);
+    }
+
+    @Test
+    void registerSale_ServiceLine_DoesNotCheckStockNorMoveInventory() {
+        stubSaleBasics();
+        when(serviceFacade.getById(2L)).thenReturn(Optional.of(serviceOf(true)));
+        CreateSaleCommand command = new CreateSaleCommand(1L, BigDecimal.valueOf(238000.00), false,
+                List.of(new CreateSaleItemCommand(null, 2L, 2)), "CASH");
+
+        saleService.registerSale(command);
+
+        verify(inventoryFacade, never()).registerMovement(anyLong(), anyString(), anyInt(), anyString());
+        verify(productFacade, never()).getById(anyLong());
+        verify(saleRepository).saveAndFlush(argThat(s -> {
+            SaleItem line = s.getItems().get(0);
+            return line.getItemType() == SaleItemType.SERVICE
+                    && line.getProductId() == null
+                    && line.getServiceId().equals(2L)
+                    && line.getItemName().equals("Masaje 60 min")
+                    && "HUR".equals(line.getUnitMeasureCode())
+                    && "90111500".equals(line.getUnspscCode())
+                    && line.getSubtotal().compareTo(BigDecimal.valueOf(238000.00)) == 0
+                    && line.getTaxAmount().compareTo(BigDecimal.valueOf(38000.00)) == 0
+                    && s.getTotalAmount().compareTo(BigDecimal.valueOf(238000.00)) == 0;
+        }));
+    }
+
+    @Test
+    void registerSale_MixedProductAndService_OnlyProductMovesStock() {
+        stubSaleBasics();
+        ProductDto product = new ProductDto(1L, "P1", "123", "Prod 1", "Cat", null, null, BigDecimal.ONE, BigDecimal.valueOf(8.00), 10, 2, true, null);
+        when(productFacade.getById(1L)).thenReturn(Optional.of(product));
+        when(serviceFacade.getById(2L)).thenReturn(Optional.of(serviceOf(true)));
+        CreateSaleCommand command = new CreateSaleCommand(1L, BigDecimal.valueOf(200000.00), false,
+                List.of(new CreateSaleItemCommand(1L, 1), new CreateSaleItemCommand(null, 2L, 1)), "CASH");
+
+        saleService.registerSale(command);
+
+        verify(inventoryFacade, times(1)).registerMovement(eq(1L), eq("VENTA"), eq(1), anyString());
+        verify(saleRepository).saveAndFlush(argThat(s -> s.getItems().size() == 2
+                && s.getTotalAmount().compareTo(BigDecimal.valueOf(119008.00)) == 0));
+    }
+
+    @Test
+    void registerSale_InactiveService_ThrowsException() {
+        stubSaleBasics();
+        when(serviceFacade.getById(2L)).thenReturn(Optional.of(serviceOf(false)));
+        CreateSaleCommand command = new CreateSaleCommand(1L, BigDecimal.valueOf(238000.00), false,
+                List.of(new CreateSaleItemCommand(null, 2L, 1)), "CASH");
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> saleService.registerSale(command));
+        assertTrue(ex.getMessage().contains("inactivo"));
+    }
+
+    @Test
+    void registerSale_ServiceFromAnotherStore_ThrowsNotFound() {
+        stubSaleBasics();
+        when(serviceFacade.getById(2L)).thenReturn(Optional.empty());
+        CreateSaleCommand command = new CreateSaleCommand(1L, BigDecimal.valueOf(238000.00), false,
+                List.of(new CreateSaleItemCommand(null, 2L, 1)), "CASH");
+
+        assertThrows(EntityNotFoundException.class, () -> saleService.registerSale(command));
+    }
+
+    @Test
+    void registerSale_LineWithBothProductAndService_ThrowsException() {
+        CreateSaleCommand both = new CreateSaleCommand(1L, BigDecimal.TEN, false,
+                List.of(new CreateSaleItemCommand(1L, 2L, 1)), "CASH");
+        CreateSaleCommand neither = new CreateSaleCommand(1L, BigDecimal.TEN, false,
+                List.of(new CreateSaleItemCommand(null, null, 1)), "CASH");
+        stubSaleBasics();
+
+        assertThrows(IllegalArgumentException.class, () -> saleService.registerSale(both));
+        assertThrows(IllegalArgumentException.class, () -> saleService.registerSale(neither));
+        verify(inventoryFacade, never()).registerMovement(anyLong(), anyString(), anyInt(), anyString());
+    }
+
+    @Test
+    void registerReturn_ServiceLine_RefundsWithoutRestock() {
+        Sale sale = saleOfStore(100L, STORE_ID);
+        SaleItem saleItem = new SaleItem();
+        saleItem.setId(5L);
+        saleItem.setSale(sale);
+        saleItem.setItemType(SaleItemType.SERVICE);
+        saleItem.setServiceId(2L);
+        saleItem.setQuantity(2);
+        saleItem.setUnitPrice(BigDecimal.valueOf(119000.00));
+
+        when(saleRepository.findById(100L)).thenReturn(Optional.of(sale));
+        when(saleItemRepository.findById(5L)).thenReturn(Optional.of(saleItem));
+        when(saleReturnRepository.sumReturnedQuantityBySaleItemId(5L)).thenReturn(0);
+        when(saleReturnRepository.save(any(SaleReturn.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(saleReturnMapper.toDto(any(SaleReturn.class), eq("FACT-000100"))).thenReturn(mock(SaleReturnDto.class));
+
+        saleService.registerReturn(100L, new CreateSaleReturnCommand("Cancelado",
+                List.of(new CreateSaleReturnItemCommand(5L, 1))));
+
+        verify(inventoryFacade, never()).registerMovement(anyLong(), anyString(), anyInt(), anyString());
+        verify(saleReturnRepository).save(argThat(r -> r.getTotalRefund().compareTo(BigDecimal.valueOf(119000.00)) == 0
+                && r.getItems().get(0).getServiceId().equals(2L)
+                && r.getItems().get(0).getProductId() == null));
     }
 
     // --- Devoluciones ---

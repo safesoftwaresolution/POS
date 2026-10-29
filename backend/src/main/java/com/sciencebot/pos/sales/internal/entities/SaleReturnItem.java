@@ -24,8 +24,12 @@ public class SaleReturnItem {
     private Long saleItemId;
 
     /** Copia de sale_items.product_id al momento de la devolucion (evita un join extra). */
-    @Column(name = "product_id", nullable = false)
+    @Column(name = "product_id")
     private Long productId;
+
+    /** Copia de sale_items.service_id cuando la linea devuelta es un servicio (no repone stock). */
+    @Column(name = "service_id")
+    private Long serviceId;
 
     @Column(nullable = false)
     private int quantity;

@@ -69,9 +69,7 @@ public class SaleMapper {
             return null;
         }
 
-        String productName = productFacade.getById(item.getProductId())
-                .map(p -> p.name())
-                .orElse("Producto Desconocido");
+        String productName = item.getItemName() != null ? item.getItemName() : lookupName(item);
 
         return new SaleItemDto(
                 item.getId(),
@@ -81,7 +79,21 @@ public class SaleMapper {
                 item.getUnitPrice(),
                 item.getSubtotal(),
                 item.getTaxRate() != null ? item.getTaxRate() : java.math.BigDecimal.ZERO,
-                item.getTaxAmount() != null ? item.getTaxAmount() : java.math.BigDecimal.ZERO
+                item.getTaxAmount() != null ? item.getTaxAmount() : java.math.BigDecimal.ZERO,
+                item.getItemType(),
+                item.getServiceId(),
+                item.getUnitMeasureCode(),
+                item.getUnspscCode()
         );
+    }
+
+    /** Ventas anteriores a los servicios no guardaron el nombre: se resuelve desde el producto. */
+    private String lookupName(SaleItem item) {
+        if (item.getProductId() == null) {
+            return "Servicio Desconocido";
+        }
+        return productFacade.getById(item.getProductId())
+                .map(p -> p.name())
+                .orElse("Producto Desconocido");
     }
 }

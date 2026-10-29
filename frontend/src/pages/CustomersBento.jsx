@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
-import { Users, UserPlus, Search, Mail, Phone, CheckCircle2, Edit3, Trash2 } from 'lucide-react';
+import { Users, UserPlus, Search, Mail, Phone, CheckCircle2, Edit3, Trash2, History, Lock } from 'lucide-react';
 import { getCustomersApi, deleteCustomerApi } from '../services/customersApi';
 import CreateDianCustomerModal from '../components/customers/CreateDianCustomerModal';
+import CustomerHistoryModal from '../components/customers/CustomerHistoryModal';
 import useAuth from '../hooks/useAuth';
 import useModal from '../hooks/useModal';
 import { Button, Badge, Card, EmptyState, PageHeader } from '../components/ui';
 import useLoad from '../hooks/useLoad';
 import asList from '../utils/asList';
+import { formatDateTime } from '../utils/format';
 
 export default function CustomersBento() {
   const { user } = useAuth();
@@ -21,6 +23,9 @@ export default function CustomersBento() {
   const [search, setSearch] = useState('');
   // null = cerrado, {} = alta, {customer} = edición
   const [modal, setModal] = useState(null);
+  const [historyOf, setHistoryOf] = useState(null);
+  // El historial de cambios es solo del administrador (GET /audit).
+  const canSeeHistory = user?.role === 'ADMINISTRATOR';
 
   const handleDelete = async (c) => {
     const ok = await confirm(
@@ -94,18 +99,46 @@ export default function CustomersBento() {
                   </div>
                 </div>
 
+                {(c.createdByUsername || c.updatedByUsername) && (
+                  <p className="text-[10px] text-ink-muted font-medium leading-relaxed">
+                    {c.createdByUsername && <>Creado por <span className="font-bold text-ink-soft">{c.createdByUsername}</span> · {formatDateTime(c.createdAt)}</>}
+                    {c.updatedByUsername && c.updatedAt !== c.createdAt && (
+                      <><br />Editado por <span className="font-bold text-ink-soft">{c.updatedByUsername}</span> · {formatDateTime(c.updatedAt)}</>
+                    )}
+                  </p>
+                )}
+
                 <div className="pt-2 border-t border-line flex justify-between items-center text-xs">
                   <span className="text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
                     <CheckCircle2 className="w-3.5 h-3.5" /> Facturación Activa
                   </span>
                   <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => setModal({ customer: c })}
-                      title="Editar cliente"
-                      className="p-1.5 text-ink-muted hover:text-brand rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer"
-                    >
-                      <Edit3 className="w-4 h-4" />
-                    </button>
+                    {canSeeHistory && (
+                      <button
+                        onClick={() => setHistoryOf(c)}
+                        title="Ver historial de cambios"
+                        className="p-1.5 text-ink-muted hover:text-brand rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer"
+                      >
+                        <History className="w-4 h-4" />
+                      </button>
+                    )}
+                    {/* El backend decide quién edita (`editable`): un vendedor solo edita los clientes que creó. */}
+                    {c.editable === false ? (
+                      <span
+                        title="Solo puedes editar los clientes que tú creaste"
+                        className="p-1.5 text-ink-muted/60 flex items-center"
+                      >
+                        <Lock className="w-4 h-4" />
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => setModal({ customer: c })}
+                        title="Editar cliente"
+                        className="p-1.5 text-ink-muted hover:text-brand rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer"
+                      >
+                        <Edit3 className="w-4 h-4" />
+                      </button>
+                    )}
                     {canDelete && (
                       <button
                         onClick={() => handleDelete(c)}
@@ -130,6 +163,8 @@ export default function CustomersBento() {
           onCreated={() => reload()}
         />
       )}
+
+      {historyOf && <CustomerHistoryModal customer={historyOf} onClose={() => setHistoryOf(null)} />}
     </div>
   );
 }

@@ -137,7 +137,7 @@ export default function SalesBento() {
             <table className="w-full text-left text-xs">
               <thead>
                 <tr className="border-b border-line text-ink-muted uppercase text-[10px] font-extrabold">
-                  <th className="py-2">Producto</th>
+                  <th className="py-2">Producto / servicio</th>
                   <th className="py-2 text-center">Cant.</th>
                   <th className="py-2 text-right">Precio</th>
                   <th className="py-2 text-right">Subtotal</th>
@@ -146,7 +146,10 @@ export default function SalesBento() {
               <tbody className="divide-y divide-line">
                 {(selected.items || []).map((it) => (
                   <tr key={it.id}>
-                    <td className="py-2 font-bold text-ink">{it.productName}</td>
+                    <td className="py-2 font-bold text-ink">
+                      {it.productName}
+                      {it.itemType === 'SERVICE' && <Badge tone="brand" className="ml-2">Servicio</Badge>}
+                    </td>
                     <td className="py-2 text-center tabular-nums">{it.quantity}</td>
                     <td className="py-2 text-right tabular-nums">{money(it.unitPrice)}</td>
                     <td className="py-2 text-right font-bold tabular-nums">{money(it.subtotal)}</td>

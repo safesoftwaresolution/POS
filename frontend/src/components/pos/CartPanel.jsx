@@ -1,5 +1,6 @@
 import React from 'react';
 import { ShoppingCart, Trash2, Plus, Minus, Banknote, X } from 'lucide-react';
+import { cartKey, isService } from '../../utils/cartItem';
 
 const money = (n) => n.toLocaleString('es-CO');
 
@@ -27,7 +28,7 @@ export default function CartPanel({
             </div>
             <div>
               <h2 className="font-extrabold text-sm text-ink">Ticket de Venta</h2>
-              <p className="text-[11px] text-ink-muted font-semibold">{cart.length} productos agregados</p>
+              <p className="text-[11px] text-ink-muted font-semibold">{cart.length} {cart.length === 1 ? 'ítem agregado' : 'ítems agregados'}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -83,19 +84,22 @@ export default function CartPanel({
             </div>
           ) : (
             cart.map(item => (
-              <div key={item.id} className="p-3 bg-gray-50 dark:bg-white/5 rounded-2xl flex items-center justify-between border border-line">
+              <div key={cartKey(item)} className="p-3 bg-gray-50 dark:bg-white/5 rounded-2xl flex items-center justify-between border border-line">
                 <div className="space-y-0.5">
-                  <h4 className="font-bold text-xs text-ink">{item.name}</h4>
+                  <h4 className="font-bold text-xs text-ink">
+                    {item.name}
+                    {isService(item) && <span className="ml-1.5 text-[9px] font-extrabold uppercase text-brand">Servicio</span>}
+                  </h4>
                   <p className="text-[10px] text-ink-soft font-mono">${money(item.price)} c/u</p>
                 </div>
 
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-1.5 bg-card px-2 py-1 rounded-xl border border-line">
-                    <button onClick={() => onQuantity(item.id, -1)} className="text-ink-soft hover:text-brand font-bold text-xs cursor-pointer">
+                    <button onClick={() => onQuantity(cartKey(item), -1)} className="text-ink-soft hover:text-brand font-bold text-xs cursor-pointer">
                       <Minus className="w-3.5 h-3.5" />
                     </button>
                     <span className="text-xs font-black text-ink px-1 tabular-nums">{item.quantity}</span>
-                    <button onClick={() => onQuantity(item.id, 1)} className="text-ink-soft hover:text-brand font-bold text-xs cursor-pointer">
+                    <button onClick={() => onQuantity(cartKey(item), 1)} className="text-ink-soft hover:text-brand font-bold text-xs cursor-pointer">
                       <Plus className="w-3.5 h-3.5" />
                     </button>
                   </div>

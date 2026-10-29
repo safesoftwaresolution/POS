@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ShoppingCart } from 'lucide-react';
 import { getProductsApi } from '../services/productsApi';
+import { getServicesApi } from '../services/servicesApi';
 import { getCustomersApi } from '../services/customersApi';
 import { createSaleApi } from '../services/salesApi';
 import { getSaleInvoiceApi } from '../services/billingApi';
@@ -15,12 +16,23 @@ import { newIdempotencyKey } from '../services/http';
 import useModal from '../hooks/useModal';
 import useLoad from '../hooks/useLoad';
 import asList from '../utils/asList';
+import { ITEM_PRODUCT, ITEM_SERVICE, cartKey, isService, toSaleLine } from '../utils/cartItem';
 
 export default function POSBento() {
   const { notify } = useModal();
   // Stock y precios se refrescan solos sin tocar el carrito ni el cliente elegido.
+  // El catálogo del POS junta productos y servicios activos; un fallo al listar servicios no frena la venta de productos.
   const { data: productsList, loading: productsLoading, reload: reloadProducts } = useLoad(
-    () => asList(getProductsApi()),
+    async () => {
+      const [products, services] = await Promise.all([
+        asList(getProductsApi()),
+        asList(getServicesApi()).catch(() => []),
+      ]);
+      return [
+        ...products.map((p) => ({ ...p, itemType: ITEM_PRODUCT })),
+        ...services.map((s) => ({ ...s, itemType: ITEM_SERVICE })),
+      ];
+    },
     [],
     { initial: [], autoRefresh: true },
   );
@@ -112,19 +124,22 @@ export default function POSBento() {
     const matchesCategory = selectedCategory === 'Todos' || p.categoryName === selectedCategory;
     const matchesSearch = (p.name && p.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
                           (p.barcode && p.barcode.includes(searchQuery)) ||
-                          (p.internalCode && p.internalCode.toLowerCase().includes(searchQuery.toLowerCase()));
+                          ((p.internalCode || p.code) && (p.internalCode || p.code).toLowerCase().includes(searchQuery.toLowerCase()));
     return matchesCategory && matchesSearch;
   });
 
+  // Un servicio no tiene existencias: no se limita su cantidad ni se bloquea por stock.
   const addToCart = (product) => {
-    const stockVal = product.quantityAvailable ?? product.stock ?? 0;
+    const service = isService(product);
+    const stockVal = service ? Infinity : (product.quantityAvailable ?? product.stock ?? 0);
     if (stockVal <= 0) return;
 
     setCart(prev => {
-      const existing = prev.find(item => item.id === product.id);
+      const key = cartKey(product);
+      const existing = prev.find(item => cartKey(item) === key);
       if (existing) {
         if (existing.quantity >= stockVal) return prev;
-        return prev.map(item => item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item);
+        return prev.map(item => cartKey(item) === key ? { ...item, quantity: item.quantity + 1 } : item);
       }
       const priceVal = product.salePrice || product.price || 0;
       return [...prev, { ...product, price: priceVal, stock: stockVal, quantity: 1 }];
@@ -138,15 +153,16 @@ export default function POSBento() {
     const code = rawCode.trim();
     if (!code) return { ok: false, message: '' };
 
-    const product = productsList.find(p => p.barcode === code) ||
-      productsList.find(p => p.internalCode && p.internalCode.toLowerCase() === code.toLowerCase());
+    // Los servicios no tienen código de barras: se escanean por su código (SRV-…).
+    const product = productsList.find(p => !isService(p) && p.barcode === code) ||
+      productsList.find(p => (p.internalCode || p.code) && (p.internalCode || p.code).toLowerCase() === code.toLowerCase());
 
     let result;
     if (!product) {
       result = { ok: false, message: `Código no encontrado: ${code}` };
     } else {
-      const stockVal = product.quantityAvailable ?? product.stock ?? 0;
-      const inCart = cart.find(item => item.id === product.id)?.quantity ?? 0;
+      const stockVal = isService(product) ? Infinity : (product.quantityAvailable ?? product.stock ?? 0);
+      const inCart = cart.find(item => cartKey(item) === cartKey(product))?.quantity ?? 0;
       if (stockVal <= 0) {
         result = { ok: false, message: `${product.name}: sin stock disponible` };
       } else if (inCart >= stockVal) {
@@ -170,9 +186,9 @@ export default function POSBento() {
     }
   };
 
-  const updateQuantity = (id, delta) => {
+  const updateQuantity = (key, delta) => {
     setCart(prev => prev.map(item => {
-      if (item.id === id) {
+      if (cartKey(item) === key) {
         const newQty = item.quantity + delta;
         return newQty > 0 ? { ...item, quantity: newQty } : null;
       }
@@ -197,11 +213,7 @@ export default function POSBento() {
 
     const saleCommand = {
       customerId: selectedCustomer?.id || null,
-      items: cart.map(item => ({
-        productId: item.id,
-        quantity: item.quantity,
-        unitPrice: item.price
-      })),
+      items: cart.map(toSaleLine),
       cashReceived: cashNumber,
       totalAmount: total,
       sendToFactus: issueDian,

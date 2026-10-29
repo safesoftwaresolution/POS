@@ -51,7 +51,8 @@ export async function createSaleApi(saleCommand, idempotencyKey) {
     body: JSON.stringify({
       customerId: saleCommand.customerId || null,
       items: saleCommand.items.map(item => ({
-        productId: item.productId,
+        productId: item.productId ?? null,
+        serviceId: item.serviceId ?? null,
         quantity: item.quantity,
         unitPrice: item.unitPrice
       })),

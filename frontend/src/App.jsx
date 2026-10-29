@@ -24,6 +24,7 @@ const DashboardBento = lazy(() => import('./pages/DashboardBento'));
 const POSBento = lazy(() => import('./pages/POSBento'));
 const InventoryBento = lazy(() => import('./pages/InventoryBento'));
 const ProductsBento = lazy(() => import('./pages/ProductsBento'));
+const ServicesBento = lazy(() => import('./pages/ServicesBento'));
 const CustomersBento = lazy(() => import('./pages/CustomersBento'));
 const InvoicingBento = lazy(() => import('./pages/InvoicingBento'));
 const SalesBento = lazy(() => import('./pages/SalesBento'));
@@ -165,6 +166,8 @@ function ProtectedLayoutContent({ mobileSidebarOpen, setMobileSidebarOpen, sideb
             <Route path="/inventory" element={<InventoryBento />} />
             <Route path="/suppliers" element={<Navigate to="/inventory?tab=suppliers" replace />} />
             <Route path="/products" element={<ProductsBento />} />
+            {/* Todos los roles de tienda ven el catálogo (GET /services); crear y editar lo limita la propia pantalla. */}
+            <Route path="/services" element={<ServicesBento />} />
             <Route path="/categories" element={<CategoriesBento />} />
             <Route path="/customers" element={<CustomersBento />} />
             <Route path="/invoicing" element={<InvoicingBento />} />

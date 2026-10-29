@@ -41,6 +41,7 @@ const PAGE_TITLES = {
   '/': { title: 'Dashboard', subtitle: 'Resumen y analíticas de tu negocio' },
   '/pos': { title: 'Punto de Venta', subtitle: 'Registra ventas, escanea productos y cobra' },
   '/products': { title: 'Productos', subtitle: 'Catálogo, precios y subcategorías' },
+  '/services': { title: 'Servicios', subtitle: 'Servicios que ofreces y cobras sin inventario' },
   '/inventory': { title: 'Inventario', subtitle: 'Stock, movimientos, devoluciones y proveedores' },
   '/customers': { title: 'Clientes', subtitle: 'Base de datos de clientes frecuentes' },
   '/invoicing': { title: 'Facturación DIAN', subtitle: 'Facturas electrónicas y su estado ante la DIAN' },

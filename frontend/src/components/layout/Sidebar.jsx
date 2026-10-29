@@ -19,7 +19,8 @@ import {
   X,
   Moon,
   Bell,
-  Camera
+  Camera,
+  Sparkles
 } from 'lucide-react';
 import useAuth from '../../hooks/useAuth';
 import useTheme from '../../hooks/useTheme';
@@ -67,6 +68,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
         { path: '/sales', label: 'Ventas', icon: Receipt },
         ...(user?.role === 'ADMINISTRATOR' ? [{ path: '/cash', label: 'Caja', icon: Wallet }] : []),
         { path: '/products', label: 'Productos', icon: Tag },
+        { path: '/services', label: 'Servicios', icon: Sparkles },
         { path: '/inventory', label: 'Inventario', icon: Package, badge: lowStockCount > 0 ? lowStockCount : undefined },
       ],
     },

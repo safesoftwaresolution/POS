@@ -89,7 +89,9 @@ export default function ReturnsBento() {
         reason,
         itemsToReturn.map((x) => ({ saleItemId: x.saleItemId, quantity: x.quantity }))
       );
-      setSuccess('Devolución registrada. El stock ya fue repuesto.');
+      // Los servicios solo se reembolsan: no hay stock que reponer.
+      const restocks = itemsToReturn.some((x) => x.item.itemType !== 'SERVICE');
+      setSuccess(restocks ? 'Devolución registrada. El stock ya fue repuesto.' : 'Devolución registrada. El servicio se reembolsó sin mover inventario.');
       setReturnQty({});
       setReason('');
       const returns = await getSaleReturnsApi(selectedSale.id);
@@ -193,7 +195,7 @@ export default function ReturnsBento() {
                 <table className="table-cards w-full text-left text-xs">
                   <thead>
                     <tr className="border-b border-line text-ink-muted uppercase tracking-wider font-extrabold text-[10px]">
-                      <th className="py-2 px-2">Producto</th>
+                      <th className="py-2 px-2">Producto / servicio</th>
                       <th className="py-2 px-2 text-center">Vendido</th>
                       <th className="py-2 px-2 text-center">Disponible</th>
                       <th className="py-2 px-2 text-center">A devolver</th>
@@ -204,7 +206,12 @@ export default function ReturnsBento() {
                       const returnable = returnableFor(item);
                       return (
                         <tr key={item.id}>
-                          <td data-label="" className="py-2.5 px-2 font-bold text-ink">{item.productName}</td>
+                          <td data-label="" className="py-2.5 px-2 font-bold text-ink">
+                            {item.productName}
+                            {item.itemType === 'SERVICE' && (
+                              <span className="ml-1.5 text-[9px] font-extrabold uppercase text-brand">Servicio</span>
+                            )}
+                          </td>
                           <td data-label="Vendido" className="py-2.5 px-2 text-center tabular-nums">{item.quantity}</td>
                           <td data-label="Disponible" className="py-2.5 px-2 text-center tabular-nums text-ink-soft">{returnable}</td>
                           <td data-label="A devolver" className="py-2.5 px-2 text-center">

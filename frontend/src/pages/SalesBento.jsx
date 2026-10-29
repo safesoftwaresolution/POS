@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Receipt, Search, RefreshCw, ChevronLeft, ChevronRight, Eye } from 'lucide-react';
 import { searchSalesApi } from '../services/salesApi';
 import useLoad from '../hooks/useLoad';
+import usePermissions from '../hooks/usePermissions';
 import { Badge, Button, DateRangeFilter, EmptyState, Modal, PageHeader, inputClass } from '../components/ui';
 import { dayEnd, dayStart, formatDateTime, isoDaysAgo, money, paymentLabel } from '../utils/format';
 
@@ -10,6 +11,8 @@ const EMPTY_PAGE = { content: [], totalElements: 0, totalPages: 0 };
 
 /** Historial de todas las ventas del local: filtro por fechas, búsqueda y detalle de cada venta. */
 export default function SalesBento() {
+  // El backend ya limita al vendedor a sus propias ventas; aquí solo se ajusta el texto.
+  const { isSeller } = usePermissions();
   const [dateFrom, setDateFrom] = useState(isoDaysAgo(6));
   const [dateTo, setDateTo] = useState(isoDaysAgo(0));
   const [search, setSearch] = useState('');
@@ -44,8 +47,8 @@ export default function SalesBento() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Ventas"
-        subtitle="Historial de todas las ventas de tu local"
+        title={isSeller ? 'Mis ventas' : 'Ventas'}
+        subtitle={isSeller ? 'Historial de las ventas que has registrado' : 'Historial de todas las ventas de tu local'}
         actions={
           <Button size="sm" icon={RefreshCw} loading={loading} onClick={() => reload({ silent: false })}>Actualizar</Button>
         }
@@ -74,7 +77,7 @@ export default function SalesBento() {
 
       <div className="bento-card p-6">
         <div className="flex items-center justify-between mb-4 text-xs font-bold text-ink-soft">
-          <span>{data.totalElements} ventas en el período</span>
+          <span>{data.totalElements} {isSeller ? 'ventas tuyas en el período' : 'ventas en el período'}</span>
           <span>Total de esta página: <span className="text-brand tabular-nums">{money(pageTotal)}</span></span>
         </div>
 

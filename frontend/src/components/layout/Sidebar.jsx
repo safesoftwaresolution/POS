@@ -42,10 +42,12 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
   const [unreadCount] = useUnreadNotifications();
   const { data: lowStockCount } = useLoad(
     async () => {
+      // La alerta de stock bajo es para quien repone inventario; el vendedor no la ve.
+      if (user?.role === 'SELLER') return 0;
       const products = await asList(getProductsApi());
       return products.filter((p) => (p.quantityAvailable ?? p.stock ?? 0) <= (p.minStock || 5)).length;
     },
-    [],
+    [user?.role],
     { initial: 0 },
   );
 

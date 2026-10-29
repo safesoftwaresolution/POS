@@ -7,7 +7,7 @@ const ICON_BTN = 'p-1.5 text-ink-muted rounded-lg hover:bg-gray-100 dark:hover:b
 
 /** Tabla del catálogo: una fila por producto, con acciones de código de barras, edición, estado y borrado. */
 export default function ProductTable({
-  products, loading, canToggleStatus, onCreate, onEdit, onBarcode, onToggleStatus, onDelete,
+  products, loading, canEdit = true, canToggleStatus, canDelete = true, onCreate, onEdit, onBarcode, onToggleStatus, onDelete,
 }) {
   if (loading) {
     return <div className="py-12 text-center text-xs font-bold text-ink-muted">Consultando catálogo de productos...</div>;
@@ -44,8 +44,8 @@ export default function ProductTable({
             return (
               <tr
                 key={p.id}
-                className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer group"
-                onClick={() => onEdit(p)}
+                className={`hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group ${canEdit ? 'cursor-pointer' : ''}`}
+                onClick={canEdit ? () => onEdit(p) : undefined}
               >
                 <td data-label="" className="py-3 px-6">
                   <div className="flex items-center gap-3">
@@ -96,9 +96,11 @@ export default function ProductTable({
                     <button onClick={() => onBarcode(p)} title="Ver código de barras" className={`${ICON_BTN} hover:text-brand`}>
                       <Barcode className="w-4 h-4" />
                     </button>
-                    <button onClick={() => onEdit(p)} title="Editar producto" className={`${ICON_BTN} hover:text-brand`}>
-                      <Edit3 className="w-4 h-4" />
-                    </button>
+                    {canEdit && (
+                      <button onClick={() => onEdit(p)} title="Editar producto" className={`${ICON_BTN} hover:text-brand`}>
+                        <Edit3 className="w-4 h-4" />
+                      </button>
+                    )}
                     {canToggleStatus && (
                       <button
                         onClick={() => onToggleStatus(p)}
@@ -108,13 +110,15 @@ export default function ProductTable({
                         {p.active === false ? <Power className="w-4 h-4" /> : <PowerOff className="w-4 h-4" />}
                       </button>
                     )}
-                    <button
-                      onClick={() => onDelete(p.id)}
-                      title="Eliminar producto"
-                      className={`${ICON_BTN} hover:text-red-600 dark:hover:text-red-400`}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    {canDelete && (
+                      <button
+                        onClick={() => onDelete(p.id)}
+                        title="Eliminar producto"
+                        className={`${ICON_BTN} hover:text-red-600 dark:hover:text-red-400`}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
                 </td>
               </tr>

@@ -10,7 +10,7 @@ import {
 } from '../services/subcategoriesApi';
 import { createInventoryMovementApi } from '../services/inventoryApi';
 import useModal from '../hooks/useModal';
-import useAuth from '../hooks/useAuth';
+import usePermissions from '../hooks/usePermissions';
 import { uploadFileApi } from '../services/http';
 import BarcodeModal from '../components/BarcodeModal';
 import ProductTable from '../components/products/ProductTable';
@@ -48,9 +48,9 @@ const TABS = [
 
 export default function ProductsBento() {
   const { confirm, notify } = useModal();
-  const { user } = useAuth();
-  // Mismo criterio que el backend: crear/importar productos y gestionar subcategorías es de ADMINISTRATOR y SUPERVISOR.
-  const canManageProducts = user?.role === 'ADMINISTRATOR' || user?.role === 'SUPERVISOR';
+  // Mismo criterio que el backend: crear/editar/importar productos y gestionar subcategorías es de ADMINISTRATOR y
+  // SUPERVISOR; eliminar, solo de ADMINISTRATOR. El vendedor solo consulta el catálogo y los códigos de barras.
+  const { canManageStock: canManageProducts, isAdmin } = usePermissions();
   const canManageSubcategories = canManageProducts;
   const [activeTab, setActiveTab] = useState('catalog');
   const [showImportModal, setShowImportModal] = useState(false);
@@ -362,7 +362,9 @@ export default function ProductsBento() {
           <ProductTable
             products={filtered}
             loading={loading}
+            canEdit={canManageProducts}
             canToggleStatus={canManageSubcategories}
+            canDelete={isAdmin}
             onCreate={canManageProducts ? openCreateModal : null}
             onEdit={openEditModal}
             onBarcode={setBarcodeProduct}
@@ -405,7 +407,7 @@ export default function ProductsBento() {
           subcategories={subcategoriesForSelectedCategory}
           errorMsg={errorMsg}
           canManageLots={canManageProducts}
-          onLotsChanged={() => loadProducts(showInactive, { silent: true })}
+          onLotsChanged={() => reloadProducts()}
           uploadingImage={uploadingImage}
           onImageChange={handleImageChange}
           onImageRemove={handleImageRemove}

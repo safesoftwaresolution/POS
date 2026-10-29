@@ -1,4 +1,4 @@
-<!-- doc-version: 1.6 | last-updated: 2026-10-28 -->
+<!-- doc-version: 1.7 | last-updated: 2026-10-29 -->
 # Roadmap y Estado por Módulo
 
 Este documento complementa los `spec.md` de cada módulo (que describen el comportamiento *actual*). Aquí se registra lo que **falta**, la **deuda técnica** conocida y las **próximas ideas**, para que quede como referencia entre sesiones de trabajo.
@@ -15,7 +15,8 @@ Este documento complementa los `spec.md` de cada módulo (que describen el compo
 | inventory | Kardex, alerta de stock bajo (notificación + correo), importación masiva y conteo físico desde Excel con vista previa y "todo o nada" (RF-INV-005), movimientos manuales sin proveedor desde Inventario (*Mover stock*: entrada, salida con motivo, conteo y ajuste) y pestaña *Movimientos* del kardex (más reciente primero) | Tipos de movimiento sin enum (`ENTRY`/`ENTRADA`); `AJUSTE` solo suma; alerta antes del commit; `InventoryMapper` atrapa el `EntityNotFoundException` de `UserFacade.getById` pero la transacción ya quedó marcada para rollback (con el fallback `orElse(1L)` y sin ese usuario, el movimiento falla con `UnexpectedRollbackException`) | Conteo por cámara/escáner en el móvil |
 | purchases | Compras a proveedor, sube stock, idempotencia | — | Órdenes de compra sugeridas por stock bajo |
 | sales | Multi-método de pago, devoluciones, multi-tenant, idempotencia, evento `SaleCompletedEvent` | Método de pago no validado contra el catálogo; stock insuficiente responde 400 (no 409); falta filtro por vendedor; fallback `orElse(1L)` de usuario | Venta a crédito/fiado |
-| customers | CRUD por local, "Cliente General" por local | — | Historial de compras por cliente |
+| customers | CRUD por local, "Cliente General" por local; cada cliente guarda quién lo creó y quién lo editó (V30), el vendedor solo edita los suyos (RN-CUST-002) y los cambios se auditan (RN-CUST-003) | — | Historial de compras por cliente; auditar también productos y ventas |
+| audit | Bitácora genérica de cambios por entidad (V30), consulta de historial solo para el administrador. Hoy audita clientes | — | Consulta global y exportación; retención de registros |
 | suppliers | CRUD por local | — | — |
 | reports | CQRS con `JdbcClient`; incluye cierre de caja (`/cash-closing`), mapa de calor de ventas por día y hora (`/sales-heatmap`, RF-REP-008) y lotes vencidos / próximos a vencer (`/expiring`, RF-REP-007, una fila por lote) | No descuenta devoluciones; rentabilidad usa precios actuales; sin índices (ver abajo) | Rentabilidad por categoría |
 | settings | Datos del negocio + catálogos de parámetros + logo | Importa `billing.internal` (`FactusTokenManager`); creación de la fila por defecto a verificar | Impuesto configurable (hoy 19% fijo en frontend) |

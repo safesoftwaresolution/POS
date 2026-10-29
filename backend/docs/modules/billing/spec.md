@@ -1,4 +1,4 @@
-<!-- spec-version: 2.1 | last-updated: 2026-10-16 -->
+<!-- spec-version: 2.2 | last-updated: 2026-10-28 -->
 # Módulo: Facturación Electrónica (Billing)
 
 ## Dependencias
@@ -174,6 +174,12 @@ El mensaje del proveedor se propaga al cliente (truncado a 500 caracteres) para 
 
 ### RN-BILL-018 — Timeouts de Salida
 - Todos los clientes HTTP hacia Factus (`FactusClientHelper`, `FactusTokenManager`) y el sincronizado del logo se crean con `OutboundHttp.restClient()`: conexión 5 s, lectura 45 s. Un proveedor lento ya no deja hilos ni filas bloqueadas indefinidamente.
+
+### RN-BILL-019 — Líneas de Servicio en Facturas y Notas Crédito
+- Una línea de venta de **servicio** (`SaleItemDto.itemType = SERVICE`, ver `sales/spec.md` RN-SALE-004) se factura con el `unit_measure_code` y el `unspsc_code` que **la venta guardó** al momento de cobrar (copiados del catálogo de `services`). Billing no consulta el catálogo de servicios: así editar o desactivar el servicio no cambia lo ya facturado, y no depende de `ServiceFacade`.
+- Sin esos datos se usan los valores por defecto (unidad `94`, estándar `999`). Las líneas de **producto** siguen resolviendo el UNSPSC desde `ProductFacade`.
+- La nota crédito (`createFromSale`) usa los mismos códigos de la línea, para que coincida con la factura que corrige.
+- Pendiente: los códigos de unidad de medida para servicios por hora u otras medidas deben validarse contra el catálogo de Factus; hoy la tienda los escribe en el servicio sin verificación.
 
 ### RN-BILL-013 — Notas Débito solo con Referencia a Factura
 - Solo se emiten notas débito con `customization_id=30` (con referencia a una factura electrónica). El tipo `32` (sin referencia) exige `billing_period` en Factus y `electronic_debit_notes.bill_number` es `NOT NULL`, así que se rechaza con 400.

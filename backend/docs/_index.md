@@ -1,4 +1,4 @@
-<!-- doc-version: 1.4 | last-updated: 2026-10-16 -->
+<!-- doc-version: 1.5 | last-updated: 2026-10-28 -->
 # Índice del Proyecto POS
 
 ## Resolución Rápida por Módulo
@@ -11,6 +11,7 @@
 | categories | modules/categories/spec.md | categories, product_subcategories | /api/v1/categories, /api/v1/subcategories |
 | inventory | modules/inventory/spec.md | inventory_movements | /api/v1/inventory |
 | purchases | modules/purchases/spec.md | purchases, purchase_items | /api/v1/purchases |
+| services | modules/services/spec.md | services | /api/v1/services |
 | sales | modules/sales/spec.md | sales, sale_items, sale_returns, sale_return_items | /api/v1/sales |
 | customers | modules/customers/spec.md | customers | /api/v1/customers |
 | suppliers | modules/suppliers/spec.md | suppliers | /api/v1/suppliers |

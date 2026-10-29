@@ -1,8 +1,8 @@
-<!-- spec-version: 1.2 | last-updated: 2026-10-16 -->
+<!-- spec-version: 1.3 | last-updated: 2026-10-28 -->
 # Módulo: Ventas (Sales)
 
 ## Dependencias
-- **Requiere**: products, inventory, customers, users, stores (tenancy)
+- **Requiere**: products, services, inventory, customers, users, stores (tenancy)
 - **Requerido por**: reports, billing (billing consume `SaleFacade` y escucha `SaleCompletedEvent`)
 
 > `sales` **no** importa `billing` ni `settings`: la emisión electrónica se desacopla por el evento `SaleCompletedEvent` (ver RF-SALE-002).
@@ -19,18 +19,24 @@
 ### RN-SALE-003 — Aislamiento por Tienda
 - Toda venta pertenece a una tienda (`store_id`, vía `TenantContext`). Un usuario solo ve y crea ventas de su propia tienda.
 
+### RN-SALE-004 — Líneas de Producto o de Servicio
+- Cada línea de venta es **un producto o un servicio**, nunca ambos ni ninguno (`CreateSaleItemCommand`: exactamente uno entre `productId` y `serviceId`; si no, 400). La BD lo garantiza con `CK_sale_items_target` (`item_type`).
+- Una línea de **servicio** no valida existencias, no registra movimiento de inventario y exige que el servicio exista en la tienda (404 si no) y esté activo (400 si no). Ver `services/spec.md`.
+- Cada línea guarda una **copia de lo facturado**: nombre (`item_name`), precio, IVA, y para servicios también `unit_measure_code` y `unspsc_code`. Editar o desactivar el servicio después no cambia la venta emitida. Las líneas anteriores a `V29` no tienen copia de nombre y se resuelven desde el producto.
+- Una **devolución** de una línea de servicio solo reembolsa: no hay stock que reponer.
+
 ### RN-INV-001 (ref: inventory/spec.md)
-- No se puede vender más cantidad de la disponible en stock. La reducción de stock es un `UPDATE` atómico y condicionado (`ProductFacade.adjustStock`, ver `inventory/spec.md`): dos ventas concurrentes del mismo producto se serializan y no pueden sobrevender.
+- No se puede vender más cantidad de la disponible en stock (aplica a líneas de producto). La reducción de stock es un `UPDATE` atómico y condicionado (`ProductFacade.adjustStock`, ver `inventory/spec.md`): dos ventas concurrentes del mismo producto se serializan y no pueden sobrevender.
 
 ## Requerimientos Funcionales
 
 ### RF-SALE-001 — Crear Venta (Punto de Venta)
 - **Prioridad**: Alta (Bloqueante)
 - **Criterios de Aceptación**:
-  - Buscar productos por nombre, código interno o código de barras.
+  - Buscar productos por nombre, código interno o código de barras, y servicios por nombre o código (RN-SALE-004).
   - Cliente opcional (por defecto: "Cliente General").
   - Carrito: agregar/quitar productos, ajustar cantidad.
-  - Validar stock disponible para cada ítem (RN-INV-001).
+  - Validar stock disponible para cada ítem de producto (RN-INV-001); los servicios no tienen stock.
   - Cálculo en tiempo real: `Subtotal = Σ(Cantidad × Precio_Venta)`, `Total = Subtotal`.
 
 ### RF-SALE-002 — Registrar Venta (Efectivo, Cambio y Emisión Electrónica)
@@ -60,7 +66,7 @@
 ### RF-SALE-005 — Devolución de Venta
 - **Prioridad**: Media
 - Se selecciona una venta y una o más líneas (`sale_items`) puntuales a devolver, con cantidad ≤ lo vendido en esa línea menos lo ya devuelto previamente de esa misma línea.
-- Repone stock del/los producto(s) devuelto(s) (movimiento de inventario) y calcula `total_refund`.
+- Repone stock del/los producto(s) devuelto(s) (movimiento de inventario) y calcula `total_refund`. Las líneas de servicio solo reembolsan, sin tocar inventario (RN-SALE-004).
 - La venta original no se modifica; la devolución queda como registro propio (`sale_returns` / `sale_return_items`) con motivo (`reason`) opcional.
 
 ## Requerimientos No Funcionales
@@ -76,9 +82,10 @@
   ```json
   {
     "customerId": 1, "cashReceived": 20.00, "paymentMethod": "CASH", "sendToFactus": false,
-    "items": [{ "productId": 1, "quantity": 2 }, { "productId": 2, "quantity": 5 }]
+    "items": [{ "productId": 1, "quantity": 2 }, { "serviceId": 4, "quantity": 1 }]
   }
   ```
+  Cada ítem lleva `productId` **o** `serviceId`. En la respuesta, cada ítem incluye `itemType` (`PRODUCT`/`SERVICE`), `serviceId`, `unitMeasureCode` y `unspscCode` (los dos últimos solo en servicios).
 - **Response 201**:
   ```json
   {
@@ -144,7 +151,8 @@
 | id | BIGINT | PK, Auto-increment |
 | sale_return_id | BIGINT | FK → sale_returns(id) ON DELETE CASCADE, NOT NULL |
 | sale_item_id | BIGINT | FK → sale_items(id), NOT NULL |
-| product_id | BIGINT | FK → products(id), NOT NULL (copia de sale_items.product_id al momento de la devolución) |
+| product_id | BIGINT | FK → products(id), NULLABLE desde `V29` (copia de sale_items.product_id; null si la línea era un servicio) |
+| service_id | BIGINT | FK → services(id), NULLABLE (`V29`; copia de sale_items.service_id) |
 | quantity | INT | NOT NULL |
 | unit_price | DECIMAL(12,2) | NOT NULL |
 | subtotal | DECIMAL(12,2) | NOT NULL |
@@ -154,12 +162,19 @@
 |---|---|---|
 | id | BIGINT | PK, Auto-increment |
 | sale_id | BIGINT | FK → sales(id) ON DELETE CASCADE, NOT NULL |
-| product_id | BIGINT | FK → products(id), NOT NULL |
+| product_id | BIGINT | FK → products(id), NULLABLE desde `V29` (null si la línea es un servicio) |
+| item_type | VARCHAR(10) | NOT NULL, DEFAULT 'PRODUCT' (`V29`): `PRODUCT` o `SERVICE` |
+| service_id | BIGINT | FK → services(id), NULLABLE (`V29`) |
+| item_name | VARCHAR(150) | NULLABLE (`V29`): copia del nombre facturado |
+| unit_measure_code | VARCHAR(10) | NULLABLE (`V29`): unidad DIAN con que se facturó |
+| unspsc_code | VARCHAR(50) | NULLABLE (`V29`): UNSPSC con que se facturó |
 | quantity | INT | NOT NULL |
 | unit_price | DECIMAL(12,2) | NOT NULL |
 | subtotal | DECIMAL(12,2) | NOT NULL |
 | tax_rate | DECIMAL(5,2) | NOT NULL, DEFAULT 0.00 (`V13`) |
 | tax_amount | DECIMAL(12,2) | NOT NULL, DEFAULT 0.00 (`V13`) |
+
+**Constraints** (`V29`): `CK_sale_items_target`: `(item_type = 'PRODUCT' AND product_id IS NOT NULL AND service_id IS NULL) OR (item_type = 'SERVICE' AND service_id IS NOT NULL AND product_id IS NULL)`; `FK_sale_items_service`. **Índice**: `IDX_sale_items_service`.
 
 ## Permisos
 | Operación | Admin | Supervisor | Vendedor |

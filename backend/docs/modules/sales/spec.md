@@ -1,4 +1,4 @@
-<!-- spec-version: 1.3 | last-updated: 2026-10-28 -->
+<!-- spec-version: 1.4 | last-updated: 2026-10-29 -->
 # Módulo: Ventas (Sales)
 
 ## Dependencias
@@ -24,6 +24,10 @@
 - Una línea de **servicio** no valida existencias, no registra movimiento de inventario y exige que el servicio exista en la tienda (404 si no) y esté activo (400 si no). Ver `services/spec.md`.
 - Cada línea guarda una **copia de lo facturado**: nombre (`item_name`), precio, IVA, y para servicios también `unit_measure_code` y `unspsc_code`. Editar o desactivar el servicio después no cambia la venta emitida. Las líneas anteriores a `V29` no tienen copia de nombre y se resuelven desde el producto.
 - Una **devolución** de una línea de servicio solo reembolsa: no hay stock que reponer.
+
+### RN-SALE-005 — Un Vendedor Solo Ve sus Ventas
+- Un usuario con rol `SELLER` solo consulta las ventas que **él registró** (`sales.user_id`): `GET /sales` las filtra en la consulta, y `GET /sales/{id}`, `GET /sales/{id}/returns` y `POST /sales/{id}/returns` responden 404 si la venta es de otro vendedor. `ADMINISTRATOR` y `SUPERVISOR` ven las de todo el local.
+- Lo decide el backend por el rol de la sesión (`SaleFacade.restrictedSellerId()`), no la interfaz. Las facturas electrónicas siguen la misma regla (`billing/spec.md`, RN-BILL-020).
 
 ### RN-INV-001 (ref: inventory/spec.md)
 - No se puede vender más cantidad de la disponible en stock (aplica a líneas de producto). La reducción de stock es un `UPDATE` atómico y condicionado (`ProductFacade.adjustStock`, ver `inventory/spec.md`): dos ventas concurrentes del mismo producto se serializan y no pueden sobrevender.

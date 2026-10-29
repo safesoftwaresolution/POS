@@ -27,6 +27,8 @@ const RANGES = [
 // Tope de ventas traídas para el gráfico y la mezcla de pagos. Los totales de dinero de ADMINISTRATOR
 // salen de los reportes (agregados en base de datos), así que no dependen de este tope.
 const SALES_SAMPLE = 200;
+// Un vendedor no tiene reportes agregados: sus totales salen de sus ventas cargadas, así que se trae un tope mayor.
+const SELLER_SALES_SAMPLE = 1000;
 const EMPTY_DASHBOARD = {
   products: [], sales: [], previousSales: [], heatmap: [], dianCount: null, salesReport: null, previousTotal: null,
   // `null` = aún no se sabe (la consulta falló o no ha terminado): la guía de primer uso no se muestra con datos desconocidos.
@@ -45,6 +47,9 @@ export default function DashboardBento() {
   const { user } = useAuth();
   const isAdmin = user?.role === 'ADMINISTRATOR';
   const canSeeStock = isAdmin || user?.role === 'SUPERVISOR';
+  // El vendedor ve solo lo que él vendió (el backend ya limita sus ventas y facturas); sin stock, compras ni ranking.
+  const isSeller = user?.role === 'SELLER';
+  const salesSample = isSeller ? SELLER_SALES_SAMPLE : SALES_SAMPLE;
 
   const [days, setDays] = useState(7);
   const [belowMinStock, setBelowMinStock] = useState(true);
@@ -59,13 +64,13 @@ export default function DashboardBento() {
     // Cada bloque falla por separado: un reporte caído no deja el panel en blanco.
     const safe = (promise, fallback) => promise.catch(() => fallback);
     const [prods, salesPage, anySale, dian, report, previousReport, previousPage, heat, top, profit, purch, stockRows, expiringRows] = await Promise.all([
-      safe(getProductsApi(), null),
-      safe(searchSalesApi({ dateFrom: from, dateTo: to, size: SALES_SAMPLE }), null),
+      canSeeStock ? safe(getProductsApi(), null) : null,
+      safe(searchSalesApi({ dateFrom: from, dateTo: to, size: salesSample }), null),
       safe(searchSalesApi({ size: 1 }), null),
       safe(listInvoicesApi('VALIDATED', 0, 1), null),
       isAdmin ? safe(getSalesReportApi(from, to), null) : null,
       isAdmin ? safe(getSalesReportApi(previousFrom, previousTo), null) : null,
-      safe(searchSalesApi({ dateFrom: previousFrom, dateTo: previousTo, size: SALES_SAMPLE }), null),
+      safe(searchSalesApi({ dateFrom: previousFrom, dateTo: previousTo, size: salesSample }), null),
       isAdmin ? safe(getSalesHeatmapApi(dayStart(isoDaysAgo(Math.max(days, HEATMAP_DAYS) - 1)), to), null) : null,
       isAdmin ? safe(getTopProductsReportApi(from, to, 8), null) : null,
       isAdmin ? safe(getProfitabilityReportApi(from, to), null) : null,
@@ -93,10 +98,10 @@ export default function DashboardBento() {
       stock: Array.isArray(stockRows) ? stockRows : previous.stock,
       expiring: Array.isArray(expiringRows) ? expiringRows : previous.expiring,
     };
-  }, [days, belowMinStock, expiringDays, isAdmin, canSeeStock], { initial: EMPTY_DASHBOARD, autoRefresh: true });
+  }, [days, belowMinStock, expiringDays, isAdmin, canSeeStock, salesSample], { initial: EMPTY_DASHBOARD, autoRefresh: true });
   const { products, sales, previousSales, heatmap, hasProducts, hasAnySale, previousTotal, dianCount, salesReport, topProducts, profitability, purchases, stock, expiring } = dashboard;
 
-  const lowStockCount = products.filter((p) => (p.quantityAvailable ?? p.stock ?? 0) <= (p.minStock || 5)).length;
+  const lowStockCount = !canSeeStock ? 0 : products.filter((p) => (p.quantityAvailable ?? p.stock ?? 0) <= (p.minStock || 5)).length;
 
   // ADMINISTRATOR: totales exactos del reporte; el resto: sobre las ventas cargadas.
   const totalSold = salesReport ? Number(salesReport.totalSold) : sumSales(sales);
@@ -161,7 +166,9 @@ export default function DashboardBento() {
           <h1 className="text-2xl sm:text-4xl font-light text-ink tracking-tight">
             Bienvenido, <span className="font-extrabold text-brand">{user?.fullName || user?.username || 'Usuario'}</span>
           </h1>
-          <p className="text-xs text-ink-soft font-medium mt-1">Resumen y analíticas de tu negocio, siempre al día</p>
+          <p className="text-xs text-ink-soft font-medium mt-1">
+            {isSeller ? 'Resumen de lo que has vendido, siempre al día' : 'Resumen y analíticas de tu negocio, siempre al día'}
+          </p>
         </div>
 
         <div className="flex items-center gap-3">
@@ -207,6 +214,7 @@ export default function DashboardBento() {
             transactions={transactions}
             averageTicket={averageTicket}
             dianCount={dianCount}
+            personal={isSeller}
             onNavigate={navigate}
           />
         </div>
@@ -215,16 +223,18 @@ export default function DashboardBento() {
         </div>
       </div>
 
-      <StatusStrip
-        days={days}
-        lowStockCount={lowStockCount}
-        expiring={expiring}
-        expiringDays={expiringDays}
-        purchasesTotal={purchases?.totalInverted}
-        showExpiring={canSeeStock}
-        showPurchases={isAdmin}
-        onNavigate={navigate}
-      />
+      {!isSeller && (
+        <StatusStrip
+          days={days}
+          lowStockCount={lowStockCount}
+          expiring={expiring}
+          expiringDays={expiringDays}
+          purchasesTotal={purchases?.totalInverted}
+          showExpiring={canSeeStock}
+          showPurchases={isAdmin}
+          onNavigate={navigate}
+        />
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {isAdmin && (

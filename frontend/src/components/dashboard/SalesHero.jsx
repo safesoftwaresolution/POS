@@ -35,7 +35,7 @@ function MiniStat({ title, value, hint, spark, onClick }) {
  * Bloque principal del Dashboard: ventas del período en grande, variación frente al período anterior,
  * curva por día y tres métricas con su tendencia. `daily` trae `{ key, label, detail, value, count }` por día.
  */
-export default function SalesHero({ days, loading, totalSold, previousTotal, daily, previousDaily, transactions, averageTicket, dianCount, onNavigate }) {
+export default function SalesHero({ days, loading, totalSold, previousTotal, daily, previousDaily, transactions, averageTicket, dianCount, personal = false, onNavigate }) {
   const animatedTotal = useCountUp(totalSold);
   const animatedCount = useCountUp(transactions);
   const animatedTicket = useCountUp(averageTicket);
@@ -45,7 +45,7 @@ export default function SalesHero({ days, loading, totalSold, previousTotal, dai
     <div className="bento-card hover:transform-none p-6 sm:p-7 card-rise">
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
         <div>
-          <span className="text-[11px] font-extrabold uppercase tracking-wider text-ink-muted">Ventas · últimos {days} días</span>
+          <span className="text-[11px] font-extrabold uppercase tracking-wider text-ink-muted">{personal ? 'Mis ventas' : 'Ventas'} · últimos {days} días</span>
           <div className="text-4xl sm:text-5xl font-black tracking-tight text-ink tabular-nums mt-1">{money(Math.round(animatedTotal))}</div>
         </div>
         <ChangePill change={change} label={`vs ${days} días antes`} />

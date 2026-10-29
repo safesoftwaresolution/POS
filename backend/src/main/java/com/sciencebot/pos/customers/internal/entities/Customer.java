@@ -51,6 +51,19 @@ public class Customer {
     @Column(name = "municipality_id")
     private Integer municipalityId;
 
+    /** Usuario que creó el cliente (null en los anteriores a V30: solo un administrador o supervisor los edita). */
+    @Column(name = "created_by", updatable = false)
+    private Long createdBy;
+
+    @Column(name = "created_by_username", length = 50, updatable = false)
+    private String createdByUsername;
+
+    @Column(name = "updated_by")
+    private Long updatedBy;
+
+    @Column(name = "updated_by_username", length = 50)
+    private String updatedByUsername;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

@@ -2,6 +2,8 @@ package com.sciencebot.pos.customers;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
+import java.time.LocalDateTime;
+
 @Schema(description = "Datos completos de un cliente")
 public record CustomerDto(
         @Schema(description = "Identificador único del cliente", example = "1")
@@ -25,8 +27,25 @@ public record CustomerDto(
         @Schema(description = "Tipo de tributo / responsabilidad DIAN (01=IVA, 21=Consumidor Final / No Responsable)", example = "21")
         Integer tributeId,
         @Schema(description = "Código de municipio DANE (ej. 11001 Bogotá)", example = "11001")
-        Integer municipalityId
+        Integer municipalityId,
+        @Schema(description = "Usuario que creó el cliente (null en los registrados antes de la auditoría)", example = "ana")
+        String createdByUsername,
+        @Schema(description = "Último usuario que editó el cliente", example = "carlos")
+        String updatedByUsername,
+        @Schema(description = "Fecha de creación")
+        LocalDateTime createdAt,
+        @Schema(description = "Fecha de la última edición")
+        LocalDateTime updatedAt,
+        @Schema(description = "Si el usuario actual puede editar este cliente (un vendedor solo edita los que creó)", example = "true")
+        boolean editable
 ) {
+    /** Sin datos de auditoría: lo usan los llamadores que solo necesitan los datos del cliente. */
+    public CustomerDto(Long id, String fullName, String identification, String email, String phone, String address,
+                       boolean active, String dv, Integer legalOrganizationId, Integer tributeId, Integer municipalityId) {
+        this(id, fullName, identification, email, phone, address, active, dv, legalOrganizationId, tributeId,
+                municipalityId, null, null, null, null, true);
+    }
+
     public CustomerDto(Long id, String fullName, String identification, String email, String phone, String address, boolean active) {
         this(id, fullName, identification, email, phone, address, active, null, 13, 21, null);
     }

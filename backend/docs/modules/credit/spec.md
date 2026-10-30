@@ -1,4 +1,4 @@
-<!-- spec-version: 1.0 | last-updated: 2026-10-29 -->
+<!-- spec-version: 1.1 | last-updated: 2026-10-30 -->
 # Módulo: Fiado (Credit)
 
 Cuentas de fiado de los clientes: quién debe cuánto, ventas "pago después" y abonos. Una venta a fiado suma su total a la deuda del cliente; pagar con cualquier otro método no la toca; un abono la baja.
@@ -25,7 +25,7 @@ Cuentas de fiado de los clientes: quién debe cuánto, ventas "pago después" y 
 - Cualquier rol de venta registra abonos: quien atiende el mostrador cobra, aunque otro vendedor haya fiado.
 
 ### RN-CRE-005 — Fecha Límite
-- Cada `CHARGE` guarda `due_date`, la fecha acordada de pago: la indica quien vende (`creditDueDate`) o, si no, 30 días desde la venta. Hoy es informativa; la usará la factura a crédito y las alertas de mora (fases futuras).
+- Cada `CHARGE` guarda `due_date`, la fecha acordada de pago: la indica quien vende (`creditDueDate`) o, si no, 30 días desde la venta. La usa la factura electrónica a crédito (`payment_due_date`) y la usarán las alertas de mora (fase futura).
 
 ### RN-CRE-006 — Devoluciones
 - Devolver productos de una venta a fiado baja la deuda por el valor devuelto, **hasta lo que aún se debe**. Si el cliente ya había pagado esa parte, la diferencia se le devuelve en dinero (fuera de la cuenta). Devolver una venta pagada con otro método no toca la cuenta.
@@ -106,7 +106,6 @@ Cuentas de fiado de los clientes: quién debe cuánto, ventas "pago después" y 
 | Fijar el cupo | ✓ | ✓ | - |
 
 ## Fuera de alcance (fases futuras)
-- Cierre de caja con los abonos en efectivo del día, y excluir del efectivo las ventas a fiado (fase 2).
-- Factura electrónica a crédito (forma de pago "Crédito" con fecha de vencimiento) cuando la persona pide factura en una venta a fiado (fase 2). Hoy las facturas salen como contado.
+(El cierre de caja con abonos y la factura a crédito ya están hechos: ver `reports/spec.md` y `billing/spec.md`, RN-BILL-021.)
 - Pantalla de Fiado y método Fiado en el POS (fase 3).
 - Pago parcial al vender (parte de contado, parte a fiado), ajustes o condonación de deuda, alertas y reporte de mora, y recibo del abono.

@@ -1,4 +1,4 @@
-<!-- spec-version: 1.2 | last-updated: 2026-10-25 -->
+<!-- spec-version: 1.3 | last-updated: 2026-10-30 -->
 # Módulo: Reportes (Reports)
 
 ## Dependencias
@@ -86,15 +86,15 @@ Este módulo no define reglas de negocio propias. Solo consulta datos de otros m
 
 ### RF-REP-006 — Cierre de Caja
 - **Prioridad**: Media
-- Efectivo esperado en caja (suma de ventas `CASH` del período), total vendido por cada método de pago y desglose del efectivo por vendedor para rendir cuentas por cajero.
+- Efectivo esperado en caja (ventas `CASH` del período más los abonos de fiado cobrados en efectivo; las ventas a fiado `CREDIT` no suman), total vendido por cada método de pago y desglose del efectivo por vendedor para rendir cuentas por cajero.
 
 ### GET /api/v1/reports/cash-closing
 - **Permisos**: Admin
 - **Query params**: dateFrom, dateTo
-- **Response 200**: `CashClosingReportDto { dateFrom, dateTo, totalByPaymentMethod, expectedCash, cashBySeller }`. La UI vive en `ReportsBento`.
+- **Response 200**: `CashClosingReportDto { dateFrom, dateTo, totalByPaymentMethod, expectedCash, cashBySeller, creditPaymentsByMethod }`. `creditPaymentsByMethod` son los abonos de fiado recibidos en el período por método de pago (`credit_movements` tipo `PAYMENT`); los de `CASH` entran en `expectedCash` y en `cashBySeller` de quien los cobró. La UI vive en `ReportsBento`.
 
 ## Modelo de Datos
-Este módulo no posee tablas propias. Ejecuta queries de solo lectura sobre las tablas de sales, sale_items, purchases, purchase_items, products, product_lots e inventory_movements.
+Este módulo no posee tablas propias. Ejecuta queries de solo lectura sobre las tablas de sales, sale_items, purchases, purchase_items, products, product_lots, inventory_movements y credit_movements (abonos del cierre de caja).
 
 ## Permisos
 | Operación | Admin | Supervisor | Vendedor |

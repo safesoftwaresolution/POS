@@ -17,6 +17,7 @@ import useModal from '../hooks/useModal';
 import useLoad from '../hooks/useLoad';
 import asList from '../utils/asList';
 import { ITEM_PRODUCT, ITEM_SERVICE, cartKey, isService, toSaleLine } from '../utils/cartItem';
+import { defaultCreditDueDate } from '../utils/credit';
 
 export default function POSBento() {
   const { notify } = useModal();
@@ -63,6 +64,7 @@ export default function POSBento() {
   const selectedCustomer = customerChoice ?? customersList[0] ?? null;
 
   const [issueDian, setIssueDian] = useState(false);
+  const [creditDueDate, setCreditDueDate] = useState(defaultCreditDueDate);
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
   const [cashTendered, setCashTendered] = useState('');
   const [saleCompleted, setSaleCompleted] = useState(null);
@@ -206,6 +208,7 @@ export default function POSBento() {
   const cashNumber = parseFloat(cashTendered) || 0;
   const change = cashNumber - total;
   const paymentIsCash = selectedPaymentMethod === 'CASH';
+  const paymentIsCredit = selectedPaymentMethod === 'CREDIT';
 
   const handleCompleteSale = async () => {
     if (cashNumber < total) return;
@@ -214,10 +217,11 @@ export default function POSBento() {
     const saleCommand = {
       customerId: selectedCustomer?.id || null,
       items: cart.map(toSaleLine),
-      cashReceived: cashNumber,
+      cashReceived: paymentIsCredit ? 0 : cashNumber,
       totalAmount: total,
       sendToFactus: issueDian,
-      paymentMethod: selectedPaymentMethod
+      paymentMethod: selectedPaymentMethod,
+      ...(paymentIsCredit && { creditDueDate })
     };
 
     // Reutiliza la clave del intento actual si existe (reintento); si no, genera una nueva.
@@ -254,6 +258,7 @@ export default function POSBento() {
       number: result?.invoiceNumber || (result?.id ? `#${result.id}` : ''),
       total,
       change: paymentIsCash ? Math.max(0, change) : 0,
+      onCredit: paymentIsCredit,
       customerName: selectedCustomer?.fullName || selectedCustomer?.name || 'Consumidor final',
       customerEmail: selectedCustomer?.email || '',
       dianRequested: issueDian,
@@ -264,6 +269,7 @@ export default function POSBento() {
     setCart([]);
     setCashTendered('');
     setSelectedPaymentMethod('CASH');
+    setCreditDueDate(defaultCreditDueDate());
     setIssueDian(false);
     setSelectedCustomer(null);
     reloadProducts();
@@ -367,6 +373,8 @@ export default function POSBento() {
           onToggleDian={setIssueDian}
           cashTendered={cashTendered}
           onCashTenderedChange={setCashTendered}
+          creditDueDate={creditDueDate}
+          onCreditDueDateChange={setCreditDueDate}
           isSubmitting={isSubmittingSale}
           onConfirm={handleCompleteSale}
           onClose={() => setShowCheckoutModal(false)}

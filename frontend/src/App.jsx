@@ -26,6 +26,7 @@ const InventoryBento = lazy(() => import('./pages/InventoryBento'));
 const ProductsBento = lazy(() => import('./pages/ProductsBento'));
 const ServicesBento = lazy(() => import('./pages/ServicesBento'));
 const CustomersBento = lazy(() => import('./pages/CustomersBento'));
+const CreditBento = lazy(() => import('./pages/CreditBento'));
 const InvoicingBento = lazy(() => import('./pages/InvoicingBento'));
 const SalesBento = lazy(() => import('./pages/SalesBento'));
 const CashBento = lazy(() => import('./pages/CashBento'));
@@ -170,6 +171,7 @@ function ProtectedLayoutContent({ mobileSidebarOpen, setMobileSidebarOpen, sideb
             <Route path="/services" element={<ServicesBento />} />
             <Route path="/categories" element={<CategoriesBento />} />
             <Route path="/customers" element={<CustomersBento />} />
+            <Route path="/credit" element={<CreditBento />} />
             <Route path="/invoicing" element={<InvoicingBento />} />
             <Route path="/sales" element={<SalesBento />} />
             <Route path="/cash" element={<RequireRole roles={['ADMINISTRATOR']}><CashBento /></RequireRole>} />

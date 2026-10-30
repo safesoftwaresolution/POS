@@ -14,7 +14,7 @@ export const dayStart = (isoDate) => `${isoDate}T00:00:00`;
 export const dayEnd = (isoDate) => `${isoDate}T23:59:59`;
 
 /** Etiqueta legible de un código de método de pago (los desconocidos se muestran tal cual). */
-const PAYMENT_LABELS = { CASH: 'Efectivo', CARD: 'Tarjeta', NEQUI: 'Nequi', TRANSFER: 'Transferencia' };
+const PAYMENT_LABELS = { CASH: 'Efectivo', CARD: 'Tarjeta', NEQUI: 'Nequi', TRANSFER: 'Transferencia', CREDIT: 'Fiado' };
 export const paymentLabel = (code) => PAYMENT_LABELS[code] || code || '—';
 
 const copFormatter = new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 });

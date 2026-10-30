@@ -44,6 +44,7 @@ const PAGE_TITLES = {
   '/services': { title: 'Servicios', subtitle: 'Servicios que ofreces y cobras sin inventario' },
   '/inventory': { title: 'Inventario', subtitle: 'Stock, movimientos, devoluciones y proveedores' },
   '/customers': { title: 'Clientes', subtitle: 'Base de datos de clientes frecuentes' },
+  '/credit': { title: 'Fiado', subtitle: 'Quién debe cuánto y los abonos a su cuenta' },
   '/invoicing': { title: 'Facturación DIAN', subtitle: 'Facturas electrónicas y su estado ante la DIAN' },
   '/documents': { title: 'Documentos', subtitle: 'Documentos legales de tu tienda' },
   '/sales': { title: 'Ventas', subtitle: 'Historial de todas las ventas de tu local' },

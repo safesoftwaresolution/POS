@@ -20,7 +20,8 @@ import {
   Moon,
   Bell,
   Camera,
-  Sparkles
+  Sparkles,
+  HandCoins
 } from 'lucide-react';
 import useAuth from '../../hooks/useAuth';
 import useTheme from '../../hooks/useTheme';
@@ -78,6 +79,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
       title: 'Clientes y Facturación',
       items: [
         { path: '/customers', label: 'Clientes', icon: Users },
+        { path: '/credit', label: 'Fiado', icon: HandCoins },
         { path: '/invoicing', label: 'Facturación DIAN', icon: FileText },
         ...(user?.role === 'ADMINISTRATOR' ? [{ path: '/documents', label: 'Documentos', icon: FileCheck2 }] : []),
       ],

@@ -1,4 +1,4 @@
-<!-- spec-version: 1.4 | last-updated: 2026-10-29 -->
+<!-- spec-version: 1.5 | last-updated: 2026-10-29 -->
 # Módulo: Ventas (Sales)
 
 ## Dependencias
@@ -29,6 +29,12 @@
 - Un usuario con rol `SELLER` solo consulta las ventas que **él registró** (`sales.user_id`): `GET /sales` las filtra en la consulta, y `GET /sales/{id}`, `GET /sales/{id}/returns` y `POST /sales/{id}/returns` responden 404 si la venta es de otro vendedor. `ADMINISTRATOR` y `SUPERVISOR` ven las de todo el local.
 - El Dashboard del vendedor se calcula solo con esas ventas (total, transacciones, ticket promedio, métodos de pago, ventas recientes y facturas validadas propias); no muestra stock, compras, vencimientos ni rankings. Al no tener reportes agregados, suma las ventas cargadas (hasta 1000 por período).
 - Lo decide el backend por el rol de la sesión (`SaleFacade.restrictedSellerId()`), no la interfaz. Las facturas electrónicas siguen la misma regla (`billing/spec.md`, RN-BILL-020).
+
+### RN-SALE-006 — Venta a Fiado
+- Con `paymentMethod = CREDIT` la venta no recibe dinero: `cash_received` y `cash_change` quedan en cero y el total se suma a la deuda del cliente (`credit/spec.md`). Exige un cliente registrado (no el Cliente General) y acepta `creditDueDate` (fecha límite de pago; por defecto 30 días).
+- Si el fiado supera el cupo del cliente, la venta completa se rechaza y se revierte (stock incluido). El stock y los servicios se tratan igual que en cualquier venta.
+- Devolver una venta a fiado baja la deuda del cliente en vez de reembolsar dinero (RN-CRE-006). Las ventas pagadas con otro método no tocan la cuenta de fiado.
+- Una venta a fiado queda en el reporte de ventas bajo su propio método `CREDIT`; no cuenta como efectivo.
 
 ### RN-INV-001 (ref: inventory/spec.md)
 - No se puede vender más cantidad de la disponible en stock (aplica a líneas de producto). La reducción de stock es un `UPDATE` atómico y condicionado (`ProductFacade.adjustStock`, ver `inventory/spec.md`): dos ventas concurrentes del mismo producto se serializan y no pueden sobrevender.

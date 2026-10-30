@@ -1,4 +1,4 @@
-<!-- doc-version: 1.6 | last-updated: 2026-10-29 -->
+<!-- doc-version: 1.7 | last-updated: 2026-10-29 -->
 # Índice del Proyecto POS
 
 ## Resolución Rápida por Módulo
@@ -14,6 +14,7 @@
 | services | modules/services/spec.md | services | /api/v1/services |
 | sales | modules/sales/spec.md | sales, sale_items, sale_returns, sale_return_items | /api/v1/sales |
 | customers | modules/customers/spec.md | customers | /api/v1/customers |
+| credit | modules/credit/spec.md | credit_accounts, credit_movements | /api/v1/credit |
 | audit | modules/audit/spec.md | audit_log | /api/v1/audit |
 | suppliers | modules/suppliers/spec.md | suppliers | /api/v1/suppliers |
 | reports | modules/reports/spec.md | (read-only) | /api/v1/reports |

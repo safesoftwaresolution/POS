@@ -35,12 +35,42 @@ class BillingCanonicalMapperTest {
     private ProductFacade productFacade;
 
 
+    @Mock
+    private com.sciencebot.pos.credit.CreditFacade creditFacade;
+
     private BillingCanonicalMapper mapper;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        mapper = new BillingCanonicalMapper(customerFacade, productFacade);
+        mapper = new BillingCanonicalMapper(customerFacade, productFacade, creditFacade);
+    }
+
+    private SaleDto saleWith(String paymentMethod) {
+        return new SaleDto(1L, 5L, null, "FACT-0001", LocalDateTime.now(), "Cliente",
+                BigDecimal.valueOf(1000), BigDecimal.valueOf(1000), BigDecimal.ZERO,
+                "cajero", List.of(), paymentMethod);
+    }
+
+    @Test
+    void toInvoiceRequest_CreditSale_IsIssuedOnCreditWithTheAgreedDueDate() {
+        java.time.LocalDate due = java.time.LocalDate.of(2026, 12, 15);
+        when(creditFacade.findChargeDueDate(5L, 1L)).thenReturn(Optional.of(due));
+
+        InvoiceRequest request = mapper.toInvoiceRequest(saleWith("CREDIT"));
+
+        assertEquals("2", request.paymentForm());
+        assertEquals(due, request.paymentDueDate());
+        assertEquals("1", request.paymentMethodCode());
+    }
+
+    @Test
+    void toInvoiceRequest_NonCreditSale_IsCashAndNeverAsksCredit() {
+        InvoiceRequest request = mapper.toInvoiceRequest(saleWith("CASH"));
+
+        assertEquals("1", request.paymentForm());
+        assertNull(request.paymentDueDate());
+        verifyNoInteractions(creditFacade);
     }
 
     @Test

@@ -14,6 +14,9 @@ public interface CreditMovementRepository extends JpaRepository<CreditMovement, 
 
     Optional<CreditMovement> findFirstByStoreIdAndAccountIdOrderByCreatedAtDescIdDesc(Long storeId, Long accountId);
 
+    /** El fiado de una venta (a lo sumo uno): de ahí sale la fecha de vencimiento de su factura. */
+    Optional<CreditMovement> findFirstByStoreIdAndSaleIdAndType(Long storeId, Long saleId, CreditMovementType type);
+
     /** ¿Este usuario le fió al cliente de esta cuenta? Decide qué cuentas ve un vendedor. */
     boolean existsByStoreIdAndAccountIdAndTypeAndUserId(Long storeId, Long accountId, CreditMovementType type, Long userId);
 }

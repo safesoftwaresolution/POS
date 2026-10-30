@@ -5,6 +5,7 @@ import org.springframework.data.domain.Pageable;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Optional;
 
 /** API pública del fiado. Todo opera sobre el local actual. */
 public interface CreditFacade {
@@ -37,6 +38,12 @@ public interface CreditFacade {
      * descontado de la deuda; si es menor que {@code amount}, la diferencia ya estaba pagada y se devuelve al cliente.
      */
     BigDecimal registerReturn(Long customerId, Long saleId, BigDecimal amount);
+
+    /**
+     * Fecha límite de pago con la que se fió una venta; vacío si la venta no se fió. Recibe el local porque la
+     * factura electrónica se emite fuera de la solicitud HTTP, sin contexto de local.
+     */
+    Optional<LocalDate> findChargeDueDate(Long storeId, Long saleId);
 
     /** Fija o quita (null) el cupo máximo de deuda del cliente. */
     CreditAccountDto setCreditLimit(Long customerId, BigDecimal creditLimit);

@@ -28,4 +28,8 @@ public interface ReportDao {
     List<SupplierPurchaseProjection> findPurchasesBySupplier(Long storeId, LocalDateTime from, LocalDateTime to);
     List<PaymentMethodTotalProjection> findSalesTotalsByPaymentMethod(Long storeId, LocalDateTime from, LocalDateTime to);
     List<SellerSaleProjection> findCashSalesBySeller(Long storeId, LocalDateTime from, LocalDateTime to);
+    /** Abonos de fiado recibidos en el período, por método de pago. */
+    List<PaymentMethodTotalProjection> findCreditPaymentsByMethod(Long storeId, LocalDateTime from, LocalDateTime to);
+    /** Abonos de fiado recibidos en efectivo en el período, por quien los cobró. */
+    List<SellerSaleProjection> findCashCreditPaymentsBySeller(Long storeId, LocalDateTime from, LocalDateTime to);
 }

@@ -112,6 +112,26 @@ class FactusSaleMapperTest {
 
     @Test
     @SuppressWarnings("unchecked")
+    void saleMapper_CreditInvoice_SendsPaymentFormTwoAndTheDueDate() {
+        InvoiceRequest request = new InvoiceRequest(40L, null, null, "FACT-000040", "2", "1", null, List.of(),
+                BigDecimal.valueOf(500.0), null, java.time.LocalDate.of(2026, 12, 15));
+
+        Map<String, Object> payload = saleMapper.toFactusRequestPayload(request, 8);
+
+        assertEquals("2026-12-15", payload.get("payment_due_date"));
+        Map<String, Object> payment = ((List<Map<String, Object>>) payload.get("payment_details")).get(0);
+        assertEquals("2", payment.get("payment_form"));
+    }
+
+    @Test
+    void saleMapper_CashInvoice_DoesNotSendADueDate() {
+        InvoiceRequest request = new InvoiceRequest(41L, "FACT-000041", "10", null, List.of(), BigDecimal.TEN);
+
+        assertNull(saleMapper.toFactusRequestPayload(request, 8).get("payment_due_date"));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
     void saleMapper_DefaultGenericCustomer_MapsCorrectly() {
         InvoiceRequest request = new InvoiceRequest(30L, "FACT-000030", "10", null, List.of(), BigDecimal.ZERO);
         Map<String, Object> payload = saleMapper.toFactusRequestPayload(request, 8);

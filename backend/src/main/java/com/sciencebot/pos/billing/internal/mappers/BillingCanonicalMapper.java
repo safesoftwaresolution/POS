@@ -3,6 +3,7 @@ package com.sciencebot.pos.billing.internal.mappers;
 import com.sciencebot.pos.billing.internal.adapters.dto.CustomerBillingData;
 import com.sciencebot.pos.billing.internal.adapters.dto.InvoiceItemData;
 import com.sciencebot.pos.billing.internal.adapters.dto.InvoiceRequest;
+import com.sciencebot.pos.credit.CreditFacade;
 import com.sciencebot.pos.customers.CustomerDto;
 import com.sciencebot.pos.customers.CustomerFacade;
 import com.sciencebot.pos.products.ProductDto;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -24,12 +26,18 @@ public class BillingCanonicalMapper {
     private final CustomerFacade customerFacade;
     private final ProductFacade productFacade;
 
+    private static final String CREDIT_PAYMENT_METHOD = "CREDIT";
+
+    private final CreditFacade creditFacade;
+
     public BillingCanonicalMapper(
             @Lazy CustomerFacade customerFacade,
-            @Lazy ProductFacade productFacade
+            @Lazy ProductFacade productFacade,
+            @Lazy CreditFacade creditFacade
     ) {
         this.customerFacade = customerFacade;
         this.productFacade = productFacade;
+        this.creditFacade = creditFacade;
     }
 
     public InvoiceRequest toInvoiceRequest(SaleDto sale) {
@@ -41,18 +49,26 @@ public class BillingCanonicalMapper {
         List<InvoiceItemData> items = mapItems(sale.items());
         String paymentMethodCode = resolveDianPaymentMethod(sale.paymentMethod());
 
+        // Una venta a fiado se factura a crédito (2) con su fecha de vencimiento; el resto, de contado (1).
+        boolean onCredit = sale.paymentMethod() != null
+                && CREDIT_PAYMENT_METHOD.equalsIgnoreCase(sale.paymentMethod().trim());
+        LocalDate dueDate = onCredit
+                ? creditFacade.findChargeDueDate(sale.storeId(), sale.id()).orElse(LocalDate.now().plusDays(30))
+                : null;
+
         // El rango de numeración lo decide el adaptador del proveedor con la configuración del local.
         return new InvoiceRequest(
                 sale.id(),
                 sale.storeId(),
                 null,
                 sale.invoiceNumber(),
-                "1", // 1 = Contado (Estándar DIAN)
+                onCredit ? "2" : "1", // 1 = Contado, 2 = Crédito (Estándar DIAN)
                 paymentMethodCode,
                 customerData,
                 items,
                 sale.totalAmount(),
-                "Factura emitida desde Sistema POS"
+                "Factura emitida desde Sistema POS",
+                dueDate
         );
     }
 
@@ -140,6 +156,7 @@ public class BillingCanonicalMapper {
             case "TRANSFER" -> "31";
             case "NEQUI", "DAVIPLATA" -> "42";
             case "CARD" -> "48";
+            case "CREDIT" -> "1"; // Instrumento no definido: aún no se ha pagado
             default -> "10";
         };
     }

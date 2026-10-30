@@ -277,4 +277,47 @@ public class ReportDaoJdbc implements ReportDao {
                 .query(SellerSaleProjection.class)
                 .list();
     }
+
+    @Override
+    public List<PaymentMethodTotalProjection> findCreditPaymentsByMethod(Long storeId, LocalDateTime from, LocalDateTime to) {
+        String sql = """
+            SELECT
+                COALESCE(m.payment_method, 'CASH') AS paymentMethod,
+                COALESCE(SUM(m.amount), 0) AS totalAmount
+            FROM credit_movements m
+            WHERE m.store_id = :storeId AND m.type = 'PAYMENT'
+                AND m.created_at >= :from AND m.created_at <= :to
+            GROUP BY COALESCE(m.payment_method, 'CASH')
+            ORDER BY totalAmount DESC
+            """;
+
+        return jdbcClient.sql(sql)
+                .param("storeId", storeId)
+                .param("from", from)
+                .param("to", to)
+                .query(PaymentMethodTotalProjection.class)
+                .list();
+    }
+
+    @Override
+    public List<SellerSaleProjection> findCashCreditPaymentsBySeller(Long storeId, LocalDateTime from, LocalDateTime to) {
+        String sql = """
+            SELECT
+                COALESCE(m.username, 'Desconocido') AS sellerName,
+                COALESCE(SUM(m.amount), 0) AS totalAmount
+            FROM credit_movements m
+            WHERE m.store_id = :storeId AND m.type = 'PAYMENT'
+                AND COALESCE(m.payment_method, 'CASH') = 'CASH'
+                AND m.created_at >= :from AND m.created_at <= :to
+            GROUP BY m.username
+            ORDER BY totalAmount DESC
+            """;
+
+        return jdbcClient.sql(sql)
+                .param("storeId", storeId)
+                .param("from", from)
+                .param("to", to)
+                .query(SellerSaleProjection.class)
+                .list();
+    }
 }

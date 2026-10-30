@@ -134,6 +134,33 @@ class ReportServiceImplTest {
     }
 
     @Test
+    void getCashClosingReport_CreditSalesAreNotCashButCashPaymentsAre() {
+        var projection = com.sciencebot.pos.reports.internal.repositories.ReportProjections.PaymentMethodTotalProjection.class;
+        when(reportDao.findSalesTotalsByPaymentMethod(any(), any(), any())).thenReturn(List.of(
+                new com.sciencebot.pos.reports.internal.repositories.ReportProjections.PaymentMethodTotalProjection("CASH", BigDecimal.valueOf(80000.00)),
+                new com.sciencebot.pos.reports.internal.repositories.ReportProjections.PaymentMethodTotalProjection("CREDIT", BigDecimal.valueOf(60000.00))
+        ));
+        when(reportDao.findCashSalesBySeller(any(), any(), any())).thenReturn(List.of(
+                new SellerSaleProjection("cajero1", BigDecimal.valueOf(80000.00))
+        ));
+        when(reportDao.findCreditPaymentsByMethod(any(), any(), any())).thenReturn(List.of(
+                new com.sciencebot.pos.reports.internal.repositories.ReportProjections.PaymentMethodTotalProjection("CASH", BigDecimal.valueOf(15000.00)),
+                new com.sciencebot.pos.reports.internal.repositories.ReportProjections.PaymentMethodTotalProjection("NEQUI", BigDecimal.valueOf(5000.00))
+        ));
+        when(reportDao.findCashCreditPaymentsBySeller(any(), any(), any())).thenReturn(List.of(
+                new SellerSaleProjection("cajero1", BigDecimal.valueOf(10000.00)),
+                new SellerSaleProjection("cajero2", BigDecimal.valueOf(5000.00))
+        ));
+
+        CashClosingReportDto result = reportService.getCashClosingReport(null, null);
+
+        assertEquals(0, BigDecimal.valueOf(95000.00).compareTo(result.expectedCash()), "80.000 de ventas + 15.000 de abonos en efectivo; el fiado no cuenta");
+        assertEquals(0, BigDecimal.valueOf(90000.00).compareTo(result.cashBySeller().get("cajero1")));
+        assertEquals(0, BigDecimal.valueOf(5000.00).compareTo(result.cashBySeller().get("cajero2")));
+        assertEquals(0, BigDecimal.valueOf(5000.00).compareTo(result.creditPaymentsByMethod().get("NEQUI")));
+    }
+
+    @Test
     void getCashClosingReport_NoCashSales_ExpectedCashIsZero() {
         when(reportDao.findSalesTotalsByPaymentMethod(any(), any(), any())).thenReturn(List.of(
                 new com.sciencebot.pos.reports.internal.repositories.ReportProjections.PaymentMethodTotalProjection("NEQUI", BigDecimal.valueOf(20000.00))

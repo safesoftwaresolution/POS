@@ -138,9 +138,20 @@ public class ReportServiceImpl implements ReportService {
             cashBySeller.put(row.sellerName(), row.totalAmount());
         }
 
-        BigDecimal expectedCash = totalByPaymentMethod.getOrDefault("CASH", BigDecimal.ZERO);
+        // Los abonos de fiado cobrados en efectivo también entran a la caja
+        for (SellerSaleProjection row : reportDao.findCashCreditPaymentsBySeller(storeId, from, to)) {
+            cashBySeller.merge(row.sellerName(), row.totalAmount(), BigDecimal::add);
+        }
 
-        return new CashClosingReportDto(from, to, totalByPaymentMethod, expectedCash, cashBySeller);
+        Map<String, BigDecimal> creditPaymentsByMethod = new LinkedHashMap<>();
+        for (var row : reportDao.findCreditPaymentsByMethod(storeId, from, to)) {
+            creditPaymentsByMethod.put(row.paymentMethod(), row.totalAmount());
+        }
+
+        BigDecimal expectedCash = totalByPaymentMethod.getOrDefault("CASH", BigDecimal.ZERO)
+                .add(creditPaymentsByMethod.getOrDefault("CASH", BigDecimal.ZERO));
+
+        return new CashClosingReportDto(from, to, totalByPaymentMethod, expectedCash, cashBySeller, creditPaymentsByMethod);
     }
 
     private static Long requireCurrentStoreId() {

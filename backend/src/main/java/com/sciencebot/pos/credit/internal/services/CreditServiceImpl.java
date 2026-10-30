@@ -187,6 +187,16 @@ public class CreditServiceImpl implements CreditFacade {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public Optional<LocalDate> findChargeDueDate(Long storeId, Long saleId) {
+        if (storeId == null || saleId == null) {
+            return Optional.empty();
+        }
+        return movementRepository.findFirstByStoreIdAndSaleIdAndType(storeId, saleId, CreditMovementType.CHARGE)
+                .map(CreditMovement::getDueDate);
+    }
+
+    @Override
     @Transactional
     public CreditAccountDto setCreditLimit(Long customerId, BigDecimal creditLimit) {
         if (creditLimit != null && creditLimit.signum() < 0) {

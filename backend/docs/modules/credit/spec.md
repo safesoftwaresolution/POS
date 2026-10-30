@@ -1,4 +1,4 @@
-<!-- spec-version: 1.1 | last-updated: 2026-10-30 -->
+<!-- spec-version: 1.2 | last-updated: 2026-10-30 -->
 # Módulo: Fiado (Credit)
 
 Cuentas de fiado de los clientes: quién debe cuánto, ventas "pago después" y abonos. Una venta a fiado suma su total a la deuda del cliente; pagar con cualquier otro método no la toca; un abono la baja.
@@ -106,6 +106,9 @@ Cuentas de fiado de los clientes: quién debe cuánto, ventas "pago después" y 
 | Fijar el cupo | ✓ | ✓ | - |
 
 ## Fuera de alcance (fases futuras)
-(El cierre de caja con abonos y la factura a crédito ya están hechos: ver `reports/spec.md` y `billing/spec.md`, RN-BILL-021.)
-- Pantalla de Fiado y método Fiado en el POS (fase 3).
+(Hechos: cierre de caja con abonos y factura a crédito — `reports/spec.md`, `billing/spec.md` RN-BILL-021 — y la pantalla Fiado y el método Fiado en el POS, ver "Interfaz".)
 - Pago parcial al vender (parte de contado, parte a fiado), ajustes o condonación de deuda, alertas y reporte de mora, y recibo del abono.
+
+## Interfaz
+- **Fiado** (`/credit`, todos los roles; el vendedor solo ve las cuentas que él fió): lista de deudores con búsqueda y filtro "solo con deuda"; al abrir una cuenta se ve lo que debe, el cupo, el disponible y el libro de movimientos, con **Registrar abono** (monto hasta lo que debe, método de pago y nota) y **Cupo** (administrador y supervisor).
+- **Punto de venta**: el método **Fiado** pide un cliente registrado (no el Cliente General), muestra lo que ya debe, el cupo disponible y cómo quedaría, y deja fijar la fecha límite (30 días por defecto). Si supera el cupo, el cobro se bloquea. La factura electrónica sigue siendo opcional.

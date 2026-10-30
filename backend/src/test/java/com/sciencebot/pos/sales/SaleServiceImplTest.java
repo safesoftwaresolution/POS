@@ -62,6 +62,9 @@ class SaleServiceImplTest {
     private ServiceFacade serviceFacade;
 
     @Mock
+    private com.sciencebot.pos.credit.CreditFacade creditFacade;
+
+    @Mock
     private InventoryFacade inventoryFacade;
 
     @Mock
@@ -161,6 +164,120 @@ class SaleServiceImplTest {
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
                 () -> saleService.registerSale(command));
         assertTrue(ex.getMessage().contains("efectivo recibido"));
+    }
+
+    // --- Fiado ---
+
+    private ProductDto productAt8() {
+        return new ProductDto(1L, "P1", "123", "Prod 1", "Cat", null, null, BigDecimal.ONE, BigDecimal.valueOf(8.00), 10, 2, true, null);
+    }
+
+    @Test
+    void registerSale_OnCredit_NeedsNoCashAndChargesTheCustomersDebt() {
+        stubSaleBasics();
+        when(productFacade.getById(1L)).thenReturn(Optional.of(productAt8()));
+        java.time.LocalDate due = java.time.LocalDate.of(2026, 12, 1);
+        CreateSaleCommand command = new CreateSaleCommand(1L, null, false,
+                List.of(new CreateSaleItemCommand(1L, 2)), "credit", due);
+
+        saleService.registerSale(command);
+
+        verify(saleRepository).saveAndFlush(argThat(s -> "CREDIT".equals(s.getPaymentMethod())
+                && s.getCashReceived().signum() == 0
+                && s.getCashChange().signum() == 0
+                && s.getTotalAmount().compareTo(BigDecimal.valueOf(16.00)) == 0));
+        verify(creditFacade).registerCharge(eq(1L), any(), argThat(a -> a.compareTo(BigDecimal.valueOf(16.00)) == 0), eq(due));
+        verify(inventoryFacade).registerMovement(eq(1L), eq("VENTA"), eq(2), anyString());
+    }
+
+    @Test
+    void registerSale_OnCredit_WithoutACustomer_IsRefused() {
+        CreateSaleCommand command = new CreateSaleCommand(null, null, false,
+                List.of(new CreateSaleItemCommand(1L, 1)), "CREDIT");
+
+        assertThrows(IllegalArgumentException.class, () -> saleService.registerSale(command));
+        verifyNoInteractions(creditFacade);
+        verify(saleRepository, never()).saveAndFlush(any(Sale.class));
+    }
+
+    @Test
+    void registerSale_OnCredit_ToTheGeneralCustomer_IsRefused() {
+        when(customerFacade.getById(9L)).thenReturn(Optional.of(
+                new CustomerDto(9L, "Cliente General", "9999999999", null, null, null, true)));
+        CreateSaleCommand command = new CreateSaleCommand(9L, null, false,
+                List.of(new CreateSaleItemCommand(1L, 1)), "CREDIT");
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> saleService.registerSale(command));
+        assertTrue(ex.getMessage().contains("Cliente General"));
+        verifyNoInteractions(creditFacade);
+    }
+
+    @Test
+    void registerSale_OnCredit_OverTheLimit_PropagatesSoTheWholeSaleRollsBack() {
+        stubSaleBasics();
+        when(productFacade.getById(1L)).thenReturn(Optional.of(productAt8()));
+        when(creditFacade.registerCharge(any(), any(), any(), any()))
+                .thenThrow(new IllegalArgumentException("El fiado supera el cupo"));
+        CreateSaleCommand command = new CreateSaleCommand(1L, null, false,
+                List.of(new CreateSaleItemCommand(1L, 2)), "CREDIT");
+
+        assertThrows(IllegalArgumentException.class, () -> saleService.registerSale(command));
+        verify(eventPublisher, never()).publishEvent(any(SaleCompletedEvent.class));
+    }
+
+    @Test
+    void registerSale_PaidInCash_NeverTouchesTheCreditAccount() {
+        stubSaleBasics();
+        when(productFacade.getById(1L)).thenReturn(Optional.of(productAt8()));
+
+        saleService.registerSale(new CreateSaleCommand(1L, BigDecimal.valueOf(20.00), false,
+                List.of(new CreateSaleItemCommand(1L, 2)), "CASH"));
+
+        verifyNoInteractions(creditFacade);
+    }
+
+    @Test
+    void registerSale_PaidInCash_StillRequiresTheCash() {
+        assertThrows(IllegalArgumentException.class, () -> saleService.registerSale(new CreateSaleCommand(
+                1L, null, false, List.of(new CreateSaleItemCommand(1L, 1)), "CASH")));
+    }
+
+    @Test
+    void registerReturn_OfACreditSale_LowersTheCustomersDebt() {
+        Sale sale = saleOfStore(100L, STORE_ID);
+        sale.setPaymentMethod("CREDIT");
+        sale.setCustomerId(1L);
+        stubOneReturnableLine(sale);
+
+        saleService.registerReturn(100L, new CreateSaleReturnCommand(null, List.of(new CreateSaleReturnItemCommand(5L, 1))));
+
+        verify(creditFacade).registerReturn(eq(1L), eq(100L), argThat(a -> a.compareTo(BigDecimal.valueOf(8.00)) == 0));
+    }
+
+    @Test
+    void registerReturn_OfACashSale_DoesNotTouchTheCreditAccount() {
+        Sale sale = saleOfStore(100L, STORE_ID);
+        sale.setPaymentMethod("CASH");
+        stubOneReturnableLine(sale);
+
+        saleService.registerReturn(100L, new CreateSaleReturnCommand(null, List.of(new CreateSaleReturnItemCommand(5L, 1))));
+
+        verifyNoInteractions(creditFacade);
+    }
+
+    private void stubOneReturnableLine(Sale sale) {
+        when(saleRepository.findById(100L)).thenReturn(Optional.of(sale));
+        SaleItem line = new SaleItem();
+        line.setId(5L);
+        line.setSale(sale);
+        line.setItemType(SaleItemType.PRODUCT);
+        line.setProductId(1L);
+        line.setQuantity(2);
+        line.setUnitPrice(BigDecimal.valueOf(8.00));
+        when(saleItemRepository.findById(5L)).thenReturn(Optional.of(line));
+        when(saleReturnRepository.sumReturnedQuantityBySaleItemId(5L)).thenReturn(0);
+        when(saleReturnRepository.save(any(SaleReturn.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(saleReturnMapper.toDto(any(SaleReturn.class), any())).thenReturn(mock(SaleReturnDto.class));
     }
 
     // --- Servicios ---

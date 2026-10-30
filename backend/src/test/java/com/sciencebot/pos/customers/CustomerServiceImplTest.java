@@ -52,12 +52,16 @@ class CustomerServiceImplTest {
     @Mock
     private AuditFacade auditFacade;
 
-    @InjectMocks
+    @Mock
+    private CustomerDeleteValidator deleteValidator;
+
     private CustomerServiceImpl customerService;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
+        customerService = new CustomerServiceImpl(customerRepository, customerMapper, userFacade, auditFacade,
+                List.of(deleteValidator));
         TenantContext.setStoreId(STORE_ID);
     }
 
@@ -218,6 +222,20 @@ class CustomerServiceImplTest {
         assertFalse(customer.isActive());
         verify(auditFacade).record(eq("CUSTOMER"), eq(5L), eq(AuditAction.DELETE), eq(1L), eq("boss"),
                 eq(Map.of("active", new FieldChange(true, false))));
+    }
+
+    @Test
+    void deleteCustomer_RefusedByAValidator_KeepsTheCustomerActive() {
+        loginAs("boss", 1L, "ADMINISTRATOR");
+        Customer customer = customerCreatedBy(5L, ANA, "ana");
+        when(customerRepository.findById(5L)).thenReturn(Optional.of(customer));
+        doThrow(new IllegalStateException("tiene deuda de fiado pendiente")).when(deleteValidator).validateBeforeDelete(5L);
+
+        assertThrows(IllegalStateException.class, () -> customerService.deleteCustomer(5L));
+
+        assertTrue(customer.isActive());
+        verify(customerRepository, never()).save(any());
+        verifyNoInteractions(auditFacade);
     }
 
     @Test

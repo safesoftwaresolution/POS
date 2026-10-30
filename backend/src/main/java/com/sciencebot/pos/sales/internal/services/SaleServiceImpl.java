@@ -11,6 +11,7 @@ import com.sciencebot.pos.sales.internal.repositories.SaleRepository;
 import com.sciencebot.pos.sales.internal.repositories.SaleReturnRepository;
 import com.sciencebot.pos.sales.internal.mappers.SaleMapper;
 import com.sciencebot.pos.sales.internal.mappers.SaleReturnMapper;
+import com.sciencebot.pos.credit.CreditFacade;
 import com.sciencebot.pos.customers.CreateCustomerCommand;
 import com.sciencebot.pos.customers.CustomerFacade;
 import com.sciencebot.pos.customers.CustomerDto;
@@ -38,6 +39,8 @@ import java.util.Optional;
 public class SaleServiceImpl implements SaleFacade {
 
     private static final String GENERAL_CUSTOMER_IDENTIFICATION = "9999999999";
+    /** Método de pago "Fiado" (valor del tema PAYMENT_METHODS). */
+    private static final String CREDIT_PAYMENT_METHOD = "CREDIT";
 
     private final SaleRepository saleRepository;
     private final SaleItemRepository saleItemRepository;
@@ -47,6 +50,7 @@ public class SaleServiceImpl implements SaleFacade {
     private final CustomerFacade customerFacade;
     private final ProductFacade productFacade;
     private final ServiceFacade serviceFacade;
+    private final CreditFacade creditFacade;
     private final InventoryFacade inventoryFacade;
     private final UserFacade userFacade;
     private final org.springframework.context.ApplicationEventPublisher eventPublisher;
@@ -60,6 +64,7 @@ public class SaleServiceImpl implements SaleFacade {
             @Lazy CustomerFacade customerFacade,
             @Lazy ProductFacade productFacade,
             @Lazy ServiceFacade serviceFacade,
+            @Lazy CreditFacade creditFacade,
             @Lazy InventoryFacade inventoryFacade,
             @Lazy UserFacade userFacade,
             org.springframework.context.ApplicationEventPublisher eventPublisher
@@ -72,6 +77,7 @@ public class SaleServiceImpl implements SaleFacade {
         this.customerFacade = customerFacade;
         this.productFacade = productFacade;
         this.serviceFacade = serviceFacade;
+        this.creditFacade = creditFacade;
         this.inventoryFacade = inventoryFacade;
         this.userFacade = userFacade;
         this.eventPublisher = eventPublisher;
@@ -104,8 +110,14 @@ public class SaleServiceImpl implements SaleFacade {
         if (command.items() == null || command.items().isEmpty()) {
             throw new IllegalArgumentException("La venta debe contener al menos un producto");
         }
-        if (command.cashReceived() == null || command.cashReceived().compareTo(BigDecimal.ZERO) < 0) {
+        // Una venta a fiado no recibe dinero: el total pasa a ser deuda del cliente (RN-SALE-006).
+        final String paymentMethod = normalizePaymentMethod(command.paymentMethod());
+        final boolean onCredit = CREDIT_PAYMENT_METHOD.equals(paymentMethod);
+        if (!onCredit && (command.cashReceived() == null || command.cashReceived().compareTo(BigDecimal.ZERO) < 0)) {
             throw new IllegalArgumentException("El efectivo recibido no puede ser negativo");
+        }
+        if (onCredit && command.customerId() == null) {
+            throw new IllegalArgumentException("Una venta a fiado necesita un cliente");
         }
 
         // 1. Resolve customer
@@ -125,6 +137,9 @@ public class SaleServiceImpl implements SaleFacade {
             if (!customer.active()) {
                 throw new IllegalArgumentException("No se pueden realizar ventas a un cliente inactivo");
             }
+            if (onCredit && GENERAL_CUSTOMER_IDENTIFICATION.equals(customer.identification())) {
+                throw new IllegalArgumentException("No se puede fiar al Cliente General: elige un cliente registrado");
+            }
             resolvedCustomerId = customer.id();
         }
 
@@ -140,9 +155,9 @@ public class SaleServiceImpl implements SaleFacade {
         sale.setCustomerId(resolvedCustomerId);
         sale.setUserId(userId);
         sale.setTotalAmount(BigDecimal.ZERO);
-        sale.setCashReceived(command.cashReceived());
+        sale.setCashReceived(onCredit ? BigDecimal.ZERO : command.cashReceived());
         sale.setCashChange(BigDecimal.ZERO);
-        sale.setPaymentMethod(normalizePaymentMethod(command.paymentMethod()));
+        sale.setPaymentMethod(paymentMethod);
 
         // Generate invoice number from database sequence
         Long seq = saleRepository.getNextInvoiceSeq();
@@ -168,12 +183,12 @@ public class SaleServiceImpl implements SaleFacade {
             items.add(saleItem);
         }
 
-        if (command.cashReceived().compareTo(total) < 0) {
+        if (!onCredit && command.cashReceived().compareTo(total) < 0) {
             throw new IllegalArgumentException("El efectivo recibido (" + command.cashReceived() + ") es insuficiente para cubrir el total (" + total + ")");
         }
 
         sale.setTotalAmount(total);
-        sale.setCashChange(command.cashReceived().subtract(total));
+        sale.setCashChange(onCredit ? BigDecimal.ZERO : command.cashReceived().subtract(total));
         sale.setItems(items);
         sale.setIdempotencyKey(key);
 
@@ -181,6 +196,10 @@ public class SaleServiceImpl implements SaleFacade {
         // de facturar: si otro reenvio concurrente gano la carrera, la violacion aborta esta
         // transaccion (revirtiendo el descuento de inventario) antes de emitir a Factus.
         Sale saved = saleRepository.saveAndFlush(sale);
+        if (onCredit) {
+            // Si el fiado supera el cupo del cliente se lanza una excepción y toda la venta se revierte (incluido el stock).
+            creditFacade.registerCharge(resolvedCustomerId, saved.getId(), total, command.creditDueDate());
+        }
         SaleDto saleDto = saleMapper.toDto(saved);
 
         // Publicación desacoplada del evento de dominio para facturación electrónica asíncrona
@@ -367,6 +386,10 @@ public class SaleServiceImpl implements SaleFacade {
         saleReturn.setItems(items);
 
         SaleReturn saved = saleReturnRepository.save(saleReturn);
+        if (CREDIT_PAYMENT_METHOD.equals(sale.getPaymentMethod())) {
+            // Venta a fiado: la devolución baja la deuda en lugar de devolver dinero (RN-SALE-006).
+            creditFacade.registerReturn(sale.getCustomerId(), saleId, totalRefund);
+        }
         return saleReturnMapper.toDto(saved, sale.getInvoiceNumber());
     }
 

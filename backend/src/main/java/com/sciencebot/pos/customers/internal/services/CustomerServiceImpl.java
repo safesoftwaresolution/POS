@@ -5,6 +5,7 @@ import com.sciencebot.pos.audit.AuditFacade;
 import com.sciencebot.pos.audit.FieldChange;
 import com.sciencebot.pos.config.tenant.TenantContext;
 import com.sciencebot.pos.customers.CreateCustomerCommand;
+import com.sciencebot.pos.customers.CustomerDeleteValidator;
 import com.sciencebot.pos.customers.CustomerDto;
 import com.sciencebot.pos.customers.CustomerFacade;
 import com.sciencebot.pos.customers.UpdateCustomerCommand;
@@ -21,6 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -36,13 +38,16 @@ public class CustomerServiceImpl implements CustomerFacade {
     private final CustomerMapper customerMapper;
     private final UserFacade userFacade;
     private final AuditFacade auditFacade;
+    private final List<CustomerDeleteValidator> deleteValidators;
 
     public CustomerServiceImpl(CustomerRepository customerRepository, CustomerMapper customerMapper,
-                               UserFacade userFacade, AuditFacade auditFacade) {
+                               UserFacade userFacade, AuditFacade auditFacade,
+                               List<CustomerDeleteValidator> deleteValidators) {
         this.customerRepository = customerRepository;
         this.customerMapper = customerMapper;
         this.userFacade = userFacade;
         this.auditFacade = auditFacade;
+        this.deleteValidators = deleteValidators;
     }
 
     /** Quién hace la solicitud: id y nombre para auditar, y si es vendedor (solo edita lo que creó). */
@@ -163,6 +168,9 @@ public class CustomerServiceImpl implements CustomerFacade {
                 .orElseThrow(() -> new EntityNotFoundException("Cliente no encontrado con ID: " + id));
 
         checkNotGeneralCustomer(customer);
+        for (CustomerDeleteValidator validator : deleteValidators) {
+            validator.validateBeforeDelete(id);
+        }
         Actor actor = currentActor();
         customer.setActive(false);
         customer.setUpdatedBy(actor.userId());

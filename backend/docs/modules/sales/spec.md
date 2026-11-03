@@ -143,7 +143,7 @@
 | user_id | BIGINT | FK → users(id), NOT NULL |
 | created_at | TIMESTAMP | NOT NULL |
 
-**Constraints**: FK_sales_customer, FK_sales_user, FK_sales_store, CK_sale_payment: `cash_received >= total_amount` (se exige también con tarjeta o transferencia).
+**Constraints**: FK_sales_customer, FK_sales_user, FK_sales_store, CK_sale_payment (`V32`): `payment_method = 'CREDIT' OR cash_received >= total_amount` (se exige también con tarjeta o transferencia; el fiado no recibe efectivo).
 
 ### Tabla: `sale_returns`
 | Campo | Tipo | Restricciones |

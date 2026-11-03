@@ -1,7 +1,7 @@
 <!-- doc-version: 1.7 | last-updated: 2026-10-29 -->
 # Esquema de Base de Datos — Vista Global
 
-Fuente de verdad: las migraciones Flyway en `src/main/resources/db/migration/` (hoy `V1` … `V31`). Este documento es el mapa;
+Fuente de verdad: las migraciones Flyway en `src/main/resources/db/migration/` (hoy `V1` … `V32`). Este documento es el mapa;
 el DDL columna a columna vive en las migraciones y, para los módulos con tablas propias complejas, en su `spec.md`.
 
 ## Diagrama Entidad-Relación
@@ -219,7 +219,7 @@ Antes este documento los listaba como existentes; **no hay ninguna migración qu
 Toda modificación al esquema físico (tablas, columnas, datos semilla, índices) **DEBE** gestionarse mediante scripts de Flyway.
 
 - **Ubicación obligatoria**: `src/main/resources/db/migration/`
-- **Nomenclatura**: `V<Versión>__<Descripcion_Breve>.sql` (ej. `V31__Customer_Credit.sql`). La siguiente libre es `V32`.
+- **Nomenclatura**: `V<Versión>__<Descripcion_Breve>.sql` (ej. `V31__Customer_Credit.sql`). La siguiente libre es `V33`.
 - **Inmutabilidad**: una migración ya aplicada **nunca** se modifica; la corrección va en una versión nueva.
 - **Validación**: Hibernate usa `ddl-auto=validate` en dev y prod, por lo que cualquier discrepancia entre entidades y esquema falla el arranque. Solo el perfil `test` deja que Hibernate cree el esquema (`create-drop`, Flyway desactivado); los `V*MigrationSqlTest` ejecutan Flyway a mano contra su propia H2.
 - **Compatibilidad H2**: las migraciones con datos deben ser seguras en H2 (perfil `dev`); H2 2.4.x falla al validar `CHECK … IN (…)` desde una conexión distinta a la que los creó.

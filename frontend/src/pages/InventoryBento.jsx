@@ -66,7 +66,7 @@ export default function InventoryBento() {
   );
 
   return (
-    <div className="space-y-6 select-none">
+    <div className="space-y-6 select-none min-w-0">
       {/* Header banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -75,7 +75,7 @@ export default function InventoryBento() {
         </div>
 
         {activeTab === 'stock' && (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {canMoveStock && (
               <>
                 <ExpiringPdfButton />
@@ -98,7 +98,7 @@ export default function InventoryBento() {
       </div>
 
       {/* Tab Switcher */}
-      <SegmentedControl options={TABS} value={activeTab} onChange={setActiveTab} ariaLabel="Secciones de inventario" pill scrollable equal={false} className="w-fit" />
+      <SegmentedControl options={TABS} value={activeTab} onChange={setActiveTab} ariaLabel="Secciones de inventario" pill scrollable equal={false} className="w-fit max-w-full" />
 
       {activeTab === 'movements' && <MovementsPanel />}
       {activeTab === 'returns' && <ReturnsBento />}
@@ -157,7 +157,7 @@ export default function InventoryBento() {
 
       {/* Main Table Card */}
       <div className="bento-card p-6 space-y-4 bg-card border-line">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="relative w-full sm:w-72">
             <Search className="w-4 h-4 text-ink-muted absolute left-3.5 top-2.5" />
             <input
@@ -183,7 +183,7 @@ export default function InventoryBento() {
             <p className="text-[11px] text-ink-muted">Crea productos desde el catálogo para visualizar las existencias en tiempo real</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div>
             <table className="table-cards w-full text-left text-xs">
               <thead>
                 <tr className="border-b border-gray-200 dark:border-gray-800 text-ink-muted uppercase tracking-wider font-extrabold text-[10px]">

@@ -26,7 +26,7 @@ export default function ExpiringPdfButton() {
   };
 
   return (
-    <div className="flex items-center gap-1.5">
+    <div className="flex flex-wrap items-center gap-1.5">
       <select
         value={days}
         onChange={(e) => setDays(Number(e.target.value))}

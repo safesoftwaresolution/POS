@@ -53,8 +53,8 @@ export default function CreditAccountModal({ customerId, onClose, onChanged }) {
         {movements.content.length === 0 ? (
           <EmptyState icon={HandCoins} title="Sin movimientos" description="Aquí aparecerán los fiados y abonos de este cliente." />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+          <div>
+            <table className="table-cards w-full text-left text-xs">
               <thead>
                 <tr className="text-[10px] uppercase tracking-wider text-ink-muted border-b border-line">
                   <th className="py-2 pr-3">Fecha</th>
@@ -69,11 +69,11 @@ export default function CreditAccountModal({ customerId, onClose, onChanged }) {
                   const t = TYPES[m.type] || { label: m.type, tone: 'neutral', sign: '' };
                   return (
                     <tr key={m.id}>
-                      <td className="py-2.5 pr-3 whitespace-nowrap text-ink-soft">{formatDateTime(m.createdAt)}</td>
-                      <td className="py-2.5 pr-3"><Badge tone={t.tone}>{t.label}</Badge></td>
-                      <td className="py-2.5 pr-3 text-right font-bold tabular-nums text-ink">{t.sign}{money(m.amount)}</td>
-                      <td className="py-2.5 pr-3 text-right tabular-nums text-ink-soft">{money(m.balanceAfter)}</td>
-                      <td className="py-2.5 text-ink-soft">
+                      <td data-label="" className="py-2.5 pr-3 whitespace-nowrap text-ink-soft">{formatDateTime(m.createdAt)}</td>
+                      <td data-label="Movimiento" className="py-2.5 pr-3"><Badge tone={t.tone}>{t.label}</Badge></td>
+                      <td data-label="Monto" className="py-2.5 pr-3 text-right font-bold tabular-nums text-ink">{t.sign}{money(m.amount)}</td>
+                      <td data-label="Saldo" className="py-2.5 pr-3 text-right tabular-nums text-ink-soft">{money(m.balanceAfter)}</td>
+                      <td data-label="Detalle" className="py-2.5 text-ink-soft">
                         {m.saleId && <span>Venta #{m.saleId}</span>}
                         {m.dueDate && <span> · vence {formatLongDate(m.dueDate)}</span>}
                         {m.paymentMethod && <span>{paymentLabel(m.paymentMethod)}</span>}

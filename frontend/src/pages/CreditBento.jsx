@@ -63,8 +63,8 @@ export default function CreditBento() {
             description="Cuando vendas con el método Fiado en el punto de venta, el cliente aparecerá aquí."
           />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+          <div>
+            <table className="table-cards w-full text-left text-xs">
               <thead>
                 <tr className="text-[10px] uppercase tracking-wider text-ink-muted border-b border-line">
                   <th className="py-2 pr-3">Cliente</th>
@@ -80,15 +80,15 @@ export default function CreditBento() {
                     onClick={() => setSelectedId(a.customerId)}
                     className="cursor-pointer hover:bg-gray-50 dark:hover:bg-white/5"
                   >
-                    <td className="py-3 pr-3">
+                    <td data-label="" className="py-3 pr-3">
                       <span className="block font-bold text-ink">{a.customerName}</span>
                       <span className="block text-[11px] text-ink-muted">{a.identification}</span>
                     </td>
-                    <td className="py-3 pr-3 text-right font-black tabular-nums text-ink">{money(a.balance)}</td>
-                    <td className="py-3 pr-3 text-right tabular-nums text-ink-soft">
+                    <td data-label="Debe" className="py-3 pr-3 text-right font-black tabular-nums text-ink">{money(a.balance)}</td>
+                    <td data-label="Cupo" className="py-3 pr-3 text-right tabular-nums text-ink-soft">
                       {a.creditLimit != null ? money(a.creditLimit) : 'Sin límite'}
                     </td>
-                    <td className="py-3 text-ink-soft">{formatDateTime(a.lastMovementAt)}</td>
+                    <td data-label="Último movimiento" className="py-3 text-ink-soft">{formatDateTime(a.lastMovementAt)}</td>
                   </tr>
                 ))}
               </tbody>

@@ -126,7 +126,7 @@ public class ServiceCatalogServiceImpl implements ServiceFacade, CategoryDeleteV
 
     @Override
     public Page<ServiceDto> searchServices(String search, Long categoryId, Boolean active, Pageable pageable) {
-        String term = search == null || search.isBlank() ? null : search.trim().toLowerCase();
+        String term = search == null || search.isBlank() ? "" : search.trim().toLowerCase();
         return serviceRepository.searchInStore(requireCurrentStoreId(), term, categoryId, active, pageable)
                 .map(serviceMapper::toDto);
     }

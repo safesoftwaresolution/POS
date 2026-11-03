@@ -17,10 +17,10 @@ public interface ServiceItemRepository extends JpaRepository<ServiceItem, Long> 
 
     /**
      * Búsqueda parcial por nombre o código dentro del local, con filtros opcionales. {@code search} llega en
-     * minúsculas (o null) desde el servicio.
+     * minúsculas (vacío si no se busca: un null suelto Postgres lo tipa como bytea) desde el servicio.
      */
     @Query("select s from ServiceItem s where s.storeId = :storeId "
-            + "and (:search is null or lower(s.name) like concat('%', :search, '%') "
+            + "and (:search = '' or lower(s.name) like concat('%', :search, '%') "
             + "or lower(s.code) like concat('%', :search, '%')) "
             + "and (:categoryId is null or s.categoryId = :categoryId) "
             + "and (:active is null or s.active = :active)")

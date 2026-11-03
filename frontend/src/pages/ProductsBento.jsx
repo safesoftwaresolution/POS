@@ -333,8 +333,8 @@ export default function ProductsBento() {
 
       {activeTab === 'catalog' && (
         <Card className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="relative w-72">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="relative w-full sm:w-72">
               <Search className="w-4 h-4 text-ink-muted absolute left-3.5 top-2.5" />
               <input
                 type="text"
@@ -344,7 +344,7 @@ export default function ProductsBento() {
                 className="w-full pl-10 pr-3 py-1.5 bg-page border border-line rounded-2xl text-xs font-semibold text-ink placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-ink"
               />
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <button
                 onClick={toggleInactive}
                 className={`px-3 py-1.5 rounded-full text-[11px] font-bold cursor-pointer border transition-colors ${

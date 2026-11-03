@@ -74,11 +74,13 @@ export default function CreditAccountModal({ customerId, onClose, onChanged }) {
                       <td data-label="Monto" className="py-2.5 pr-3 text-right font-bold tabular-nums text-ink">{t.sign}{money(m.amount)}</td>
                       <td data-label="Saldo" className="py-2.5 pr-3 text-right tabular-nums text-ink-soft">{money(m.balanceAfter)}</td>
                       <td data-label="Detalle" className="py-2.5 text-ink-soft">
-                        {m.saleId && <span>Venta #{m.saleId}</span>}
-                        {m.dueDate && <span> · vence {formatLongDate(m.dueDate)}</span>}
-                        {m.paymentMethod && <span>{paymentLabel(m.paymentMethod)}</span>}
-                        {m.note && <span> · {m.note}</span>}
-                        {m.username && <span className="text-ink-muted"> · {m.username}</span>}
+                        <div className="min-w-0 space-y-0.5">
+                          {m.saleId && <span className="block">Venta #{m.saleId}</span>}
+                          {m.dueDate && <span className="block">Vence {formatLongDate(m.dueDate)}</span>}
+                          {m.paymentMethod && <span className="block">{paymentLabel(m.paymentMethod)}</span>}
+                          {m.note && <span className="block break-words">{m.note}</span>}
+                          {m.username && <span className="block text-ink-muted">{m.username}</span>}
+                        </div>
                       </td>
                     </tr>
                   );

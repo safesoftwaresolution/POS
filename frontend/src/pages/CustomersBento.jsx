@@ -57,8 +57,8 @@ export default function CustomersBento() {
       />
 
       <Card className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="relative w-72">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="relative w-full sm:w-72">
             <Search className="w-4 h-4 text-ink-muted absolute left-3.5 top-2.5" />
             <input
               type="text"
@@ -84,7 +84,7 @@ export default function CustomersBento() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filtered.map(c => (
               <div key={c.id} className="p-5 bg-card rounded-2xl border border-line space-y-3 shadow-xs hover:border-line-strong transition-all">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <span className="text-[10px] font-mono font-bold text-ink-soft">CC/NIT: {c.identification}</span>
                   <Badge tone={c.active === false ? 'neutral' : 'success'}>
                     {c.active === false ? 'Inactivo' : 'Habilitado'}

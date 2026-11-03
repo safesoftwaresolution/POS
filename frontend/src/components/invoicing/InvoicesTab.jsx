@@ -107,13 +107,13 @@ export default function InvoicesTab({ role, refreshKey, onChanged }) {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar por número de factura, CUFE o venta..."
+            placeholder="Buscar factura, CUFE o venta..."
             aria-label="Buscar facturas"
             className="w-full h-10 pl-10 pr-4 bg-card border border-line rounded-2xl text-xs font-semibold text-ink placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-ink dark:focus:border-brand"
           />
         </div>
 
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0">
+        <div className="flex flex-wrap items-center gap-1.5">
           {[['', 'Todas'], ...INVOICE_STATUSES.map(s => [s, INVOICE_STATUS_LABELS[s]])].map(([value, label]) => (
             <button
               key={value || 'all'}

@@ -5,7 +5,7 @@ export function TabButton({ active, onClick, icon: Icon, label, count }) {
     <button
       type="button"
       onClick={onClick}
-      className={`pb-3 text-sm font-bold flex items-center gap-2 border-b-2 transition-all cursor-pointer whitespace-nowrap ${
+      className={`pb-3 text-xs sm:text-sm font-bold flex items-center gap-1.5 sm:gap-2 border-b-2 transition-all cursor-pointer whitespace-nowrap ${
         active
           ? 'border-brand text-brand'
           : 'border-transparent text-ink-soft hover:text-ink'

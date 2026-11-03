@@ -101,8 +101,8 @@ export default function SuppliersBento() {
       </div>
 
       <div className="bento-card p-6 space-y-4 bg-card border-line">
-        <div className="flex items-center justify-between">
-          <div className="relative w-72">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="relative w-full sm:w-72">
             <Search className="w-4 h-4 text-ink-muted absolute left-3.5 top-2.5" />
             <input
               type="text"
@@ -138,7 +138,7 @@ export default function SuppliersBento() {
             {filtered.map(s => (
               <div key={s.id} className="p-5 bg-card rounded-2xl border border-line space-y-3 flex flex-col justify-between hover:border-line-strong transition-all shadow-xs group">
                 <div>
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <span className="text-[10px] font-mono font-bold text-ink-soft">NIT: {s.taxId}</span>
                   </div>
                   <h3 className="font-extrabold text-sm text-ink mt-2 group-hover:text-brand transition-colors">{s.companyName}</h3>

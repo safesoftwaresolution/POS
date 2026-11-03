@@ -120,7 +120,7 @@ export default function InvoicingBento() {
       </div>
 
       {canSeeActivation && (
-        <div className="border-b border-line flex items-center gap-6 overflow-x-auto">
+        <div className="border-b border-line flex flex-wrap items-center gap-x-4 sm:gap-x-6">
           <TabButton active={tab === 'invoices'} onClick={() => setTab('invoices')} icon={FileText} label="Facturas emitidas" count={totalsLoaded ? totalInvoices : null} />
           <TabButton active={tab === 'activation'} onClick={() => setTab('activation')} icon={Building2} label="Habilitación y rangos" count={ranges.length || null} />
         </div>

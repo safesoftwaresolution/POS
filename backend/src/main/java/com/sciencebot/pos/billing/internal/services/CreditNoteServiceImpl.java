@@ -325,6 +325,7 @@ public class CreditNoteServiceImpl implements CreditNoteService {
             return;
         }
 
+        note.trackProviderDocument(result.providerDocumentId());
         if ("VALIDATED".equalsIgnoreCase(result.status())) {
             note.markAsValidated(
                     result.creditNoteNumber(),

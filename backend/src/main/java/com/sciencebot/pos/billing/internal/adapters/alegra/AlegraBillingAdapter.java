@@ -30,15 +30,18 @@ public class AlegraBillingAdapter implements ElectronicInvoicingProvider {
     private final AlegraCompanyProvider companyProvider;
     private final AlegraNumberingRangeClient rangeClient;
     private final AlegraInvoiceClient invoiceClient;
+    private final AlegraNoteClient noteClient;
 
     public AlegraBillingAdapter(AlegraAccessResolver accessResolver,
                                 AlegraCompanyProvider companyProvider,
                                 AlegraNumberingRangeClient rangeClient,
-                                AlegraInvoiceClient invoiceClient) {
+                                AlegraInvoiceClient invoiceClient,
+                                AlegraNoteClient noteClient) {
         this.accessResolver = accessResolver;
         this.companyProvider = companyProvider;
         this.rangeClient = rangeClient;
         this.invoiceClient = invoiceClient;
+        this.noteClient = noteClient;
     }
 
     @Override
@@ -103,16 +106,16 @@ public class AlegraBillingAdapter implements ElectronicInvoicingProvider {
         return InvoiceResult.error(String.format(PENDING, "la consulta de facturas por número legal"));
     }
 
-    // --- Notas (FEAT-026) ---
+    // --- Notas crédito y débito ---
 
     @Override
     public CreditNoteResult emitCreditNote(CreateCreditNoteRequest request, Long storeId) {
-        return CreditNoteResult.error(String.format(PENDING, "la emisión de notas crédito"));
+        return noteClient.emitCreditNote(request, storeId);
     }
 
     @Override
     public DebitNoteResult emitDebitNote(CreateDebitNoteRequest request, Long storeId) {
-        return DebitNoteResult.error(String.format(PENDING, "la emisión de notas débito"));
+        return noteClient.emitDebitNote(request, storeId);
     }
 
     // --- Rangos de numeración (tablas locales) ---

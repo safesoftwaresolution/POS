@@ -274,6 +274,7 @@ public class DebitNoteServiceImpl implements DebitNoteService {
             return;
         }
 
+        note.trackProviderDocument(result.providerDocumentId());
         if ("VALIDATED".equalsIgnoreCase(result.status())) {
             if (result.debitNoteNumber() == null || result.debitNoteNumber().isBlank()) {
                 note.markAsError("El proveedor reportó la nota débito como validada pero no retornó su número legal");

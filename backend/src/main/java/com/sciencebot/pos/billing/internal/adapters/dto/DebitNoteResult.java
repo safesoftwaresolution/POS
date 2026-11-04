@@ -11,9 +11,21 @@ public record DebitNoteResult(
     String pdfUrl,
     String status, // VALIDATED, REJECTED, PENDING, ERROR
     LocalDateTime validatedAt,
-    String errorMessage
+    String errorMessage,
+    String providerDocumentId
+) {
 
-) { 
+    /** Forma sin el id del documento en el proveedor (la de Factus y el mock). */
+    public DebitNoteResult(boolean success, String debitNoteNumber, String cude, String qrCode, String pdfUrl,
+                           String status, LocalDateTime validatedAt, String errorMessage) {
+        this(success, debitNoteNumber, cude, qrCode, pdfUrl, status, validatedAt, errorMessage, null);
+    }
+
+    public DebitNoteResult withProviderDocumentId(String providerDocumentId) {
+        return new DebitNoteResult(success, debitNoteNumber, cude, qrCode, pdfUrl, status, validatedAt, errorMessage,
+                providerDocumentId);
+    }
+
     public boolean isSuccess() {
     return success;
     }   

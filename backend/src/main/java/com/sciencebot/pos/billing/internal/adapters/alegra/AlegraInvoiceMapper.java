@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -26,6 +27,69 @@ public class AlegraInvoiceMapper {
 
     private static final BigDecimal HUNDRED = BigDecimal.valueOf(100);
     private static final int MAX_NOTE = 5000;
+
+    /** Lo que define una nota crédito o débito, independiente del formato de cada solicitud. */
+    public record NoteInput(String conceptCode, String observation, String paymentForm, String paymentMethodCode,
+                            LocalDate paymentDueDate, CustomerBillingData customer, List<InvoiceItemData> items) {}
+
+    /** La factura aceptada que la nota referencia: su fecha, su prefijo y número legal y su CUFE. */
+    public record OriginalInvoice(LocalDate date, String prefix, long number, String cufe) {}
+
+    /**
+     * Cuerpo de {@code POST /credit-notes} o {@code /debit-notes}. La numeración (prefijo y número) es la propia y no
+     * lleva resolución; el periodo y el documento asociado salen de la factura de origen (Alegra los exige).
+     */
+    public Map<String, Object> toAlegraNotePayload(NoteInput note, AlegraCompany company, Allocation allocation,
+                                                    OriginalInvoice original) {
+        if (note.items() == null || note.items().isEmpty()) {
+            throw new IllegalStateException("La nota no tiene ítems");
+        }
+        if (original == null) {
+            throw new IllegalStateException("La nota necesita la factura aceptada que referencia");
+        }
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("prefix", allocation.prefix());
+        body.put("number", allocation.number());
+        body.put("conceptCode", note.conceptCode());
+        Map<String, Object> period = new LinkedHashMap<>();
+        period.put("startDate", original.date().toString());
+        period.put("endDate", original.date().toString());
+        body.put("invoicePeriod", period);
+        Map<String, Object> associated = new LinkedHashMap<>();
+        associated.put("date", original.date().toString());
+        associated.put("documentType", "01");
+        associated.put("number", original.number());
+        associated.put("prefix", original.prefix());
+        associated.put("uuid", original.cufe());
+        body.put("associatedDocuments", List.of(associated));
+        body.put("company", mapCompany(company));
+        body.put("customer", mapCustomer(note.customer()));
+
+        List<Map<String, Object>> lines = new ArrayList<>();
+        BigDecimal gross = BigDecimal.ZERO;
+        BigDecimal tax = BigDecimal.ZERO;
+        for (InvoiceItemData item : note.items()) {
+            Map<String, Object> line = mapItem(item);
+            gross = gross.add((BigDecimal) line.get("subtotal"));
+            tax = tax.add((BigDecimal) line.get("taxAmount"));
+            lines.add(line);
+        }
+        body.put("items", lines);
+        Map<String, Object> payment = new LinkedHashMap<>();
+        String form = firstNonBlank(note.paymentForm(), "1");
+        payment.put("paymentForm", form);
+        payment.put("paymentMethod", firstNonBlank(note.paymentMethodCode(), "10"));
+        if ("2".equals(form) && note.paymentDueDate() != null) {
+            payment.put("paymentDueDate", note.paymentDueDate().toString());
+        }
+        body.put("payments", List.of(payment));
+        body.put("totalAmounts", totals(gross, tax));
+        if (note.observation() != null && !note.observation().isBlank()) {
+            String text = note.observation().trim();
+            body.put("note", List.of(text.length() > MAX_NOTE ? text.substring(0, MAX_NOTE) : text));
+        }
+        return body;
+    }
 
     public Map<String, Object> toAlegraPayload(InvoiceRequest request, AlegraCompany company, Allocation allocation) {
         Map<String, Object> body = new LinkedHashMap<>();

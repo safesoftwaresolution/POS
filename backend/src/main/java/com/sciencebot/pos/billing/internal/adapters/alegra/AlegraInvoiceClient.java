@@ -44,7 +44,7 @@ public class AlegraInvoiceClient {
     private record Envelope(Invoice invoice) {}
 
     @JsonIgnoreProperties(ignoreUnknown = true)
-    private record Invoice(String id, String status, String legalStatus, String cufe, String prefix, Object number,
+    record Invoice(String id, String status, String legalStatus, String cufe, String cude, String prefix, Object number,
                            String fullNumber, GovernmentResponse governmentResponse, String qrCodeContent,
                            List<Object> errors) {}
 
@@ -312,7 +312,7 @@ public class AlegraInvoiceClient {
     }
 
     /** La respuesta de Alegra manda: el 201 solo dice que el documento se recibió, no que la DIAN lo aceptó. */
-    private InvoiceResult fromInvoice(Invoice invoice, Allocation allocation) {
+    InvoiceResult fromInvoice(Invoice invoice, Allocation allocation) {
         if (invoice == null) {
             return InvoiceResult.pending("Alegra respondió sin el documento; se reintentará");
         }
@@ -323,7 +323,8 @@ public class AlegraInvoiceClient {
             complete(allocation);
             String legalNumber = invoice.fullNumber() != null && !invoice.fullNumber().isBlank()
                     ? invoice.fullNumber() : (invoice.prefix() == null ? "" : invoice.prefix()) + invoice.number();
-            return InvoiceResult.success(legalNumber, invoice.cufe(), invoice.qrCodeContent(), null)
+            String code = invoice.cufe() != null ? invoice.cufe() : invoice.cude();
+            return InvoiceResult.success(legalNumber, code, invoice.qrCodeContent(), null)
                     .withProviderDocumentId(invoice.id());
         }
         if ("REJECTED".equalsIgnoreCase(legalStatus)) {
@@ -339,7 +340,7 @@ public class AlegraInvoiceClient {
     }
 
     /** Traduce un fallo HTTP al resultado: qué se corrige, qué se reintenta y cuándo cambia la llave. */
-    private InvoiceResult fromProviderError(BillingProviderException ex, Allocation allocation) {
+    InvoiceResult fromProviderError(BillingProviderException ex, Allocation allocation) {
         int status = ex.getUpstreamStatus();
         log.warn("Alegra respondió con un error al emitir/consultar una factura (estado {}): {}", status, ex.getMessage());
         if (status == 400) {

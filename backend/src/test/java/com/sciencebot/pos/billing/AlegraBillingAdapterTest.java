@@ -11,6 +11,7 @@ import com.sciencebot.pos.billing.internal.adapters.alegra.AlegraBillingAdapter;
 import com.sciencebot.pos.billing.internal.adapters.alegra.AlegraCompany;
 import com.sciencebot.pos.billing.internal.adapters.alegra.AlegraCompanyProvider;
 import com.sciencebot.pos.billing.internal.adapters.alegra.AlegraInvoiceClient;
+import com.sciencebot.pos.billing.internal.adapters.alegra.AlegraNoteClient;
 import com.sciencebot.pos.billing.internal.adapters.alegra.AlegraNumberingRangeClient;
 import com.sciencebot.pos.billing.internal.adapters.dto.CreditNoteResult;
 import com.sciencebot.pos.billing.internal.adapters.dto.DebitNoteResult;
@@ -31,6 +32,7 @@ class AlegraBillingAdapterTest {
     private AlegraCompanyProvider companyProvider;
     private AlegraNumberingRangeClient rangeClient;
     private AlegraInvoiceClient invoiceClient;
+    private AlegraNoteClient noteClient;
     private AlegraBillingAdapter adapter;
 
     @BeforeEach
@@ -39,7 +41,8 @@ class AlegraBillingAdapterTest {
         companyProvider = mock(AlegraCompanyProvider.class);
         rangeClient = mock(AlegraNumberingRangeClient.class);
         invoiceClient = mock(AlegraInvoiceClient.class);
-        adapter = new AlegraBillingAdapter(resolver, companyProvider, rangeClient, invoiceClient);
+        noteClient = mock(AlegraNoteClient.class);
+        adapter = new AlegraBillingAdapter(resolver, companyProvider, rangeClient, invoiceClient, noteClient);
     }
 
     private static AlegraAccess access() {
@@ -100,16 +103,23 @@ class AlegraBillingAdapterTest {
     }
 
     @Test
-    void noteEmissionIsNotImplementedYetAndSaysSoWithoutThrowing() {
-        CreditNoteResult credit = adapter.emitCreditNote(null, 5L);
-        DebitNoteResult debit = adapter.emitDebitNote(null, 5L);
+    void noteEmissionGoesToTheNoteClient() {
+        CreditNoteResult credit = CreditNoteResult.pending("x");
+        DebitNoteResult debit = DebitNoteResult.pending("y");
+        when(noteClient.emitCreditNote(null, 5L)).thenReturn(credit);
+        when(noteClient.emitDebitNote(null, 5L)).thenReturn(debit);
+
+        assertSame(credit, adapter.emitCreditNote(null, 5L));
+        assertSame(debit, adapter.emitDebitNote(null, 5L));
+    }
+
+    @Test
+    void queryingAnInvoiceByLegalNumberIsNotSupportedAndSaysSoWithoutThrowing() {
         InvoiceResult query = adapter.queryInvoice("SETP1");
 
-        for (String message : List.of(credit.errorMessage(), debit.errorMessage(), query.errorMessage())) {
-            assertTrue(message.contains("no está implementad"), message);
-            assertFalse(message.contains("409"), "los servicios de notas leen 409 como conflicto de Factus");
-        }
-        assertEquals("ERROR", credit.status());
+        assertEquals("ERROR", query.status());
+        assertTrue(query.errorMessage().contains("no está implementad"), query.errorMessage());
+        assertFalse(query.errorMessage().contains("409"), "los servicios de notas leen 409 como conflicto de Factus");
     }
 
     @Test

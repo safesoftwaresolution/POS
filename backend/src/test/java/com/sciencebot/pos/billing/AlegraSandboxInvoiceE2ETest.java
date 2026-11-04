@@ -2,7 +2,14 @@ package com.sciencebot.pos.billing;
 
 import com.sciencebot.pos.billing.dto.BillingActivationStatus;
 import com.sciencebot.pos.billing.dto.BillingEnvironment;
+import com.sciencebot.pos.billing.dto.CreateCreditNoteRequest;
+import com.sciencebot.pos.billing.dto.CreateDebitNoteRequest;
 import com.sciencebot.pos.billing.internal.adapters.alegra.AlegraInvoiceClient;
+import com.sciencebot.pos.billing.internal.adapters.alegra.AlegraNoteClient;
+import com.sciencebot.pos.billing.internal.adapters.dto.CreditNoteResult;
+import com.sciencebot.pos.billing.internal.adapters.dto.DebitNoteResult;
+import com.sciencebot.pos.billing.internal.entities.ElectronicInvoice;
+import com.sciencebot.pos.billing.internal.repositories.ElectronicInvoiceRepository;
 import com.sciencebot.pos.billing.internal.adapters.dto.CustomerBillingData;
 import com.sciencebot.pos.billing.internal.adapters.dto.InvoiceItemData;
 import com.sciencebot.pos.billing.internal.adapters.dto.InvoiceRequest;
@@ -40,6 +47,10 @@ class AlegraSandboxInvoiceE2ETest {
     @Autowired
     private AlegraInvoiceClient invoiceClient;
     @Autowired
+    private AlegraNoteClient noteClient;
+    @Autowired
+    private ElectronicInvoiceRepository invoiceRepository;
+    @Autowired
     private StoreBillingConfigRepository configRepository;
     @Autowired
     private NumberingRangeRepository rangeRepository;
@@ -53,6 +64,7 @@ class AlegraSandboxInvoiceE2ETest {
         TenantContext.clear();
         allocationRepository.deleteAll(allocationRepository.findAll().stream().filter(a -> a.getStoreId().equals(storeId)).toList());
         rangeRepository.deleteAll(rangeRepository.findAll().stream().filter(r -> r.getStoreId().equals(storeId)).toList());
+        invoiceRepository.findAll().stream().filter(i -> storeId.equals(i.getStoreId())).forEach(invoiceRepository::delete);
         configRepository.findById(storeId).ifPresent(configRepository::delete);
     }
 
@@ -107,5 +119,35 @@ class AlegraSandboxInvoiceE2ETest {
             assertTrue(invoiceClient.sendInvoiceEmail(result.providerDocumentId(), recipient.trim()));
             System.out.println("E2E Alegra email -> enviado");
         }
+
+        // Notas credito (anulacion) y debito sobre la factura aceptada: numeracion propia (91/92) y sin resolucion.
+        ElectronicInvoice accepted = ElectronicInvoice.initialize(request.saleId(), storeId);
+        accepted.markAsValidated(result.legalInvoiceNumber(), result.cufe(), result.qrCode(), null, java.time.LocalDateTime.now());
+        accepted.trackProviderDocument(result.providerDocumentId());
+        invoiceRepository.save(accepted);
+        long noteFirst = 700_000_000L + ThreadLocalRandom.current().nextLong(80_000_000L);
+        rangeRepository.save(new NumberingRange(storeId, BillingEnvironment.SANDBOX, "91", "NC", null, noteFirst, noteFirst + 50, null, null, null));
+        rangeRepository.save(new NumberingRange(storeId, BillingEnvironment.SANDBOX, "92", "ND", null, noteFirst + 100, noteFirst + 150, null, null, null));
+
+        CreateCreditNoteRequest.ItemCreditNoteRequest.TaxItemRequest vat = new CreateCreditNoteRequest.ItemCreditNoteRequest.TaxItemRequest("01", "19.00");
+        CreateCreditNoteRequest credit = new CreateCreditNoteRequest("NC-" + first, "2", null, result.legalInvoiceNumber(), null,
+                "Anulacion de prueba E2E", List.of(new CreateCreditNoteRequest.PaymentDetailRequest("1", "10", "pago-1", "26000.00")), null,
+                List.of(new CreateCreditNoteRequest.ItemCreditNoteRequest("REF-PROD", "Producto gravado", "2.00", "0.00", "8403.36", "94", "999", List.of(vat)),
+                        new CreateCreditNoteRequest.ItemCreditNoteRequest("REF-EXENTO", "Producto exento", "1.00", "0.00", "5000.00", "94", "999", List.of())));
+        CreditNoteResult creditResult = noteClient.emitCreditNote(credit, storeId);
+        System.out.println("E2E Alegra nota credito -> " + creditResult.status() + " " + creditResult.creditNoteNumber() + " " + creditResult.errorMessage());
+        assertTrue(creditResult.isSuccess(), "nota credito: " + creditResult.status() + " " + creditResult.errorMessage());
+        assertEquals("NC" + noteFirst, creditResult.creditNoteNumber());
+        assertNotNull(creditResult.cude());
+        assertNotNull(creditResult.providerDocumentId());
+
+        CreateDebitNoteRequest debit = new CreateDebitNoteRequest("ND-" + first, "1", null, result.legalInvoiceNumber(), null,
+                "Intereses de prueba E2E", List.of(new CreateDebitNoteRequest.PaymentDetailRequest("1", "10", "pago-1", null, "1190.00")), null,
+                List.of(new CreateDebitNoteRequest.ItemDebitNoteRequest("REF-INT", "Intereses de mora", "1.00", "0.00", "1000.00", "94", "999",
+                        List.of(new CreateDebitNoteRequest.ItemDebitNoteRequest.TaxItemRequest("01", "19.00")))));
+        DebitNoteResult debitResult = noteClient.emitDebitNote(debit, storeId);
+        System.out.println("E2E Alegra nota debito -> " + debitResult.status() + " " + debitResult.debitNoteNumber() + " " + debitResult.errorMessage());
+        assertTrue(debitResult.isSuccess(), "nota debito: " + debitResult.status() + " " + debitResult.errorMessage());
+        assertEquals("ND" + (noteFirst + 100), debitResult.debitNoteNumber());
     }
 }

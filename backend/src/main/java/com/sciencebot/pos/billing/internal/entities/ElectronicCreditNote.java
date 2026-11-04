@@ -176,6 +176,22 @@ public class ElectronicCreditNote {
 
     public String getProviderDocumentId() { return providerDocumentId; }
 
+    /**
+     * Anota el id que el proveedor le dio al documento de este intento. Mientras la nota crédito no esté validada puede
+     * cambiar (un documento rechazado se reemplaza por el de la nueva emisión); una validada nunca cambia de id.
+     */
+    public void trackProviderDocument(String id) {
+        if (id == null || id.isBlank()) {
+            return;
+        }
+        String value = id.trim();
+        if (this.status == ElectronicInvoiceStatus.VALIDATED && this.providerDocumentId != null
+                && !this.providerDocumentId.equals(value)) {
+            throw new IllegalStateException("Una nota crédito VALIDATED no puede cambiar de documento en el proveedor");
+        }
+        this.providerDocumentId = value;
+    }
+
     /** Asigna el id del documento en el proveedor: una sola vez; repetir el mismo valor no hace nada. */
     public void assignProviderDocumentId(String providerDocumentId) {
         if (providerDocumentId == null || providerDocumentId.isBlank()) {

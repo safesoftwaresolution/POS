@@ -10,8 +10,21 @@ public record CreditNoteResult(
         String pdfUrl,
         String status, // VALIDATED, REJECTED, PENDING, ERROR
         String errorMessage,
-        LocalDateTime validatedAt
+        LocalDateTime validatedAt,
+        String providerDocumentId
 ) {
+
+    /** Forma sin el id del documento en el proveedor (la de Factus y el mock). */
+    public CreditNoteResult(boolean isSuccess, String creditNoteNumber, String cude, String qrCode, String pdfUrl,
+                            String status, String errorMessage, LocalDateTime validatedAt) {
+        this(isSuccess, creditNoteNumber, cude, qrCode, pdfUrl, status, errorMessage, validatedAt, null);
+    }
+
+    public CreditNoteResult withProviderDocumentId(String providerDocumentId) {
+        return new CreditNoteResult(isSuccess, creditNoteNumber, cude, qrCode, pdfUrl, status, errorMessage,
+                validatedAt, providerDocumentId);
+    }
+
     public static CreditNoteResult success(String creditNoteNumber, String cude, String qrCode, String pdfUrl) {
         return new CreditNoteResult(true, creditNoteNumber, cude, qrCode, pdfUrl, "VALIDATED", null, LocalDateTime.now());
     }

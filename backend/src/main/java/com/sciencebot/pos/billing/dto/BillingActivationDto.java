@@ -20,5 +20,9 @@ public record BillingActivationDto(
         Integer sandboxNumberingRangeId,
         @Schema(description = "Rango de numeración que el local eligió para producción (solo lectura para el back office)")
         Integer productionNumberingRangeId,
+        @Schema(description = "Si el back office ya cargó el company.id del proveedor para sandbox (el valor no se expone)")
+        boolean sandboxCompanyIdConfigured,
+        @Schema(description = "Si el back office ya cargó el company.id del proveedor para producción (el valor no se expone)")
+        boolean productionCompanyIdConfigured,
         LocalDateTime updatedAt
 ) {}

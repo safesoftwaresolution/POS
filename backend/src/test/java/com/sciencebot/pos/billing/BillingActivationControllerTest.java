@@ -42,7 +42,7 @@ class BillingActivationControllerTest {
     }
 
     private static BillingActivationDto dto(BillingActivationStatus status) {
-        return new BillingActivationDto(STORE, status, null, BillingEnvironment.SANDBOX, false, false, null, null, null);
+        return new BillingActivationDto(STORE, status, null, BillingEnvironment.SANDBOX, false, false, null, null, false, false, null);
     }
 
     @Test

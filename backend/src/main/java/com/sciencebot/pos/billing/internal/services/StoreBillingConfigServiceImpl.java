@@ -142,6 +142,19 @@ public class StoreBillingConfigServiceImpl implements StoreBillingConfigService 
 
     @Override
     @Transactional
+    public BillingActivationDto updateProviderCompanyId(Long storeId, BillingEnvironment environment,
+                                                        String companyId, String actor) {
+        Objects.requireNonNull(environment, "El entorno es obligatorio");
+        StoreBillingConfig config = getOrCreate(storeId);
+        config.assignCompanyId(environment, companyId);
+        config.setUpdatedBy(actor);
+        StoreBillingConfig saved = repository.save(config);
+        activeBillingProvider.get().onAccountChanged(saved.getStoreId());
+        return mapper.toDto(saved);
+    }
+
+    @Override
+    @Transactional
     public BillingActivationDto switchEnvironment(Long storeId, BillingEnvironment environment, String actor) {
         Objects.requireNonNull(environment, "El entorno es obligatorio");
         StoreBillingConfig config = getOrCreate(storeId);

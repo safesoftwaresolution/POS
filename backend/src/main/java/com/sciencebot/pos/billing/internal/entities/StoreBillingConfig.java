@@ -50,6 +50,13 @@ public class StoreBillingConfig {
     })
     private FactusCredentials production = new FactusCredentials();
 
+    /** company.id del proveedor (Alegra) por entorno: cada local es una empresa asociada bajo el token de plataforma. */
+    @Column(name = "sandbox_company_id", length = 64)
+    private String sandboxCompanyId;
+
+    @Column(name = "production_company_id", length = 64)
+    private String productionCompanyId;
+
     @Column(name = "updated_by", length = 100)
     private String updatedBy;
 
@@ -62,6 +69,27 @@ public class StoreBillingConfig {
     /** Credenciales del entorno indicado. */
     public FactusCredentials credentialsFor(BillingEnvironment env) {
         return env == BillingEnvironment.PRODUCTION ? production : sandbox;
+    }
+
+    /** company.id del proveedor para el entorno indicado, o null si aún no se cargó. */
+    public String companyIdFor(BillingEnvironment env) {
+        return env == BillingEnvironment.PRODUCTION ? productionCompanyId : sandboxCompanyId;
+    }
+
+    /** Guarda el company.id del entorno indicado (sin espacios; obligatorio y de hasta 64 caracteres). */
+    public void assignCompanyId(BillingEnvironment env, String companyId) {
+        if (companyId == null || companyId.isBlank()) {
+            throw new IllegalArgumentException("El company id no puede estar vacío");
+        }
+        String value = companyId.trim();
+        if (value.length() > 64) {
+            throw new IllegalArgumentException("El company id no puede superar los 64 caracteres");
+        }
+        if (env == BillingEnvironment.PRODUCTION) {
+            this.productionCompanyId = value;
+        } else {
+            this.sandboxCompanyId = value;
+        }
     }
 
     @PostLoad

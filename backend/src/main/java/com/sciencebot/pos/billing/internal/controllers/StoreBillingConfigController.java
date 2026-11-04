@@ -6,6 +6,7 @@ import com.sciencebot.pos.billing.dto.BillingConnectionTestResult;
 import com.sciencebot.pos.billing.dto.BillingEnvironment;
 import com.sciencebot.pos.billing.dto.TransitionBillingStatusRequest;
 import com.sciencebot.pos.billing.dto.UpdateBillingCredentialsCommand;
+import com.sciencebot.pos.billing.dto.UpdateProviderCompanyIdCommand;
 import com.sciencebot.pos.billing.internal.controllers.doc.StoreBillingConfigApiDoc;
 import com.sciencebot.pos.billing.internal.services.StoreBillingConfigService;
 import jakarta.validation.Valid;
@@ -53,6 +54,18 @@ public class StoreBillingConfigController implements StoreBillingConfigApiDoc {
             @Valid @RequestBody UpdateBillingCredentialsCommand command,
             Authentication authentication) {
         return ResponseEntity.ok(service.updateCredentials(storeId, environment, command, authentication.getName()));
+    }
+
+    @Override
+    @PutMapping("/api/v1/backoffice/stores/{storeId}/billing/company-id")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    public ResponseEntity<BillingActivationDto> updateProviderCompanyId(
+            @PathVariable Long storeId,
+            @RequestParam BillingEnvironment environment,
+            @Valid @RequestBody UpdateProviderCompanyIdCommand command,
+            Authentication authentication) {
+        return ResponseEntity.ok(service.updateProviderCompanyId(
+                storeId, environment, command.companyId(), authentication.getName()));
     }
 
     @Override

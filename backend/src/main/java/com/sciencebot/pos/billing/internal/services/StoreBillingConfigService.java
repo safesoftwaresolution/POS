@@ -38,6 +38,13 @@ public interface StoreBillingConfigService {
     BillingActivationDto updateCredentials(Long storeId, BillingEnvironment environment,
                                            UpdateBillingCredentialsCommand command, String actor);
 
+    /**
+     * Guarda el company.id que el proveedor (Alegra) asignó al local en un entorno. Idempotente:
+     * repetir el mismo valor no cambia nada. Descarta cualquier dato en caché del proveedor para el local.
+     */
+    BillingActivationDto updateProviderCompanyId(Long storeId, BillingEnvironment environment,
+                                                 String companyId, String actor);
+
     /** Cambia el entorno con el que factura el local (sandbox o producción). */
     BillingActivationDto switchEnvironment(Long storeId, BillingEnvironment environment, String actor);
 

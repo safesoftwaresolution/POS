@@ -6,6 +6,7 @@ import com.sciencebot.pos.billing.dto.BillingConnectionTestResult;
 import com.sciencebot.pos.billing.dto.BillingEnvironment;
 import com.sciencebot.pos.billing.dto.TransitionBillingStatusRequest;
 import com.sciencebot.pos.billing.dto.UpdateBillingCredentialsCommand;
+import com.sciencebot.pos.billing.dto.UpdateProviderCompanyIdCommand;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -33,6 +34,16 @@ public interface StoreBillingConfigApiDoc {
             Long storeId,
             @Parameter(description = "Entorno que se está configurando", example = "SANDBOX") BillingEnvironment environment,
             UpdateBillingCredentialsCommand command,
+            Authentication authentication
+    );
+
+    @Operation(summary = "Cargar el company.id que el proveedor asignó al local en un entorno",
+            description = "Alegra identifica a cada local por su company.id (empresa asociada bajo el token de plataforma). "
+                    + "Idempotente. La respuesta solo indica si el entorno ya tiene company.id, no su valor.")
+    ResponseEntity<BillingActivationDto> updateProviderCompanyId(
+            Long storeId,
+            BillingEnvironment environment,
+            UpdateProviderCompanyIdCommand command,
             Authentication authentication
     );
 

@@ -31,6 +31,8 @@ public class BillingActivationMapper {
                 account.isAccountConfigured(entity.getStoreId(), BillingEnvironment.PRODUCTION),
                 entity.getSandbox().getNumberingRangeId(),
                 entity.getProduction().getNumberingRangeId(),
+                entity.companyIdFor(BillingEnvironment.SANDBOX) != null,
+                entity.companyIdFor(BillingEnvironment.PRODUCTION) != null,
                 entity.getUpdatedAt()
         );
     }
@@ -46,6 +48,8 @@ public class BillingActivationMapper {
                 false,
                 null,
                 null,
+                false,
+                false,
                 null
         );
     }

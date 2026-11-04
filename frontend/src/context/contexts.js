@@ -5,3 +5,4 @@ import { createContext } from 'react';
 export const AuthContext = createContext();
 export const ModalContext = createContext(null);
 export const ThemeContext = createContext();
+export const StoreTemplateContext = createContext(null);

@@ -9,8 +9,9 @@ import {
 import useModal from '../../hooks/useModal';
 import useLoad from '../../hooks/useLoad';
 import asList from '../../utils/asList';
+import { DEFAULT_STORE_TEMPLATE, STORE_TEMPLATE_OPTIONS, storeTemplateLabel } from '../../constants/storeTemplates';
 
-const EMPTY_FORM = { id: null, name: '', description: '' };
+const EMPTY_FORM = { id: null, name: '', description: '', template: DEFAULT_STORE_TEMPLATE };
 
 export default function CategoriesBento() {
   const { confirm, notify } = useModal();
@@ -26,7 +27,7 @@ export default function CategoriesBento() {
   };
 
   const openEdit = (cat) => {
-    setForm({ id: cat.id, name: cat.name, description: cat.description || '' });
+    setForm({ id: cat.id, name: cat.name, description: cat.description || '', template: cat.template || DEFAULT_STORE_TEMPLATE });
     setError('');
     setShowForm(true);
   };
@@ -36,9 +37,9 @@ export default function CategoriesBento() {
     setError('');
     try {
       if (form.id) {
-        await updateBackofficeStoreCategoryApi(form.id, form.name, form.description);
+        await updateBackofficeStoreCategoryApi(form.id, form.name, form.description, form.template);
       } else {
-        await createBackofficeStoreCategoryApi(form.name, form.description);
+        await createBackofficeStoreCategoryApi(form.name, form.description, form.template);
       }
       setShowForm(false);
       setForm(EMPTY_FORM);
@@ -96,6 +97,9 @@ export default function CategoriesBento() {
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-extrabold">
                       Activa
+                    </span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-brand/10 text-brand border border-brand/20 font-extrabold">
+                      {storeTemplateLabel(cat.template)}
                     </span>
                   </div>
                   <h3 className="font-extrabold text-sm text-ink mt-2">{cat.name}</h3>
@@ -168,6 +172,20 @@ export default function CategoriesBento() {
                   placeholder="Locales de comida"
                   className="w-full p-2.5 bg-page border border-line rounded-2xl text-xs text-ink focus:outline-none focus:border-ink dark:focus:border-brand"
                 />
+              </div>
+              <div>
+                <label htmlFor="category-template" className="font-bold text-gray-700 dark:text-gray-300 block mb-1">Plantilla del local:</label>
+                <select
+                  id="category-template"
+                  value={form.template}
+                  onChange={e => setForm({ ...form, template: e.target.value })}
+                  className="w-full p-2.5 bg-page border border-line rounded-2xl text-xs font-semibold text-ink focus:outline-none focus:border-ink dark:focus:border-brand"
+                >
+                  {STORE_TEMPLATE_OPTIONS.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+                <p className="text-[11px] text-ink-muted mt-1">Los locales de esta categoría usan esta plantilla automáticamente.</p>
               </div>
             </div>
 

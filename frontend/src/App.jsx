@@ -5,6 +5,7 @@ import { AuthProvider } from './context/AuthContext';
 import useAuth from './hooks/useAuth';
 import { ThemeProvider } from './context/ThemeContext';
 import { ModalProvider } from './context/ModalContext';
+import { StoreTemplateProvider } from './context/StoreTemplateContext';
 import { getOwnStoreApi } from './services/storesApi';
 
 import Sidebar from './components/layout/Sidebar';
@@ -142,6 +143,7 @@ function ProtectedLayout() {
 
 function ProtectedLayoutContent({ mobileSidebarOpen, setMobileSidebarOpen, sidebarCollapsed, toggleSidebarCollapse }) {
   return (
+    <StoreTemplateProvider>
     <div className="min-h-screen bg-page text-ink flex transition-colors duration-300">
       {/* Expandable / Collapsible Sidebar */}
       <Sidebar
@@ -186,6 +188,7 @@ function ProtectedLayoutContent({ mobileSidebarOpen, setMobileSidebarOpen, sideb
         </main>
       </div>
     </div>
+    </StoreTemplateProvider>
   );
 }
 

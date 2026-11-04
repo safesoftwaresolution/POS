@@ -16,7 +16,7 @@
 |---|---|---|
 | ¿Basta `company.id` o hay que enviar el bloque `company` completo? | **No basta.** Solo `id` → `400 AEP6012` (falta `organizationType`); con `organizationType` → `400 AEP6013` (falta `identificationType`). Se aceptó con `id`, `organizationType`, `identificationType` (`31`), `identificationNumber`, `dv`, `name`, `regimeCode`, `email` y `address{address,city,department,country}`. No se probó el conjunto mínimo exacto ni actualizar la empresa con `PUT /companies/{id}` para evitar enviar el bloque cada vez. | FEAT-022, 024, 025 |
 | ¿`POST /invoices` acepta `Idempotency-Key`? | **Sí.** Header opcional (UUID v4). Repetir llave y cuerpo devuelve `201` con `Idempotent-Replayed: true`. Llave igual con cuerpo distinto (`422`) y `409` están documentados, no probados. | FEAT-025 |
-| ¿`attachedDocument`/`zip`/correo traen PDF? | **Pendiente.** La respuesta trae `files.xml`, `files.attachedDocument` y `files.zip` (enlaces que caducan en 60 min); **no hay clave de PDF**. No se descargaron ni se probó `POST /send-email`. | FEAT-028 |
+| ¿`attachedDocument`/`zip`/correo traen PDF? | **Sí, dentro del zip (verificado 2026-11-04).** `files.xml` y `files.attachedDocument` son XML (enlaces S3); `files.zip` (`application/zip`, enlace firmado de `*.alegra.com`, sin token) trae un **PDF real** (~36 KB) y el XML del documento adjunto. El zip guarda las entradas sin comprimir y con descriptor de datos (hay que leerlo con `ZipFile`, no con `ZipInputStream`). Los enlaces caducan a los 60 min: se pide uno fresco con `GET /invoices/{id}`. El correo (`POST /send-email`) sigue sin probarse. | FEAT-028 (ruta A, hecha), FEAT-027 |
 | ¿NC/ND exigen resolución o rango propio? | **Pendiente.** No se probó. | FEAT-023, 026 |
 | ¿Token distinto por entorno? ¿cómo se obtiene? | **Parcial.** Autenticación `Authorization: Bearer <token>` (sin usuario). Sandbox y producción son entornos independientes; si el token difiere por entorno y cómo se rota no se pudo comprobar. | FEAT-024, 029 |
 | Formato exacto de errores | **Parcial.** `400`/`404`: `{"errors":[{"code":"AEP....","message":"..."}]}`. Un rechazo de la DIAN **no es un error HTTP**: llega como `201` con `invoice.legalStatus: REJECTED` y `governmentResponse{code,message,errorMessages[]}`. `422` y `409` sin probar. | FEAT-025 |
@@ -52,7 +52,7 @@
 - Los mensajes de error propios no deben contener "409" (los servicios de notas lo leen como conflicto de Factus).
 
 ## Pendiente para cerrar el spike
-- [ ] Descargar `attachedDocument` y `zip` (dentro de los 60 min) y listar su contenido: ¿hay PDF?
+- [x] Descargar `attachedDocument` y `zip` y listar su contenido: el zip trae un PDF (ver tabla).
 - [ ] `POST /send-email` y ver qué adjunta.
 - [ ] `POST /credit-notes` y `POST /debit-notes` sobre una factura aceptada: resolución, prefijo y rango exigidos.
 - [ ] Llave de idempotencia igual con cuerpo distinto (`422`).

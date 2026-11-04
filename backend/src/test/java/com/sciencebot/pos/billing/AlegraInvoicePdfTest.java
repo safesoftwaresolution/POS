@@ -238,4 +238,44 @@ class AlegraInvoicePdfTest {
 
         assertEquals(404, error.getUpstreamStatus());
     }
+
+    @Test
+    void aRedirectIsAFailureAndIsNeverFollowed() {
+        expectInvoice(ZIP_LINK);
+        server.expect(once(), requestTo(ZIP_LINK))
+                .andRespond(withStatus(HttpStatus.FOUND).header("Location", "https://evil.example/steal.zip"));
+
+        AlegraApiException error = assertThrows(AlegraApiException.class, () -> client.downloadInvoicePDF("inv-1"));
+
+        assertEquals(302, error.getUpstreamStatus());
+        server.verify();
+    }
+
+    @Test
+    void aConnectionFailureNeverLeaksTheSignedLinkIntoTheMessage() {
+        expectInvoice(ZIP_LINK);
+        server.expect(once(), requestTo(ZIP_LINK)).andRespond(request -> { throw new IOException("connection reset"); });
+
+        AlegraApiException error = assertThrows(AlegraApiException.class, () -> client.downloadInvoicePDF("inv-1"));
+
+        assertFalse(error.getMessage().contains("t=abc"), error.getMessage());
+        assertFalse(error.getMessage().contains("?t="), error.getMessage());
+        assertTrue(error.isTemporary());
+    }
+
+    @Test
+    void onlyAlegrasOwnS3BucketIsTrustedNotAnyAwsCustomer() throws Exception {
+        String alegraBucket = "https://api-alegra-e-provider-col-sand.s3.us-east-1.amazonaws.com/f.zip?X-Amz-Signature=abc";
+        expectInvoice(alegraBucket);
+        server.expect(once(), requestTo(alegraBucket))
+                .andExpect(headerDoesNotExist("Authorization"))
+                .andRespond(withSuccess(zip("doc.pdf", new String(PDF, StandardCharsets.ISO_8859_1)),
+                        MediaType.parseMediaType("application/zip")));
+        assertArrayEquals(PDF, client.downloadInvoicePDF("inv-1"));
+
+        server.reset();
+        expectInvoice("https://evil-bucket.s3.amazonaws.com/f.zip");
+        assertThrows(IllegalStateException.class, () -> client.downloadInvoicePDF("inv-1"));
+        server.verify();
+    }
 }

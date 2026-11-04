@@ -35,7 +35,7 @@ public class AlegraClientHelper {
 
     @Autowired
     public AlegraClientHelper() {
-        this(OutboundHttp.restClient());
+        this(OutboundHttp.noRedirectsRestClient());
     }
 
     public AlegraClientHelper(RestClient restClient) {
@@ -61,7 +61,8 @@ public class AlegraClientHelper {
     public byte[] download(String link, int maxBytes) {
         URI uri = trustedDownloadUri(link);
         return restClient.get().uri(uri).exchange((request, response) -> {
-            if (response.getStatusCode().isError()) {
+            // Cualquier cosa que no sea 2xx (incluidas las redirecciones, que no se siguen) es un fallo de la descarga.
+            if (!response.getStatusCode().is2xxSuccessful()) {
                 throw new RestClientResponseException("Alegra respondió con un error al descargar el archivo",
                         response.getStatusCode(), response.getStatusText(), response.getHeaders(), null, null);
             }
@@ -81,9 +82,12 @@ public class AlegraClientHelper {
             throw new IllegalStateException("Alegra devolvió un enlace de descarga inválido");
         }
         String host = uri.getHost();
+        String lower = host == null ? "" : host.toLowerCase();
+        // Los dominios de Alegra y solo el bucket de S3 con el nombre de Alegra (no cualquier cliente de AWS).
+        boolean alegraHost = lower.equals("alegra.com") || lower.endsWith(".alegra.com");
+        boolean alegraBucket = lower.startsWith("api-alegra-e-provider-") && lower.endsWith(".amazonaws.com");
         boolean trusted = "https".equalsIgnoreCase(uri.getScheme()) && host != null && uri.getUserInfo() == null
-                && (host.equalsIgnoreCase("alegra.com") || host.toLowerCase().endsWith(".alegra.com")
-                || host.toLowerCase().endsWith(".amazonaws.com"));
+                && (alegraHost || alegraBucket);
         if (!trusted) {
             throw new IllegalStateException("Alegra devolvió un enlace de descarga que no es de confianza");
         }
@@ -108,9 +112,15 @@ public class AlegraClientHelper {
                     action + " (Alegra HTTP " + label + ")" + hint + (detail.isEmpty() ? "" : ": " + detail), ex);
         }
         if (ex instanceof ResourceAccessException) {
-            return new AlegraApiException(0, action + ": no se pudo conectar con Alegra (" + ex.getMessage() + ")", ex);
+            return new AlegraApiException(0, action + ": no se pudo conectar con Alegra ("
+                    + withoutQueryStrings(ex.getMessage()) + ")", ex);
         }
-        return new AlegraApiException(0, action + ": " + ex.getMessage(), ex);
+        return new AlegraApiException(0, action + ": " + withoutQueryStrings(ex.getMessage()), ex);
+    }
+
+    /** Spring incluye la URL completa en los errores de E/S: una URL firmada daría acceso al archivo, así que se oculta la consulta. */
+    private static String withoutQueryStrings(String message) {
+        return message == null ? null : message.replaceAll("\\?[^\\s\"']*", "?***");
     }
 
     private static String describeBody(String body) {

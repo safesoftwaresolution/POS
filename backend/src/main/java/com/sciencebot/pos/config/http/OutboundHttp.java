@@ -1,6 +1,8 @@
 package com.sciencebot.pos.config.http;
 
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import java.io.IOException;
+import java.net.HttpURLConnection;
 import org.springframework.web.client.RestClient;
 
 import java.time.Duration;
@@ -21,6 +23,23 @@ public final class OutboundHttp {
 
     public static RestClient restClient() {
         return restClient(CONNECT_TIMEOUT, READ_TIMEOUT);
+    }
+
+    /**
+     * Igual que {@link #restClient()} pero sin seguir redirecciones: un 3xx llega tal cual y quien llama decide.
+     * Sirve cuando la URL ya se validó contra una lista de hosts y un redireccionamiento podría llevar a otro.
+     */
+    public static RestClient noRedirectsRestClient() {
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory() {
+            @Override
+            protected void prepareConnection(HttpURLConnection connection, String httpMethod) throws IOException {
+                super.prepareConnection(connection, httpMethod);
+                connection.setInstanceFollowRedirects(false);
+            }
+        };
+        factory.setConnectTimeout(CONNECT_TIMEOUT);
+        factory.setReadTimeout(READ_TIMEOUT);
+        return RestClient.builder().requestFactory(factory).build();
     }
 
     public static RestClient restClient(Duration connectTimeout, Duration readTimeout) {

@@ -59,8 +59,14 @@ services:
       SMTP_USERNAME: ${SMTP_USERNAME:-}
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
       # --- Facturacion electronica ---
-      BILLING_PROVIDER: ${BILLING_PROVIDER:-factus}
+      BILLING_PROVIDER: ${BILLING_PROVIDER:-alegra}
       BILLING_ENCRYPTION_KEY: ${BILLING_ENCRYPTION_KEY:-}
+      # Alegra (token de plataforma por entorno; nunca va en este archivo, solo en el entorno de despliegue)
+      ALEGRA_URL_SANDBOX: ${ALEGRA_URL_SANDBOX:-https://sandbox-api.alegra.com/e-provider/col/v1}
+      ALEGRA_API_TOKEN_SANDBOX: ${ALEGRA_API_TOKEN_SANDBOX:-}
+      ALEGRA_URL_PRODUCTION: ${ALEGRA_URL_PRODUCTION:-https://api.alegra.com/e-provider/col/v1}
+      ALEGRA_API_TOKEN_PRODUCTION: ${ALEGRA_API_TOKEN_PRODUCTION:-}
+      # Factus (solo si BILLING_PROVIDER=factus)
       FACTUS_URL_SANDBOX: ${FACTUS_URL_SANDBOX:-https://api-sandbox.factus.com.co}
       FACTUS_URL_PRODUCTION: ${FACTUS_URL_PRODUCTION:-https://api.factus.com.co}
       # --- Documentacion OpenAPI (apagada en prod salvo true) ---

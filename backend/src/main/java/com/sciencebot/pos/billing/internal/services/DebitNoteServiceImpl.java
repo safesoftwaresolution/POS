@@ -45,7 +45,7 @@ public class DebitNoteServiceImpl implements DebitNoteService {
     private final ElectronicInvoiceRepository invoiceRepository;
     private final Map<String, DebitNoteProvider> providersMap;
 
-    @Value("${billing.provider:factus}")
+    @Value("${billing.provider:alegra}")
     private String activeProviderName;
 
     public DebitNoteServiceImpl(

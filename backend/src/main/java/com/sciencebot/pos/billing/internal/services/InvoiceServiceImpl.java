@@ -43,7 +43,7 @@ public class InvoiceServiceImpl implements InvoiceService {
     private final InvoiceEmissionTransactions emissions;
     private final Map<String, InvoiceProvider> providersMap;
 
-    @Value("${billing.provider:factus}")
+    @Value("${billing.provider:alegra}")
     private String activeProviderName;
 
     public InvoiceServiceImpl(

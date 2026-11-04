@@ -65,7 +65,7 @@ public class CompanyLogoServiceImpl implements CompanyLogoService {
      * Proveedor de facturación configurado. La sincronización del logo usa la API de Factus, así que
      * solo se intenta si el proveedor activo es Factus (otro proveedor o el mock no la exponen).
      */
-    @Value("${billing.provider:factus}")
+    @Value("${billing.provider:alegra}")
     private String billingProvider = FACTUS_PROVIDER;
 
     @Autowired

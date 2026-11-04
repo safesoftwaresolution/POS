@@ -53,7 +53,7 @@ public class NumberingRangeServiceImpl implements NumberingRangeService {
     private final StoreBillingConfigRepository billingConfigRepository;
     private final NumberingRangeAuditRepository auditRepository;
 
-    @Value("${billing.provider:factus}")
+    @Value("${billing.provider:alegra}")
     private String activeProviderName;
 
     public NumberingRangeServiceImpl(

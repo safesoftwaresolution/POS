@@ -27,7 +27,7 @@ public class ActiveBillingProvider {
 
     public ActiveBillingProvider(
             List<ElectronicInvoicingProvider> providers,
-            @Value("${billing.provider:factus}") String configuredName) {
+            @Value("${billing.provider:alegra}") String configuredName) {
         for (ElectronicInvoicingProvider provider : providers) {
             providersByName.putIfAbsent(provider.getProviderName().toLowerCase(), provider);
         }

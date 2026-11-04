@@ -84,9 +84,32 @@ class BillingProviderStartupValidatorTest {
         });
     }
 
+    @Configuration
+    @Import({ActiveBillingProvider.class, BillingProviderStartupValidator.class})
+    static class AlegraWiringConfig {
+        @Bean
+        ElectronicInvoicingProvider alegraStub() {
+            return provider("alegra");
+        }
+    }
+
     @Test
-    void theApplicationContextStartsWithTheConfiguredProviderOrTheFactusDefault() {
+    void theApplicationContextStartsWithTheConfiguredProvider() {
         runner.withPropertyValues("billing.provider=factus").run(context -> assertThat(context).hasNotFailed());
-        runner.run(context -> assertThat(context).hasNotFailed());
+    }
+
+    @Test
+    void withoutBillingProviderTheDefaultIsAlegra() {
+        // Sin la propiedad manda el default (alegra): arranca si Alegra esta registrado y no arranca si solo hay factus.
+        new ApplicationContextRunner().withUserConfiguration(AlegraWiringConfig.class)
+                .run(context -> assertThat(context).hasNotFailed());
+        runner.run(context -> {
+            assertThat(context).hasFailed();
+            Throwable root = context.getStartupFailure();
+            while (root.getCause() != null) {
+                root = root.getCause();
+            }
+            assertThat(root.getMessage()).contains("alegra").contains("[factus]");
+        });
     }
 }

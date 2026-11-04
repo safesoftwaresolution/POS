@@ -61,3 +61,6 @@ Thumbs.db
 
 # Copias de la base H2 de desarrollo (contienen usuarios y hashes)
 backend/data_backup_*/
+
+# Registro de skills generado por Gentle-AI
+.atl/

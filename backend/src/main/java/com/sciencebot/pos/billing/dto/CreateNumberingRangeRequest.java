@@ -27,5 +27,20 @@ public record CreateNumberingRangeRequest(
         @Schema(description = "Consecutivo actual: el próximo número a usar. Si ya se usaron números, el último usado más uno", example = "1")
         @NotNull(message = "El consecutivo actual es obligatorio")
         @Positive(message = "El consecutivo actual debe ser mayor que cero")
-        Long current
-) {}
+        Long current,
+        @Schema(description = "Consecutivo inicial de la resolución. Solo lo usa Alegra (obligatorio allí); Factus lo ignora", example = "990000000")
+        Long from,
+        @Schema(description = "Consecutivo final de la resolución. Solo lo usa Alegra (obligatorio allí); Factus lo ignora", example = "995000000")
+        Long to,
+        @Schema(description = "Inicio de vigencia (AAAA-MM-DD). Opcional; Factus lo ignora", example = "2026-01-01")
+        String startDate,
+        @Schema(description = "Fin de vigencia (AAAA-MM-DD). Opcional; Factus lo ignora", example = "2027-01-01")
+        String endDate,
+        @Schema(description = "Clave técnica de la resolución. Opcional; Factus la ignora")
+        String technicalKey
+) {
+    /** Forma original (la de Factus): sin los datos de rango que solo Alegra necesita. */
+    public CreateNumberingRangeRequest(String document, String prefix, String resolutionNumber, Long current) {
+        this(document, prefix, resolutionNumber, current, null, null, null, null, null);
+    }
+}

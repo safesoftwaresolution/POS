@@ -88,6 +88,30 @@ public class NumberingRange {
         this.technicalKey = technicalKey;
     }
 
+    /** Alterna activo/inactivo y devuelve el estado resultante. Un rango eliminado no puede reactivarse. */
+    public boolean toggleActive() {
+        if (deleted) {
+            throw new IllegalStateException("El rango de numeración fue eliminado");
+        }
+        this.active = !this.active;
+        return this.active;
+    }
+
+    /** Borrado lógico: el rango deja de usarse pero conserva su historial de asignaciones. */
+    public void markDeleted() {
+        this.deleted = true;
+        this.active = false;
+    }
+
+    /** Fija el próximo número a usar; debe quedar dentro de los límites de la resolución. */
+    public void moveNextNumberTo(long next) {
+        if (next < minNumber || next > maxNumber) {
+            throw new IllegalArgumentException(
+                    "El consecutivo debe estar entre " + minNumber + " y " + maxNumber + " (se intentó " + next + ")");
+        }
+        this.nextNumber = next;
+    }
+
     /** Toma el siguiente número del rango y avanza el consecutivo. Falla si el rango ya se agotó. */
     public long takeNextNumber() {
         if (nextNumber > maxNumber) {

@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -54,4 +55,20 @@ public interface ElectronicInvoiceRepository extends JpaRepository<ElectronicInv
                                                            @Param("userId") Long userId, Pageable pageable);
 
     Optional<ElectronicInvoice> findBySaleIdAndStoreId(Long saleId, Long storeId);
+
+    /**
+     * Facturas que el reintento automático puede emitir de nuevo, de cualquier local (es un job de plataforma; el
+     * job fija el local de cada factura antes de emitir): ERROR o PENDING con el reintento vencido, o PENDING cuya
+     * reserva caducó (el hilo que emitía se cayó). Una factura REJECTED o VALIDATED nunca aparece aquí.
+     */
+    @Query("SELECT e FROM ElectronicInvoice e WHERE e.attempts < :maxAttempts AND ("
+            + "(e.status IN (com.sciencebot.pos.billing.dto.ElectronicInvoiceStatus.ERROR, "
+            + "com.sciencebot.pos.billing.dto.ElectronicInvoiceStatus.PENDING) "
+            + "AND e.processingStartedAt IS NULL AND e.nextRetryAt <= :now) "
+            + "OR (e.status = com.sciencebot.pos.billing.dto.ElectronicInvoiceStatus.PENDING "
+            + "AND e.processingStartedAt <= :leaseCutoff)) ORDER BY e.id")
+    List<ElectronicInvoice> findDueForRetry(@Param("now") LocalDateTime now,
+                                            @Param("leaseCutoff") LocalDateTime leaseCutoff,
+                                            @Param("maxAttempts") int maxAttempts,
+                                            Pageable pageable);
 }

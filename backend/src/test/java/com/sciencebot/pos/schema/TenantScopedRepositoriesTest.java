@@ -31,6 +31,9 @@ class TenantScopedRepositoriesTest {
 
     /** "Repositorio.metodo" que a proposito no filtra por local. Cada entrada lleva su motivo. */
     private static final Set<String> PLATFORM_WIDE = Set.of(
+            // Job de plataforma (InvoiceRetryJob): reintenta facturas de CUALQUIER local; fija el local de cada una
+            // antes de emitir y omite los locales sin facturación activa.
+            "ElectronicInvoiceRepository.findDueForRetry",
             // Clave unica global (reference_code, idempotency_key, numero de ticket/nota): el servicio compara
             // el storeId de lo encontrado con el del contexto y responde "en uso"/"no existe" si no coincide.
             "ElectronicCreditNoteRepository.findByReferenceCodeForUpdate",

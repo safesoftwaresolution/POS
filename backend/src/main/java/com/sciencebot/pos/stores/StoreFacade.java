@@ -44,6 +44,8 @@ public interface StoreFacade {
     Page<StoreStatusAuditDto> getStatusAudit(String newStatus, String q, Pageable pageable);
     List<StoreDocumentDto> getDocuments(Long storeId);
     StoreDocumentDto reviewDocument(Long storeId, Long docId, ReviewDocumentCommand command);
+    /** Template the given store runs with, derived from its category (RETAIL when it has none). */
+    StoreTemplate getTemplateForStore(Long storeId);
     List<StoreCategoryDto> listCategories();
     StoreCategoryDto createCategory(CreateStoreCategoryCommand command);
     StoreCategoryDto updateCategory(Long id, CreateStoreCategoryCommand command);

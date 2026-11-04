@@ -3,7 +3,10 @@ package com.sciencebot.pos.stores.internal.controllers;
 import com.sciencebot.pos.stores.CreateStoreCommand;
 import com.sciencebot.pos.stores.StoreDocumentDto;
 import com.sciencebot.pos.stores.StoreDto;
+import com.sciencebot.pos.config.tenant.TenantContext;
 import com.sciencebot.pos.stores.StoreFacade;
+import com.sciencebot.pos.stores.StoreTemplateDto;
+import jakarta.persistence.EntityNotFoundException;
 import com.sciencebot.pos.stores.UpdateOwnStoreCommand;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -41,6 +44,17 @@ public class StoreOnboardingController {
     @Operation(summary = "Obtener mi local", description = "Retorna el local del ADMINISTRATOR autenticado.")
     public ResponseEntity<StoreDto> getOwnStore(Authentication authentication) {
         return ResponseEntity.ok(storeFacade.getOwnStore(authentication.getName()));
+    }
+
+    @GetMapping("/me/template")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Plantilla de mi local", description = "Plantilla funcional (RETAIL, FOOD, APPOINTMENTS) del local del usuario autenticado, para cualquier rol del local. Se deriva de la categoria del local.")
+    public ResponseEntity<StoreTemplateDto> getOwnTemplate() {
+        Long storeId = TenantContext.getStoreId();
+        if (storeId == null) {
+            throw new EntityNotFoundException("El usuario no pertenece a un local.");
+        }
+        return ResponseEntity.ok(new StoreTemplateDto(storeFacade.getTemplateForStore(storeId).name()));
     }
 
     @PutMapping("/me")

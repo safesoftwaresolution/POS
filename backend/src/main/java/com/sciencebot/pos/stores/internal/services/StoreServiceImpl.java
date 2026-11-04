@@ -528,6 +528,12 @@ public class StoreServiceImpl implements StoreFacade {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public StoreTemplate getTemplateForStore(Long storeId) {
+        return StoreTemplate.parse(getById(storeId).template(), StoreTemplate.RETAIL);
+    }
+
+    @Override
     public List<StoreCategoryDto> listCategories() {
         return categoryRepository.findByActiveTrue().stream()
                 .map(storeMapper::toCategoryDto).toList();

@@ -588,4 +588,29 @@ class StoreServiceImplTest {
         storeService.updateCategory(3L, new CreateStoreCategoryCommand("Salón", "x"));
         assertEquals(StoreTemplate.APPOINTMENTS, entity.getTemplate());
     }
+
+    @Test
+    void getTemplateForStore_ReturnsTheTemplateOfTheStoreCategory() {
+        var category = new com.sciencebot.pos.stores.internal.entities.StoreCategoryEntity();
+        category.setName("Barbería");
+        category.setTemplate(StoreTemplate.APPOINTMENTS);
+        StoreEntity store = new StoreEntity();
+        store.setId(4L);
+        store.setStoreCategoryId(9L);
+        when(storeRepository.findById(4L)).thenReturn(Optional.of(store));
+        when(categoryRepository.findById(9L)).thenReturn(Optional.of(category));
+        when(storeMapper.toDto(any(), any())).thenAnswer(inv -> {
+            var c = (com.sciencebot.pos.stores.internal.entities.StoreCategoryEntity) inv.getArgument(1);
+            return new StoreDto(4L, "S", 9L, c.getName(), null, "s@t.com", null, null, null, "ACTIVE", true, null, null, "BASIC", c.getTemplate().name());
+        });
+
+        assertEquals(StoreTemplate.APPOINTMENTS, storeService.getTemplateForStore(4L));
+    }
+
+    @Test
+    void getTemplateForStore_UnknownStore_ThrowsNotFound() {
+        when(storeRepository.findById(404L)).thenReturn(Optional.empty());
+
+        assertThrows(jakarta.persistence.EntityNotFoundException.class, () -> storeService.getTemplateForStore(404L));
+    }
 }

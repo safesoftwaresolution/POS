@@ -88,6 +88,14 @@ public class NumberingRange {
         this.technicalKey = technicalKey;
     }
 
+    /** Toma el siguiente número del rango y avanza el consecutivo. Falla si el rango ya se agotó. */
+    public long takeNextNumber() {
+        if (nextNumber > maxNumber) {
+            throw new IllegalStateException("El rango de numeración está agotado");
+        }
+        return nextNumber++;
+    }
+
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();

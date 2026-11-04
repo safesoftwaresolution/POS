@@ -68,6 +68,11 @@ public class DocumentNumberAllocation {
         this.idempotencyKey = idempotencyKey;
     }
 
+    /** Cambia la llave de idempotencia conservando el número (tras una respuesta final no aceptada). */
+    public void rotateIdempotencyKey(String newKey) {
+        this.idempotencyKey = newKey;
+    }
+
     /** Marca que el proveedor ya recibió el documento con este número. */
     public void markCompleted() {
         this.completed = true;

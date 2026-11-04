@@ -1,7 +1,7 @@
 <!-- doc-version: 1.7 | last-updated: 2026-10-29 -->
 # Esquema de Base de Datos — Vista Global
 
-Fuente de verdad: las migraciones Flyway en `src/main/resources/db/migration/` (hoy `V1` … `V32`). Este documento es el mapa;
+Fuente de verdad: las migraciones Flyway en `src/main/resources/db/migration/` (hoy `V1` … `V33`). Este documento es el mapa;
 el DDL columna a columna vive en las migraciones y, para los módulos con tablas propias complejas, en su `spec.md`.
 
 ## Diagrama Entidad-Relación
@@ -75,11 +75,13 @@ erDiagram
 | legal | `legal_documents` | V3 | `slug` único |
 | support | `support_tickets` | V3 | `ticket_number` único |
 | notifications | `notifications` | V11 | Por local; `read` |
-| billing | `electronic_invoices` | V2, V5, V13 (`store_id`) | Una por venta |
+| billing | `electronic_invoices` | V2, V5, V13 (`store_id`), V33 (`provider_document_id`) | Una por venta; `provider_document_id` también en las notas |
 | billing | `store_billing_config` | V14 | PK = `store_id`; secretos cifrados |
 | billing | `numbering_range_audit` | V15, V17 | Bitácora de rangos |
 | billing | `electronic_credit_notes` | V18 | `reference_code` único global |
 | billing | `electronic_debit_notes` | V19 | `reference_code` único global |
+| billing | `billing_numbering_range` | V33 | Rangos de numeración locales (Alegra): único `(store_id, environment, document, prefix, resolution_number)` |
+| billing | `billing_document_number` | V33 | Libro de números asignados: único por referencia y por `(range_id, number)` |
 
 `backoffice` y `storage` no tienen tablas propias (`backoffice` opera sobre `users` y `stores`; `storage` guarda en Cloudflare R2).
 
@@ -107,6 +109,7 @@ Relación 1 a 1 con `stores`: la PK **es** el `store_id`. DDL completo en `modul
 | status_reason | VARCHAR(500) | Motivo obligatorio para `REJECTED` / `SUSPENDED` |
 | environment | VARCHAR(12) | `SANDBOX` o `PRODUCTION` (CHECK) |
 | sandbox_* / production_* | VARCHAR / INT | Dos juegos de credenciales + id de rango por entorno |
+| sandbox_company_id / production_company_id | VARCHAR(64) | `company.id` del proveedor (Alegra) por entorno, V33; no es secreto |
 | …_client_secret, …_password | VARCHAR(1024) | **Cifrados AES-256-GCM por la aplicación**, nunca en claro |
 | updated_by | VARCHAR(100) | Último usuario que modificó la configuración |
 | created_at / updated_at | TIMESTAMP | |

@@ -55,6 +55,10 @@ public class ElectronicCreditNote {
     @Column(name = "pdf_url", length = 500)
     private String pdfUrl;
 
+    /** Identificador del documento en el proveedor de facturación; se asigna una sola vez. */
+    @Column(name = "provider_document_id", length = 64)
+    private String providerDocumentId;
+
     @Column(name = "validated_at")
     private LocalDateTime validatedAt;
 
@@ -169,6 +173,20 @@ public class ElectronicCreditNote {
     }
 
     // --- Getters ---
+
+    public String getProviderDocumentId() { return providerDocumentId; }
+
+    /** Asigna el id del documento en el proveedor: una sola vez; repetir el mismo valor no hace nada. */
+    public void assignProviderDocumentId(String providerDocumentId) {
+        if (providerDocumentId == null || providerDocumentId.isBlank()) {
+            throw new IllegalArgumentException("El id del documento en el proveedor es obligatorio");
+        }
+        String value = providerDocumentId.trim();
+        if (this.providerDocumentId != null && !this.providerDocumentId.equals(value)) {
+            throw new IllegalStateException("El documento ya tiene un id de proveedor y no puede cambiarse");
+        }
+        this.providerDocumentId = value;
+    }
 
     public Long getId() { return id; }
     public Long getStoreId() { return storeId; }

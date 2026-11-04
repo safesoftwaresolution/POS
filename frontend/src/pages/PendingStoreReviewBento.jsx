@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Clock, XCircle, LogOut } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
+import useAuth from '../hooks/useAuth';
 
 const STATUS_COPY = {
   PENDING_VERIFICATION: {

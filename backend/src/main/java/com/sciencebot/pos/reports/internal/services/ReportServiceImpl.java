@@ -10,7 +10,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -21,8 +23,12 @@ public class ReportServiceImpl implements ReportService {
 
     private static final int DEFAULT_REPORT_DAYS = 30;
     private static final int DEFAULT_TOP_PRODUCTS_LIMIT = 10;
+    private static final int DEFAULT_EXPIRING_DAYS = 30;
+    private static final int MAX_EXPIRING_DAYS = 365;
+    private static final int MAX_EXPIRING_ROWS = 500;
 
     private final ReportDao reportDao;
+    private final ExpiringReportPdfRenderer expiringPdf = new ExpiringReportPdfRenderer();
 
     public ReportServiceImpl(ReportDao reportDao) {
         this.reportDao = reportDao;
@@ -46,6 +52,13 @@ public class ReportServiceImpl implements ReportService {
     }
 
     @Override
+    public List<SalesHeatmapCellDto> getSalesHeatmap(LocalDateTime dateFrom, LocalDateTime dateTo) {
+        LocalDateTime from = (dateFrom != null) ? dateFrom : LocalDateTime.now().minusDays(DEFAULT_REPORT_DAYS);
+        LocalDateTime to = (dateTo != null) ? dateTo : LocalDateTime.now();
+        return reportDao.findSalesHeatmap(requireCurrentStoreId(), from, to);
+    }
+
+    @Override
     public List<TopProductDto> getTopProductsReport(LocalDateTime dateFrom, LocalDateTime dateTo, int limit) {
         LocalDateTime from = (dateFrom != null) ? dateFrom : LocalDateTime.now().minusDays(DEFAULT_REPORT_DAYS);
         LocalDateTime to = (dateTo != null) ? dateTo : LocalDateTime.now();
@@ -57,6 +70,31 @@ public class ReportServiceImpl implements ReportService {
     @Override
     public List<StockReportDto> getStockReport(Boolean belowMinStock) {
         return reportDao.findStockReport(requireCurrentStoreId(), belowMinStock);
+    }
+
+    @Override
+    public List<ExpiringProductDto> getExpiringProductsReport(Integer days) {
+        int window = expiringWindow(days);
+        LocalDate today = LocalDate.now();
+
+        return reportDao.findExpiringProducts(requireCurrentStoreId(), today.plusDays(window), MAX_EXPIRING_ROWS).stream()
+                .map(row -> {
+                    long daysToExpire = ChronoUnit.DAYS.between(today, row.expirationDate());
+                    String status = daysToExpire < 0 ? "EXPIRED" : daysToExpire == 0 ? "TODAY" : "EXPIRING";
+                    return new ExpiringProductDto(row.productId(), row.productName(), row.internalCode(),
+                            row.lotId(), row.lotCode(), row.expirationDate(), daysToExpire, row.lotRemaining(),
+                            row.quantityAvailable(), status);
+                })
+                .toList();
+    }
+
+    @Override
+    public byte[] getExpiringProductsReportPdf(Integer days) {
+        return expiringPdf.render(getExpiringProductsReport(days), expiringWindow(days), LocalDate.now());
+    }
+
+    private static int expiringWindow(Integer days) {
+        return (days == null) ? DEFAULT_EXPIRING_DAYS : Math.min(Math.max(days, 1), MAX_EXPIRING_DAYS);
     }
 
     @Override
@@ -100,9 +138,20 @@ public class ReportServiceImpl implements ReportService {
             cashBySeller.put(row.sellerName(), row.totalAmount());
         }
 
-        BigDecimal expectedCash = totalByPaymentMethod.getOrDefault("CASH", BigDecimal.ZERO);
+        // Los abonos de fiado cobrados en efectivo también entran a la caja
+        for (SellerSaleProjection row : reportDao.findCashCreditPaymentsBySeller(storeId, from, to)) {
+            cashBySeller.merge(row.sellerName(), row.totalAmount(), BigDecimal::add);
+        }
 
-        return new CashClosingReportDto(from, to, totalByPaymentMethod, expectedCash, cashBySeller);
+        Map<String, BigDecimal> creditPaymentsByMethod = new LinkedHashMap<>();
+        for (var row : reportDao.findCreditPaymentsByMethod(storeId, from, to)) {
+            creditPaymentsByMethod.put(row.paymentMethod(), row.totalAmount());
+        }
+
+        BigDecimal expectedCash = totalByPaymentMethod.getOrDefault("CASH", BigDecimal.ZERO)
+                .add(creditPaymentsByMethod.getOrDefault("CASH", BigDecimal.ZERO));
+
+        return new CashClosingReportDto(from, to, totalByPaymentMethod, expectedCash, cashBySeller, creditPaymentsByMethod);
     }
 
     private static Long requireCurrentStoreId() {

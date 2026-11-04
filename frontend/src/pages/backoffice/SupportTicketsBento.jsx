@@ -1,4 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
+import useLoad from '../../hooks/useLoad';
+import useDebouncedValue from '../../hooks/useDebouncedValue';
 import {
   LifeBuoy,
   Search,
@@ -74,13 +76,29 @@ function MetricCard({ label, value, icon: Icon, accent }) {
 }
 
 export default function SupportTicketsBento() {
-  const [metrics, setMetrics] = useState(null);
-  const [tickets, setTickets] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [priorityFilter, setPriorityFilter] = useState('ALL');
+  const debouncedSearch = useDebouncedValue(search, 300);
+
+  const { data: board, loading, reload } = useLoad(
+    async () => {
+      const [m, t] = await Promise.all([
+        getBackofficeSupportMetricsApi().catch(() => null),
+        getBackofficeSupportTicketsApi({
+          type: typeFilter === 'ALL' ? undefined : typeFilter,
+          status: statusFilter === 'ALL' ? undefined : statusFilter,
+          priority: priorityFilter === 'ALL' ? undefined : priorityFilter,
+          q: debouncedSearch.trim() || undefined
+        }).catch(() => [])
+      ]);
+      return { metrics: m, tickets: Array.isArray(t?.content) ? t.content : Array.isArray(t) ? t : [] };
+    },
+    [typeFilter, statusFilter, priorityFilter, debouncedSearch],
+    { initial: { metrics: null, tickets: [] }, autoRefresh: true },
+  );
+  const { metrics, tickets } = board;
 
   const [detailTicket, setDetailTicket] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -89,29 +107,6 @@ export default function SupportTicketsBento() {
   const [statusDraft, setStatusDraft] = useState('OPEN');
   const [priorityDraft, setPriorityDraft] = useState('NORMAL');
   const [notesDraft, setNotesDraft] = useState('');
-
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [m, t] = await Promise.all([
-        getBackofficeSupportMetricsApi().catch(() => null),
-        getBackofficeSupportTicketsApi({
-          type: typeFilter === 'ALL' ? undefined : typeFilter,
-          status: statusFilter === 'ALL' ? undefined : statusFilter,
-          priority: priorityFilter === 'ALL' ? undefined : priorityFilter,
-          q: search.trim() || undefined
-        }).catch(() => [])
-      ]);
-      setMetrics(m);
-      setTickets(Array.isArray(t?.content) ? t.content : Array.isArray(t) ? t : []);
-    } finally {
-      setLoading(false);
-    }
-  }, [typeFilter, statusFilter, priorityFilter, search]);
-
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
 
   const openDetail = async (ticket) => {
     setDetailTicket(ticket);
@@ -149,7 +144,7 @@ export default function SupportTicketsBento() {
         resolutionNotes: notesDraft
       });
       setDetailTicket(updated);
-      await loadData();
+      reload();
     } catch (e) {
       setDetailError(e.message || 'Error actualizando ticket.');
     } finally {
@@ -230,8 +225,8 @@ export default function SupportTicketsBento() {
             </div>
           </div>
         ) : (
-          <div className="overflow-x-auto -mx-2">
-            <table className="w-full text-xs min-w-[820px]">
+          <div className="md:overflow-x-auto md:-mx-2">
+            <table className="table-cards w-full text-xs md:min-w-[820px]">
               <thead>
                 <tr className="text-left text-[10px] font-extrabold text-ink-muted uppercase">
                   <th className="px-2 py-2">Radicado</th>
@@ -250,25 +245,25 @@ export default function SupportTicketsBento() {
                       onClick={() => openDetail(t)}
                       className="border-t border-gray-100 dark:border-gray-800 hover:bg-gray-50/60 dark:hover:bg-white/5 cursor-pointer"
                     >
-                      <td className="px-2 py-3">
+                      <td data-label="" className="px-2 py-3">
                         <p className="font-extrabold text-[#17171B] dark:text-white font-mono">{t.ticketNumber}</p>
                         <p className="text-[10px] text-ink-muted truncate max-w-[220px]">{t.title}</p>
                       </td>
-                      <td className="px-2 py-3">
+                      <td data-label="Tipo" className="px-2 py-3">
                         <span className="inline-flex items-center gap-1.5 font-semibold text-gray-600 dark:text-gray-300">
                           <Icon className="w-3.5 h-3.5 text-ink-muted" /> {TYPE_LABELS[t.type] || t.type}
                         </span>
                       </td>
-                      <td className="px-2 py-3">
+                      <td data-label="Contacto" className="px-2 py-3">
                         <p className="font-semibold text-gray-600 dark:text-gray-300">{t.contactName}</p>
                         <p className="text-[10px] text-ink-muted">{t.contactEmail}</p>
                       </td>
-                      <td className="px-2 py-3">
+                      <td data-label="Prioridad" className="px-2 py-3">
                         <span className={`text-[10px] px-2 py-0.5 rounded-full font-extrabold ${PRIORITY_STYLES[t.priority] || ''}`}>
                           {PRIORITY_LABELS[t.priority] || t.priority}
                         </span>
                       </td>
-                      <td className="px-2 py-3">
+                      <td data-label="Estado" className="px-2 py-3">
                         <span className={`text-[10px] px-2 py-0.5 rounded-full font-extrabold ${STATUS_STYLES[t.status] || ''}`}>
                           {STATUS_LABELS[t.status] || t.status}
                         </span>
@@ -382,7 +377,7 @@ export default function SupportTicketsBento() {
                     type="button"
                     onClick={handleSaveDetail}
                     disabled={savingDetail}
-                    className="w-1/2 py-3 bg-solid hover:bg-solid-hover disabled:opacity-50 text-white rounded-2xl text-xs font-extrabold cursor-pointer shadow-md shadow-[#0A0A0A]/10"
+                    className="w-1/2 py-3 bg-solid hover:bg-solid-hover disabled:opacity-50 text-solid-ink rounded-2xl text-xs font-extrabold cursor-pointer shadow-md shadow-[#0A0A0A]/10"
                   >
                     {savingDetail ? 'Guardando...' : 'Guardar Cambios'}
                   </button>

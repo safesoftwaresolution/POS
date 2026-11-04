@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -8,7 +8,8 @@ import {
   Users,
   FileText,
   FileCheck2,
-  BarChart3,
+  Receipt,
+  Wallet,
   Settings,
   UserCog,
   HelpCircle,
@@ -17,55 +18,43 @@ import {
   ChevronRight,
   X,
   Moon,
-  Bell
+  Bell,
+  Camera,
+  Sparkles,
+  HandCoins
 } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
-import { useTheme } from '../../context/ThemeContext';
+import useAuth from '../../hooks/useAuth';
+import useTheme from '../../hooks/useTheme';
 import { getProductsApi } from '../../services/productsApi';
-import { getUnreadNotificationCountApi } from '../../services/notificationsApi';
+import useLoad from '../../hooks/useLoad';
+import useUnreadNotifications from '../../hooks/useUnreadNotifications';
+import asList from '../../utils/asList';
+import { ROLE_LABELS } from '../../constants/roles';
 import BentoIcon from '../BentoIcon';
-
-const ROLE_LABELS = {
-  ADMINISTRATOR: 'Administrador',
-  SUPERVISOR: 'Supervisor',
-  SELLER: 'Vendedor',
-};
+import BrandLogo from '../BrandLogo';
+import Avatar from '../ui/Avatar';
+import useAvatarUpload from '../../hooks/useAvatarUpload';
 
 export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }) {
   const { logout, user } = useAuth();
   const { darkMode, toggleTheme } = useTheme();
   const navigate = useNavigate();
-  const [lowStockCount, setLowStockCount] = useState(0);
   const [profileOpen, setProfileOpen] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const [unreadCount] = useUnreadNotifications();
+  const { data: lowStockCount } = useLoad(
+    async () => {
+      // La alerta de stock bajo es para quien repone inventario; el vendedor no la ve.
+      if (user?.role === 'SELLER') return 0;
+      const products = await asList(getProductsApi());
+      return products.filter((p) => (p.quantityAvailable ?? p.stock ?? 0) <= (p.minStock || 5)).length;
+    },
+    [user?.role],
+    { initial: 0 },
+  );
 
-  useEffect(() => {
-    getProductsApi()
-      .then(data => {
-        const products = Array.isArray(data) ? data : [];
-        setLowStockCount(products.filter(p => (p.quantityAvailable ?? p.stock ?? 0) <= (p.minStock || 5)).length);
-      })
-      .catch(() => setLowStockCount(0));
-  }, []);
-
-  const refreshUnreadCount = useCallback(async () => {
-    try {
-      setUnreadCount(await getUnreadNotificationCountApi());
-    } catch {
-      setUnreadCount(0);
-    }
-  }, []);
-
-  useEffect(() => {
-    refreshUnreadCount();
-    const interval = setInterval(refreshUnreadCount, 45000);
-    return () => clearInterval(interval);
-  }, [refreshUnreadCount]);
-
-  const getInitials = (name) => {
-    if (!name) return 'US';
-    return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-  };
+  const {
+    inputRef: avatarInputRef, busy: avatarBusy, error: avatarError, onFile: handleAvatarFile, remove: handleAvatarRemove,
+  } = useAvatarUpload();
 
   // Agrupado por área de trabajo para que el menú sea más fácil de escanear.
   const navGroups = [
@@ -79,7 +68,10 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
       title: 'Operación',
       items: [
         { path: '/pos', label: 'Punto de Venta', icon: ShoppingCart },
+        { path: '/sales', label: 'Ventas', icon: Receipt },
+        ...(user?.role === 'ADMINISTRATOR' ? [{ path: '/cash', label: 'Caja', icon: Wallet }] : []),
         { path: '/products', label: 'Productos', icon: Tag },
+        { path: '/services', label: 'Servicios', icon: Sparkles },
         { path: '/inventory', label: 'Inventario', icon: Package, badge: lowStockCount > 0 ? lowStockCount : undefined },
       ],
     },
@@ -87,14 +79,11 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
       title: 'Clientes y Facturación',
       items: [
         { path: '/customers', label: 'Clientes', icon: Users },
+        { path: '/credit', label: 'Fiado', icon: HandCoins },
         { path: '/invoicing', label: 'Facturación DIAN', icon: FileText },
         ...(user?.role === 'ADMINISTRATOR' ? [{ path: '/documents', label: 'Documentos', icon: FileCheck2 }] : []),
       ],
     },
-    ...(user?.role !== 'SELLER' ? [{
-      title: 'Análisis',
-      items: [{ path: '/reports', label: 'Reportes', icon: BarChart3 }],
-    }] : []),
     {
       title: 'Sistema',
       items: [
@@ -137,14 +126,13 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
           isCollapsed ? 'px-3 justify-center' : 'px-5 justify-between'
         }`}>
           <div className="flex items-center gap-3 min-w-0">
-            <BentoIcon />
-            {(!isCollapsed || isOpen) && (
-              <div className="truncate">
-                <h1 className="font-black text-lg leading-tight tracking-tight text-ink truncate flex items-center gap-1">
-                  <span>Bento</span><span className="text-brand">POS</span>
-                </h1>
-                <p className="text-[10px] text-gray-400 font-semibold tracking-wide">Tu negocio, en equilibrio</p>
+            {(!isCollapsed || isOpen) ? (
+              <div className="min-w-0 space-y-1">
+                <BrandLogo className="h-10" />
+                <p className="text-[10px] text-gray-400 font-semibold tracking-wide truncate">Tu negocio, en equilibrio</p>
               </div>
+            ) : (
+              <BentoIcon />
             )}
           </div>
         </div>
@@ -171,7 +159,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
                     className={({ isActive }) =>
                       `relative rounded-2xl flex items-center transition-all duration-200 cursor-pointer ${
                         isActive
-                          ? 'bg-solid text-white shadow-md shadow-[#0A0A0A]/10 font-bold'
+                          ? 'bg-solid text-solid-ink shadow-md shadow-[#0A0A0A]/10 font-bold'
                           : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-line hover:text-brand dark:hover:text-brand'
                       } ${
                         isCollapsed && !isOpen
@@ -188,7 +176,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
                             <span className="truncate">{item.label}</span>
                             {item.badge != null && (
                               <span className={`ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
-                                isActive ? 'bg-white/20 text-white' : 'bg-brand text-white'
+                                'bg-brand text-white'
                               }`}>
                                 {item.badge}
                               </span>
@@ -216,9 +204,11 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
             className={`flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-line transition-colors cursor-pointer text-left ${isCollapsed && !isOpen ? 'justify-center' : ''}`}
           >
             <div className="relative shrink-0">
-              <div className="w-9 h-9 rounded-full bg-solid text-white flex items-center justify-center font-bold text-xs ring-1 ring-[#EAEAEA] dark:ring-line">
-                {getInitials(user?.fullName || user?.username)}
-              </div>
+              <Avatar
+                name={user?.fullName || user?.username}
+                src={user?.avatarUrl}
+                className="w-9 h-9 rounded-full text-xs ring-1 ring-[#EAEAEA] dark:ring-line"
+              />
               <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-brand ring-2 ring-white dark:ring-card" />
             </div>
             {(!isCollapsed || isOpen) && (
@@ -266,10 +256,28 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
             <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-line">
               <div className="flex items-center gap-4 min-w-0">
                 <div className="relative shrink-0">
-                  <div className="w-14 h-14 rounded-2xl bg-solid text-white flex items-center justify-center font-bold text-lg ring-2 ring-[#EAEAEA] dark:ring-line">
-                    {getInitials(user?.fullName || user?.username)}
-                  </div>
-                  <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full bg-brand ring-2 ring-white dark:ring-card" />
+                  <Avatar
+                    name={user?.fullName || user?.username}
+                    src={user?.avatarUrl}
+                    className={`w-14 h-14 rounded-2xl text-lg ring-2 ring-[#EAEAEA] dark:ring-line ${avatarBusy ? 'opacity-50' : ''}`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => avatarInputRef.current?.click()}
+                    disabled={avatarBusy}
+                    aria-label="Cambiar foto de perfil"
+                    title="Cambiar foto de perfil"
+                    className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-brand text-white flex items-center justify-center ring-2 ring-white dark:ring-card cursor-pointer disabled:cursor-wait"
+                  >
+                    <Camera className="w-3 h-3" />
+                  </button>
+                  <input
+                    ref={avatarInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg"
+                    className="hidden"
+                    onChange={handleAvatarFile}
+                  />
                 </div>
                 <div className="min-w-0">
                   <p className="text-base font-extrabold text-ink truncate leading-tight">
@@ -280,7 +288,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
                       {ROLE_LABELS[user?.role] || user?.role}
                     </span>
                     <span className="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#FFF0EB] text-brand border border-[#FFD5C8]">
-                      BentoPOS Pro
+                      PosBento Pro
                     </span>
                   </div>
                 </div>
@@ -292,6 +300,22 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
                 <X className="w-4 h-4" />
               </button>
             </div>
+
+            {(avatarError || user?.avatarUrl) && (
+              <div className="px-5 pt-3 flex items-center justify-between gap-3 text-[11px]">
+                <span className="text-red-600 dark:text-red-400 font-semibold">{avatarError}</span>
+                {user?.avatarUrl && (
+                  <button
+                    type="button"
+                    onClick={handleAvatarRemove}
+                    disabled={avatarBusy}
+                    className="shrink-0 font-bold text-ink-soft hover:text-red-600 cursor-pointer disabled:opacity-50"
+                  >
+                    Quitar foto
+                  </button>
+                )}
+              </div>
+            )}
 
             {/* Menu Items */}
             <div className="px-3 py-3 flex flex-col gap-1">

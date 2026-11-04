@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import { Edit3, Plus, X, AlertCircle, Eye, EyeOff, Trash2, ScrollText } from 'lucide-react';
 import {
   getBackofficeLegalDocumentsApi,
@@ -7,32 +7,23 @@ import {
   deleteBackofficeLegalDocumentApi,
   toggleBackofficeLegalDocumentPublishApi
 } from '../../services/backoffice/legalApi';
-import { useModal } from '../../context/ModalContext';
+import useModal from '../../hooks/useModal';
+import useLoad from '../../hooks/useLoad';
+import asList from '../../utils/asList';
 
 const EMPTY_FORM = { id: null, slug: '', title: '', content: '', version: '' };
 
 export default function LegalDocumentsBento() {
   const { confirm } = useModal();
-  const [documents, setDocuments] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { data: documents, loading, reload } = useLoad(
+    () => asList(getBackofficeLegalDocumentsApi()),
+    [],
+    { initial: [], autoRefresh: true },
+  );
   const [form, setForm] = useState(EMPTY_FORM);
   const [error, setError] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [showForm, setShowForm] = useState(false);
-
-  const loadDocuments = useCallback(async () => {
-    setLoading(true);
-    try {
-      setDocuments(await getBackofficeLegalDocumentsApi());
-    } catch (e) {
-      console.warn('Error cargando documentos legales:', e);
-      setDocuments([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { loadDocuments(); }, [loadDocuments]);
 
   const openCreate = () => {
     setForm(EMPTY_FORM);
@@ -63,7 +54,7 @@ export default function LegalDocumentsBento() {
       }
       setShowForm(false);
       setForm(EMPTY_FORM);
-      await loadDocuments();
+      reload();
     } catch (err) {
       setError(err.message || 'Error al guardar el documento.');
     }
@@ -73,7 +64,7 @@ export default function LegalDocumentsBento() {
     setErrorMsg('');
     try {
       await toggleBackofficeLegalDocumentPublishApi(doc.id);
-      await loadDocuments();
+      reload();
     } catch (err) {
       setErrorMsg(err.message || 'Error al publicar/despublicar el documento.');
     }
@@ -85,7 +76,7 @@ export default function LegalDocumentsBento() {
     setErrorMsg('');
     try {
       await deleteBackofficeLegalDocumentApi(doc.id);
-      await loadDocuments();
+      reload();
     } catch (err) {
       setErrorMsg(err.message || 'Error al eliminar el documento.');
     }
@@ -101,7 +92,7 @@ export default function LegalDocumentsBento() {
 
         <button
           onClick={openCreate}
-          className="px-4 py-2.5 bg-solid hover:bg-solid-hover text-white rounded-2xl text-xs font-bold flex items-center gap-2 shadow-md shadow-[#0A0A0A]/10 cursor-pointer"
+          className="px-4 py-2.5 bg-solid hover:bg-solid-hover text-solid-ink rounded-2xl text-xs font-bold flex items-center gap-2 shadow-md shadow-[#0A0A0A]/10 cursor-pointer"
         >
           <Plus className="w-4 h-4" /> Nuevo Documento
         </button>
@@ -128,8 +119,8 @@ export default function LegalDocumentsBento() {
             </div>
           </div>
         ) : (
-          <div className="overflow-x-auto -mx-2">
-            <table className="w-full text-xs min-w-[720px]">
+          <div className="md:overflow-x-auto md:-mx-2">
+            <table className="table-cards w-full text-xs md:min-w-[720px]">
               <thead>
                 <tr className="text-left text-[10px] font-extrabold text-ink-muted uppercase">
                   <th className="px-2 py-2">Documento</th>
@@ -142,13 +133,13 @@ export default function LegalDocumentsBento() {
               <tbody>
                 {documents.map(doc => (
                   <tr key={doc.id} className="border-t border-line hover:bg-gray-50/60 dark:hover:bg-white/5">
-                    <td className="px-2 py-3">
+                    <td data-label="" className="px-2 py-3">
                       <p className="font-extrabold text-ink">{doc.title}</p>
                       <p className="text-[10px] text-ink-muted">Actualizado: {doc.updatedAt ? new Date(doc.updatedAt).toLocaleDateString() : '—'}</p>
                     </td>
-                    <td className="px-2 py-3 text-ink-soft font-mono">{doc.slug}</td>
-                    <td className="px-2 py-3 text-ink-soft font-semibold">{doc.version || '—'}</td>
-                    <td className="px-2 py-3">
+                    <td data-label="Slug" className="px-2 py-3 text-ink-soft font-mono">{doc.slug}</td>
+                    <td data-label="Versión" className="px-2 py-3 text-ink-soft font-semibold">{doc.version || '—'}</td>
+                    <td data-label="Estado" className="px-2 py-3">
                       <span className={`text-[10px] px-2 py-0.5 rounded-full font-extrabold ${
                         doc.published
                           ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
@@ -157,7 +148,7 @@ export default function LegalDocumentsBento() {
                         {doc.published ? 'Publicado' : 'Borrador'}
                       </span>
                     </td>
-                    <td className="px-2 py-3">
+                    <td data-label="Acciones" className="px-2 py-3">
                       <div className="flex items-center justify-end gap-1">
                         <button
                           onClick={() => handleTogglePublish(doc)}
@@ -277,7 +268,7 @@ export default function LegalDocumentsBento() {
               </button>
               <button
                 type="submit"
-                className="w-1/2 py-3 bg-solid hover:bg-solid-hover text-white rounded-2xl text-xs font-extrabold cursor-pointer shadow-md shadow-[#0A0A0A]/10"
+                className="w-1/2 py-3 bg-solid hover:bg-solid-hover text-solid-ink rounded-2xl text-xs font-extrabold cursor-pointer shadow-md shadow-[#0A0A0A]/10"
               >
                 {form.id ? 'Guardar Cambios' : 'Crear Documento'}
               </button>

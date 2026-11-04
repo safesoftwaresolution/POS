@@ -2,6 +2,7 @@ package com.sciencebot.pos.products;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 @Schema(description = "Datos completos de un producto del catálogo")
 public record ProductDto(
@@ -34,12 +35,27 @@ public record ProductDto(
     @Schema(description = "Tasa de impuesto / IVA del producto (0.00, 5.00, 19.00)", example = "19.00")
     BigDecimal taxRate,
     @Schema(description = "Código estándar UNSPSC para facturación electrónica DIAN", example = "50202301")
-    String unspscCode
+    String unspscCode,
+    @Schema(description = "ID de la categoría a la que pertenece", example = "2")
+    Long categoryId,
+    @Schema(description = "Descripción detallada del producto", example = "Arroz blanco de primera calidad")
+    String description,
+    @Schema(description = "Vencimiento del lote más próximo que todavía tiene unidades (derivado de los lotes; null si el producto no tiene lotes con unidades)",
+            example = "2026-12-31", nullable = true)
+    LocalDate expirationDate
 ) {
     public ProductDto(Long id, String internalCode, String barcode, String name, String categoryName,
                       Long subcategoryId, String subcategoryName, BigDecimal purchasePrice, BigDecimal salePrice,
                       int quantityAvailable, int minStock, boolean active, String imageUrl) {
         this(id, internalCode, barcode, name, categoryName, subcategoryId, subcategoryName, purchasePrice, salePrice,
-                quantityAvailable, minStock, active, imageUrl, BigDecimal.ZERO, null);
+                quantityAvailable, minStock, active, imageUrl, BigDecimal.ZERO, null, null, null, null);
+    }
+
+    public ProductDto(Long id, String internalCode, String barcode, String name, String categoryName,
+                      Long subcategoryId, String subcategoryName, BigDecimal purchasePrice, BigDecimal salePrice,
+                      int quantityAvailable, int minStock, boolean active, String imageUrl,
+                      BigDecimal taxRate, String unspscCode, Long categoryId, String description) {
+        this(id, internalCode, barcode, name, categoryName, subcategoryId, subcategoryName, purchasePrice, salePrice,
+                quantityAvailable, minStock, active, imageUrl, taxRate, unspscCode, categoryId, description, null);
     }
 }

@@ -1,7 +1,7 @@
-<!-- doc-version: 1.3 | last-updated: 2026-10-16 -->
+<!-- doc-version: 1.7 | last-updated: 2026-10-29 -->
 # Esquema de Base de Datos — Vista Global
 
-Fuente de verdad: las migraciones Flyway en `src/main/resources/db/migration/` (hoy `V1` … `V19`). Este documento es el mapa;
+Fuente de verdad: las migraciones Flyway en `src/main/resources/db/migration/` (hoy `V1` … `V32`). Este documento es el mapa;
 el DDL columna a columna vive en las migraciones y, para los módulos con tablas propias complejas, en su `spec.md`.
 
 ## Diagrama Entidad-Relación
@@ -54,18 +54,21 @@ erDiagram
 
 | Módulo | Tabla | Migración | Notas |
 |---|---|---|---|
-| users / auth | `users` | V1, V3 (`store_id`), V7 (`email_verified`) | `store_id` nulo solo para `SUPER_ADMIN` |
+| users / auth | `users` | V1, V3 (`store_id`), V7 (`email_verified`), V28 (`avatar_url`) | `store_id` nulo solo para `SUPER_ADMIN` |
 | auth | `refresh_tokens` | V4 | Hash SHA-256, `family_id`, rotación |
 | auth | `email_verification_tokens` | V7 | Hash del token, `used_at`, expira |
 | categories | `categories` | V1 | **Global** (sin `store_id`) |
 | categories | `product_subcategories` | V12 | Por local; única por (`store_id`, `category_id`, `name`) |
-| products | `products` | V1, V2 (`tax_rate`, `unspsc_code`), V3, V12 (`subcategory_id`) | Único por local: `internal_code` y `barcode` (V9) |
-| customers | `customers` | V1, V2 (campos DIAN), V3 | Un "Cliente General" por local |
+| products | `products`, `product_lots` | V1, V2 (`tax_rate`, `unspsc_code`), V3, V12 (`subcategory_id`), V27 (`product_lots`: lotes de vencimiento) | Único por local: `internal_code` y `barcode` (V9) |
+| services | `services` | V29 | Catálogo sin stock; único por local: `code` (`UK_services_store_code`) |
+| customers | `customers` | V1, V2 (campos DIAN), V3, V30 (`created_by`, `updated_by` y sus nombres de usuario) | Un "Cliente General" por local |
+| audit | `audit_log` | V30 | Bitácora genérica por entidad; sin FK a `users` |
+| credit | `credit_accounts`, `credit_movements` | V31 | Fiado: saldo atómico por cliente y libro inmutable; único por local: `customer_id` (`UK_credit_accounts_store_customer`) |
 | suppliers | `suppliers` | V1, V3 | |
 | inventory | `inventory_movements` | V1, V9 (`store_id`) | Kardex; `previous_stock` / `new_stock` |
 | purchases | `purchases`, `purchase_items` | V1, V5 (`idempotency_key`), V9 | Única (`supplier_id`, `invoice_number`) |
-| sales | `sales`, `sale_items` | V1, V5, V8 (`payment_method`), V9, V13 (`tax_rate`, `tax_amount`) | `idempotency_key` único (global) |
-| sales | `sale_returns`, `sale_return_items` | V10 | Cada ítem apunta al `sale_item` exacto |
+| sales | `sales`, `sale_items` | V1, V5, V8 (`payment_method`), V9, V13 (`tax_rate`, `tax_amount`), V29 (`item_type`, `service_id` y copia facturada; `product_id` opcional) | `idempotency_key` único (global) |
+| sales | `sale_returns`, `sale_return_items` | V10, V29 (`service_id`; `product_id` opcional) | Cada ítem apunta al `sale_item` exacto |
 | settings | `settings` | V1, V3, V16 (se quitan columnas Factus) | PK = id del local |
 | settings | `parameter_topics`, `parameter_values` | V6 | Catálogos dinámicos (`PAYMENT_METHODS`, …) |
 | stores | `store_categories`, `stores`, `store_documents` | V3, V7 (`rejection_reason`, estado `REJECTED`) | Onboarding y KYC |
@@ -107,6 +110,10 @@ Relación 1 a 1 con `stores`: la PK **es** el `store_id`. DDL completo en `modul
 | …_client_secret, …_password | VARCHAR(1024) | **Cifrados AES-256-GCM por la aplicación**, nunca en claro |
 | updated_by | VARCHAR(100) | Último usuario que modificó la configuración |
 | created_at / updated_at | TIMESTAMP | |
+
+## Tabla `user_deletion_audit` (módulo users, V26)
+
+Registro inmutable (solo inserciones) de cada borrado definitivo de usuario: `user_id`, `username`, `full_name`, `email`, `role`, `store_id` (copia de los datos), `kind` (`PERMANENT` o `UNVERIFIED`), `performed_by` y `created_at`. Sin llave foránea a propósito: sobrevive al usuario y al local. Sin datos sensibles. Se escribe en la misma transacción del borrado y se lee en `GET /api/v1/backoffice/user-deletions` (`SUPER_ADMIN`). Los locales eliminados quedan en `store_status_audit` (`new_status = 'DELETED'`).
 
 ## Tabla `store_status_audit` (módulo stores)
 Historial inmutable de cambios de estado de un local (`V18__Store_Status_Audit.sql`). Solo se inserta.
@@ -189,6 +196,13 @@ Bitácora de cambios sobre rangos de numeración DIAN (`V15`, ampliada en `V17`)
 | IDX_numbering_range_audit_store_range | numbering_range_audit(store_id, range_id) | V15 |
 | IDX_electronic_credit_notes_store / _store_status / _bill | electronic_credit_notes | V18 |
 | IDX_electronic_debit_notes_store / _store_status / _bill | electronic_debit_notes | V19 |
+| IDX_product_lots_product, IDX_product_lots_store_expiration | product_lots(product_id), product_lots(store_id, expiration_date) | V27 |
+| IDX_services_store_active | services(store_id, active) | V29 |
+| IDX_audit_log_entity | audit_log(store_id, entity_type, entity_id, created_at) | V30 |
+| IDX_credit_accounts_store_balance | credit_accounts(store_id, balance) | V31 |
+| IDX_credit_movements_account | credit_movements(account_id, created_at) | V31 |
+| IDX_credit_movements_sale | credit_movements(sale_id) | V31 |
+| IDX_sale_items_service | sale_items(service_id) | V29 |
 
 Búsquedas por `barcode`, `internal_code` e `identification` se resuelven con las restricciones `UNIQUE` por local (V9), no con índices `IDX_` aparte.
 
@@ -205,7 +219,7 @@ Antes este documento los listaba como existentes; **no hay ninguna migración qu
 Toda modificación al esquema físico (tablas, columnas, datos semilla, índices) **DEBE** gestionarse mediante scripts de Flyway.
 
 - **Ubicación obligatoria**: `src/main/resources/db/migration/`
-- **Nomenclatura**: `V<Versión>__<Descripcion_Breve>.sql` (ej. `V24__Debit_Notes.sql`). La siguiente libre es `V25`.
+- **Nomenclatura**: `V<Versión>__<Descripcion_Breve>.sql` (ej. `V31__Customer_Credit.sql`). La siguiente libre es `V33`.
 - **Inmutabilidad**: una migración ya aplicada **nunca** se modifica; la corrección va en una versión nueva.
 - **Validación**: Hibernate usa `ddl-auto=validate` en dev y prod, por lo que cualquier discrepancia entre entidades y esquema falla el arranque. Solo el perfil `test` deja que Hibernate cree el esquema (`create-drop`, Flyway desactivado); los `V*MigrationSqlTest` ejecutan Flyway a mano contra su propia H2.
 - **Compatibilidad H2**: las migraciones con datos deben ser seguras en H2 (perfil `dev`); H2 2.4.x falla al validar `CHECK … IN (…)` desde una conexión distinta a la que los creó.

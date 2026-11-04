@@ -1,15 +1,17 @@
 import React from 'react';
 import { ShoppingCart, Trash2, Plus, Minus, Banknote, X } from 'lucide-react';
+import { cartKey, isService } from '../../utils/cartItem';
 
 const money = (n) => n.toLocaleString('es-CO');
 
 /**
  * Ticket de venta (columna derecha en desktop, drawer inferior en mobile): cliente asignado,
- * líneas con stepper de cantidad, totales y botón de cobro.
+ * líneas con stepper de cantidad, totales y botón de cobro. `scanner` es el escáner de cámara
+ * que se muestra arriba del ticket en mobile.
  */
 export default function CartPanel({
   cart, customers, selectedCustomer, onSelectCustomer,
-  subtotal, total, mobileOpen, onCloseMobile, onClear, onQuantity, onCheckout,
+  subtotal, total, mobileOpen, scanner, onCloseMobile, onClear, onQuantity, onCheckout,
 }) {
   return (
     <div className={
@@ -26,7 +28,7 @@ export default function CartPanel({
             </div>
             <div>
               <h2 className="font-extrabold text-sm text-ink">Ticket de Venta</h2>
-              <p className="text-[11px] text-ink-muted font-semibold">{cart.length} productos agregados</p>
+              <p className="text-[11px] text-ink-muted font-semibold">{cart.length} {cart.length === 1 ? 'ítem agregado' : 'ítems agregados'}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -43,6 +45,9 @@ export default function CartPanel({
             </button>
           </div>
         </div>
+
+        {/* Escáner (solo mobile): sigue activo dentro del ticket para agregar productos sin cerrarlo. */}
+        {scanner && mobileOpen && <div className="shrink-0 lg:hidden p-3 border-b border-line">{scanner}</div>}
 
         <div className="shrink-0 bg-gray-50 dark:bg-white/5 p-4 border-b border-line space-y-2">
           <div className="flex items-center justify-between text-xs font-bold text-ink-soft">
@@ -79,19 +84,22 @@ export default function CartPanel({
             </div>
           ) : (
             cart.map(item => (
-              <div key={item.id} className="p-3 bg-gray-50 dark:bg-white/5 rounded-2xl flex items-center justify-between border border-line">
+              <div key={cartKey(item)} className="p-3 bg-gray-50 dark:bg-white/5 rounded-2xl flex items-center justify-between border border-line">
                 <div className="space-y-0.5">
-                  <h4 className="font-bold text-xs text-ink">{item.name}</h4>
+                  <h4 className="font-bold text-xs text-ink">
+                    {item.name}
+                    {isService(item) && <span className="ml-1.5 text-[9px] font-extrabold uppercase text-brand">Servicio</span>}
+                  </h4>
                   <p className="text-[10px] text-ink-soft font-mono">${money(item.price)} c/u</p>
                 </div>
 
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-1.5 bg-card px-2 py-1 rounded-xl border border-line">
-                    <button onClick={() => onQuantity(item.id, -1)} className="text-ink-soft hover:text-brand font-bold text-xs cursor-pointer">
+                    <button onClick={() => onQuantity(cartKey(item), -1)} className="text-ink-soft hover:text-brand font-bold text-xs cursor-pointer">
                       <Minus className="w-3.5 h-3.5" />
                     </button>
                     <span className="text-xs font-black text-ink px-1 tabular-nums">{item.quantity}</span>
-                    <button onClick={() => onQuantity(item.id, 1)} className="text-ink-soft hover:text-brand font-bold text-xs cursor-pointer">
+                    <button onClick={() => onQuantity(cartKey(item), 1)} className="text-ink-soft hover:text-brand font-bold text-xs cursor-pointer">
                       <Plus className="w-3.5 h-3.5" />
                     </button>
                   </div>
@@ -123,7 +131,7 @@ export default function CartPanel({
             className={`w-full py-3.5 rounded-2xl font-black text-sm flex items-center justify-center gap-2 shadow-lg transition-all ${
               cart.length === 0
                 ? 'bg-gray-200 dark:bg-gray-800 text-ink-muted cursor-not-allowed'
-                : 'bg-solid hover:bg-solid-hover text-white shadow-[#0A0A0A]/10 active:scale-98 cursor-pointer'
+                : 'bg-solid hover:bg-solid-hover text-solid-ink shadow-[#0A0A0A]/10 active:scale-98 cursor-pointer'
             }`}
           >
             <Banknote className="w-5 h-5" />

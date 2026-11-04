@@ -2,6 +2,7 @@ package com.sciencebot.pos.products;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 @Schema(description = "Datos requeridos para crear un nuevo producto")
 public record CreateProductCommand(
@@ -30,10 +31,20 @@ public record CreateProductCommand(
     @Schema(description = "Tasa de impuesto / IVA del producto (0.00, 5.00, 19.00)", example = "19.00")
     BigDecimal taxRate,
     @Schema(description = "Código estándar UNSPSC para facturación electrónica DIAN", example = "50202301")
-    String unspscCode
+    String unspscCode,
+    @Schema(description = "Vencimiento del stock inicial (opcional). Si se envía exige quantityAvailable > 0 y crea un lote con esas unidades",
+            example = "2026-12-31", nullable = true)
+    LocalDate expirationDate
 ) {
     public CreateProductCommand(String internalCode, String barcode, String name, Long categoryId, Long subcategoryId,
                                 BigDecimal purchasePrice, BigDecimal salePrice, int minStock, String description, String imageUrl) {
-        this(internalCode, barcode, name, categoryId, subcategoryId, purchasePrice, salePrice, minStock, 0, description, imageUrl, BigDecimal.ZERO, null);
+        this(internalCode, barcode, name, categoryId, subcategoryId, purchasePrice, salePrice, minStock, 0, description, imageUrl, BigDecimal.ZERO, null, null);
+    }
+
+    public CreateProductCommand(String internalCode, String barcode, String name, Long categoryId, Long subcategoryId,
+                                BigDecimal purchasePrice, BigDecimal salePrice, int minStock, int quantityAvailable,
+                                String description, String imageUrl, BigDecimal taxRate, String unspscCode) {
+        this(internalCode, barcode, name, categoryId, subcategoryId, purchasePrice, salePrice, minStock, quantityAvailable,
+                description, imageUrl, taxRate, unspscCode, null);
     }
 }

@@ -108,7 +108,7 @@ export default function ResetPasswordBento() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3.5 bg-solid hover:bg-solid-hover text-white font-black text-xs rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-[#0A0A0A]/10 active:scale-98 transition-all cursor-pointer disabled:opacity-50"
+                className="w-full py-3.5 bg-solid hover:bg-solid-hover text-solid-ink font-black text-xs rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-[#0A0A0A]/10 active:scale-98 transition-all cursor-pointer disabled:opacity-50"
               >
                 <span>{loading ? 'Guardando...' : 'Guardar contraseña'}</span>
                 <ArrowRight className="w-4 h-4" />

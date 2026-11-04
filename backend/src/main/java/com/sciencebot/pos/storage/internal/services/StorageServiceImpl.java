@@ -2,15 +2,21 @@ package com.sciencebot.pos.storage.internal.services;
 
 import com.sciencebot.pos.storage.StorageFacade;
 import com.sciencebot.pos.storage.StorageUploadResult;
+import com.sciencebot.pos.storage.StoredFile;
 import com.sciencebot.pos.storage.internal.config.R2StorageProperties;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -43,6 +49,7 @@ public class StorageServiceImpl implements StorageFacade {
         String extension = getFileExtension(originalFilename);
         String contentType = file.getContentType();
         validateUploadType(extension, contentType);
+        requirePublicUrl();
 
         String sanitizedFolder = sanitizeFolder(folder);
         String key = (sanitizedFolder.isEmpty() ? "" : sanitizedFolder + "/") + UUID.randomUUID() + extension;
@@ -78,6 +85,7 @@ public class StorageServiceImpl implements StorageFacade {
             throw new IllegalArgumentException("Los datos a subir no pueden estar vacios");
         }
 
+        requirePublicUrl();
         String extension = getFileExtension(filename);
         String mimeType = (contentType != null && !contentType.isBlank()) ? contentType : "application/octet-stream";
         String sanitizedFolder = sanitizeFolder(folder);
@@ -124,6 +132,47 @@ public class StorageServiceImpl implements StorageFacade {
         }
     }
 
+    @Override
+    public void deleteFileByUrl(String publicUrl, String... keyPrefixes) {
+        if (publicUrl == null || publicUrl.isBlank() || keyPrefixes == null) {
+            return;
+        }
+        String base = properties.getPublicUrl() == null ? "" : properties.getPublicUrl().replaceAll("/+$", "");
+        String url = publicUrl.trim();
+        if (!url.startsWith(base + "/")) {
+            return;
+        }
+        String key = url.substring(base.length() + 1);
+        boolean allowed = Arrays.stream(keyPrefixes).anyMatch(prefix -> prefix != null && !prefix.isBlank() && key.startsWith(prefix));
+        if (key.contains("..") || !allowed) {
+            return;
+        }
+        deleteFile(key);
+    }
+
+    @Override
+    public List<StoredFile> listFiles(String prefix) {
+        if (properties.getAccessKeyId() == null || properties.getAccessKeyId().isBlank()) {
+            return List.of();
+        }
+        List<StoredFile> files = new ArrayList<>();
+        String token = null;
+        try {
+            do {
+                ListObjectsV2Response page = s3Client.listObjectsV2(ListObjectsV2Request.builder()
+                        .bucket(properties.getBucketName())
+                        .prefix(prefix)
+                        .continuationToken(token)
+                        .build());
+                page.contents().forEach(o -> files.add(new StoredFile(o.key(), buildPublicUrl(o.key()), o.lastModified())));
+                token = Boolean.TRUE.equals(page.isTruncated()) ? page.nextContinuationToken() : null;
+            } while (token != null);
+        } catch (Exception e) {
+            throw new IllegalStateException("Error al listar archivos de Cloudflare R2: " + e.getMessage(), e);
+        }
+        return files;
+    }
+
     private String getFileExtension(String filename) {
         if (filename != null && filename.contains(".")) {
             return filename.substring(filename.lastIndexOf(".")).toLowerCase();
@@ -151,6 +200,14 @@ public class StorageServiceImpl implements StorageFacade {
         String expected = ALLOWED_UPLOAD_TYPES.get(extension);
         if (expected == null || !(expected.equals(mime) || ("image/jpeg".equals(expected) && "image/jpg".equals(mime)))) {
             throw new IllegalArgumentException("Tipo de archivo no permitido. Formatos validos: jpg, png, webp, gif, pdf");
+        }
+    }
+
+    /** Falla antes de subir: sin URL publica el archivo quedaria en el bucket con un enlace que no abre. */
+    private void requirePublicUrl() {
+        if (!properties.hasPublicUrl()) {
+            throw new IllegalStateException(
+                    "R2_PUBLIC_URL no esta configurada: define la URL publica del bucket (Public Development URL o dominio propio de R2).");
         }
     }
 

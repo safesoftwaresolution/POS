@@ -14,6 +14,8 @@ import com.sciencebot.pos.customers.CustomerDto;
 import com.sciencebot.pos.customers.CustomerFacade;
 import com.sciencebot.pos.products.ProductDto;
 import com.sciencebot.pos.products.ProductFacade;
+import com.sciencebot.pos.services.ServiceDto;
+import com.sciencebot.pos.services.ServiceFacade;
 import com.sciencebot.pos.inventory.InventoryFacade;
 import com.sciencebot.pos.users.UserFacade;
 import jakarta.persistence.EntityNotFoundException;
@@ -57,6 +59,12 @@ class SaleServiceImplTest {
     private ProductFacade productFacade;
 
     @Mock
+    private ServiceFacade serviceFacade;
+
+    @Mock
+    private com.sciencebot.pos.credit.CreditFacade creditFacade;
+
+    @Mock
     private InventoryFacade inventoryFacade;
 
     @Mock
@@ -71,6 +79,10 @@ class SaleServiceImplTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
+        // Sin sesion el servicio atribuye al usuario "admin"; el usuario debe existir (ya no hay id 1 por defecto).
+        com.sciencebot.pos.users.UserDto actor = org.mockito.Mockito.mock(com.sciencebot.pos.users.UserDto.class);
+        org.mockito.Mockito.when(actor.id()).thenReturn(1L);
+        org.mockito.Mockito.when(userFacade.findByUsername("admin")).thenReturn(Optional.of(actor));
         TenantContext.setStoreId(STORE_ID);
     }
 
@@ -154,6 +166,236 @@ class SaleServiceImplTest {
         assertTrue(ex.getMessage().contains("efectivo recibido"));
     }
 
+    // --- Fiado ---
+
+    private ProductDto productAt8() {
+        return new ProductDto(1L, "P1", "123", "Prod 1", "Cat", null, null, BigDecimal.ONE, BigDecimal.valueOf(8.00), 10, 2, true, null);
+    }
+
+    @Test
+    void registerSale_OnCredit_NeedsNoCashAndChargesTheCustomersDebt() {
+        stubSaleBasics();
+        when(productFacade.getById(1L)).thenReturn(Optional.of(productAt8()));
+        java.time.LocalDate due = java.time.LocalDate.of(2026, 12, 1);
+        CreateSaleCommand command = new CreateSaleCommand(1L, null, false,
+                List.of(new CreateSaleItemCommand(1L, 2)), "credit", due);
+
+        saleService.registerSale(command);
+
+        verify(saleRepository).saveAndFlush(argThat(s -> "CREDIT".equals(s.getPaymentMethod())
+                && s.getCashReceived().signum() == 0
+                && s.getCashChange().signum() == 0
+                && s.getTotalAmount().compareTo(BigDecimal.valueOf(16.00)) == 0));
+        verify(creditFacade).registerCharge(eq(1L), any(), argThat(a -> a.compareTo(BigDecimal.valueOf(16.00)) == 0), eq(due));
+        verify(inventoryFacade).registerMovement(eq(1L), eq("VENTA"), eq(2), anyString());
+    }
+
+    @Test
+    void registerSale_OnCredit_WithoutACustomer_IsRefused() {
+        CreateSaleCommand command = new CreateSaleCommand(null, null, false,
+                List.of(new CreateSaleItemCommand(1L, 1)), "CREDIT");
+
+        assertThrows(IllegalArgumentException.class, () -> saleService.registerSale(command));
+        verifyNoInteractions(creditFacade);
+        verify(saleRepository, never()).saveAndFlush(any(Sale.class));
+    }
+
+    @Test
+    void registerSale_OnCredit_ToTheGeneralCustomer_IsRefused() {
+        when(customerFacade.getById(9L)).thenReturn(Optional.of(
+                new CustomerDto(9L, "Cliente General", "9999999999", null, null, null, true)));
+        CreateSaleCommand command = new CreateSaleCommand(9L, null, false,
+                List.of(new CreateSaleItemCommand(1L, 1)), "CREDIT");
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> saleService.registerSale(command));
+        assertTrue(ex.getMessage().contains("Cliente General"));
+        verifyNoInteractions(creditFacade);
+    }
+
+    @Test
+    void registerSale_OnCredit_OverTheLimit_PropagatesSoTheWholeSaleRollsBack() {
+        stubSaleBasics();
+        when(productFacade.getById(1L)).thenReturn(Optional.of(productAt8()));
+        when(creditFacade.registerCharge(any(), any(), any(), any()))
+                .thenThrow(new IllegalArgumentException("El fiado supera el cupo"));
+        CreateSaleCommand command = new CreateSaleCommand(1L, null, false,
+                List.of(new CreateSaleItemCommand(1L, 2)), "CREDIT");
+
+        assertThrows(IllegalArgumentException.class, () -> saleService.registerSale(command));
+        verify(eventPublisher, never()).publishEvent(any(SaleCompletedEvent.class));
+    }
+
+    @Test
+    void registerSale_PaidInCash_NeverTouchesTheCreditAccount() {
+        stubSaleBasics();
+        when(productFacade.getById(1L)).thenReturn(Optional.of(productAt8()));
+
+        saleService.registerSale(new CreateSaleCommand(1L, BigDecimal.valueOf(20.00), false,
+                List.of(new CreateSaleItemCommand(1L, 2)), "CASH"));
+
+        verifyNoInteractions(creditFacade);
+    }
+
+    @Test
+    void registerSale_PaidInCash_StillRequiresTheCash() {
+        assertThrows(IllegalArgumentException.class, () -> saleService.registerSale(new CreateSaleCommand(
+                1L, null, false, List.of(new CreateSaleItemCommand(1L, 1)), "CASH")));
+    }
+
+    @Test
+    void registerReturn_OfACreditSale_LowersTheCustomersDebt() {
+        Sale sale = saleOfStore(100L, STORE_ID);
+        sale.setPaymentMethod("CREDIT");
+        sale.setCustomerId(1L);
+        stubOneReturnableLine(sale);
+
+        saleService.registerReturn(100L, new CreateSaleReturnCommand(null, List.of(new CreateSaleReturnItemCommand(5L, 1))));
+
+        verify(creditFacade).registerReturn(eq(1L), eq(100L), argThat(a -> a.compareTo(BigDecimal.valueOf(8.00)) == 0));
+    }
+
+    @Test
+    void registerReturn_OfACashSale_DoesNotTouchTheCreditAccount() {
+        Sale sale = saleOfStore(100L, STORE_ID);
+        sale.setPaymentMethod("CASH");
+        stubOneReturnableLine(sale);
+
+        saleService.registerReturn(100L, new CreateSaleReturnCommand(null, List.of(new CreateSaleReturnItemCommand(5L, 1))));
+
+        verifyNoInteractions(creditFacade);
+    }
+
+    private void stubOneReturnableLine(Sale sale) {
+        when(saleRepository.findById(100L)).thenReturn(Optional.of(sale));
+        SaleItem line = new SaleItem();
+        line.setId(5L);
+        line.setSale(sale);
+        line.setItemType(SaleItemType.PRODUCT);
+        line.setProductId(1L);
+        line.setQuantity(2);
+        line.setUnitPrice(BigDecimal.valueOf(8.00));
+        when(saleItemRepository.findById(5L)).thenReturn(Optional.of(line));
+        when(saleReturnRepository.sumReturnedQuantityBySaleItemId(5L)).thenReturn(0);
+        when(saleReturnRepository.save(any(SaleReturn.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(saleReturnMapper.toDto(any(SaleReturn.class), any())).thenReturn(mock(SaleReturnDto.class));
+    }
+
+    // --- Servicios ---
+
+    private void stubSaleBasics() {
+        CustomerDto customer = new CustomerDto(1L, "Maria Lopez", "123", "a@a.com", "123", "Calle", true);
+        when(customerFacade.getById(1L)).thenReturn(Optional.of(customer));
+        when(saleRepository.getNextInvoiceSeq()).thenReturn(1L);
+        when(saleRepository.saveAndFlush(any(Sale.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(saleMapper.toDto(any(Sale.class))).thenReturn(mock(SaleDto.class));
+    }
+
+    private ServiceDto serviceOf(boolean active) {
+        return new ServiceDto(2L, "SRV-1", "Masaje 60 min", null, 3L, "Spa", BigDecimal.valueOf(119000.00),
+                BigDecimal.valueOf(19.00), "90111500", "HUR", 60, active);
+    }
+
+    @Test
+    void registerSale_ServiceLine_DoesNotCheckStockNorMoveInventory() {
+        stubSaleBasics();
+        when(serviceFacade.getById(2L)).thenReturn(Optional.of(serviceOf(true)));
+        CreateSaleCommand command = new CreateSaleCommand(1L, BigDecimal.valueOf(238000.00), false,
+                List.of(new CreateSaleItemCommand(null, 2L, 2)), "CASH");
+
+        saleService.registerSale(command);
+
+        verify(inventoryFacade, never()).registerMovement(anyLong(), anyString(), anyInt(), anyString());
+        verify(productFacade, never()).getById(anyLong());
+        verify(saleRepository).saveAndFlush(argThat(s -> {
+            SaleItem line = s.getItems().get(0);
+            return line.getItemType() == SaleItemType.SERVICE
+                    && line.getProductId() == null
+                    && line.getServiceId().equals(2L)
+                    && line.getItemName().equals("Masaje 60 min")
+                    && "HUR".equals(line.getUnitMeasureCode())
+                    && "90111500".equals(line.getUnspscCode())
+                    && line.getSubtotal().compareTo(BigDecimal.valueOf(238000.00)) == 0
+                    && line.getTaxAmount().compareTo(BigDecimal.valueOf(38000.00)) == 0
+                    && s.getTotalAmount().compareTo(BigDecimal.valueOf(238000.00)) == 0;
+        }));
+    }
+
+    @Test
+    void registerSale_MixedProductAndService_OnlyProductMovesStock() {
+        stubSaleBasics();
+        ProductDto product = new ProductDto(1L, "P1", "123", "Prod 1", "Cat", null, null, BigDecimal.ONE, BigDecimal.valueOf(8.00), 10, 2, true, null);
+        when(productFacade.getById(1L)).thenReturn(Optional.of(product));
+        when(serviceFacade.getById(2L)).thenReturn(Optional.of(serviceOf(true)));
+        CreateSaleCommand command = new CreateSaleCommand(1L, BigDecimal.valueOf(200000.00), false,
+                List.of(new CreateSaleItemCommand(1L, 1), new CreateSaleItemCommand(null, 2L, 1)), "CASH");
+
+        saleService.registerSale(command);
+
+        verify(inventoryFacade, times(1)).registerMovement(eq(1L), eq("VENTA"), eq(1), anyString());
+        verify(saleRepository).saveAndFlush(argThat(s -> s.getItems().size() == 2
+                && s.getTotalAmount().compareTo(BigDecimal.valueOf(119008.00)) == 0));
+    }
+
+    @Test
+    void registerSale_InactiveService_ThrowsException() {
+        stubSaleBasics();
+        when(serviceFacade.getById(2L)).thenReturn(Optional.of(serviceOf(false)));
+        CreateSaleCommand command = new CreateSaleCommand(1L, BigDecimal.valueOf(238000.00), false,
+                List.of(new CreateSaleItemCommand(null, 2L, 1)), "CASH");
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> saleService.registerSale(command));
+        assertTrue(ex.getMessage().contains("inactivo"));
+    }
+
+    @Test
+    void registerSale_ServiceFromAnotherStore_ThrowsNotFound() {
+        stubSaleBasics();
+        when(serviceFacade.getById(2L)).thenReturn(Optional.empty());
+        CreateSaleCommand command = new CreateSaleCommand(1L, BigDecimal.valueOf(238000.00), false,
+                List.of(new CreateSaleItemCommand(null, 2L, 1)), "CASH");
+
+        assertThrows(EntityNotFoundException.class, () -> saleService.registerSale(command));
+    }
+
+    @Test
+    void registerSale_LineWithBothProductAndService_ThrowsException() {
+        CreateSaleCommand both = new CreateSaleCommand(1L, BigDecimal.TEN, false,
+                List.of(new CreateSaleItemCommand(1L, 2L, 1)), "CASH");
+        CreateSaleCommand neither = new CreateSaleCommand(1L, BigDecimal.TEN, false,
+                List.of(new CreateSaleItemCommand(null, null, 1)), "CASH");
+        stubSaleBasics();
+
+        assertThrows(IllegalArgumentException.class, () -> saleService.registerSale(both));
+        assertThrows(IllegalArgumentException.class, () -> saleService.registerSale(neither));
+        verify(inventoryFacade, never()).registerMovement(anyLong(), anyString(), anyInt(), anyString());
+    }
+
+    @Test
+    void registerReturn_ServiceLine_RefundsWithoutRestock() {
+        Sale sale = saleOfStore(100L, STORE_ID);
+        SaleItem saleItem = new SaleItem();
+        saleItem.setId(5L);
+        saleItem.setSale(sale);
+        saleItem.setItemType(SaleItemType.SERVICE);
+        saleItem.setServiceId(2L);
+        saleItem.setQuantity(2);
+        saleItem.setUnitPrice(BigDecimal.valueOf(119000.00));
+
+        when(saleRepository.findById(100L)).thenReturn(Optional.of(sale));
+        when(saleItemRepository.findById(5L)).thenReturn(Optional.of(saleItem));
+        when(saleReturnRepository.sumReturnedQuantityBySaleItemId(5L)).thenReturn(0);
+        when(saleReturnRepository.save(any(SaleReturn.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(saleReturnMapper.toDto(any(SaleReturn.class), eq("FACT-000100"))).thenReturn(mock(SaleReturnDto.class));
+
+        saleService.registerReturn(100L, new CreateSaleReturnCommand("Cancelado",
+                List.of(new CreateSaleReturnItemCommand(5L, 1))));
+
+        verify(inventoryFacade, never()).registerMovement(anyLong(), anyString(), anyInt(), anyString());
+        verify(saleReturnRepository).save(argThat(r -> r.getTotalRefund().compareTo(BigDecimal.valueOf(119000.00)) == 0
+                && r.getItems().get(0).getServiceId().equals(2L)
+                && r.getItems().get(0).getProductId() == null));
+    }
+
     // --- Devoluciones ---
 
     private Sale saleOfStore(Long saleId, Long storeId) {
@@ -232,6 +474,122 @@ class SaleServiceImplTest {
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
                 () -> saleService.registerReturn(100L, command));
         assertTrue(ex.getMessage().contains("no pertenece"));
+    }
+
+    private void loginAs(String username, Long userId, String role) {
+        com.sciencebot.pos.users.UserDto user = mock(com.sciencebot.pos.users.UserDto.class);
+        when(user.id()).thenReturn(userId);
+        when(userFacade.findByUsername(username)).thenReturn(Optional.of(user));
+        org.springframework.security.core.context.SecurityContextHolder.getContext().setAuthentication(
+                new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
+                        username, null, List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_" + role))));
+    }
+
+    @Test
+    void getById_SellerSeesOwnSale() {
+        loginAs("ana", 7L, "SELLER");
+        try {
+            Sale own = saleOfStore(100L, STORE_ID);
+            own.setUserId(7L);
+            when(saleRepository.findById(100L)).thenReturn(Optional.of(own));
+            when(saleMapper.toDto(own)).thenReturn(mock(SaleDto.class));
+
+            assertTrue(saleService.getById(100L).isPresent());
+        } finally {
+            org.springframework.security.core.context.SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
+    void getById_SellerCannotSeeAnotherSellersSale() {
+        loginAs("ana", 7L, "SELLER");
+        try {
+            Sale other = saleOfStore(100L, STORE_ID);
+            other.setUserId(8L);
+            when(saleRepository.findById(100L)).thenReturn(Optional.of(other));
+
+            assertTrue(saleService.getById(100L).isEmpty());
+            verify(saleMapper, never()).toDto(any(Sale.class));
+        } finally {
+            org.springframework.security.core.context.SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
+    void getById_AdministratorSeesAnyonesSale() {
+        loginAs("boss", 1L, "ADMINISTRATOR");
+        try {
+            Sale other = saleOfStore(100L, STORE_ID);
+            other.setUserId(8L);
+            when(saleRepository.findById(100L)).thenReturn(Optional.of(other));
+            when(saleMapper.toDto(other)).thenReturn(mock(SaleDto.class));
+
+            assertTrue(saleService.getById(100L).isPresent());
+        } finally {
+            org.springframework.security.core.context.SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
+    void searchSales_SellerQueryIsLimitedToTheirUserId() {
+        loginAs("ana", 7L, "SELLER");
+        try {
+            var pageable = org.springframework.data.domain.PageRequest.of(0, 20);
+            when(saleRepository.searchSales(eq(STORE_ID), eq(7L), any(), any(), any(), eq(pageable)))
+                    .thenReturn(org.springframework.data.domain.Page.empty());
+
+            saleService.searchSales(null, null, null, pageable);
+
+            verify(saleRepository).searchSales(STORE_ID, 7L, null, null, null, pageable);
+        } finally {
+            org.springframework.security.core.context.SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
+    void searchSales_AdministratorQueryIsNotLimited() {
+        loginAs("boss", 1L, "ADMINISTRATOR");
+        try {
+            var pageable = org.springframework.data.domain.PageRequest.of(0, 20);
+            when(saleRepository.searchSales(any(), any(), any(), any(), any(), any()))
+                    .thenReturn(org.springframework.data.domain.Page.empty());
+
+            saleService.searchSales(null, null, null, pageable);
+
+            verify(saleRepository).searchSales(STORE_ID, null, null, null, null, pageable);
+        } finally {
+            org.springframework.security.core.context.SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
+    void registerReturn_SellerCannotReturnAnotherSellersSale() {
+        loginAs("ana", 7L, "SELLER");
+        try {
+            Sale other = saleOfStore(100L, STORE_ID);
+            other.setUserId(8L);
+            when(saleRepository.findById(100L)).thenReturn(Optional.of(other));
+            CreateSaleReturnCommand command = new CreateSaleReturnCommand(null,
+                    List.of(new CreateSaleReturnItemCommand(1L, 1)));
+
+            assertThrows(EntityNotFoundException.class, () -> saleService.registerReturn(100L, command));
+        } finally {
+            org.springframework.security.core.context.SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
+    void getReturnsBySale_SellerCannotSeeAnotherSellersSale() {
+        loginAs("ana", 7L, "SELLER");
+        try {
+            Sale other = saleOfStore(100L, STORE_ID);
+            other.setUserId(8L);
+            when(saleRepository.findById(100L)).thenReturn(Optional.of(other));
+
+            assertThrows(EntityNotFoundException.class, () -> saleService.getReturnsBySale(100L));
+        } finally {
+            org.springframework.security.core.context.SecurityContextHolder.clearContext();
+        }
     }
 
     @Test

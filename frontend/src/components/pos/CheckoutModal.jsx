@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
+import MoneyInput from '../ui/MoneyInput';
 import {
   X,
   CreditCard,
   Banknote,
-  ArrowRightLeft,
+  Smartphone,
+  Landmark,
   Wallet,
   CheckCircle2,
   Printer,
@@ -19,7 +21,8 @@ import {
   ShieldAlert,
   AlertCircle,
   RefreshCw,
-  QrCode
+  QrCode,
+  HandCoins
 } from 'lucide-react';
 import CreateDianCustomerModal from '../customers/CreateDianCustomerModal';
 import {
@@ -29,12 +32,16 @@ import {
   downloadInvoiceXmlApi
 } from '../../services/billingApi';
 import { deliverBlob } from '../../utils/downloadBlob';
-import { useModal } from '../../context/ModalContext';
+import useModal from '../../hooks/useModal';
+import useLoad from '../../hooks/useLoad';
+import CreditPanel from './CreditPanel';
+import { getCreditAccountApi } from '../../services/creditApi';
+import { creditBlockReason, isGeneralCustomer } from '../../utils/credit';
 
 const money = (value) => `$${Number(value || 0).toLocaleString('es-CO')}`;
 
 // Ícono por código del catálogo PAYMENT_METHODS; los códigos nuevos usan el ícono genérico.
-const PAYMENT_ICONS = { CASH: Banknote, CARD: CreditCard, NEQUI: ArrowRightLeft, TRANSFER: ArrowRightLeft };
+const PAYMENT_ICONS = { CASH: Banknote, CARD: CreditCard, NEQUI: Smartphone, TRANSFER: Landmark, CREDIT: HandCoins };
 
 const INVOICE_BADGE = {
   VALIDATED: { label: 'Validada por la DIAN', cls: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20' },
@@ -61,6 +68,8 @@ export default function CheckoutModal({
   onToggleDian,
   cashTendered,
   onCashTenderedChange,
+  creditDueDate,
+  onCreditDueDateChange,
   isSubmitting,
   onConfirm,
   onClose
@@ -69,7 +78,15 @@ export default function CheckoutModal({
   const isCash = selectedPaymentMethod === 'CASH';
   const cashNumber = parseFloat(cashTendered) || 0;
   const change = cashNumber - total;
-  const blocked = isSubmitting || (isCash ? change < 0 || cashNumber <= 0 : false);
+  const isCredit = selectedPaymentMethod === 'CREDIT';
+  const creditCustomerId = isCredit && !isGeneralCustomer(selectedCustomer) ? selectedCustomer.id : null;
+  const { data: creditAccount } = useLoad(
+    () => (creditCustomerId ? getCreditAccountApi(creditCustomerId) : Promise.resolve(null)),
+    [creditCustomerId],
+    { initial: null },
+  );
+  const creditBlock = isCredit ? creditBlockReason(selectedCustomer, creditAccount, total) : null;
+  const blocked = isSubmitting || creditBlock !== null || (isCash ? change < 0 || cashNumber <= 0 : false);
 
   return (
     <>
@@ -115,9 +132,8 @@ export default function CheckoutModal({
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="text-xs font-extrabold text-ink">Emitir factura electrónica DIAN</span>
-                      <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-brand text-white tracking-wider">FACTUS</span>
                     </div>
-                    <p className="text-[11px] text-ink-soft">Se transmite con CUFE, código QR y XML</p>
+                    <p className="text-[11px] text-ink-soft">Se envía a la DIAN a través de Factus, nuestro proveedor autorizado (incluye CUFE, QR y XML)</p>
                   </div>
                 </div>
 
@@ -200,7 +216,7 @@ export default function CheckoutModal({
                         onClick={() => onSelectPaymentMethod(m.code)}
                         className={`py-3 px-2 rounded-2xl border flex flex-col items-center justify-center gap-1.5 transition-all cursor-pointer ${
                           active
-                            ? 'bg-solid text-white border-line-strong shadow-sm'
+                            ? 'bg-solid text-solid-ink border-line-strong shadow-sm'
                             : 'bg-white dark:bg-page text-gray-600 dark:text-gray-300 border-line hover:border-line-strong'
                         }`}
                       >
@@ -219,14 +235,13 @@ export default function CheckoutModal({
                   <label htmlFor="checkout-cash" className={`${SECTION_LABEL} block mb-1.5`}>Efectivo recibido</label>
                   <div className="relative">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-gray-400">$</span>
-                    <input
+                    <MoneyInput
                       id="checkout-cash"
-                      type="number"
                       autoFocus
                       value={cashTendered}
-                      onChange={(e) => onCashTenderedChange(e.target.value)}
+                      onChange={onCashTenderedChange}
                       placeholder="0"
-                      className="w-full h-12 pl-9 pr-4 bg-page border border-line rounded-2xl text-lg font-black text-ink tabular-nums focus:outline-none focus:border-ink dark:focus:border-brand"
+                      className="h-12 pl-9 pr-4 rounded-2xl text-lg font-black tabular-nums dark:focus:border-brand"
                     />
                   </div>
                 </div>
@@ -239,7 +254,7 @@ export default function CheckoutModal({
                       onClick={() => onCashTenderedChange(String(val))}
                       className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
                         cashNumber === val
-                          ? 'bg-solid text-white border-line-strong'
+                          ? 'bg-solid text-solid-ink border-line-strong'
                           : 'bg-white dark:bg-page text-gray-600 dark:text-gray-300 border-line hover:border-line-strong'
                       }`}
                     >
@@ -269,6 +284,17 @@ export default function CheckoutModal({
                   )}
                 </div>
               </div>
+            ) : isCredit ? (
+              <CreditPanel
+                customers={customers}
+                selectedCustomer={selectedCustomer}
+                onSelectCustomer={onSelectCustomer}
+                account={creditAccount}
+                total={total}
+                dueDate={creditDueDate}
+                onDueDateChange={onCreditDueDateChange}
+                blockReason={creditBlock}
+              />
             ) : (
               <p className="text-[11px] text-ink-soft font-semibold text-center p-3 rounded-2xl bg-gray-50 dark:bg-white/5">
                 Pago electrónico: se registra por el monto exacto de la venta, sin cambio.
@@ -298,7 +324,7 @@ export default function CheckoutModal({
               ) : (
                 <CheckCircle2 className="w-4 h-4 text-brand" />
               )}
-              <span>{isSubmitting ? 'Procesando...' : issueDian ? 'Cobrar y emitir factura' : 'Confirmar cobro'}</span>
+              <span>{isSubmitting ? 'Procesando...' : isCredit ? (issueDian ? 'Fiar y emitir factura' : 'Confirmar fiado') : issueDian ? 'Cobrar y emitir factura' : 'Confirmar cobro'}</span>
             </button>
           </div>
         </div>
@@ -457,7 +483,7 @@ export function SaleResultModal({ sale, onClose }) {
                     <button
                       type="submit"
                       disabled={sendingEmail}
-                      className="px-3.5 h-10 rounded-xl bg-solid hover:bg-solid-hover disabled:opacity-50 text-white text-xs font-extrabold cursor-pointer"
+                      className="px-3.5 h-10 rounded-xl bg-solid hover:bg-solid-hover disabled:opacity-50 text-solid-ink text-xs font-extrabold cursor-pointer"
                     >
                       {sendingEmail ? 'Enviando...' : emailSent ? 'Enviado' : 'Enviar'}
                     </button>
@@ -496,6 +522,11 @@ export function SaleResultModal({ sale, onClose }) {
           <div className="flex justify-between font-bold text-gray-700 dark:text-gray-300">
             <span>Cliente</span><span className="truncate ml-3">{sale.customerName}</span>
           </div>
+          {sale.onCredit && (
+            <div className="flex justify-between font-bold text-amber-700 dark:text-amber-400">
+              <span>Queda a fiado</span><span className="tabular-nums">{money(sale.total)}</span>
+            </div>
+          )}
           {sale.change > 0 && (
             <div className="flex justify-between font-bold text-emerald-600 dark:text-emerald-400">
               <span>Cambio entregado</span><span className="tabular-nums">{money(sale.change)}</span>
@@ -514,7 +545,7 @@ export function SaleResultModal({ sale, onClose }) {
           <button
             type="button"
             onClick={onClose}
-            className="w-1/2 py-3 bg-solid hover:bg-solid-hover text-white rounded-2xl font-extrabold text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-md shadow-[#0A0A0A]/10"
+            className="w-1/2 py-3 bg-solid hover:bg-solid-hover text-solid-ink rounded-2xl font-extrabold text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-md shadow-[#0A0A0A]/10"
           >
             <ShoppingBag className="w-4 h-4 text-brand" /> Nueva venta
           </button>

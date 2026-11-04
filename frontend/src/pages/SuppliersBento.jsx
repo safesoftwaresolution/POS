@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import { Truck, Plus, Search, Edit3, Trash2, Mail, Phone, AlertCircle } from 'lucide-react';
 import {
   getSuppliersApi,
@@ -6,32 +6,23 @@ import {
   updateSupplierApi,
   deleteSupplierApi
 } from '../services/suppliersApi';
-import { useModal } from '../context/ModalContext';
+import useModal from '../hooks/useModal';
+import useLoad from '../hooks/useLoad';
+import asList from '../utils/asList';
 
 const EMPTY_FORM = { id: null, companyName: '', taxId: '', contactName: '', email: '', phone: '', address: '' };
 
 export default function SuppliersBento() {
   const { confirm, notify } = useModal();
-  const [suppliers, setSuppliers] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { data: suppliers, loading, reload } = useLoad(
+    () => asList(getSuppliersApi()),
+    [],
+    { initial: [], autoRefresh: true },
+  );
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [errorMsg, setErrorMsg] = useState('');
-
-  const loadSuppliers = useCallback(async () => {
-    setLoading(true);
-    try {
-      setSuppliers(await getSuppliersApi());
-    } catch (e) {
-      console.warn('Error cargando proveedores:', e);
-      setSuppliers([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { loadSuppliers(); }, [loadSuppliers]);
 
   const openCreate = () => {
     setForm(EMPTY_FORM);
@@ -70,7 +61,7 @@ export default function SuppliersBento() {
       }
       setShowModal(false);
       setForm(EMPTY_FORM);
-      await loadSuppliers();
+      reload();
     } catch (err) {
       setErrorMsg(err.message || 'Error al guardar el proveedor. Intenta nuevamente.');
     }
@@ -81,7 +72,7 @@ export default function SuppliersBento() {
     if (!ok) return;
     try {
       await deleteSupplierApi(s.id);
-      await loadSuppliers();
+      reload();
     } catch (err) {
       notify('Error eliminando proveedor: ' + err.message);
     }
@@ -98,20 +89,20 @@ export default function SuppliersBento() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-ink">Proveedores</h1>
-          <p className="text-xs text-ink-soft font-medium">Directorio de proveedores para registrar compras y cargas de stock en BentoPOS</p>
+          <p className="text-xs text-ink-soft font-medium">Directorio de proveedores para registrar compras y cargas de stock en PosBento</p>
         </div>
 
         <button
           onClick={openCreate}
-          className="px-4 py-2.5 bg-solid hover:bg-solid-hover text-white rounded-2xl text-xs font-bold flex items-center gap-2 shadow-md shadow-[#0A0A0A]/10 cursor-pointer transition-all"
+          className="px-4 py-2.5 bg-solid hover:bg-solid-hover text-solid-ink rounded-2xl text-xs font-bold flex items-center gap-2 shadow-md shadow-[#0A0A0A]/10 cursor-pointer transition-all"
         >
           <Plus className="w-4 h-4" /> Nuevo Proveedor
         </button>
       </div>
 
       <div className="bento-card p-6 space-y-4 bg-card border-line">
-        <div className="flex items-center justify-between">
-          <div className="relative w-72">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="relative w-full sm:w-72">
             <Search className="w-4 h-4 text-ink-muted absolute left-3.5 top-2.5" />
             <input
               type="text"
@@ -137,7 +128,7 @@ export default function SuppliersBento() {
             </div>
             <button
               onClick={openCreate}
-              className="px-4 py-2 bg-solid text-white rounded-xl text-xs font-extrabold shadow-sm hover:bg-solid-hover cursor-pointer"
+              className="px-4 py-2 bg-solid text-solid-ink rounded-xl text-xs font-extrabold shadow-sm hover:bg-solid-hover cursor-pointer"
             >
               + Registrar Primer Proveedor
             </button>
@@ -147,7 +138,7 @@ export default function SuppliersBento() {
             {filtered.map(s => (
               <div key={s.id} className="p-5 bg-card rounded-2xl border border-line space-y-3 flex flex-col justify-between hover:border-line-strong transition-all shadow-xs group">
                 <div>
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <span className="text-[10px] font-mono font-bold text-ink-soft">NIT: {s.taxId}</span>
                   </div>
                   <h3 className="font-extrabold text-sm text-ink mt-2 group-hover:text-brand transition-colors">{s.companyName}</h3>
@@ -276,7 +267,7 @@ export default function SuppliersBento() {
               </button>
               <button
                 type="submit"
-                className="w-1/2 py-3 bg-solid hover:bg-solid-hover text-white rounded-2xl text-xs font-extrabold shadow-md shadow-[#0A0A0A]/10 cursor-pointer"
+                className="w-1/2 py-3 bg-solid hover:bg-solid-hover text-solid-ink rounded-2xl text-xs font-extrabold shadow-md shadow-[#0A0A0A]/10 cursor-pointer"
               >
                 {form.id ? 'Guardar Cambios' : 'Crear Proveedor'}
               </button>

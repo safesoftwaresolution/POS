@@ -177,6 +177,13 @@ public class AuthService implements AuthFacade {
         lockoutCache.remove(userFacade.getById(userId).username().toLowerCase());
     }
 
+    /** Tras un restablecimiento hecho por un administrador: la sesion vieja no debe sobrevivir a la contrasena vieja. */
+    @Transactional
+    public void closeSessionsAndClearLockout(Long userId, String username) {
+        refreshTokenService.revokeAllForUser(userId);
+        lockoutCache.remove(username.toLowerCase());
+    }
+
     @Override
     @Transactional
     public void deleteUnverifiedAccount(Long userId) {
@@ -206,14 +213,34 @@ public class AuthService implements AuthFacade {
     private void sendVerificationEmail(UserDto user) {
         String rawToken = emailVerificationService.issue(user.id());
         String link = frontendUrl + "/verify-email?token=" + rawToken;
+        String greeting = "<p style=\"margin:0 0 14px;\">Hola <strong>" + EmailTemplate.escape(user.fullName()) + "</strong>,</p>";
+        if ("SUPER_ADMIN".equals(user.role())) {
+            // Operador de la plataforma invitado desde el backoffice: al confirmar, la cuenta queda activa.
+            emailSender.send(
+                    user.email(),
+                    "Te invitaron a PosBento como operador",
+                    EmailTemplate.render(
+                            frontendUrl,
+                            "Acepta la invitación para activar tu cuenta de operador de PosBento.",
+                            "Te invitaron como operador",
+                            greeting
+                                    + "<p style=\"margin:0;\">Te invitaron a administrar la plataforma PosBento como operador. "
+                                    + "Tu usuario es <strong>" + EmailTemplate.escape(user.username()) + "</strong>. "
+                                    + "Acepta la invitación para activar tu cuenta; el enlace vence en <strong>24 horas</strong>.</p>",
+                            "Aceptar invitación",
+                            link,
+                            "Si no esperabas esta invitación, puedes ignorar este mensaje: la cuenta no se activará."));
+            return;
+        }
         emailSender.send(
                 user.email(),
-                "Verifica tu correo - BentoPOS",
+                "Verifica tu correo - PosBento",
                 EmailTemplate.render(
-                        "Confirma tu correo para activar tu cuenta de BentoPOS.",
+                        frontendUrl,
+                        "Confirma tu correo para activar tu cuenta de PosBento.",
                         "Confirma tu correo",
-                        "<p style=\"margin:0 0 14px;\">Hola <strong>" + EmailTemplate.escape(user.fullName()) + "</strong>,</p>"
-                                + "<p style=\"margin:0;\">Gracias por registrarte en BentoPOS. Confirma tu correo para activar tu cuenta "
+                        greeting
+                                + "<p style=\"margin:0;\">Gracias por registrarte en PosBento. Confirma tu correo para activar tu cuenta "
                                 + "y continuar con el registro de tu local.</p>",
                         "Verificar mi correo",
                         link,
@@ -234,7 +261,9 @@ public class AuthService implements AuthFacade {
                 user.username(),
                 user.role(),
                 user.storeId(),
-                jwtService.getExpirationTime()
+                jwtService.getExpirationTime(),
+                user.fullName(),
+                user.avatarUrl()
         );
     }
 
@@ -282,9 +311,9 @@ public class AuthService implements AuthFacade {
             storeId = posUserDetails.getStoreId();
         }
 
-        Long userId = userFacade.findByUsername(userDetails.getUsername())
-                .map(UserDto::id)
+        UserDto account = userFacade.findByUsername(userDetails.getUsername())
                 .orElseThrow(() -> new BadCredentialsException("Usuario o contrasena incorrectos"));
+        Long userId = account.id();
 
         String token = jwtService.generateToken(userDetails, role, storeId);
         String refreshToken = refreshTokenService.issue(userId);
@@ -295,7 +324,9 @@ public class AuthService implements AuthFacade {
                 userDetails.getUsername(),
                 role,
                 storeId,
-                jwtService.getExpirationTime()
+                jwtService.getExpirationTime(),
+                account.fullName(),
+                account.avatarUrl()
         );
     }
 
@@ -327,7 +358,9 @@ public class AuthService implements AuthFacade {
                 user.username(),
                 user.role(),
                 user.storeId(),
-                jwtService.getExpirationTime()
+                jwtService.getExpirationTime(),
+                user.fullName(),
+                user.avatarUrl()
         );
     }
 

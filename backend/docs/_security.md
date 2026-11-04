@@ -21,7 +21,7 @@ Definidos en `SecurityConfig`:
 - `POST /api/v1/auth/reset-password` — consume el token, fija la nueva contraseña (misma política de fortaleza), **revoca todas las sesiones** del usuario y limpia su bloqueo por intentos. Tokens: opacos, solo se guarda su SHA-256 (`password_reset_tokens`, V19).
 - `GET /api/v1/legal/**` (políticas y términos vigentes)
 - `POST /api/v1/support/tickets` y `GET /api/v1/support/tickets/track/**` (el seguimiento devuelve solo estado y resolución, no datos de contacto)
-- `/v3/api-docs/**`, `/swagger-ui/**`, `/swagger-ui.html` (la documentación está abierta en todos los perfiles; desactivarla o protegerla en producción)
+- `/v3/api-docs/**`, `/swagger-ui/**`, `/swagger-ui.html` (abierta en `dev`; en el perfil `prod` está **apagada** salvo `SWAGGER_ENABLED=true`)
 - Cualquier ruta que **no** empiece por `/api/v1/` también queda abierta (`anyRequest().permitAll()`), por ejemplo `/h2-console` en `dev`.
 
 ### CORS
@@ -74,7 +74,7 @@ El detalle por operación está en el `spec.md` de cada módulo. Salvo los endpo
 Cada solicitud lleva el `storeId` en `TenantContext`. El aislamiento es manual en cada servicio (no hay `@Filter` de Hibernate ni RLS). Reglas vigentes:
 - Un recurso de otro local se trata como inexistente (404), no como prohibido.
 - Las operaciones de facturación y archivos **exigen** local; no existe respaldo al local 1.
-- Los archivos de R2 subidos por el endpoint HTTP van bajo `tienda-{storeId}/` y solo se borran claves de ese prefijo.
+- Los archivos de R2 subidos por el endpoint HTTP van bajo `{carpeta}/tienda-{storeId}/` (ej. `imagenes-productos/tienda-4/`) y solo se borran claves de ese prefijo (o del prefijo antiguo `tienda-{storeId}/`).
 
 ## Datos sembrados
 `DatabaseSeeder` ya no crea cuentas con contraseña conocida en producción: el `SUPER_ADMIN` solo se siembra si se define `SEED_SUPERADMIN_PASSWORD`, y `admin`/local 1 solo en el perfil `dev`. Cualquier entorno que haya arrancado antes con la versión anterior puede tener `superadmin / SuperAdmin123!` y `admin / Password123`: **rotarlas**.

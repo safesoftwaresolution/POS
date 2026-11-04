@@ -1,0 +1,11 @@
+---
+// Logo horizontal oficial (isotipo + "POS Bento"), igual que el de la marca.
+import Logo from './Logo.astro';
+
+interface Props {
+  class?: string;
+  size?: 'md' | 'lg';
+}
+const { class: cls = '', size = 'md' } = Astro.props;
+---
+<Logo class:list={['w-auto text-ink', size === 'lg' ? 'h-12' : 'h-10', cls]} label="" />

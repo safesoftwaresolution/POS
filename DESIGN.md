@@ -1,8 +1,8 @@
-# BentoPOS — Design System & UI Specification
+# PosBento — Design System & UI Specification
 
 ## 1. Product Identity & Philosophy
 
-**BentoPOS** ("Tu negocio, en equilibrio") es un sistema moderno de Punto de Venta (POS), control de inventario en tiempo real y facturación electrónica oficial DIAN (Colombia) bajo una arquitectura multi-tenant y backoffice corporativo.
+**PosBento** ("Tu negocio, en equilibrio") es un sistema moderno de Punto de Venta (POS), control de inventario en tiempo real y facturación electrónica oficial DIAN (Colombia) bajo una arquitectura multi-tenant y backoffice corporativo.
 
 El diseño se basa en la estética **Bento Grid**:
 - Organización modular en compartimentos rectangulares y cuadrados con bordes generosamente redondeados (`24px` / `rounded-3xl`).
@@ -101,7 +101,7 @@ No escribir hex ni pares `bg-white dark:bg-[#17171B]` en componentes nuevos. Las
 ## 5. Arquitectura de Layout y Navegación
 
 ### 5.1 Sidebar Bento (Colapsable y Responsivo)
-- **Header del Sidebar**: Logotipo con isotipo cúbico BentoIcon en `#FF5520`, tipografía `BentoPOS`, badge de status del establecimiento (`ACTIVE`).
+- **Header del Sidebar**: Logotipo con isotipo cúbico BentoIcon en `#FF5520`, tipografía `PosBento`, badge de status del establecimiento (`ACTIVE`).
 - **Navegación Agrupada**:
   - **Principal**: Dashboard
   - **Operación**: Punto de Venta (POS), Productos, Inventario (con badge de items en stock bajo)
@@ -163,7 +163,7 @@ No escribir hex ni pares `bg-white dark:bg-[#17171B]` en componentes nuevos. Las
 
 ```json
 {
-  "displayName": "BentoPOS Design System",
+  "displayName": "PosBento Design System",
   "theme": {
     "headlineFont": "PLUS_JAKARTA_SANS",
     "bodyFont": "PLUS_JAKARTA_SANS",

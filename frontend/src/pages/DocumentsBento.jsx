@@ -1,8 +1,10 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { FileCheck2, Upload, AlertCircle, CheckCircle2, Clock, XCircle, ExternalLink } from 'lucide-react';
 import { getOwnStoreDocumentsApi, uploadOwnStoreDocumentApi } from '../services/storesApi';
 import { DOCUMENT_TYPES, DOC_TYPE_LABELS, DOC_STATUS_LABELS, DOC_STATUS_STYLES } from '../constants/storeDocuments';
-import { useModal } from '../context/ModalContext';
+import useModal from '../hooks/useModal';
+import useLoad from '../hooks/useLoad';
+import asList from '../utils/asList';
 
 const DOC_STATUS_ICONS = {
   PENDING: Clock,
@@ -62,7 +64,7 @@ function DocumentCard({ type, latestDoc, uploading, onUpload }) {
           type="button"
           disabled={uploading}
           onClick={() => inputRef.current?.click()}
-          className="flex-1 py-2 bg-solid hover:bg-solid-hover disabled:opacity-50 text-white rounded-2xl text-[11px] font-extrabold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm shadow-[#0A0A0A]/10"
+          className="flex-1 py-2 bg-solid hover:bg-solid-hover disabled:opacity-50 text-solid-ink rounded-2xl text-[11px] font-extrabold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm shadow-[#0A0A0A]/10"
         >
           <Upload className="w-3.5 h-3.5" /> {uploading ? 'Subiendo...' : latestDoc ? 'Reemplazar' : 'Subir'}
         </button>
@@ -80,24 +82,12 @@ function DocumentCard({ type, latestDoc, uploading, onUpload }) {
 
 export default function DocumentsBento() {
   const { notify } = useModal();
-  const [documents, setDocuments] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [errorMsg, setErrorMsg] = useState('');
+  const { data: documents, loading, error: errorMsg, reload: reloadDocuments } = useLoad(
+    () => asList(getOwnStoreDocumentsApi()),
+    [],
+    { initial: [], autoRefresh: true, errorMessage: 'Error cargando los documentos del local.' },
+  );
   const [uploadingType, setUploadingType] = useState(null);
-
-  const loadDocuments = useCallback(async () => {
-    setLoading(true);
-    setErrorMsg('');
-    try {
-      setDocuments(await getOwnStoreDocumentsApi());
-    } catch (e) {
-      setErrorMsg(e.message || 'Error cargando los documentos del local.');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { loadDocuments(); }, [loadDocuments]);
 
   // Documento más reciente por tipo (un tipo puede tener varias versiones subidas en el tiempo).
   const latestByType = (type) => {
@@ -110,7 +100,7 @@ export default function DocumentsBento() {
     setUploadingType(type);
     try {
       await uploadOwnStoreDocumentApi(type, file);
-      await loadDocuments();
+      reloadDocuments();
     } catch (err) {
       notify(err.message || 'Error al subir el documento. Intenta nuevamente.');
     } finally {

@@ -1,24 +1,28 @@
 import React, { useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { AlertCircle, ImagePlus, Plus, ScanLine } from 'lucide-react';
-import { Button, Field, Input, Modal, Select, inputClass } from '../ui';
+import { AlertCircle, Camera, ImagePlus, Images, Plus, ScanLine, Trash2 } from 'lucide-react';
+import { Button, Field, Input, Modal, MoneyInput, Select, inputClass } from '../ui';
 import { BarcodeScanner } from '../scanner';
+import ProductLotsSection from './ProductLotsSection';
 
 /**
  * Alta / edición de un producto. El estado vive en la página (`product`, `setProduct`);
  * este componente solo pinta el formulario y delega las acciones en los callbacks.
  */
 export default function ProductFormModal({
-  product, setProduct, categories, subcategories, errorMsg,
-  uploadingImage, onImageChange,
+  product, setProduct, categories, subcategories, errorMsg, canManageLots = false, onLotsChanged,
+  uploadingImage, onImageChange, onImageRemove,
   creatingSubcategory, setCreatingSubcategory, newSubcategoryName, setNewSubcategoryName, onCreateSubcategory,
   onSubmit, onClose,
 }) {
   const imageInputRef = useRef(null);
+  const cameraInputRef = useRef(null);
+  const galleryInputRef = useRef(null);
   const [scanning, setScanning] = useState(false);
   const isEdit = !!product.id;
   const set = (patch) => setProduct({ ...product, ...patch });
   const noCategories = categories.length === 0;
+  const hasInitialStock = (parseInt(product.stock) || 0) > 0;
 
   return (
     <Modal title={isEdit ? 'Editar Producto' : 'Crear Nuevo Producto'} onClose={onClose} dismissible={false}>
@@ -46,10 +50,36 @@ export default function ProductFormModal({
             )}
           </div>
           <div className="space-y-1.5">
-            <Button variant="soft" disabled={uploadingImage} onClick={() => imageInputRef.current?.click()}>
-              {uploadingImage ? 'Subiendo...' : product.imageUrl ? 'Cambiar imagen' : 'Subir imagen'}
-            </Button>
+            {/* Escritorio: selector de archivos. */}
+            <div className="hidden lg:block">
+              <Button variant="soft" disabled={uploadingImage} onClick={() => imageInputRef.current?.click()}>
+                {uploadingImage ? 'Subiendo...' : product.imageUrl ? 'Cambiar imagen' : 'Subir imagen'}
+              </Button>
+            </div>
             <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={onImageChange} />
+
+            {/* Móvil/tablet: elegir entre abrir la cámara o la galería. `capture` abre la cámara nativa. */}
+            <div className="lg:hidden space-y-1.5">
+              <p className="text-xs font-bold text-ink-soft">
+                {uploadingImage ? 'Subiendo foto...' : product.imageUrl ? 'Cambiar foto del producto' : 'Agrega una foto del producto'}
+              </p>
+              <div className="flex gap-2">
+                <Button size="sm" variant="soft" icon={Camera} disabled={uploadingImage} onClick={() => cameraInputRef.current?.click()}>
+                  Tomar foto
+                </Button>
+                <Button size="sm" variant="soft" icon={Images} disabled={uploadingImage} onClick={() => galleryInputRef.current?.click()}>
+                  Galería
+                </Button>
+              </div>
+              <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={onImageChange} />
+              <input ref={galleryInputRef} type="file" accept="image/*" className="hidden" onChange={onImageChange} />
+            </div>
+
+            {product.imageUrl && (
+              <Button size="sm" variant="soft" icon={Trash2} disabled={uploadingImage} onClick={onImageRemove}>
+                Quitar imagen
+              </Button>
+            )}
           </div>
         </div>
 
@@ -76,7 +106,7 @@ export default function ProductFormModal({
                   type="button"
                   onClick={() => setCreatingSubcategory(true)}
                   title="Crear nueva subcategoría"
-                  className="shrink-0 w-9 h-9 rounded-2xl bg-brand/10 dark:bg-brand/20 text-brand hover:bg-solid hover:text-white flex items-center justify-center cursor-pointer transition-colors"
+                  className="shrink-0 w-9 h-9 rounded-2xl bg-brand/10 dark:bg-brand/20 text-brand hover:bg-solid hover:text-solid-ink flex items-center justify-center cursor-pointer transition-colors"
                 >
                   <Plus className="w-4 h-4" />
                 </button>
@@ -117,7 +147,7 @@ export default function ProductFormModal({
                 onClick={() => setScanning(true)}
                 aria-label="Escanear código de barras con la cámara"
                 title="Escanear con la cámara"
-                className="lg:hidden absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-xl bg-solid text-white flex items-center justify-center active:scale-95 transition-all cursor-pointer"
+                className="lg:hidden absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-xl bg-solid text-solid-ink flex items-center justify-center active:scale-95 transition-all cursor-pointer"
               >
                 <ScanLine className="w-4 h-4" />
               </button>
@@ -127,12 +157,40 @@ export default function ProductFormModal({
         </div>
 
         <div className={isEdit ? '' : 'grid grid-cols-2 gap-3'}>
-          <Input label="Precio Venta ($ COP)" type="number" value={product.price} onChange={e => set({ price: e.target.value })} placeholder="12000" required />
+          <MoneyInput label="Precio Venta ($ COP)" value={product.price} onChange={price => set({ price })} placeholder="12.000" required />
           {!isEdit && (
             <Input label="Stock Inicial" type="number" value={product.stock} onChange={e => set({ stock: e.target.value })} placeholder="50" />
           )}
         </div>
         {isEdit && <p className="text-[10px] text-ink-muted">Para ajustar el stock ve al módulo de Inventario.</p>}
+
+        {!isEdit && (
+          <Field
+            label="Vencimiento del stock inicial (opcional)"
+            hint={hasInitialStock
+              ? 'Déjala vacía si este producto no vence. Cuando entre más mercancía, la fecha se registra en Inventario → Mover stock.'
+              : 'Primero indica el stock inicial: la fecha corresponde a esas unidades.'}
+          >
+            <div className="flex items-center gap-2">
+              <input
+                type="date"
+                className={inputClass}
+                value={product.expirationDate || ''}
+                disabled={!hasInitialStock}
+                onChange={e => set({ expirationDate: e.target.value })}
+              />
+              {product.expirationDate && (
+                <Button size="sm" variant="soft" className="shrink-0" onClick={() => set({ expirationDate: '' })}>
+                  Quitar fecha
+                </Button>
+              )}
+            </div>
+          </Field>
+        )}
+
+        {isEdit && canManageLots && (
+          <ProductLotsSection productId={product.id} onChanged={onLotsChanged} />
+        )}
 
         <div className="flex gap-2 pt-2">
           <Button variant="soft" className="w-1/2" onClick={onClose}>Cancelar</Button>

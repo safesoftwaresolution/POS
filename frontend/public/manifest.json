@@ -1,6 +1,6 @@
 {
-  "name": "BentoPOS",
-  "short_name": "BentoPOS",
+  "name": "PosBento",
+  "short_name": "PosBento",
   "description": "Punto de venta, inventario y facturación electrónica DIAN.",
   "id": "/",
   "start_url": "/",

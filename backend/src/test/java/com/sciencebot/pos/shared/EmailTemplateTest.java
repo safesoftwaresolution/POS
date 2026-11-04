@@ -9,11 +9,11 @@ class EmailTemplateTest {
 
     @Test
     void render_IncludesBrandTitleBodyButtonAndFallbackLink() {
-        String html = EmailTemplate.render("Resumen", "Titulo", "<p>Cuerpo</p>",
+        String html = EmailTemplate.render("https://app.posbento.com/", "Resumen", "Titulo", "<p>Cuerpo</p>",
                 "Entrar", "https://posbento.com/login", "Nota final");
 
-        assertTrue(html.contains("Bento"));
-        assertTrue(html.contains("POS"));
+        assertTrue(html.contains("src=\"https://app.posbento.com/email-logo.png\""));
+        assertTrue(html.contains("PosBento"));
         assertFalse(html.contains("ProPOS"));
         assertTrue(html.contains("Titulo"));
         assertTrue(html.contains("<p>Cuerpo</p>"));
@@ -25,14 +25,14 @@ class EmailTemplateTest {
 
     @Test
     void render_WithoutButton_OmitsTheActionBlock() {
-        String html = EmailTemplate.render("r", "t", "<p>x</p>", null, null, null);
+        String html = EmailTemplate.render("https://app.posbento.com", "r", "t", "<p>x</p>", null, null, null);
 
         assertFalse(html.contains("<a href"));
     }
 
     @Test
     void render_EscapesTitleButtonTextAndUrl() {
-        String html = EmailTemplate.render("r", "<script>t</script>", "<p>x</p>", "<b>", "https://x/?a=1&b=\"2\"", null);
+        String html = EmailTemplate.render("https://app.posbento.com", "r", "<script>t</script>", "<p>x</p>", "<b>", "https://x/?a=1&b=\"2\"", null);
 
         assertFalse(html.contains("<script>"));
         assertTrue(html.contains("&amp;b=&quot;2&quot;"));

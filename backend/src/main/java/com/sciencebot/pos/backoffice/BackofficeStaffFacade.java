@@ -12,4 +12,6 @@ public interface BackofficeStaffFacade {
     void changeStatus(Long id, boolean active);
     void deleteStaff(Long id);
     void changePassword(Long id, ChangePasswordCommand command);
+    /** Reenvia el correo de invitacion a un operador que aun no la acepto. */
+    void resendInvitation(Long id);
 }

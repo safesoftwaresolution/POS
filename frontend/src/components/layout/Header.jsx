@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Calendar,
   Bell,
@@ -9,14 +9,18 @@ import {
   Package,
   FileCheck2,
   FileX2,
-  ShoppingBag
+  ShoppingBag,
+  Settings,
+  HelpCircle
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
-import { useTheme } from '../../context/ThemeContext';
+import useAuth from '../../hooks/useAuth';
+import useNow from '../../hooks/useNow';
+import useUnreadNotifications from '../../hooks/useUnreadNotifications';
+import useTheme from '../../hooks/useTheme';
+import UserMenu from '../UserMenu';
 import {
   getNotificationsApi,
-  getUnreadNotificationCountApi,
   markNotificationReadApi,
   markAllNotificationsReadApi
 } from '../../services/notificationsApi';
@@ -34,14 +38,17 @@ function formatHeaderDate(date) {
 }
 
 const PAGE_TITLES = {
-  '/': { title: 'Dashboard', subtitle: 'Resumen en tiempo real de tu negocio' },
+  '/': { title: 'Dashboard', subtitle: 'Resumen y analíticas de tu negocio' },
   '/pos': { title: 'Punto de Venta', subtitle: 'Registra ventas, escanea productos y cobra' },
   '/products': { title: 'Productos', subtitle: 'Catálogo, precios y subcategorías' },
-  '/inventory': { title: 'Inventario', subtitle: 'Stock, devoluciones y proveedores' },
+  '/services': { title: 'Servicios', subtitle: 'Servicios que ofreces y cobras sin inventario' },
+  '/inventory': { title: 'Inventario', subtitle: 'Stock, movimientos, devoluciones y proveedores' },
   '/customers': { title: 'Clientes', subtitle: 'Base de datos de clientes frecuentes' },
+  '/credit': { title: 'Fiado', subtitle: 'Quién debe cuánto y los abonos a su cuenta' },
   '/invoicing': { title: 'Facturación DIAN', subtitle: 'Facturas electrónicas y su estado ante la DIAN' },
   '/documents': { title: 'Documentos', subtitle: 'Documentos legales de tu tienda' },
-  '/reports': { title: 'Reportes', subtitle: 'Rendimiento de ventas y compras' },
+  '/sales': { title: 'Ventas', subtitle: 'Historial de todas las ventas de tu local' },
+  '/cash': { title: 'Caja', subtitle: 'Arqueo y recaudo por cajero y método de pago' },
   '/users': { title: 'Usuarios', subtitle: 'Personal con acceso a tu local y sus permisos' },
   '/settings': { title: 'Configuración', subtitle: 'Preferencias y datos de tu negocio' },
 };
@@ -64,32 +71,20 @@ export default function Header({ onToggleMobileMenu }) {
   const location = useLocation();
   const { user } = useAuth();
   const { darkMode, toggleTheme } = useTheme();
-  const pageInfo = PAGE_TITLES[location.pathname] || { title: 'BentoPOS', subtitle: 'Tu negocio, en equilibrio' };
+  const pageInfo = PAGE_TITLES[location.pathname] || { title: 'PosBento', subtitle: 'Tu negocio, en equilibrio' };
   const isOnPos = location.pathname === '/pos';
 
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const [unreadCount, setUnreadCount] = useUnreadNotifications();
+  const now = useNow();
   const notifRef = useRef(null);
 
-  const getInitials = (name) => {
-    if (!name) return 'US';
-    return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-  };
-
-  const refreshUnreadCount = useCallback(async () => {
-    try {
-      setUnreadCount(await getUnreadNotificationCountApi());
-    } catch (e) {
-      console.warn('Error consultando notificaciones no leídas:', e);
-    }
-  }, []);
-
-  useEffect(() => {
-    refreshUnreadCount();
-    const interval = setInterval(refreshUnreadCount, 45000);
-    return () => clearInterval(interval);
-  }, [refreshUnreadCount]);
+  // Configuración la ven todos menos el vendedor, igual que en la barra lateral.
+  const userMenuItems = [
+    ...(user?.role !== 'SELLER' ? [{ label: 'Configuración', icon: Settings, to: '/settings' }] : []),
+    { label: 'Ayuda y soporte', icon: HelpCircle, to: '/support' },
+  ];
 
   useEffect(() => {
     function handleClickOutside(e) {
@@ -156,12 +151,6 @@ export default function Header({ onToggleMobileMenu }) {
             <h1 className="text-xl font-bold text-ink tracking-tight truncate">
               {pageInfo.title}
             </h1>
-            {isOnPos && (
-              <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#FFF0EB] text-brand border border-[#FFD5C8] shrink-0">
-                <span className="w-1.5 h-1.5 rounded-full bg-brand"></span>
-                Modo Rápido
-              </span>
-            )}
           </div>
           <p className="text-xs text-ink-soft truncate hidden sm:block">{pageInfo.subtitle}</p>
         </div>
@@ -172,7 +161,7 @@ export default function Header({ onToggleMobileMenu }) {
         {/* Current Date */}
         <div className="hidden md:flex items-center gap-2 h-10 px-3.5 text-gray-600 dark:text-gray-300 bg-card border border-line rounded-xl text-xs font-semibold">
           <Calendar className="w-4 h-4" />
-          <span>{formatHeaderDate(new Date())}</span>
+          <span>{formatHeaderDate(now)}</span>
         </div>
 
         {/* Dark / Light Mode Toggle Button */}
@@ -252,7 +241,7 @@ export default function Header({ onToggleMobileMenu }) {
         {!isOnPos && (
           <button
             onClick={() => navigate('/pos')}
-            className="flex items-center gap-1.5 bg-solid hover:bg-solid-hover text-white font-bold text-xs rounded-xl px-4 py-2.5 transition-all shadow-md shadow-[#0A0A0A]/10 cursor-pointer"
+            className="flex items-center gap-1.5 bg-solid hover:bg-solid-hover text-solid-ink font-bold text-xs rounded-xl px-4 py-2.5 transition-all shadow-md shadow-[#0A0A0A]/10 cursor-pointer"
           >
             <ShoppingBag className="w-4 h-4 text-brand" />
             <span className="hidden sm:inline">Nueva Venta</span>
@@ -260,9 +249,7 @@ export default function Header({ onToggleMobileMenu }) {
         )}
 
         {/* User Profile Avatar */}
-        <div className="w-10 h-10 rounded-full bg-solid dark:bg-line text-white flex items-center justify-center font-bold text-xs shadow-sm border-2 border-white dark:border-line-strong cursor-pointer" title={user?.fullName || user?.username}>
-          {getInitials(user?.fullName || user?.username)}
-        </div>
+        <UserMenu items={userMenuItems} />
       </div>
 
     </header>

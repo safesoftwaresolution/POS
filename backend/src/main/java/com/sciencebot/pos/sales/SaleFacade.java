@@ -19,7 +19,15 @@ public interface SaleFacade {
     /** Recupera una venta por su clave de idempotencia (para resolver reenvios concurrentes). */
     Optional<SaleDto> findByIdempotencyKey(String idempotencyKey);
 
+    /**
+     * Una venta del local actual. Un {@code SELLER} solo obtiene las que él registró; las de otro vendedor
+     * responden como inexistentes.
+     */
     Optional<SaleDto> getById(Long id);
+
+    /** Id del usuario al que se limita la consulta: presente solo si el usuario actual es {@code SELLER}. */
+    Optional<Long> restrictedSellerId();
+
     Page<SaleDto> searchSales(
             Long customerId,
             LocalDateTime dateFrom,

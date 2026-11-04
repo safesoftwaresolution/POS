@@ -1,6 +1,7 @@
 package com.sciencebot.pos.reports.internal.repositories;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 /**
  * Proyecciones inmutables para el mapeo directo con JdbcClient.
@@ -27,5 +28,16 @@ public final class ReportProjections {
     public record PaymentMethodTotalProjection(
             String paymentMethod,
             BigDecimal totalAmount
+    ) {}
+
+    public record ExpiringProductProjection(
+            Long productId,
+            String productName,
+            String internalCode,
+            Long lotId,
+            String lotCode,
+            LocalDate expirationDate,
+            int lotRemaining,
+            int quantityAvailable
     ) {}
 }

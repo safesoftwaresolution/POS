@@ -77,7 +77,7 @@
 - **Response**: `204 No Content` siempre, exista o no la cuenta. Solo envía si la cuenta existe y sigue sin verificar; máximo un envío por correo por minuto (en memoria). Si el correo falla en `register`, la cuenta queda creada y el usuario usa este endpoint.
 
 ### Correos transaccionales
-Todos los correos (verificación, recuperación de contraseña y aprobación de local) usan la plantilla `shared.email.EmailTemplate`: cabecera BentoPOS, tarjeta con el contenido, botón de acción con enlace de respaldo y pie, en HTML con tablas y estilos en línea y sin imágenes externas. Los valores que vienen del usuario se escapan con `EmailTemplate.escape`. El nombre de producto en asuntos y cuerpo es **BentoPOS**.
+Todos los correos (verificación, recuperación de contraseña y aprobación de local) usan la plantilla `shared.email.EmailTemplate`: cabecera PosBento, tarjeta con el contenido, botón de acción con enlace de respaldo y pie, en HTML con tablas y estilos en línea y sin imágenes externas. Los valores que vienen del usuario se escapan con `EmailTemplate.escape`. El nombre de producto en asuntos y cuerpo es **PosBento**.
 
 ### POST /api/v1/backoffice/onboarding/pending-users/{userId}/resend-verification
 - **Permisos**: `SUPER_ADMIN` (controlador en el módulo `backoffice`, que llega a `auth` solo por `AuthFacade.resendVerificationToUser`).

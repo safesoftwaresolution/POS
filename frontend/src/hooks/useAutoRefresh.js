@@ -5,12 +5,13 @@ import { useEffect, useRef } from 'react';
  * Pensado para paneles que deben reflejar cambios de otros usuarios (p. ej. nuevos registros en el
  * backoffice) sin recargar: `refresh` debe ser silencioso (sin pantalla de "Cargando...") y tolerar fallos.
  */
-export default function useAutoRefresh(refresh, intervalMs = 15000) {
+export default function useAutoRefresh(refresh, intervalMs = 15000, enabled = true) {
   const refreshRef = useRef(refresh);
 
   useEffect(() => { refreshRef.current = refresh; }, [refresh]);
 
   useEffect(() => {
+    if (!enabled) return undefined;
     const tick = () => {
       if (document.visibilityState === 'visible') refreshRef.current();
     };
@@ -20,5 +21,5 @@ export default function useAutoRefresh(refresh, intervalMs = 15000) {
       clearInterval(id);
       document.removeEventListener('visibilitychange', tick);
     };
-  }, [intervalMs]);
+  }, [intervalMs, enabled]);
 }

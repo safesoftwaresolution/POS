@@ -31,5 +31,27 @@ public interface ElectronicInvoiceRepository extends JpaRepository<ElectronicInv
 
     Page<ElectronicInvoice> findByStoreIdAndStatus(Long storeId, ElectronicInvoiceStatus status, Pageable pageable);
 
+    /**
+     * Facturas de las ventas de un vendedor (RN-SALE-005). Consulta nativa porque `sales` es de otro módulo y su
+     * entidad no se puede referenciar desde aquí; el orden es fijo (más recientes primero).
+     */
+    @Query(value = "SELECT e.* FROM electronic_invoices e WHERE e.store_id = :storeId AND e.sale_id IN " +
+            "(SELECT s.id FROM sales s WHERE s.store_id = :storeId AND s.user_id = :userId) ORDER BY e.id DESC",
+            countQuery = "SELECT COUNT(*) FROM electronic_invoices e WHERE e.store_id = :storeId AND e.sale_id IN " +
+            "(SELECT s.id FROM sales s WHERE s.store_id = :storeId AND s.user_id = :userId)",
+            nativeQuery = true)
+    Page<ElectronicInvoice> findByStoreIdAndSeller(@Param("storeId") Long storeId, @Param("userId") Long userId, Pageable pageable);
+
+    /**
+     * Igual que {@link #findByStoreIdAndSeller} filtrando además por estado.
+     */
+    @Query(value = "SELECT e.* FROM electronic_invoices e WHERE e.store_id = :storeId AND e.status = :status AND e.sale_id IN " +
+            "(SELECT s.id FROM sales s WHERE s.store_id = :storeId AND s.user_id = :userId) ORDER BY e.id DESC",
+            countQuery = "SELECT COUNT(*) FROM electronic_invoices e WHERE e.store_id = :storeId AND e.status = :status AND e.sale_id IN " +
+            "(SELECT s.id FROM sales s WHERE s.store_id = :storeId AND s.user_id = :userId)",
+            nativeQuery = true)
+    Page<ElectronicInvoice> findByStoreIdAndStatusAndSeller(@Param("storeId") Long storeId, @Param("status") String status,
+                                                           @Param("userId") Long userId, Pageable pageable);
+
     Optional<ElectronicInvoice> findBySaleIdAndStoreId(Long saleId, Long storeId);
 }

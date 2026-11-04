@@ -1,0 +1,13 @@
+---
+import { icons } from '../lib/icons.js';
+
+interface Props {
+  name: string;
+  class?: string;
+}
+
+const { name, class: cls = 'size-5' } = Astro.props;
+const svg = icons[name];
+if (!svg) throw new Error(`Icono desconocido: "${name}" (agregalo en src/lib/icons.js)`);
+---
+<span class:list={['ic', cls]} aria-hidden="true" set:html={svg} />

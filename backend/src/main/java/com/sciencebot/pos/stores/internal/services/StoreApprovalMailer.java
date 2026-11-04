@@ -34,9 +34,10 @@ public class StoreApprovalMailer {
         String body = "<p style=\"margin:0 0 14px;\">Hola,</p>"
                 + "<p style=\"margin:0 0 14px;\">¡Buenas noticias! Revisamos la información de <strong>"
                 + EmailTemplate.escape(storeName) + "</strong> y tu local fue <strong style=\"color:#16A34A;\">aprobado</strong>.</p>"
-                + "<p style=\"margin:0;\">Ya puedes iniciar sesión y empezar a vender, controlar tu inventario y facturar con BentoPOS.</p>";
+                + "<p style=\"margin:0;\">Ya puedes iniciar sesión y empezar a vender, controlar tu inventario y facturar con PosBento.</p>";
         String html = EmailTemplate.render(
-                "Tu local fue aprobado: ya puedes iniciar sesión en BentoPOS.",
+                frontendUrl,
+                "Tu local fue aprobado: ya puedes iniciar sesión en PosBento.",
                 "¡Tu local fue aprobado!",
                 body,
                 "Iniciar sesión",
@@ -44,7 +45,7 @@ public class StoreApprovalMailer {
                 "Si no reconoces este registro, puedes ignorar este mensaje.");
         for (String to : recipients) {
             try {
-                emailSender.send(to, "Tu local fue aprobado - BentoPOS", html);
+                emailSender.send(to, "Tu local fue aprobado - PosBento", html);
             } catch (RuntimeException e) {
                 log.warn("No se pudo enviar el correo de aprobacion del local \"{}\" a {}", storeName, to, e);
             }

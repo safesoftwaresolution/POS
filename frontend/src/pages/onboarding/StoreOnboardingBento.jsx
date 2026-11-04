@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Store, Phone, Mail, MapPin, Globe, FileText, ArrowRight, AlertCircle } from 'lucide-react';
 import { registerOwnStoreApi } from '../../services/storesApi';
-import { useAuth } from '../../context/AuthContext';
+import useAuth from '../../hooks/useAuth';
 
 const EMPTY_FORM = { name: '', phone: '', email: '', website: '', address: '', taxId: '' };
 
@@ -39,7 +39,7 @@ export default function StoreOnboardingBento() {
           </div>
           <h1 className="text-xl font-black tracking-tight">Registra tu local</h1>
           <p className="text-xs text-ink-soft font-semibold">
-            Un último paso: cuéntanos sobre tu negocio para activar BentoPOS.
+            Un último paso: cuéntanos sobre tu negocio para activar PosBento.
           </p>
         </div>
 
@@ -127,7 +127,7 @@ export default function StoreOnboardingBento() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3.5 bg-solid hover:bg-solid-hover text-white font-black text-xs rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-[#0A0A0A]/10 active:scale-98 transition-all cursor-pointer disabled:opacity-50"
+            className="w-full py-3.5 bg-solid hover:bg-solid-hover text-solid-ink font-black text-xs rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-[#0A0A0A]/10 active:scale-98 transition-all cursor-pointer disabled:opacity-50"
           >
             <span>{loading ? 'Registrando local...' : 'Registrar mi local'}</span>
             <ArrowRight className="w-4 h-4" />

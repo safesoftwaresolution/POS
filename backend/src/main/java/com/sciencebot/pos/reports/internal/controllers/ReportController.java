@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -55,6 +56,31 @@ public class ReportController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime dateTo
     ) {
         return ResponseEntity.ok(reportService.getSalesReport(dateFrom, dateTo));
+    }
+
+    @GetMapping("/sales-heatmap")
+    @PreAuthorize("hasRole('ADMINISTRATOR')")
+    @Operation(
+            summary = "Mapa de calor de ventas",
+            description = """
+                    Ventas agrupadas por día de la semana (1 = lunes … 7 = domingo) y hora del día, para saber cuándo vende más
+                    el local. Solo devuelve las franjas con ventas. Sin fechas, usa los últimos 30 días. Solo para **ADMINISTRATOR**.
+                    """
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Franjas con ventas",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            array = @ArraySchema(schema = @Schema(implementation = SalesHeatmapCellDto.class)))),
+            @ApiResponse(responseCode = "401", description = "No autenticado", content = @Content),
+            @ApiResponse(responseCode = "403", description = "Solo ADMINISTRATOR puede acceder a reportes", content = @Content)
+    })
+    public ResponseEntity<List<SalesHeatmapCellDto>> getSalesHeatmap(
+            @Parameter(description = "Fecha inicial del período (ISO 8601)", example = "2025-01-01T00:00:00")
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime dateFrom,
+            @Parameter(description = "Fecha final del período (ISO 8601)", example = "2025-12-31T23:59:59")
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime dateTo
+    ) {
+        return ResponseEntity.ok(reportService.getSalesHeatmap(dateFrom, dateTo));
     }
 
     @GetMapping("/top-products")
@@ -110,6 +136,61 @@ public class ReportController {
             @RequestParam(required = false) Boolean belowMinStock
     ) {
         return ResponseEntity.ok(reportService.getStockReport(belowMinStock));
+    }
+
+    @GetMapping("/expiring")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'SUPERVISOR')")
+    @Operation(
+            summary = "Productos vencidos o próximos a vencer",
+            description = """
+                    Lista los productos activos con existencias cuya fecha de vencimiento ya pasó o llega dentro de los
+                    próximos `days` días, del que vence primero al que vence último. Los productos sin fecha de
+                    vencimiento no aparecen.
+                    - `daysToExpire` es negativo si el producto ya venció
+                    - `status`: `EXPIRED`, `TODAY` o `EXPIRING`
+                    - `days` por defecto 30 (entre 1 y 365). Máximo 500 filas.
+
+                    Accesible para **ADMINISTRATOR** y **SUPERVISOR**.
+                    """
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Productos vencidos o por vencer",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            array = @ArraySchema(schema = @Schema(implementation = ExpiringProductDto.class)))),
+            @ApiResponse(responseCode = "401", description = "No autenticado", content = @Content),
+            @ApiResponse(responseCode = "403", description = "Sin permisos suficientes", content = @Content)
+    })
+    public ResponseEntity<List<ExpiringProductDto>> getExpiringProductsReport(
+            @Parameter(description = "Ventana en días hacia adelante (1 a 365)", example = "30")
+            @RequestParam(required = false) Integer days
+    ) {
+        return ResponseEntity.ok(reportService.getExpiringProductsReport(days));
+    }
+
+    @GetMapping(value = "/expiring/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'SUPERVISOR')")
+    @Operation(
+            summary = "Vencimientos en PDF",
+            description = """
+                    Mismo contenido que `GET /reports/expiring` (lotes vencidos y por vencer con sus cantidades),
+                    como archivo PDF. `days` por defecto 30 (entre 1 y 365).
+
+                    Accesible para **ADMINISTRATOR** y **SUPERVISOR**.
+                    """
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "PDF generado", content = @Content(mediaType = MediaType.APPLICATION_PDF_VALUE)),
+            @ApiResponse(responseCode = "401", description = "No autenticado", content = @Content),
+            @ApiResponse(responseCode = "403", description = "Sin permisos suficientes", content = @Content)
+    })
+    public ResponseEntity<byte[]> getExpiringProductsReportPdf(
+            @Parameter(description = "Ventana en días hacia adelante (1 a 365)", example = "30")
+            @RequestParam(required = false) Integer days
+    ) {
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"vencimientos.pdf\"")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(reportService.getExpiringProductsReportPdf(days));
     }
 
     @GetMapping("/profitability")

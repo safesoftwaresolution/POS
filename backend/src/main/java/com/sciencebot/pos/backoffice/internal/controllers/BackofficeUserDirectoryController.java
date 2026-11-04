@@ -5,6 +5,8 @@ import com.sciencebot.pos.backoffice.BackofficeUserDto;
 import com.sciencebot.pos.backoffice.StorePlanUsageDto;
 import com.sciencebot.pos.backoffice.StoreWithoutOwnerDto;
 import com.sciencebot.pos.backoffice.internal.repositories.UserDirectoryDao;
+import com.sciencebot.pos.users.UserDeletionAuditDto;
+import com.sciencebot.pos.users.UserFacade;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.data.domain.Page;
@@ -35,10 +37,12 @@ public class BackofficeUserDirectoryController {
 
     private final UserDirectoryDao userDirectoryDao;
     private final AuthFacade authFacade;
+    private final UserFacade userFacade;
 
-    public BackofficeUserDirectoryController(UserDirectoryDao userDirectoryDao, AuthFacade authFacade) {
+    public BackofficeUserDirectoryController(UserDirectoryDao userDirectoryDao, AuthFacade authFacade, UserFacade userFacade) {
         this.userDirectoryDao = userDirectoryDao;
         this.authFacade = authFacade;
+        this.userFacade = userFacade;
     }
 
     @GetMapping("/users")
@@ -87,6 +91,14 @@ public class BackofficeUserDirectoryController {
         }
         authFacade.setAccountActive(userId, active);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/user-deletions")
+    @Operation(summary = "Historial de usuarios eliminados definitivamente",
+            description = "Solo lectura, el mas reciente primero: quien era, de que local, quien lo elimino y cuando. "
+                    + "Los locales eliminados quedan en la auditoria de locales (estado DELETED).")
+    public ResponseEntity<Page<UserDeletionAuditDto>> userDeletions(Pageable pageable) {
+        return ResponseEntity.ok(userFacade.listDeletionAudit(pageable));
     }
 
     @DeleteMapping("/users/{userId}")

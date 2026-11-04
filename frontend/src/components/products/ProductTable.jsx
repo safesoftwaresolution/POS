@@ -1,12 +1,13 @@
 import React from 'react';
 import { Package, Barcode, Edit3, Trash2, Power, PowerOff } from 'lucide-react';
 import { Button, EmptyState } from '../ui';
+import ExpiryBadge from './ExpiryBadge';
 
 const ICON_BTN = 'p-1.5 text-ink-muted rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer';
 
 /** Tabla del catálogo: una fila por producto, con acciones de código de barras, edición, estado y borrado. */
 export default function ProductTable({
-  products, loading, canToggleStatus, onCreate, onEdit, onBarcode, onToggleStatus, onDelete,
+  products, loading, canEdit = true, canToggleStatus, canDelete = true, onCreate, onEdit, onBarcode, onToggleStatus, onDelete,
 }) {
   if (loading) {
     return <div className="py-12 text-center text-xs font-bold text-ink-muted">Consultando catálogo de productos...</div>;
@@ -18,14 +19,14 @@ export default function ProductTable({
         icon={Package}
         title="No se encontraron productos"
         description="Crea tu primer producto para empezar a registrar ventas"
-        action={<Button size="sm" onClick={onCreate}>+ Registrar Primer Producto</Button>}
+        action={onCreate ? <Button size="sm" onClick={onCreate}>+ Registrar Primer Producto</Button> : null}
       />
     );
   }
 
   return (
-    <div className="overflow-x-auto -mx-6">
-      <table className="w-full text-left text-xs">
+    <div className="md:overflow-x-auto md:-mx-6">
+      <table className="table-cards w-full text-left text-xs">
         <thead>
           <tr className="border-b border-line bg-gray-50/50 dark:bg-page text-ink-muted uppercase text-[10px] tracking-wider font-extrabold">
             <th className="py-3 px-6">Producto</th>
@@ -43,10 +44,10 @@ export default function ProductTable({
             return (
               <tr
                 key={p.id}
-                className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer group"
-                onClick={() => onEdit(p)}
+                className={`hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group ${canEdit ? 'cursor-pointer' : ''}`}
+                onClick={canEdit ? () => onEdit(p) : undefined}
               >
-                <td className="py-3 px-6">
+                <td data-label="" className="py-3 px-6">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-gray-50 dark:bg-page border border-line flex items-center justify-center overflow-hidden shrink-0">
                       {p.imageUrl ? (
@@ -65,8 +66,8 @@ export default function ProductTable({
                     </div>
                   </div>
                 </td>
-                <td className="py-3 px-3 font-mono font-semibold text-ink-soft">{p.internalCode}</td>
-                <td className="py-3 px-3">
+                <td data-label="Código" className="py-3 px-3 font-mono font-semibold text-ink-soft">{p.internalCode}</td>
+                <td data-label="Categoría" className="py-3 px-3">
                   <div className="flex items-center gap-1 flex-wrap">
                     <span className="text-[10px] px-2 py-0.5 rounded-full bg-brand/10 dark:bg-brand/20 text-brand font-extrabold">
                       {p.categoryName || 'General'}
@@ -78,22 +79,28 @@ export default function ProductTable({
                     )}
                   </div>
                 </td>
-                <td className="py-3 px-3 text-right font-black text-sm text-ink tabular-nums">
+                <td data-label="Precio" className="py-3 px-3 text-right font-black text-sm text-ink tabular-nums">
                   ${(p.salePrice || p.price || 0).toLocaleString('es-CO')}
                 </td>
-                <td className="py-3 px-3">
-                  <span className={`font-bold tabular-nums ${isLow ? 'text-amber-600 dark:text-amber-400' : 'text-ink'}`}>
-                    {stockVal} {isLow && '(Bajo)'}
-                  </span>
+                <td data-label="Stock" className="py-3 px-3">
+                  <div className="flex flex-col items-start gap-1">
+                    <span className={`font-bold tabular-nums ${isLow ? 'text-amber-600 dark:text-amber-400' : 'text-ink'}`}>
+                      {stockVal} {isLow && '(Bajo)'}
+                    </span>
+                    {/* Sin existencias no hay nada que vender ni que dar de baja: no se alerta. */}
+                    {stockVal > 0 && <ExpiryBadge date={p.expirationDate} />}
+                  </div>
                 </td>
-                <td className="py-3 px-6 text-right" onClick={(e) => e.stopPropagation()}>
+                <td data-label="Acciones" className="py-3 px-6 text-right" onClick={(e) => e.stopPropagation()}>
                   <div className="flex items-center justify-end gap-1">
                     <button onClick={() => onBarcode(p)} title="Ver código de barras" className={`${ICON_BTN} hover:text-brand`}>
                       <Barcode className="w-4 h-4" />
                     </button>
-                    <button onClick={() => onEdit(p)} title="Editar producto" className={`${ICON_BTN} hover:text-brand`}>
-                      <Edit3 className="w-4 h-4" />
-                    </button>
+                    {canEdit && (
+                      <button onClick={() => onEdit(p)} title="Editar producto" className={`${ICON_BTN} hover:text-brand`}>
+                        <Edit3 className="w-4 h-4" />
+                      </button>
+                    )}
                     {canToggleStatus && (
                       <button
                         onClick={() => onToggleStatus(p)}
@@ -103,13 +110,15 @@ export default function ProductTable({
                         {p.active === false ? <Power className="w-4 h-4" /> : <PowerOff className="w-4 h-4" />}
                       </button>
                     )}
-                    <button
-                      onClick={() => onDelete(p.id)}
-                      title="Eliminar producto"
-                      className={`${ICON_BTN} hover:text-red-600 dark:hover:text-red-400`}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    {canDelete && (
+                      <button
+                        onClick={() => onDelete(p.id)}
+                        title="Eliminar producto"
+                        className={`${ICON_BTN} hover:text-red-600 dark:hover:text-red-400`}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
                 </td>
               </tr>

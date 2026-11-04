@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { useAuth } from '../context/AuthContext';
+import useAuth from '../hooks/useAuth';
 import { useNavigate, Link } from 'react-router-dom';
 import { User, KeyRound, ArrowRight, AlertCircle } from 'lucide-react';
-import BentoIcon from '../components/BentoIcon';
+import { LANDING_URL } from '../constants/site';
 import { resendVerificationApi } from '../services/authApi';
 
 export default function LoginBento() {
@@ -46,11 +46,9 @@ export default function LoginBento() {
 
         {/* Brand Header */}
         <div className="text-center space-y-3">
-          <BentoIcon size="w-16 h-16 mx-auto" rounded="rounded-3xl" />
-          <div className="flex items-baseline justify-center gap-1">
-            <span className="font-black text-2xl tracking-tight text-white">Bento</span>
-            <span className="font-black text-2xl tracking-tight text-brand">POS</span>
-          </div>
+          <a href={LANDING_URL} aria-label="PosBento, ir al sitio" className="block">
+            <img src="/logo-vertical-color-fondo-oscuro.svg" alt="PosBento" className="h-28 mx-auto" draggable={false} />
+          </a>
           <p className="text-xs text-gray-400 font-semibold tracking-wide">
             Sistema de Punto de Venta • Iniciar Sesión
           </p>
@@ -78,7 +76,7 @@ export default function LoginBento() {
                 type="button"
                 onClick={handleResend}
                 disabled={!resendEmail.trim() || resendState === 'sending'}
-                className="px-3 py-2 bg-solid hover:bg-solid-hover text-white rounded-xl text-xs font-black cursor-pointer disabled:opacity-50"
+                className="px-3 py-2 bg-solid hover:bg-solid-hover text-solid-ink rounded-xl text-xs font-black cursor-pointer disabled:opacity-50"
               >
                 {resendState === 'sending' ? 'Enviando...' : 'Reenviar'}
               </button>
@@ -136,7 +134,7 @@ export default function LoginBento() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3.5 bg-solid hover:bg-solid-hover text-white font-black text-xs rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-[#0A0A0A]/10 active:scale-98 transition-all cursor-pointer disabled:opacity-50"
+            className="w-full py-3.5 bg-solid hover:bg-solid-hover text-solid-ink font-black text-xs rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-[#0A0A0A]/10 active:scale-98 transition-all cursor-pointer disabled:opacity-50"
           >
             <span>{loading ? 'Autenticando...' : 'Ingresar al Sistema'}</span>
             <ArrowRight className="w-4 h-4" />

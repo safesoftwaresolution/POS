@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   Store,
@@ -17,17 +17,16 @@ import {
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
+import useAuth from '../../hooks/useAuth';
 import BentoIcon from '../BentoIcon';
+import BrandLogo from '../BrandLogo';
+import Avatar from '../ui/Avatar';
+import ProfileModal from '../profile/ProfileModal';
 
 export default function BackofficeSidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }) {
   const { logout, user } = useAuth();
   const navigate = useNavigate();
-
-  const getInitials = (name) => {
-    if (!name) return 'SA';
-    return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-  };
+  const [profileOpen, setProfileOpen] = useState(false);
 
   const navGroups = [
     {
@@ -89,14 +88,13 @@ export default function BackofficeSidebar({ isOpen, onClose, isCollapsed, onTogg
           isCollapsed ? 'px-3 justify-center' : 'px-5 justify-between'
         }`}>
           <div className="flex items-center gap-3 min-w-0">
-            <BentoIcon />
-            {(!isCollapsed || isOpen) && (
-              <div className="truncate">
-                <h1 className="font-black text-lg leading-tight tracking-tight text-ink truncate flex items-center gap-1">
-                  <span>Bento</span><span className="text-brand">POS</span>
-                </h1>
-                <p className="text-[10px] text-gray-400 font-semibold tracking-wide">Backoffice SaaS</p>
+            {(!isCollapsed || isOpen) ? (
+              <div className="min-w-0 space-y-1">
+                <BrandLogo className="h-10" />
+                <p className="text-[10px] text-gray-400 font-semibold tracking-wide truncate">Backoffice SaaS</p>
               </div>
+            ) : (
+              <BentoIcon />
             )}
           </div>
         </div>
@@ -123,7 +121,7 @@ export default function BackofficeSidebar({ isOpen, onClose, isCollapsed, onTogg
                     className={({ isActive }) =>
                       `rounded-2xl flex items-center transition-all duration-200 cursor-pointer ${
                         isActive
-                          ? 'bg-solid text-white shadow-md shadow-[#0A0A0A]/10 font-bold'
+                          ? 'bg-solid text-solid-ink shadow-md shadow-[#0A0A0A]/10 font-bold'
                           : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-line hover:text-brand dark:hover:text-brand'
                       } ${
                         isCollapsed && !isOpen
@@ -147,17 +145,24 @@ export default function BackofficeSidebar({ isOpen, onClose, isCollapsed, onTogg
 
         <div className="shrink-0 flex flex-col gap-2 w-full px-3 pt-3 border-t border-line">
           {/* User Card */}
-          <div className={`flex items-center gap-2.5 p-2.5 rounded-xl ${isCollapsed && !isOpen ? 'justify-center' : ''}`}>
-            <div className="w-9 h-9 rounded-full bg-solid text-white flex items-center justify-center font-bold text-xs shrink-0 ring-1 ring-[#EAEAEA] dark:ring-line">
-              {getInitials(user?.fullName || user?.username)}
-            </div>
+          <button
+            type="button"
+            onClick={() => setProfileOpen(true)}
+            title="Mi perfil"
+            className={`flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-line transition-colors cursor-pointer text-left ${isCollapsed && !isOpen ? 'justify-center' : ''}`}
+          >
+            <Avatar
+              name={user?.fullName || user?.username}
+              src={user?.avatarUrl}
+              className="w-9 h-9 rounded-full text-xs ring-1 ring-[#EAEAEA] dark:ring-line"
+            />
             {(!isCollapsed || isOpen) && (
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-bold text-ink truncate">{user?.fullName || user?.username}</p>
                 <p className="text-[11px] text-ink-muted truncate">Super Admin</p>
               </div>
             )}
-          </div>
+          </button>
 
           <button
             onClick={onToggleCollapse}
@@ -188,6 +193,8 @@ export default function BackofficeSidebar({ isOpen, onClose, isCollapsed, onTogg
           </button>
         </div>
       </aside>
+
+      {profileOpen && <ProfileModal onClose={() => setProfileOpen(false)} />}
     </>
   );
 }

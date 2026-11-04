@@ -1,0 +1,21 @@
+# PosBento
+
+> PosBento es un sistema de punto de venta (POS) web para comercios en Colombia: ventas en caja, inventario en tiempo real y facturación electrónica ante la DIAN en un solo sistema. Funciona desde el navegador, en computador, tablet o celular, y requiere conexión a internet.
+
+La facturación electrónica se emite en segundo plano a través de un proveedor tecnológico: la venta se cierra al instante y la factura queda con su estado (pendiente, validada, rechazada o con error), con reintento, XML y PDF. Cada local trabaja con datos aislados y cada persona entra con un rol (Administrador, Supervisor o Vendedor).
+
+## Producto
+
+- [Inicio: funciones, facturación DIAN, cómo funciona y preguntas frecuentes](https://posbento.com/): descripción completa del producto.
+- [Facturación electrónica DIAN](https://posbento.com/#facturacion): cómo se emite, estados y reintentos.
+- [Preguntas frecuentes](https://posbento.com/#preguntas): instalación, lector de código de barras, varios locales, seguridad y uso sin internet.
+
+## Legal y soporte
+
+- [Términos y condiciones](https://posbento.com/legal/terms-and-conditions)
+- [Política de privacidad](https://posbento.com/legal/privacy-policy)
+- [Soporte](https://posbento.com/support)
+
+## Opcional
+
+- [Sistema (requiere cuenta, no indexable)](https://app.posbento.com/login): acceso para clientes registrados.

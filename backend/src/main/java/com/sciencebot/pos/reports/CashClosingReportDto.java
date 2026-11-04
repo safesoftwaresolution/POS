@@ -13,8 +13,10 @@ public record CashClosingReportDto(
         LocalDateTime dateTo,
         @Schema(description = "Monto total vendido por cada método de pago (código del tema PAYMENT_METHODS → monto)")
         Map<String, BigDecimal> totalByPaymentMethod,
-        @Schema(description = "Efectivo esperado en caja: suma de ventas en efectivo (CASH) del período")
+        @Schema(description = "Efectivo esperado en caja: ventas en efectivo (CASH) más abonos de fiado cobrados en efectivo; las ventas a fiado (CREDIT) no suman")
         BigDecimal expectedCash,
-        @Schema(description = "Desglose del efectivo (CASH) vendido por cada vendedor, para rendir cuentas por cajero")
-        Map<String, BigDecimal> cashBySeller
+        @Schema(description = "Desglose del efectivo recibido (ventas en efectivo y abonos de fiado) por cada vendedor, para rendir cuentas por cajero")
+        Map<String, BigDecimal> cashBySeller,
+        @Schema(description = "Abonos de fiado recibidos en el período por método de pago (código → monto)")
+        Map<String, BigDecimal> creditPaymentsByMethod
 ) {}

@@ -11,6 +11,7 @@ import com.sciencebot.pos.products.ProductDto;
 import com.sciencebot.pos.products.ProductFacade;
 import com.sciencebot.pos.sales.SaleDto;
 import com.sciencebot.pos.sales.SaleItemDto;
+import com.sciencebot.pos.sales.SaleItemType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -22,6 +23,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 class BillingCanonicalMapperTest {
@@ -33,12 +35,42 @@ class BillingCanonicalMapperTest {
     private ProductFacade productFacade;
 
 
+    @Mock
+    private com.sciencebot.pos.credit.CreditFacade creditFacade;
+
     private BillingCanonicalMapper mapper;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        mapper = new BillingCanonicalMapper(customerFacade, productFacade);
+        mapper = new BillingCanonicalMapper(customerFacade, productFacade, creditFacade);
+    }
+
+    private SaleDto saleWith(String paymentMethod) {
+        return new SaleDto(1L, 5L, null, "FACT-0001", LocalDateTime.now(), "Cliente",
+                BigDecimal.valueOf(1000), BigDecimal.valueOf(1000), BigDecimal.ZERO,
+                "cajero", List.of(), paymentMethod);
+    }
+
+    @Test
+    void toInvoiceRequest_CreditSale_IsIssuedOnCreditWithTheAgreedDueDate() {
+        java.time.LocalDate due = java.time.LocalDate.of(2026, 12, 15);
+        when(creditFacade.findChargeDueDate(5L, 1L)).thenReturn(Optional.of(due));
+
+        InvoiceRequest request = mapper.toInvoiceRequest(saleWith("CREDIT"));
+
+        assertEquals("2", request.paymentForm());
+        assertEquals(due, request.paymentDueDate());
+        assertEquals("1", request.paymentMethodCode());
+    }
+
+    @Test
+    void toInvoiceRequest_NonCreditSale_IsCashAndNeverAsksCredit() {
+        InvoiceRequest request = mapper.toInvoiceRequest(saleWith("CASH"));
+
+        assertEquals("1", request.paymentForm());
+        assertNull(request.paymentDueDate());
+        verifyNoInteractions(creditFacade);
     }
 
     @Test
@@ -167,7 +199,7 @@ class BillingCanonicalMapperTest {
                 productId, "LAP-01", "770123456", "Laptop HP", "Tecnologia",
                 null, null, BigDecimal.valueOf(2000000.00), BigDecimal.valueOf(2500000.00),
                 5, 1, true, null,
-                BigDecimal.valueOf(19.00), "43211503"
+                BigDecimal.valueOf(19.00), "43211503", null, null
         );
         when(productFacade.getById(productId)).thenReturn(Optional.of(prod));
 
@@ -177,5 +209,22 @@ class BillingCanonicalMapperTest {
         InvoiceRequest request = mapper.toInvoiceRequest(sale);
         assertEquals(1, request.items().size());
         assertEquals("43211503", request.items().get(0).standardCode());
+        assertEquals("94", request.items().get(0).unitMeasureCode());
+    }
+
+    @Test
+    void toInvoiceRequest_ServiceLineUsesSnapshotUnitAndUnspsc() {
+        SaleItemDto item = new SaleItemDto(1L, null, "Masaje 60 min", 2, BigDecimal.valueOf(119000.00),
+                BigDecimal.valueOf(238000.00), BigDecimal.valueOf(19.00), BigDecimal.valueOf(38000.00),
+                SaleItemType.SERVICE, 2L, "HUR", "90111500");
+        SaleDto sale = new SaleDto(8L, 5L, null, "FACT-0008", LocalDateTime.now(), null, BigDecimal.valueOf(238000.00),
+                BigDecimal.valueOf(238000.00), BigDecimal.ZERO, "admin", List.of(item), "CASH");
+
+        InvoiceItemData data = mapper.toInvoiceRequest(sale).items().get(0);
+
+        assertEquals("HUR", data.unitMeasureCode());
+        assertEquals("90111500", data.standardCode());
+        assertEquals(0, data.unitPrice().compareTo(BigDecimal.valueOf(100000.00)), "precio neto sin IVA");
+        verifyNoInteractions(productFacade);
     }
 }

@@ -7,6 +7,8 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpecificationExecutor<Product> {
@@ -40,8 +42,16 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
     Optional<Product> findByStoreIdAndInternalCode(Long storeId, String internalCode);
     Optional<Product> findByStoreIdAndBarcode(Long storeId, String barcode);
 
+    List<Product> findByStoreIdAndInternalCodeIn(Long storeId, Collection<String> internalCodes);
+    List<Product> findByStoreIdAndBarcodeIn(Long storeId, Collection<String> barcodes);
+
     boolean existsByStoreIdAndInternalCode(Long storeId, String internalCode);
     boolean existsByStoreIdAndBarcode(Long storeId, String barcode);
+    boolean existsByStoreIdAndImageUrl(Long storeId, String imageUrl);
+
+    /** URLs de foto en uso por cualquier producto (activo o no) de cualquier local. */
+    @Query("select distinct p.imageUrl from Product p where p.imageUrl is not null")
+    List<String> findAllImageUrls();
 
     // Nota: intencionalmente NO se filtran por local. Las categorias son globales (solo
     // SUPER_ADMIN las administra) y este chequeo se dispara al borrar una categoria global,

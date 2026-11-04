@@ -27,7 +27,7 @@ Ciclo de vida de los comercios/locales de la plataforma SaaS: el **auto-registro
 - `GET /api/v1/backoffice/stores/{id}`: detalle de local.
 - `POST /api/v1/backoffice/stores`: creación de local.
 - `PUT /api/v1/backoffice/stores/{id}`: actualización de datos.
-- `PATCH /api/v1/backoffice/stores/{id}/status`: cambio de estado. Al pasar de `PENDING_VERIFICATION` a `ACTIVE` (aprobación) se envía, tras confirmar la transacción y en segundo plano (`StoreApprovalMailer`, `@Async`), un correo con la marca BentoPOS a los administradores del local (o al correo del local si aún no tiene) avisando que fue aprobado, con un botón a `/login`. Reactivar un local suspendido no lo envía; un fallo de SMTP no revierte la aprobación. La pantalla "en revisión" del administrador consulta el estado cada 15 s y abre el POS sola al aprobarse.
+- `PATCH /api/v1/backoffice/stores/{id}/status`: cambio de estado. Al pasar de `PENDING_VERIFICATION` a `ACTIVE` (aprobación) se envía, tras confirmar la transacción y en segundo plano (`StoreApprovalMailer`, `@Async`), un correo con la marca PosBento a los administradores del local (o al correo del local si aún no tiene) avisando que fue aprobado, con un botón a `/login`. Reactivar un local suspendido no lo envía; un fallo de SMTP no revierte la aprobación. La pantalla "en revisión" del administrador consulta el estado cada 15 s y abre el POS sola al aprobarse.
 - `PATCH /api/v1/backoffice/stores/{id}/reject`: rechazo con motivo (`{ "reason": "..." }`).
 - `PATCH /api/v1/backoffice/stores/{id}/verify-email`: verificación de correo.
 - `GET /api/v1/backoffice/stores/{id}/documents`: listado de documentos KYC.

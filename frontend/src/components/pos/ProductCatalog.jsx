@@ -1,10 +1,12 @@
 import React from 'react';
-import { Search, Package, Plus, ScanLine } from 'lucide-react';
+import { Search, Package, Plus, ScanLine, Sparkles } from 'lucide-react';
+import { cartKey, isService } from '../../utils/cartItem';
 
 function ProductCard({ product, onAdd }) {
+  const service = isService(product);
   const stockVal = product.quantityAvailable ?? product.stock ?? 0;
-  const isLowStock = stockVal <= (product.minStock || 5);
-  const isOut = stockVal <= 0;
+  const isLowStock = !service && stockVal <= (product.minStock || 5);
+  const isOut = !service && stockVal <= 0;
   const priceVal = product.salePrice || product.price || 0;
 
   return (
@@ -24,12 +26,16 @@ function ProductCard({ product, onAdd }) {
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
-            <Package className="w-8 h-8 text-gray-300 dark:text-gray-600" />
+            {service
+              ? <Sparkles className="w-8 h-8 text-gray-300 dark:text-gray-600" />
+              : <Package className="w-8 h-8 text-gray-300 dark:text-gray-600" />}
           </div>
         )}
 
         <div className="absolute top-1.5 right-1.5">
-          {isOut ? (
+          {service ? (
+            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-lg bg-brand text-white shadow-sm">Servicio</span>
+          ) : isOut ? (
             <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-lg bg-rose-500 text-white shadow-sm">Agotado</span>
           ) : isLowStock ? (
             <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-lg bg-amber-500 text-white shadow-sm">Stock: {stockVal}</span>
@@ -52,12 +58,16 @@ function ProductCard({ product, onAdd }) {
       <div className="flex-1 flex flex-col justify-between">
         <div>
           <h4 className="text-sm font-bold text-ink line-clamp-2 leading-snug">{product.name}</h4>
-          <span className="text-[11px] font-mono text-ink-muted">{product.internalCode}</span>
+          <span className="text-[11px] font-mono text-ink-muted">
+            {service
+              ? `${product.code}${product.durationMinutes ? ` · ${product.durationMinutes} min` : ''}`
+              : product.internalCode}
+          </span>
         </div>
 
         <div className="mt-2 pt-2 border-t border-[#F5F5F3] dark:border-line flex items-center justify-between">
           <span className="text-lg font-extrabold text-ink font-mono tracking-tight">${priceVal.toLocaleString('es-CO')}</span>
-          <div className="w-8 h-8 rounded-xl bg-page group-hover:bg-solid group-hover:text-white flex items-center justify-center transition-colors shrink-0">
+          <div className="w-8 h-8 rounded-xl bg-page group-hover:bg-solid group-hover:text-solid-ink flex items-center justify-center transition-colors shrink-0">
             <Plus className="w-3.5 h-3.5" />
           </div>
         </div>
@@ -100,7 +110,7 @@ export default function ProductCatalog({
           type="button"
           onClick={onOpenScanner}
           aria-label="Escanear con la cámara"
-          className="lg:hidden h-12 w-12 shrink-0 rounded-2xl bg-solid text-white flex items-center justify-center active:scale-95 transition-all cursor-pointer"
+          className="lg:hidden h-12 w-12 shrink-0 rounded-2xl bg-solid text-solid-ink flex items-center justify-center active:scale-95 transition-all cursor-pointer"
         >
           <ScanLine className="w-5 h-5" />
         </button>
@@ -114,7 +124,7 @@ export default function ProductCatalog({
             onClick={() => onSelectCategory(cat)}
             className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all duration-150 border cursor-pointer ${
               selectedCategory === cat
-                ? 'bg-solid text-white border-transparent shadow-sm'
+                ? 'bg-solid text-solid-ink border-transparent shadow-sm'
                 : 'bg-card text-ink-soft border-line hover:border-line-strong hover:text-ink'
             }`}
           >
@@ -129,12 +139,12 @@ export default function ProductCatalog({
         ) : products.length === 0 ? (
           <div className="py-12 text-center space-y-3 bg-gray-50/50 dark:bg-white/5 rounded-3xl border border-dashed border-line">
             <Package className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto stroke-1" />
-            <p className="text-xs font-bold text-ink">No hay productos en el catálogo</p>
-            <p className="text-[11px] text-ink-muted">Ve al módulo de productos para registrar artículos</p>
+            <p className="text-xs font-bold text-ink">No hay productos ni servicios en el catálogo</p>
+            <p className="text-[11px] text-ink-muted">Ve al módulo de productos o de servicios para registrar lo que vendes</p>
           </div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
-            {products.map(product => <ProductCard key={product.id} product={product} onAdd={onAdd} />)}
+            {products.map(product => <ProductCard key={cartKey(product)} product={product} onAdd={onAdd} />)}
           </div>
         )}
       </div>

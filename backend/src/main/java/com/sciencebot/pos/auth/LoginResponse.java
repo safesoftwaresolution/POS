@@ -20,5 +20,16 @@ public record LoginResponse(
         Long storeId,
 
         @Schema(description = "Tiempo de expiración en segundos del access token", example = "900")
-        long expiresIn
-) {}
+        long expiresIn,
+
+        @Schema(description = "Nombre completo del usuario", example = "Carlos Martinez")
+        String fullName,
+
+        @Schema(description = "URL de la foto de perfil (nula si no tiene)")
+        String avatarUrl
+) {
+    public LoginResponse(String token, String refreshToken, String username, String role, Long storeId,
+                         long expiresIn) {
+        this(token, refreshToken, username, role, storeId, expiresIn, null, null);
+    }
+}

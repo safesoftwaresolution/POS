@@ -13,6 +13,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -67,7 +68,9 @@ public class InventoryController {
                 command.productId(),
                 command.movementType(),
                 command.quantity(),
-                command.reason()
+                command.reason(),
+                command.expirationDate(),
+                command.lotCode()
         );
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
@@ -78,6 +81,7 @@ public class InventoryController {
             summary = "Buscar movimientos de inventario",
             description = """
                     Lista el historial de movimientos con filtros opcionales. Soporta paginación.
+                    Los resultados vienen del más reciente al más antiguo.
                     - `productId` — filtra movimientos de un producto específico
                     - `movementType` — filtra por tipo: `ENTRY`, `EXIT`, `ADJUSTMENT`, `RETURN`
                     - `dateFrom` / `dateTo` — rango de fechas en formato ISO 8601
@@ -103,7 +107,8 @@ public class InventoryController {
             @Parameter(description = "Tamaño de página", example = "20")
             @RequestParam(defaultValue = "20") int size
     ) {
-        Pageable pageable = PageRequest.of(page, size);
+        // Kardex: lo mas reciente primero. El id desempata movimientos con la misma marca de tiempo.
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt", "id"));
         Page<InventoryMovementDto> movements = inventoryFacade.searchMovements(productId, movementType, dateFrom, dateTo, pageable);
         return ResponseEntity.ok(movements);
     }

@@ -1,16 +1,17 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import { FileText, RefreshCw, ShieldCheck, ShieldAlert, Hash, CheckCircle2, AlertTriangle, Building2 } from 'lucide-react';
 import {
   listInvoicesApi,
   getBillingActivationStatusApi,
   listNumberingRangesApi
 } from '../services/billingApi';
-import { useAuth } from '../context/AuthContext';
+import useAuth from '../hooks/useAuth';
 import { INVOICE_STATUSES, ACTIVATION_LABELS } from '../components/invoicing/constants';
 import { TabButton, KpiCard } from '../components/invoicing/parts';
 
 import InvoicesTab from '../components/invoicing/InvoicesTab';
 import ActivationTab from '../components/invoicing/ActivationTab';
+import useLoad from '../hooks/useLoad';
 
 export default function InvoicingBento() {
   const { user } = useAuth();
@@ -19,41 +20,36 @@ export default function InvoicingBento() {
   const [tab, setTab] = useState('invoices');
   const [refreshKey, setRefreshKey] = useState(0);
 
-  const [totals, setTotals] = useState({ VALIDATED: null, PENDING: null, ERROR: null, REJECTED: null });
-  const [activation, setActivation] = useState(null);
-  const [ranges, setRanges] = useState([]);
-  const [rangesLoading, setRangesLoading] = useState(false);
+  // Cuántas facturas hay en cada estado; si un estado no se puede consultar queda en null (se muestra "—").
+  const { data: totals, reload: reloadTotals } = useLoad(
+    async () => {
+      const entries = await Promise.all(
+        INVOICE_STATUSES.map(async (s) => {
+          try {
+            const page = await listInvoicesApi(s, 0, 1);
+            return [s, page.totalElements ?? (page.content || []).length];
+          } catch {
+            return [s, null];
+          }
+        })
+      );
+      return Object.fromEntries(entries);
+    },
+    [refreshKey],
+    { initial: { VALIDATED: null, PENDING: null, ERROR: null, REJECTED: null }, autoRefresh: true },
+  );
 
-  const loadTotals = useCallback(async () => {
-    const entries = await Promise.all(
-      INVOICE_STATUSES.map(async (s) => {
-        try {
-          const page = await listInvoicesApi(s, 0, 1);
-          return [s, page.totalElements ?? (page.content || []).length];
-        } catch {
-          return [s, null];
-        }
-      })
-    );
-    setTotals(Object.fromEntries(entries));
-  }, []);
-
-  const loadBillingState = useCallback(async () => {
-    if (!canSeeActivation) return;
-    setRangesLoading(true);
-    try {
-      const [act, rgs] = await Promise.all([
-        getBillingActivationStatusApi().catch(() => null),
-        listNumberingRangesApi().catch(() => [])
-      ]);
-      setActivation(act);
-      setRanges(Array.isArray(rgs) ? rgs : []);
-    } finally {
-      setRangesLoading(false);
-    }
-  }, [canSeeActivation]);
-
-  useEffect(() => { loadTotals(); loadBillingState(); }, [loadTotals, loadBillingState, refreshKey]);
+  const { data: billing, loading: rangesLoading, reload: reloadBilling } = useLoad(
+    async () => {
+      const act = await getBillingActivationStatusApi().catch(() => null);
+      // Sin habilitación ACTIVE el backend responde 409 a los rangos (no hay credenciales del local): ni se piden.
+      const rgs = act?.status === 'ACTIVE' ? await listNumberingRangesApi().catch(() => []) : [];
+      return { activation: act, ranges: Array.isArray(rgs) ? rgs : [] };
+    },
+    [refreshKey],
+    { initial: { activation: null, ranges: [] }, autoRefresh: true, enabled: canSeeActivation },
+  );
+  const { activation, ranges } = billing;
 
   const activeRangeId = activation?.environment === 'PRODUCTION' ? activation?.productionNumberingRangeId : activation?.sandboxNumberingRangeId;
   const activeRange = ranges.find(r => r.id === activeRangeId);
@@ -72,7 +68,7 @@ export default function InvoicingBento() {
             <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-brand text-white">Factus</span>
           </div>
           <p className="text-xs text-ink-soft font-medium mt-1">
-            Seguimiento de facturas, CUFE y numeración oficial de tu local ante la DIAN
+            Seguimiento de facturas, CUFE y numeración oficial de tu local ante la DIAN. Factus es el proveedor tecnológico autorizado que las transmite.
           </p>
         </div>
 
@@ -124,14 +120,14 @@ export default function InvoicingBento() {
       </div>
 
       {canSeeActivation && (
-        <div className="border-b border-line flex items-center gap-6 overflow-x-auto">
+        <div className="border-b border-line flex flex-wrap items-center gap-x-4 sm:gap-x-6">
           <TabButton active={tab === 'invoices'} onClick={() => setTab('invoices')} icon={FileText} label="Facturas emitidas" count={totalsLoaded ? totalInvoices : null} />
           <TabButton active={tab === 'activation'} onClick={() => setTab('activation')} icon={Building2} label="Habilitación y rangos" count={ranges.length || null} />
         </div>
       )}
 
       {tab === 'invoices' || !canSeeActivation ? (
-        <InvoicesTab role={role} refreshKey={refreshKey} onChanged={loadTotals} />
+        <InvoicesTab role={role} refreshKey={refreshKey} onChanged={() => reloadTotals()} />
       ) : (
         <ActivationTab
           role={role}
@@ -139,7 +135,7 @@ export default function InvoicingBento() {
           ranges={ranges}
           rangesLoading={rangesLoading}
           activeRangeId={activeRangeId}
-          onReload={loadBillingState}
+          onReload={() => reloadBilling()}
         />
       )}
     </div>

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-6 -6 108 108" width="108" height="108" role="img" aria-label="POS Bento - isotipo (color)">
+  <title>POS Bento - isotipo (color)</title>
+  <rect id="tile" width="96" height="96" rx="32" fill="#0A0A0A"/>
+  <rect x="21" y="21" width="24" height="24" rx="6" fill="#FF5520"/>
+  <rect x="51" y="21" width="24" height="24" rx="6" fill="#DADADA"/>
+  <rect x="21" y="51" width="24" height="24" rx="6" fill="#DADADA"/>
+  <rect x="51" y="51" width="24" height="24" rx="6" fill="#532011"/>
+  <circle id="dot-ring" cx="91.5" cy="4.5" r="10.5" fill="#FFFFFF"/>
+  <circle id="dot" cx="91.5" cy="4.5" r="7.5" fill="#FF5520"/>
+</svg>

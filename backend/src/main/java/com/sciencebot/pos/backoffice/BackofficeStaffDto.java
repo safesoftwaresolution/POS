@@ -13,5 +13,7 @@ public record BackofficeStaffDto(
     @Schema(description = "Correo electronico", example = "ana.torres@platform.internal")
     String email,
     @Schema(description = "Si la cuenta puede iniciar sesion", example = "true")
-    boolean active
+    boolean active,
+    @Schema(description = "false = invitacion pendiente: aun no acepto el enlace del correo", example = "true")
+    boolean emailVerified
 ) {}

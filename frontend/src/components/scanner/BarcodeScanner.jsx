@@ -37,11 +37,7 @@ function vibrate(pattern) {
  * Usa `BarcodeDetector` nativo cuando existe (Chrome/Android) y, si no (iOS Safari,
  * Firefox), carga ZXing bajo demanda para no engordar el bundle principal.
  */
-<<<<<<< HEAD
-export default function BarcodeScanner({ onDetect, onClose }) {
-=======
 export default function BarcodeScanner({ onDetect, onClose, inline = false }) {
->>>>>>> 18c762f07bb6313943960200ee1871b39bb39525
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const stopRef = useRef(() => {});
@@ -154,19 +150,11 @@ export default function BarcodeScanner({ onDetect, onClose, inline = false }) {
   // Evita que la página de atrás haga scroll mientras el escáner cubre la pantalla.
   useEffect(() => {
     const prev = document.body.style.overflow;
-<<<<<<< HEAD
-    document.body.style.overflow = 'hidden';
-    const onKey = (e) => e.key === 'Escape' && onClose?.();
-    document.addEventListener('keydown', onKey);
-    return () => { document.body.style.overflow = prev; document.removeEventListener('keydown', onKey); };
-  }, [onClose]);
-=======
     if (!inline) document.body.style.overflow = 'hidden';
     const onKey = (e) => e.key === 'Escape' && onClose?.();
     document.addEventListener('keydown', onKey);
     return () => { document.body.style.overflow = prev; document.removeEventListener('keydown', onKey); };
   }, [onClose, inline]);
->>>>>>> 18c762f07bb6313943960200ee1871b39bb39525
 
   const toggleTorch = async () => {
     const track = streamRef.current?.getVideoTracks()[0];
@@ -176,8 +164,6 @@ export default function BarcodeScanner({ onDetect, onClose, inline = false }) {
     } catch { setTorchSupported(false); }
   };
 
-<<<<<<< HEAD
-=======
   // Modo incrustado: franja fija arriba de la pantalla (el catálogo sigue visible y usable debajo).
   if (inline) {
     return (
@@ -232,7 +218,6 @@ export default function BarcodeScanner({ onDetect, onClose, inline = false }) {
     );
   }
 
->>>>>>> 18c762f07bb6313943960200ee1871b39bb39525
   return (
     <div className="fixed inset-0 z-110 bg-black text-white flex flex-col" role="dialog" aria-modal="true" aria-label="Escáner de códigos de barras">
       <video ref={videoRef} className="absolute inset-0 w-full h-full object-cover" playsInline muted />

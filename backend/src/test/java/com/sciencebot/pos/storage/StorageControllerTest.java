@@ -41,16 +41,16 @@ class StorageControllerTest {
     void uploadFile_PrefixesFolderWithCallerStore() {
         MockMultipartFile file = new MockMultipartFile("file", "test.jpg", "image/jpeg", "content".getBytes());
         StorageUploadResult expectedResult = new StorageUploadResult(
-                "tienda-7/imagenes-productos/uuid.jpg",
-                "https://pub-test.r2.dev/tienda-7/imagenes-productos/uuid.jpg",
+                "imagenes-productos/tienda-7/uuid.jpg",
+                "https://pub-test.r2.dev/imagenes-productos/tienda-7/uuid.jpg",
                 "test.jpg", 7L, "image/jpeg");
-        when(storageFacade.uploadFile(file, "tienda-7/imagenes-productos")).thenReturn(expectedResult);
+        when(storageFacade.uploadFile(file, "imagenes-productos/tienda-7")).thenReturn(expectedResult);
 
         ResponseEntity<StorageUploadResult> response = storageController.uploadFile(file, "imagenes-productos");
 
         assertEquals(200, response.getStatusCode().value());
         assertEquals(expectedResult, response.getBody());
-        verify(storageFacade).uploadFile(file, "tienda-7/imagenes-productos");
+        verify(storageFacade).uploadFile(file, "imagenes-productos/tienda-7");
     }
 
     @Test
@@ -74,16 +74,16 @@ class StorageControllerTest {
     @Test
     void deleteFile_OwnKey_CallsFacade() {
         ResponseEntity<Map<String, String>> response =
-                storageController.deleteFile("tienda-7/imagenes-productos/uuid.jpg");
+                storageController.deleteFile("imagenes-productos/tienda-7/uuid.jpg");
 
         assertEquals(200, response.getStatusCode().value());
         assertEquals("Archivo eliminado correctamente", response.getBody().get("message"));
-        verify(storageFacade).deleteFile("tienda-7/imagenes-productos/uuid.jpg");
+        verify(storageFacade).deleteFile("imagenes-productos/tienda-7/uuid.jpg");
     }
 
     @Test
     void deleteFile_OtherStoreOrTraversalKey_IsDenied() {
-        assertThrows(AccessDeniedException.class, () -> storageController.deleteFile("tienda-8/imagenes-productos/uuid.jpg"));
+        assertThrows(AccessDeniedException.class, () -> storageController.deleteFile("imagenes-productos/tienda-8/uuid.jpg"));
         assertThrows(AccessDeniedException.class, () -> storageController.deleteFile("documentos/rut.pdf"));
         assertThrows(AccessDeniedException.class, () -> storageController.deleteFile("tienda-7/../tienda-8/uuid.jpg"));
         verifyNoInteractions(storageFacade);

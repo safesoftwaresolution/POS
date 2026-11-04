@@ -1,4 +1,4 @@
-import { fetchApi } from './http';
+import { fetchApi, downloadFileApi } from './http';
 
 function dateParams(dateFrom, dateTo) {
   const params = new URLSearchParams();
@@ -11,6 +11,11 @@ export async function getSalesReportApi(dateFrom, dateTo) {
   return await fetchApi(`/reports/sales?${dateParams(dateFrom, dateTo)}`);
 }
 
+/** Ventas por día de la semana (1 = lunes) y hora: `[{ dayOfWeek, hourOfDay, transactionCount, totalSold }]`. */
+export async function getSalesHeatmapApi(dateFrom, dateTo) {
+  return await fetchApi(`/reports/sales-heatmap?${dateParams(dateFrom, dateTo)}`);
+}
+
 export async function getTopProductsReportApi(dateFrom, dateTo, limit = 10) {
   const params = dateParams(dateFrom, dateTo);
   return await fetchApi(`/reports/top-products?${params}&limit=${limit}`);
@@ -18,6 +23,11 @@ export async function getTopProductsReportApi(dateFrom, dateTo, limit = 10) {
 
 export async function getStockReportApi(belowMinStock = false) {
   return await fetchApi(`/reports/stock?belowMinStock=${belowMinStock}`);
+}
+
+/** Productos vencidos y los que vencen dentro de `days` días (activos y con existencias). */
+export async function getExpiringReportApi(days = 30) {
+  return await fetchApi(`/reports/expiring?days=${days}`);
 }
 
 export async function getProfitabilityReportApi(dateFrom, dateTo) {
@@ -30,4 +40,9 @@ export async function getPurchasesReportApi(dateFrom, dateTo) {
 
 export async function getCashClosingReportApi(dateFrom, dateTo) {
   return await fetchApi(`/reports/cash-closing?${dateParams(dateFrom, dateTo)}`);
+}
+
+/** Informe de vencimientos como PDF (Blob), con la misma ventana en días que `getExpiringReportApi`. */
+export async function downloadExpiringReportPdfApi(days = 30) {
+  return await downloadFileApi(`/reports/expiring/pdf?days=${days}`);
 }

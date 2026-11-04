@@ -39,6 +39,11 @@ public class FactusSaleMapper {
                     : request.observation());
         }
 
+        // Venta a crédito (fiado): Factus exige la fecha de vencimiento del pago
+        if ("2".equals(request.paymentForm()) && request.paymentDueDate() != null) {
+            payload.put("payment_due_date", request.paymentDueDate().toString());
+        }
+
         // 2. Medios de pago (payment_details)
         payload.put("payment_details", mapPaymentDetails(request));
         payload.put("cash_rounding_amount", "0.00");

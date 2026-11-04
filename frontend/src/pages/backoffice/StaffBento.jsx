@@ -1,24 +1,30 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { ShieldCheck, Plus, Edit3, KeyRound, Ban, CheckCircle2, X, AlertCircle, UserCog } from 'lucide-react';
+import React, { useState } from 'react';
+import { ShieldCheck, Plus, Edit3, KeyRound, Ban, CheckCircle2, X, AlertCircle, UserCog, Send } from 'lucide-react';
 import {
   getBackofficeStaffApi,
   createBackofficeStaffApi,
+  resendBackofficeStaffInvitationApi,
   updateBackofficeStaffApi,
   changeBackofficeStaffStatusApi,
   changeBackofficeStaffPasswordApi,
   deleteBackofficeStaffApi
 } from '../../services/backoffice/staffApi';
-import { useAuth } from '../../context/AuthContext';
-import { useModal } from '../../context/ModalContext';
+import useAuth from '../../hooks/useAuth';
+import useModal from '../../hooks/useModal';
+import useLoad from '../../hooks/useLoad';
 
 const EMPTY_STAFF_FORM = { fullName: '', username: '', email: '', password: '' };
 
 export default function StaffBento() {
   const { user } = useAuth();
   const { confirm } = useModal();
-  const [staff, setStaff] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { data: staff, loading, reload } = useLoad(
+    async () => (await getBackofficeStaffApi()).content || [],
+    [],
+    { initial: [], autoRefresh: true },
+  );
   const [errorMsg, setErrorMsg] = useState('');
+  const [infoMsg, setInfoMsg] = useState('');
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createForm, setCreateForm] = useState(EMPTY_STAFF_FORM);
@@ -32,25 +38,11 @@ export default function StaffBento() {
   const [newPassword, setNewPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
 
-  const loadStaff = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await getBackofficeStaffApi();
-      setStaff(data.content || []);
-    } catch (e) {
-      console.warn('Error cargando operadores del backoffice:', e);
-      setStaff([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { loadStaff(); }, [loadStaff]);
-
   const isSelf = (member) => member.username?.toLowerCase() === user?.username?.toLowerCase();
 
   // ---------- Create ----------
   const openCreate = () => {
+    setInfoMsg('');
     setCreateForm(EMPTY_STAFF_FORM);
     setCreateError('');
     setShowCreateModal(true);
@@ -62,7 +54,8 @@ export default function StaffBento() {
     try {
       await createBackofficeStaffApi(createForm);
       setShowCreateModal(false);
-      await loadStaff();
+      setInfoMsg(`Invitación enviada a ${createForm.email}. La cuenta se activa cuando la acepte (el enlace vence en 24 horas).`);
+      reload();
     } catch (err) {
       setCreateError(err.message || 'Error al crear el operador.');
     }
@@ -80,7 +73,7 @@ export default function StaffBento() {
     try {
       await updateBackofficeStaffApi(editForm.id, { fullName: editForm.fullName, email: editForm.email });
       setEditForm(null);
-      await loadStaff();
+      reload();
     } catch (err) {
       setEditError(err.message || 'Error al actualizar el operador.');
     }
@@ -91,9 +84,20 @@ export default function StaffBento() {
     setErrorMsg('');
     try {
       await changeBackofficeStaffStatusApi(member.id, !member.active);
-      await loadStaff();
+      reload();
     } catch (err) {
       setErrorMsg(err.message || 'Error al cambiar el estado del operador.');
+    }
+  };
+
+  const handleResendInvitation = async (member) => {
+    setErrorMsg('');
+    setInfoMsg('');
+    try {
+      await resendBackofficeStaffInvitationApi(member.id);
+      setInfoMsg(`Invitación reenviada a ${member.email}.`);
+    } catch (err) {
+      setErrorMsg(err.message || 'No se pudo reenviar la invitación.');
     }
   };
 
@@ -103,7 +107,7 @@ export default function StaffBento() {
     setErrorMsg('');
     try {
       await deleteBackofficeStaffApi(member.id);
-      await loadStaff();
+      reload();
     } catch (err) {
       setErrorMsg(err.message || 'Error al desactivar el operador.');
     }
@@ -140,11 +144,18 @@ export default function StaffBento() {
 
         <button
           onClick={openCreate}
-          className="px-4 py-2.5 bg-solid hover:bg-solid-hover text-white rounded-2xl text-xs font-bold flex items-center gap-2 shadow-md shadow-[#0A0A0A]/10 cursor-pointer"
+          className="px-4 py-2.5 bg-solid hover:bg-solid-hover text-solid-ink rounded-2xl text-xs font-bold flex items-center gap-2 shadow-md shadow-[#0A0A0A]/10 cursor-pointer"
         >
           <Plus className="w-4 h-4" /> Nuevo Operador
         </button>
       </div>
+
+      {infoMsg && (
+        <div className="p-3 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/40 rounded-xl text-xs font-bold flex items-center gap-2">
+          <CheckCircle2 className="w-4 h-4 shrink-0" />
+          <span>{infoMsg}</span>
+        </div>
+      )}
 
       {errorMsg && (
         <div className="p-3 bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800/40 rounded-xl text-xs font-bold flex items-center gap-2">
@@ -167,8 +178,8 @@ export default function StaffBento() {
             </div>
           </div>
         ) : (
-          <div className="overflow-x-auto -mx-2">
-            <table className="w-full text-xs min-w-[680px]">
+          <div className="md:overflow-x-auto md:-mx-2">
+            <table className="table-cards w-full text-xs md:min-w-[680px]">
               <thead>
                 <tr className="text-left text-[10px] font-extrabold text-ink-muted uppercase">
                   <th className="px-2 py-2">Operador</th>
@@ -183,26 +194,37 @@ export default function StaffBento() {
                   const self = isSelf(member);
                   return (
                     <tr key={member.id} className="border-t border-line hover:bg-gray-50/60 dark:hover:bg-white/5">
-                      <td className="px-2 py-3">
+                      <td data-label="" className="px-2 py-3">
                         <p className="font-extrabold text-ink flex items-center gap-1.5">
                           <ShieldCheck className="w-3.5 h-3.5 text-brand dark:text-brand" />
                           {member.fullName}
                           {self && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-400 font-extrabold">Tú</span>}
                         </p>
                       </td>
-                      <td className="px-2 py-3 text-ink-soft font-mono">{member.username}</td>
-                      <td className="px-2 py-3 text-ink-soft">{member.email}</td>
-                      <td className="px-2 py-3">
+                      <td data-label="Usuario" className="px-2 py-3 text-ink-soft font-mono">{member.username}</td>
+                      <td data-label="Correo" className="px-2 py-3 text-ink-soft">{member.email}</td>
+                      <td data-label="Estado" className="px-2 py-3">
                         <span className={`text-[10px] px-2 py-0.5 rounded-full font-extrabold ${
-                          member.active
+                          !member.emailVerified
+                            ? 'bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400'
+                            : member.active
                             ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
                             : 'bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400'
                         }`}>
-                          {member.active ? 'Activo' : 'Inactivo'}
+                          {!member.emailVerified ? 'Invitación pendiente' : (member.active ? 'Activo' : 'Inactivo')}
                         </span>
                       </td>
-                      <td className="px-2 py-3">
+                      <td data-label="Acciones" className="px-2 py-3">
                         <div className="flex items-center justify-end gap-1">
+                          {!member.emailVerified && (
+                            <button
+                              onClick={() => handleResendInvitation(member)}
+                              title="Reenviar invitación"
+                              className="p-1.5 text-ink-muted hover:text-brand rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer"
+                            >
+                              <Send className="w-4 h-4" />
+                            </button>
+                          )}
                           <button
                             onClick={() => openPasswordReset(member)}
                             title="Restablecer contraseña"
@@ -314,6 +336,10 @@ export default function StaffBento() {
               </div>
             </div>
 
+            <p className="text-[11px] text-ink-soft font-medium">
+              Le enviaremos una invitación por correo. La cuenta queda activa cuando la persona la acepte; el enlace vence en 24 horas.
+            </p>
+
             <div className="flex gap-2 pt-2">
               <button
                 type="button"
@@ -324,9 +350,9 @@ export default function StaffBento() {
               </button>
               <button
                 type="submit"
-                className="w-1/2 py-3 bg-solid hover:bg-solid-hover text-white rounded-2xl text-xs font-extrabold cursor-pointer shadow-md shadow-[#0A0A0A]/10"
+                className="w-1/2 py-3 bg-solid hover:bg-solid-hover text-solid-ink rounded-2xl text-xs font-extrabold cursor-pointer shadow-md shadow-[#0A0A0A]/10"
               >
-                Crear Operador
+                Enviar invitación
               </button>
             </div>
           </form>
@@ -388,7 +414,7 @@ export default function StaffBento() {
               </button>
               <button
                 type="submit"
-                className="w-1/2 py-3 bg-solid hover:bg-solid-hover text-white rounded-2xl text-xs font-extrabold cursor-pointer shadow-md shadow-[#0A0A0A]/10"
+                className="w-1/2 py-3 bg-solid hover:bg-solid-hover text-solid-ink rounded-2xl text-xs font-extrabold cursor-pointer shadow-md shadow-[#0A0A0A]/10"
               >
                 Guardar Cambios
               </button>
@@ -460,7 +486,7 @@ export default function StaffBento() {
               </button>
               <button
                 type="submit"
-                className="w-1/2 py-3 bg-solid hover:bg-solid-hover text-white rounded-2xl text-xs font-extrabold cursor-pointer shadow-md shadow-[#0A0A0A]/10"
+                className="w-1/2 py-3 bg-solid hover:bg-solid-hover text-solid-ink rounded-2xl text-xs font-extrabold cursor-pointer shadow-md shadow-[#0A0A0A]/10"
               >
                 Restablecer
               </button>

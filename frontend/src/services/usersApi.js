@@ -1,4 +1,4 @@
-import { fetchApi } from './http';
+import { fetchApi, uploadFileApi } from './http';
 
 // Gestión de usuarios del local. Todos los endpoints exigen rol ADMINISTRATOR
 // (cambiar la propia contraseña es la excepción: lo puede hacer cualquier usuario).
@@ -48,4 +48,15 @@ export async function changeUserPasswordApi(id, newPassword, currentPassword) {
 
 export async function deleteUserApi(id) {
   return await fetchApi(`/users/${id}`, { method: 'DELETE' });
+}
+
+// Foto de perfil propia (cualquier rol). El backend acepta PNG/JPG de hasta 512 KB y 512x512 px.
+export async function uploadMyAvatarApi(file) {
+  const formData = new FormData();
+  formData.append('file', file);
+  return await uploadFileApi('/users/me/avatar', formData);
+}
+
+export async function removeMyAvatarApi() {
+  return await fetchApi('/users/me/avatar', { method: 'DELETE' });
 }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import { Puzzle, Plus, Edit3, Ban, AlertCircle, X, Lock, ChevronRight } from 'lucide-react';
 import {
   getParameterTopicsApi,
@@ -8,18 +8,27 @@ import {
   updateParameterValueApi,
   deactivateParameterValueApi
 } from '../../services/parametersApi';
-import { useModal } from '../../context/ModalContext';
+import useModal from '../../hooks/useModal';
+import useLoad from '../../hooks/useLoad';
+import asList from '../../utils/asList';
 
 const EMPTY_TOPIC_FORM = { code: '', name: '', description: '' };
 const EMPTY_VALUE_FORM = { id: null, code: '', label: '', extraValue: '', sortOrder: 0 };
 
 export default function ParametersBento() {
   const { confirm, notify } = useModal();
-  const [topics, setTopics] = useState([]);
-  const [loadingTopics, setLoadingTopics] = useState(true);
   const [selectedTopic, setSelectedTopic] = useState(null);
-  const [values, setValues] = useState([]);
-  const [loadingValues, setLoadingValues] = useState(false);
+  const { data: topics, loading: loadingTopics, reload: reloadTopics } = useLoad(
+    () => asList(getParameterTopicsApi()),
+    [],
+    { initial: [], autoRefresh: true },
+  );
+  // Los valores se piden recién cuando se elige un tema, y se vuelven a pedir al cambiar de tema.
+  const { data: values, loading: loadingValues, reload: reloadValues } = useLoad(
+    () => asList(getParameterValuesApi(selectedTopic.code)),
+    [selectedTopic?.code],
+    { initial: [], autoRefresh: true, enabled: Boolean(selectedTopic) },
+  );
 
   const [showTopicForm, setShowTopicForm] = useState(false);
   const [topicForm, setTopicForm] = useState(EMPTY_TOPIC_FORM);
@@ -29,36 +38,7 @@ export default function ParametersBento() {
   const [valueForm, setValueForm] = useState(EMPTY_VALUE_FORM);
   const [valueError, setValueError] = useState('');
 
-  const loadTopics = useCallback(async () => {
-    setLoadingTopics(true);
-    try {
-      setTopics(await getParameterTopicsApi());
-    } catch (e) {
-      console.warn('Error cargando temas de parámetros:', e);
-      setTopics([]);
-    } finally {
-      setLoadingTopics(false);
-    }
-  }, []);
-
-  useEffect(() => { loadTopics(); }, [loadTopics]);
-
-  const loadValues = useCallback(async (topicCode) => {
-    setLoadingValues(true);
-    try {
-      setValues(await getParameterValuesApi(topicCode));
-    } catch (e) {
-      console.warn('Error cargando valores del tema:', e);
-      setValues([]);
-    } finally {
-      setLoadingValues(false);
-    }
-  }, []);
-
-  const selectTopic = (topic) => {
-    setSelectedTopic(topic);
-    loadValues(topic.code);
-  };
+  const selectTopic = (topic) => setSelectedTopic(topic);
 
   const handleCreateTopic = async (e) => {
     e.preventDefault();
@@ -67,7 +47,7 @@ export default function ParametersBento() {
       await createParameterTopicApi(topicForm.code, topicForm.name, topicForm.description);
       setShowTopicForm(false);
       setTopicForm(EMPTY_TOPIC_FORM);
-      await loadTopics();
+      reloadTopics();
     } catch (err) {
       setTopicError(err.message || 'Error al crear el tema.');
     }
@@ -107,7 +87,7 @@ export default function ParametersBento() {
       }
       setShowValueForm(false);
       setValueForm(EMPTY_VALUE_FORM);
-      await loadValues(selectedTopic.code);
+      reloadValues();
     } catch (err) {
       setValueError(err.message || 'Error al guardar el valor.');
     }
@@ -119,14 +99,14 @@ export default function ParametersBento() {
       if (!ok) return;
       try {
         await deactivateParameterValueApi(val.id);
-        await loadValues(selectedTopic.code);
+        reloadValues();
       } catch (err) {
         notify('Error desactivando valor: ' + err.message);
       }
     } else {
       try {
         await updateParameterValueApi(val.id, { label: val.label, extraValue: val.extraValue, sortOrder: val.sortOrder, active: true });
-        await loadValues(selectedTopic.code);
+        reloadValues();
       } catch (err) {
         notify('Error reactivando valor: ' + err.message);
       }
@@ -145,7 +125,7 @@ export default function ParametersBento() {
 
         <button
           onClick={() => { setTopicForm(EMPTY_TOPIC_FORM); setTopicError(''); setShowTopicForm(true); }}
-          className="px-4 py-2.5 bg-solid hover:bg-solid-hover text-white rounded-2xl text-xs font-bold flex items-center gap-2 shadow-md shadow-[#0A0A0A]/10 cursor-pointer"
+          className="px-4 py-2.5 bg-solid hover:bg-solid-hover text-solid-ink rounded-2xl text-xs font-bold flex items-center gap-2 shadow-md shadow-[#0A0A0A]/10 cursor-pointer"
         >
           <Plus className="w-4 h-4" /> Nuevo Tema
         </button>
@@ -167,17 +147,17 @@ export default function ParametersBento() {
                   onClick={() => selectTopic(t)}
                   className={`w-full text-left p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-2 ${
                     selectedTopic?.code === t.code
-                      ? 'bg-solid border-line-strong text-white'
+                      ? 'bg-solid border-line-strong text-solid-ink'
                       : 'bg-gray-50/60 dark:bg-white/5 border-line hover:border-line-strong'
                   }`}
                 >
                   <div className="min-w-0">
-                    <p className={`text-xs font-extrabold truncate ${selectedTopic?.code === t.code ? 'text-white' : 'text-ink'}`}>{t.name}</p>
-                    <p className={`text-[10px] font-mono truncate ${selectedTopic?.code === t.code ? 'text-white/70' : 'text-ink-muted'}`}>{t.code}</p>
+                    <p className={`text-xs font-extrabold truncate ${selectedTopic?.code === t.code ? 'text-solid-ink' : 'text-ink'}`}>{t.name}</p>
+                    <p className={`text-[10px] font-mono truncate ${selectedTopic?.code === t.code ? 'text-solid-ink/70' : 'text-ink-muted'}`}>{t.code}</p>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
-                    {t.isSystem && <Lock className={`w-3 h-3 ${selectedTopic?.code === t.code ? 'text-white/70' : 'text-ink-muted'}`} />}
-                    <ChevronRight className={`w-4 h-4 ${selectedTopic?.code === t.code ? 'text-white' : 'text-gray-300 dark:text-gray-600'}`} />
+                    {t.isSystem && <Lock className={`w-3 h-3 ${selectedTopic?.code === t.code ? 'text-solid-ink/70' : 'text-ink-muted'}`} />}
+                    <ChevronRight className={`w-4 h-4 ${selectedTopic?.code === t.code ? 'text-solid-ink' : 'text-gray-300 dark:text-gray-600'}`} />
                   </div>
                 </button>
               ))}
@@ -210,7 +190,7 @@ export default function ParametersBento() {
                 </div>
                 <button
                   onClick={openAddValue}
-                  className="px-3 py-1.5 bg-solid hover:bg-solid-hover text-white rounded-xl text-[11px] font-bold flex items-center gap-1 shrink-0 cursor-pointer shadow-sm shadow-[#0A0A0A]/10"
+                  className="px-3 py-1.5 bg-solid hover:bg-solid-hover text-solid-ink rounded-xl text-[11px] font-bold flex items-center gap-1 shrink-0 cursor-pointer shadow-sm shadow-[#0A0A0A]/10"
                 >
                   <Plus className="w-3.5 h-3.5" /> Nuevo Valor
                 </button>
@@ -221,8 +201,8 @@ export default function ParametersBento() {
               ) : values.length === 0 ? (
                 <div className="py-8 text-center text-xs font-bold text-ink-muted">Este tema aún no tiene valores</div>
               ) : (
-                <div className="overflow-x-auto -mx-2">
-                  <table className="w-full text-xs min-w-[480px]">
+                <div className="md:overflow-x-auto md:-mx-2">
+                  <table className="table-cards w-full text-xs md:min-w-[480px]">
                     <thead>
                       <tr className="text-left text-[10px] font-extrabold text-ink-muted uppercase">
                         <th className="px-2 py-2">Código</th>
@@ -235,10 +215,10 @@ export default function ParametersBento() {
                     <tbody>
                       {values.map(v => (
                         <tr key={v.id} className="border-t border-line">
-                          <td className="px-2 py-3 font-mono font-bold text-ink-soft">{v.code}</td>
-                          <td className="px-2 py-3 font-extrabold text-ink">{v.label}</td>
-                          <td className="px-2 py-3 text-ink-soft">{v.extraValue || '—'}</td>
-                          <td className="px-2 py-3 text-center">
+                          <td data-label="" className="px-2 py-3 font-mono font-bold text-ink-soft">{v.code}</td>
+                          <td data-label="Etiqueta" className="px-2 py-3 font-extrabold text-ink">{v.label}</td>
+                          <td data-label="Dato extra" className="px-2 py-3 text-ink-soft">{v.extraValue || '—'}</td>
+                          <td data-label="Estado" className="px-2 py-3 text-center">
                             <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
                               v.active
                                 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
@@ -247,7 +227,7 @@ export default function ParametersBento() {
                               {v.active ? 'Activo' : 'Inactivo'}
                             </span>
                           </td>
-                          <td className="px-2 py-3 text-right space-x-1">
+                          <td data-label="Acciones" className="px-2 py-3 text-right space-x-1">
                             <button
                               onClick={() => openEditValue(v)}
                               title="Editar valor"
@@ -330,7 +310,7 @@ export default function ParametersBento() {
               <button type="button" onClick={() => setShowTopicForm(false)} className="w-1/2 py-3 bg-gray-100 dark:bg-line hover:bg-gray-200 dark:hover:bg-line-strong text-gray-700 dark:text-gray-300 rounded-2xl text-xs font-bold cursor-pointer">
                 Cancelar
               </button>
-              <button type="submit" className="w-1/2 py-3 bg-solid hover:bg-solid-hover text-white rounded-2xl text-xs font-extrabold cursor-pointer shadow-md shadow-[#0A0A0A]/10">
+              <button type="submit" className="w-1/2 py-3 bg-solid hover:bg-solid-hover text-solid-ink rounded-2xl text-xs font-extrabold cursor-pointer shadow-md shadow-[#0A0A0A]/10">
                 Crear Tema
               </button>
             </div>
@@ -408,7 +388,7 @@ export default function ParametersBento() {
               <button type="button" onClick={() => setShowValueForm(false)} className="w-1/2 py-3 bg-gray-100 dark:bg-line hover:bg-gray-200 dark:hover:bg-line-strong text-gray-700 dark:text-gray-300 rounded-2xl text-xs font-bold cursor-pointer">
                 Cancelar
               </button>
-              <button type="submit" className="w-1/2 py-3 bg-solid hover:bg-solid-hover text-white rounded-2xl text-xs font-extrabold cursor-pointer shadow-md shadow-[#0A0A0A]/10">
+              <button type="submit" className="w-1/2 py-3 bg-solid hover:bg-solid-hover text-solid-ink rounded-2xl text-xs font-extrabold cursor-pointer shadow-md shadow-[#0A0A0A]/10">
                 {valueForm.id ? 'Guardar Cambios' : 'Agregar Valor'}
               </button>
             </div>

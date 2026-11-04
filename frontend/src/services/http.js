@@ -90,10 +90,32 @@ async function refreshAccessToken() {
 // Core HTTP Fetch Wrapper
 // Respuestas exitosas sin cuerpo (204, o 201 de /auth/register): response.json() fallaria con
 // "Unexpected end of JSON input" aunque la operacion haya funcionado.
+const PUBLIC_AUTH_ENDPOINT = /^\/auth\/(verify-email|reset-password|forgot-password)/;
+
 async function parseSuccessBody(response) {
   if (response.status === 204) return true;
   const text = await response.text();
-  return text ? JSON.parse(text) : true;
+  return text ? hoistPageMeta(JSON.parse(text)) : true;
+}
+
+// Spring Boot 4 serializa una Page como `{ content, page: { size, number, totalElements, totalPages } }`;
+// el frontend lee `totalElements`/`totalPages` en la raíz, así que se suben aquí, en un solo sitio.
+function hoistPageMeta(data) {
+  if (data && Array.isArray(data.content) && data.page && typeof data.page === 'object' && data.totalPages === undefined) {
+    const { size, number, totalElements, totalPages } = data.page;
+    return { ...data, size, number, totalElements, totalPages };
+  }
+  return data;
+}
+
+// Error de una respuesta no exitosa. Además del mensaje lleva `status` y el cuerpo en `data`, porque algunos
+// endpoints devuelven detalle útil (p. ej. la vista previa de una importación rechazada con 422).
+async function httpError(response) {
+  const errorData = await response.json().catch(() => ({}));
+  const error = new Error(errorData.message || `Error HTTP ${response.status}`);
+  error.status = response.status;
+  error.data = errorData;
+  return error;
 }
 
 export async function fetchApi(endpoint, options = {}, _retried = false) {
@@ -112,9 +134,10 @@ export async function fetchApi(endpoint, options = {}, _retried = false) {
   if (response.status === 401) {
     // Un 401 de /auth/login es 'credenciales incorrectas': se muestra el mensaje del backend, sin intentar
     // renovar ni cerrar una sesion que no existe. Tampoco se renueva el propio endpoint de refresh.
-    if (endpoint === '/auth/login') {
+    // Endpoints publicos: un 401 aqui es un rechazo del servidor (credenciales, token vencido), no una sesion que expiro.
+    if (endpoint === '/auth/login' || PUBLIC_AUTH_ENDPOINT.test(endpoint)) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || 'Usuario o contraseña incorrectos');
+      throw new Error(errorData.message || (endpoint === '/auth/login' ? 'Usuario o contraseña incorrectos' : 'El enlace no es válido o ya venció.'));
     }
     if (!_retried && endpoint !== '/auth/refresh') {
       const refreshed = await refreshAccessToken();
@@ -129,8 +152,7 @@ export async function fetchApi(endpoint, options = {}, _retried = false) {
   }
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.message || `Error HTTP ${response.status}`);
+    throw await httpError(response);
   }
 
   return await parseSuccessBody(response);
@@ -167,9 +189,36 @@ export async function uploadFileApi(endpoint, formData, options = {}, _retried =
   }
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.message || `Error HTTP ${response.status}`);
+    throw await httpError(response);
   }
 
   return await parseSuccessBody(response);
+}
+
+// Variante de fetchApi para descargar archivos (Excel, etc.): devuelve un Blob en vez de JSON.
+// Comparte el mismo manejo de token/refresh/errores que fetchApi.
+export async function downloadFileApi(endpoint, _retried = false) {
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    headers: authToken ? { Authorization: `Bearer ${authToken}` } : {},
+    credentials: 'include',
+  });
+
+  if (response.status === 401) {
+    if (!_retried) {
+      const refreshed = await refreshAccessToken();
+      if (refreshed) {
+        return downloadFileApi(endpoint, true);
+      }
+    }
+    setAuthToken('');
+    setRefreshToken('');
+    notifySessionExpired();
+    throw new Error('Sesión expirada o credenciales no válidas.');
+  }
+
+  if (!response.ok) {
+    throw await httpError(response);
+  }
+
+  return await response.blob();
 }

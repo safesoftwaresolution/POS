@@ -280,8 +280,9 @@ public class CreditNoteServiceImpl implements CreditNoteService {
                         String.format(Locale.US, "%.2f", (double) item.quantity()),
                         "0.00",
                         String.format(Locale.US, "%.2f", netUnitPrice),
-                        "94",
-                        "999",
+                        // Servicios: los códigos con que se facturó la línea (la nota debe coincidir con la factura).
+                        item.unitMeasureCode() != null && !item.unitMeasureCode().isBlank() ? item.unitMeasureCode().trim() : "94",
+                        item.unspscCode() != null && !item.unspscCode().isBlank() ? item.unspscCode().trim() : "999",
                         List.of(taxItem)
                 ));
             }

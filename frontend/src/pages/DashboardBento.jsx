@@ -1,406 +1,263 @@
-import React, { useState, useEffect } from 'react';
-import {
-  ArrowUpRight,
-  BarChart3,
-  Calendar,
-  Package,
-  ArrowUp,
-  RefreshCw,
-  Plus,
-  AlertTriangle,
-  Receipt,
-  FileText,
-  ChevronRight
-} from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import useAuth from '../hooks/useAuth';
 import { getProductsApi } from '../services/productsApi';
-import { getSalesApi } from '../services/salesApi';
+import { searchSalesApi } from '../services/salesApi';
+import { listInvoicesApi } from '../services/billingApi';
+import {
+  getExpiringReportApi, getProfitabilityReportApi, getPurchasesReportApi, getSalesHeatmapApi, getSalesReportApi,
+  getStockReportApi, getTopProductsReportApi,
+} from '../services/reportsApi';
+import useLoad from '../hooks/useLoad';
+import GettingStarted from '../components/dashboard/GettingStarted';
+import SalesHero from '../components/dashboard/SalesHero';
+import PaymentsCard from '../components/dashboard/PaymentsCard';
+import StatusStrip from '../components/dashboard/StatusStrip';
+import InsightsPanel from '../components/dashboard/InsightsPanel';
+import InventoryPanel from '../components/dashboard/InventoryPanel';
+import RecentSales from '../components/dashboard/RecentSales';
+import { dayEnd, dayStart, isoDaysAgo, paymentLabel } from '../utils/format';
+import { EXPIRY_WINDOW_DAYS } from '../utils/expiry';
 
+const RANGES = [
+  { days: 7, label: '7 días' },
+  { days: 30, label: '30 días' },
+];
+// Tope de ventas traídas para el gráfico y la mezcla de pagos. Los totales de dinero de ADMINISTRATOR
+// salen de los reportes (agregados en base de datos), así que no dependen de este tope.
+const SALES_SAMPLE = 200;
+// Un vendedor no tiene reportes agregados: sus totales salen de sus ventas cargadas, así que se trae un tope mayor.
+const SELLER_SALES_SAMPLE = 1000;
+const EMPTY_DASHBOARD = {
+  products: [], sales: [], previousSales: [], heatmap: [], dianCount: null, salesReport: null, previousTotal: null,
+  // `null` = aún no se sabe (la consulta falló o no ha terminado): la guía de primer uso no se muestra con datos desconocidos.
+  hasProducts: null, hasAnySale: null,
+  topProducts: [], profitability: [], purchases: null, stock: [], expiring: [],
+};
+
+// El mapa de calor necesita historia suficiente para que las franjas se distingan: al menos 30 días.
+const HEATMAP_DAYS = 30;
+
+const sumSales = (sales) => sales.reduce((sum, s) => sum + Number(s.totalAmount || 0), 0);
+
+/** Resumen del negocio: ventas con tendencia, mezcla de pagos, estado del inventario y analíticas del período. */
 export default function DashboardBento() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [products, setProducts] = useState([]);
-  const [sales, setSales] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const isAdmin = user?.role === 'ADMINISTRATOR';
+  const canSeeStock = isAdmin || user?.role === 'SUPERVISOR';
+  // El vendedor ve solo lo que él vendió (el backend ya limita sus ventas y facturas); sin stock, compras ni ranking.
+  const isSeller = user?.role === 'SELLER';
+  const salesSample = isSeller ? SELLER_SALES_SAMPLE : SALES_SAMPLE;
 
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      const prodData = await getProductsApi();
-      setProducts(Array.isArray(prodData) ? prodData : []);
+  const [days, setDays] = useState(7);
+  const [belowMinStock, setBelowMinStock] = useState(true);
+  const [expiringDays, setExpiringDays] = useState(EXPIRY_WINDOW_DAYS);
 
-      const salesData = await getSalesApi();
-      setSales(Array.isArray(salesData) ? salesData : []);
-    } catch (e) {
-      console.warn('Error cargando datos reales del Dashboard:', e);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data: dashboard, loading, reload } = useLoad(async (previous) => {
+    const from = dayStart(isoDaysAgo(days - 1));
+    const to = dayEnd(isoDaysAgo(0));
+    // El período anterior de la misma duración, para mostrar si el negocio sube o baja.
+    const previousFrom = dayStart(isoDaysAgo(days * 2 - 1));
+    const previousTo = dayEnd(isoDaysAgo(days));
+    // Cada bloque falla por separado: un reporte caído no deja el panel en blanco.
+    const safe = (promise, fallback) => promise.catch(() => fallback);
+    const [prods, salesPage, anySale, dian, report, previousReport, previousPage, heat, top, profit, purch, stockRows, expiringRows] = await Promise.all([
+      canSeeStock ? safe(getProductsApi(), null) : null,
+      safe(searchSalesApi({ dateFrom: from, dateTo: to, size: salesSample }), null),
+      safe(searchSalesApi({ size: 1 }), null),
+      safe(listInvoicesApi('VALIDATED', 0, 1), null),
+      isAdmin ? safe(getSalesReportApi(from, to), null) : null,
+      isAdmin ? safe(getSalesReportApi(previousFrom, previousTo), null) : null,
+      safe(searchSalesApi({ dateFrom: previousFrom, dateTo: previousTo, size: salesSample }), null),
+      isAdmin ? safe(getSalesHeatmapApi(dayStart(isoDaysAgo(Math.max(days, HEATMAP_DAYS) - 1)), to), null) : null,
+      isAdmin ? safe(getTopProductsReportApi(from, to, 8), null) : null,
+      isAdmin ? safe(getProfitabilityReportApi(from, to), null) : null,
+      isAdmin ? safe(getPurchasesReportApi(from, to), null) : null,
+      canSeeStock ? safe(getStockReportApi(belowMinStock), null) : null,
+      canSeeStock ? safe(getExpiringReportApi(expiringDays), null) : null,
+    ]);
+    let previousTotal = previous.previousTotal;
+    if (previousReport) previousTotal = Number(previousReport.totalSold);
+    else if (previousPage) previousTotal = sumSales(previousPage.content || []);
+    // Un bloque que falló conserva lo que ya se veía en vez de quedar en blanco.
+    return {
+      products: Array.isArray(prods) ? prods : previous.products,
+      sales: salesPage ? salesPage.content || [] : previous.sales,
+      previousSales: previousPage ? previousPage.content || [] : previous.previousSales,
+      heatmap: Array.isArray(heat) ? heat : previous.heatmap,
+      hasProducts: Array.isArray(prods) ? prods.length > 0 : previous.hasProducts,
+      hasAnySale: anySale ? (anySale.totalElements ?? (anySale.content || []).length) > 0 : previous.hasAnySale,
+      dianCount: dian ? dian.totalElements ?? (dian.content || []).length : previous.dianCount,
+      salesReport: report || previous.salesReport,
+      previousTotal,
+      topProducts: Array.isArray(top) ? top : previous.topProducts,
+      profitability: Array.isArray(profit) ? profit : previous.profitability,
+      purchases: purch || previous.purchases,
+      stock: Array.isArray(stockRows) ? stockRows : previous.stock,
+      expiring: Array.isArray(expiringRows) ? expiringRows : previous.expiring,
+    };
+  }, [days, belowMinStock, expiringDays, isAdmin, canSeeStock, salesSample], { initial: EMPTY_DASHBOARD, autoRefresh: true });
+  const { products, sales, previousSales, heatmap, hasProducts, hasAnySale, previousTotal, dianCount, salesReport, topProducts, profitability, purchases, stock, expiring } = dashboard;
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  const lowStockCount = !canSeeStock ? 0 : products.filter((p) => (p.quantityAvailable ?? p.stock ?? 0) <= (p.minStock || 5)).length;
 
-  // 100% Dynamic Metrics calculated strictly from real API data
-  const totalSalesAmount = sales.reduce((sum, s) => sum + parseFloat(s.totalAmount || s.total || 0), 0);
-  const averageTicket = sales.length > 0 ? (totalSalesAmount / sales.length).toFixed(2) : '0.00';
-  const lowStockProducts = products.filter(p => (p.quantityAvailable ?? p.stock ?? 0) <= (p.minStock || 5));
-  const dianInvoicesCount = sales.length;
+  // ADMINISTRATOR: totales exactos del reporte; el resto: sobre las ventas cargadas.
+  const totalSold = salesReport ? Number(salesReport.totalSold) : sumSales(sales);
+  const transactions = salesReport ? salesReport.transactionCount : sales.length;
+  const averageTicket = transactions > 0 ? totalSold / transactions : 0;
 
-  // Dynamic 7-day sales breakdown calculated from sales timestamps
-  const daysOfWeek = ['LUN', 'MAR', 'MIE', 'JUE', 'VIE', 'SAB', 'DOM'];
-  const daySalesMap = { LUN: 0, MAR: 0, MIE: 0, JUE: 0, VIE: 0, SAB: 0, DOM: 0 };
-  
-  sales.forEach(s => {
-    if (s.createdAt || s.date) {
-      const dateObj = new Date(s.createdAt || s.date);
-      const dayIdx = (dateObj.getDay() + 6) % 7; // Map Sun=0 to DOM=6
-      const dayName = daysOfWeek[dayIdx];
-      if (dayName) {
-        daySalesMap[dayName] += parseFloat(s.totalAmount || s.total || 0);
+  const daily = useMemo(() => {
+    const buckets = new Map();
+    for (let i = days - 1; i >= 0; i -= 1) buckets.set(isoDaysAgo(i), { value: 0, count: 0 });
+    sales.forEach((s) => {
+      const bucket = buckets.get((s.createdAt || '').slice(0, 10));
+      if (bucket) {
+        bucket.value += Number(s.totalAmount || 0);
+        bucket.count += 1;
       }
-    }
-  });
+    });
+    return [...buckets.entries()].map(([date, { value, count }]) => {
+      const d = new Date(`${date}T12:00:00`);
+      return {
+        key: date,
+        value,
+        count,
+        detail: d.toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'short' }),
+        label: days <= 7
+          ? d.toLocaleDateString('es-CO', { weekday: 'short' }).replace('.', '').toUpperCase()
+          : String(d.getDate()),
+      };
+    });
+  }, [sales, days]);
 
-  const maxDaySale = Math.max(...Object.values(daySalesMap), 1);
-  const bestDay = Object.keys(daySalesMap).reduce((a, b) => daySalesMap[a] >= daySalesMap[b] ? a : b, 'JUE');
+  // Total por día del período anterior, alineado día a día con `daily` para dibujarlo como línea punteada.
+  const previousDaily = useMemo(() => {
+    if (previousSales.length === 0) return null;
+    const buckets = new Map();
+    for (let i = days * 2 - 1; i >= days; i -= 1) buckets.set(isoDaysAgo(i), 0);
+    previousSales.forEach((s) => {
+      const key = (s.createdAt || '').slice(0, 10);
+      if (buckets.has(key)) buckets.set(key, buckets.get(key) + Number(s.totalAmount || 0));
+    });
+    return [...buckets.values()];
+  }, [previousSales, days]);
 
-  // Dynamic currentDate formatted range
-  const todayFormatted = new Date().toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' });
+  const { paymentMix, paymentTotal } = useMemo(() => {
+    const totals = {};
+    sales.forEach((s) => {
+      const code = s.paymentMethod || 'CASH';
+      totals[code] = (totals[code] || 0) + Number(s.totalAmount || 0);
+    });
+    const sum = Object.values(totals).reduce((a, b) => a + b, 0);
+    return {
+      paymentTotal: sum,
+      paymentMix: Object.entries(totals)
+        .map(([code, value]) => ({ label: paymentLabel(code), value, pct: sum > 0 ? Math.round((value / sum) * 100) : 0 }))
+        .sort((a, b) => b.value - a.value),
+    };
+  }, [sales]);
 
   return (
     <div className="space-y-6 pb-12 select-none">
-      
-      {/* Top Welcome Title Row */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mb-2">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
         <div>
           <h1 className="text-2xl sm:text-4xl font-light text-ink tracking-tight">
-            Bienvenido, <span className="font-extrabold text-brand dark:text-brand">{user?.fullName || user?.username || 'Usuario'}</span>
+            Bienvenido, <span className="font-extrabold text-brand">{user?.fullName || user?.username || 'Usuario'}</span>
           </h1>
           <p className="text-xs text-ink-soft font-medium mt-1">
-            Panel de control BentoPOS con la información actualizada de tu negocio
+            {isSeller ? 'Resumen de lo que has vendido, siempre al día' : 'Resumen y analíticas de tu negocio, siempre al día'}
           </p>
         </div>
 
         <div className="flex items-center gap-3">
-          <button 
-            onClick={loadData}
-            className="p-2 text-gray-500 hover:text-brand dark:hover:text-brand bg-card border border-line rounded-full transition-colors cursor-pointer"
-            title="Recargar Datos"
+          <div className="flex bg-card border border-line rounded-full p-1">
+            {RANGES.map((r) => (
+              <button
+                key={r.days}
+                type="button"
+                onClick={() => setDays(r.days)}
+                className={`px-3.5 py-1 text-xs font-bold rounded-full cursor-pointer transition-colors ${
+                  days === r.days ? 'bg-solid dark:bg-white text-solid-ink dark:text-gray-950' : 'text-ink-soft hover:text-ink'
+                }`}
+              >
+                {r.label}
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => reload({ silent: false })}
+            className="p-2 text-ink-soft hover:text-brand bg-card border border-line rounded-full transition-colors cursor-pointer"
+            title="Recargar datos"
+            aria-label="Recargar datos"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-brand' : ''}`} />
           </button>
-          <div className="bg-card border border-line rounded-full px-4 py-2 flex items-center gap-2 shadow-xs text-xs font-semibold text-ink">
-            <Calendar className="w-4 h-4 text-brand dark:text-brand" />
-            <span>{todayFormatted}</span>
-          </div>
         </div>
       </div>
 
-      {/* KPI Row - 4 tarjetas iguales */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        {/* KPI 1 - Ventas Reales */}
-        <div
-          onClick={() => navigate('/pos')}
-          className="bento-card p-6 flex flex-col justify-between cursor-pointer hover:border-line-strong  transition-all"
-        >
-          <div className="flex justify-between items-start">
-            <h3 className="text-xs font-semibold text-[#7A7A7A] uppercase tracking-wider">Ventas Totales</h3>
-            <div className="w-7 h-7 rounded-full border border-line flex items-center justify-center text-[#7A7A7A]">
-              <ArrowUpRight className="w-4 h-4" />
-            </div>
-          </div>
-
-          <div className="mt-2">
-            <div className="text-2xl font-black tracking-tight tabular-nums text-ink">
-              $ {totalSalesAmount.toLocaleString('es-CO')}
-            </div>
-            <span className="text-[11px] text-[#7A7A7A] mt-1 block">Ticket Promedio: ${averageTicket}</span>
-          </div>
-
-          <span className="inline-flex items-center gap-1 self-start text-[11px] font-bold px-2 py-0.5 rounded-full bg-[#FFF0EB] text-brand border border-[#FFD5C8] mt-3">
-            <ArrowUp className="w-3 h-3" /> {sales.length} ventas
-          </span>
-        </div>
-
-        {/* KPI 2 - Transacciones */}
-        <div
-          onClick={() => navigate('/pos')}
-          className="bento-card p-6 flex flex-col justify-between cursor-pointer hover:border-line-strong  transition-all"
-        >
-          <div className="flex justify-between items-start">
-            <h3 className="text-xs font-semibold text-[#7A7A7A] uppercase tracking-wider">Transacciones</h3>
-            <div className="w-7 h-7 rounded-full border border-line flex items-center justify-center text-[#7A7A7A]">
-              <Receipt className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-2">
-            <div className="text-2xl font-black tracking-tight tabular-nums text-ink">
-              {sales.length}
-            </div>
-            <span className="text-[11px] text-[#7A7A7A] mt-1 block">Ventas procesadas en total</span>
-          </div>
-        </div>
-
-        {/* KPI 3 - Productos bajo mínimo */}
-        <div
-          onClick={() => navigate('/inventory')}
-          className="bento-card p-6 flex flex-col justify-between cursor-pointer hover:border-line-strong  transition-all"
-        >
-          <div className="flex justify-between items-start">
-            <h3 className="text-xs font-semibold text-[#7A7A7A] uppercase tracking-wider">Bajo mínimo</h3>
-            <div className="w-7 h-7 rounded-full border border-line flex items-center justify-center text-[#7A7A7A]">
-              <Package className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-2">
-            <div className="text-2xl font-black tracking-tight tabular-nums text-ink">
-              {lowStockProducts.length}
-            </div>
-            <span className={`text-[11px] mt-1 block font-bold ${lowStockProducts.length > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
-              {lowStockProducts.length > 0 ? 'Requieren reabastecimiento' : 'Stock en niveles óptimos'}
-            </span>
-          </div>
-        </div>
-
-        {/* KPI 4 - Facturas DIAN */}
-        <div
-          onClick={() => navigate('/invoicing')}
-          className="bento-card p-6 flex flex-col justify-between cursor-pointer hover:border-line-strong  transition-all"
-        >
-          <div className="flex justify-between items-start">
-            <h3 className="text-xs font-semibold text-[#7A7A7A] uppercase tracking-wider">Facturas DIAN</h3>
-            <div className="w-7 h-7 rounded-full border border-line flex items-center justify-center text-[#7A7A7A]">
-              <FileText className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-2">
-            <div className="text-2xl font-black tracking-tight tabular-nums text-ink">
-              {dianInvoicesCount}
-            </div>
-            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-ink-soft mt-1">
-              ✓ Registradas
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Alerta de bajo stock */}
-      {lowStockProducts.length > 0 && (
-        <div className="bento-card p-5 border-amber-200 dark:border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
-              <AlertTriangle className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h4 className="text-sm font-bold text-ink">Bajo stock</h4>
-                <span className="text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400">
-                  Atención
-                </span>
-              </div>
-              <p className="text-xs text-ink-soft mt-0.5">
-                {lowStockProducts.length} {lowStockProducts.length === 1 ? 'producto está' : 'productos están'} por debajo del mínimo. Reabastécelos para no perder ventas.
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={() => navigate('/inventory')}
-            className="h-10 px-4 rounded-xl bg-solid hover:bg-solid-hover text-white text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 shrink-0"
-          >
-            <span>Ver inventario</span>
-            <ChevronRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
+      {!loading && hasAnySale !== null && (!canSeeStock || hasProducts !== null) && (
+        <GettingStarted hasProducts={Boolean(hasProducts)} hasSales={hasAnySale} canCreateProducts={canSeeStock} />
       )}
 
-      {/* Bento Layout Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-6 auto-rows-min">
-
-        {/* Chart (Col-span-8) - Ventas Últimos 7 Días */}
-        <div className="md:col-span-12 lg:col-span-8 bento-card p-6 flex flex-col justify-between bg-card rounded-3xl border border-line shadow-xs">
-          <div className="flex justify-between items-center mb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-brand/10 dark:bg-brand/20 flex items-center justify-center text-brand dark:text-brand">
-                <BarChart3 className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-ink">Ventas Últimos 7 Días</h3>
-                <p className="text-[11px] text-ink-soft font-medium">Calculado dinámicamente con tus transacciones</p>
-              </div>
-            </div>
-            <div className="flex bg-gray-100 dark:bg-line rounded-full p-1 border border-gray-200 dark:border-gray-700">
-              <button className="px-3.5 py-1 text-xs font-semibold bg-solid text-white rounded-full shadow-xs cursor-pointer">
-                Semanal
-              </button>
-            </div>
-          </div>
-
-          {/* Bar Chart Bars */}
-          <div className="flex-1 flex items-end justify-between gap-3 mt-4 h-[160px] relative pt-6">
-            {daysOfWeek.map((day) => {
-              const dayValue = daySalesMap[day];
-              const heightPercent = sales.length === 0 
-                ? (day === 'JUE' ? 80 : day === 'SAB' ? 90 : 40)
-                : Math.max(Math.round((dayValue / maxDaySale) * 100), 12);
-              
-              const isBest = day === bestDay;
-
-              return (
-                <div key={day} className="flex-1 flex flex-col items-center gap-2 h-full justify-end relative group">
-                  {isBest && (
-                    <span className="absolute -top-3 bg-solid text-white text-[9px] font-extrabold px-1.5 py-0.5 rounded-full shadow-xs">
-                      PICO
-                    </span>
-                  )}
-                  <div 
-                    style={{ height: `${heightPercent}%` }}
-                    className={`w-full rounded-t-xl transition-all duration-500 ${
-                      isBest 
-                        ? 'bg-solid shadow-sm' 
-                        : 'bg-[#FFF0EB] dark:bg-brand/30 group-hover:bg-solid dark:group-hover:bg-brand'
-                    }`}
-                  ></div>
-                  <span className={`text-[11px] font-bold uppercase ${
-                    isBest ? 'text-brand dark:text-brand' : 'text-ink-soft'
-                  }`}>
-                    {day}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        <div className="lg:col-span-8">
+          <SalesHero
+            days={days}
+            loading={loading}
+            totalSold={totalSold}
+            previousTotal={previousTotal}
+            daily={daily}
+            previousDaily={previousDaily}
+            transactions={transactions}
+            averageTicket={averageTicket}
+            dianCount={dianCount}
+            personal={isSeller}
+            onNavigate={navigate}
+          />
         </div>
-
-        {/* Métodos de Pago (Col-span-4), junto al gráfico */}
-        <div className="md:col-span-12 lg:col-span-4 bento-card p-6 bg-card rounded-3xl border border-line shadow-xs flex flex-col justify-between">
-          <div className="flex justify-between items-center mb-4">
-            <div>
-              <h3 className="text-base font-bold text-ink">Métodos de Pago</h3>
-              <p className="text-xs text-ink-soft">Distribución de cobros en caja</p>
-            </div>
-            <div className="w-8 h-8 rounded-full border border-gray-200 dark:border-gray-700 flex items-center justify-center text-gray-500 cursor-pointer hover:bg-gray-50 dark:hover:bg-white/5">
-              <ArrowUpRight className="w-4 h-4" />
-            </div>
-          </div>
-
-          <div className="space-y-4 my-2 text-xs font-semibold">
-            {/* Efectivo */}
-            <div className="space-y-1.5">
-              <div className="flex justify-between items-center text-gray-700 dark:text-gray-300">
-                <span className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-solid"></span> Efectivo en Caja
-                </span>
-                <span className="font-bold text-ink">85%</span>
-              </div>
-              <div className="w-full h-2.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                <div className="h-full bg-solid rounded-full w-[85%]"></div>
-              </div>
-            </div>
-
-            {/* Tarjeta */}
-            <div className="space-y-1.5">
-              <div className="flex justify-between items-center text-gray-700 dark:text-gray-300">
-                <span className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-solid dark:bg-gray-400"></span> Datáfono / Tarjeta
-                </span>
-                <span className="font-bold text-ink">10%</span>
-              </div>
-              <div className="w-full h-2.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                <div className="h-full bg-solid dark:bg-gray-400 rounded-full w-[10%]"></div>
-              </div>
-            </div>
-
-            {/* Transferencia */}
-            <div className="space-y-1.5">
-              <div className="flex justify-between items-center text-gray-700 dark:text-gray-300">
-                <span className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span> Nequi / Transferencia
-                </span>
-                <span className="font-bold text-ink">5%</span>
-              </div>
-              <div className="w-full h-2.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                <div className="h-full bg-amber-500 rounded-full w-[5%]"></div>
-              </div>
-            </div>
-          </div>
+        <div className="lg:col-span-4">
+          <PaymentsCard days={days} loading={loading} entries={paymentMix} total={paymentTotal} />
         </div>
-
-        {/* Ventas Recientes (fila completa) */}
-        <div className="md:col-span-12 bento-card p-6 bg-card rounded-3xl border border-line shadow-xs space-y-4">
-          <div className="flex justify-between items-center">
-            <div>
-              <h3 className="text-base font-bold text-ink">Ventas Recientes</h3>
-              <p className="text-xs text-ink-soft">Historial de tus ventas más recientes</p>
-            </div>
-            <button 
-              onClick={() => navigate('/pos')}
-              className="px-3.5 py-1.5 bg-solid text-white rounded-full text-xs font-bold flex items-center gap-1 hover:bg-solid-hover shadow-sm shadow-[#0A0A0A]/10 cursor-pointer transition-all"
-            >
-              <Plus className="w-3.5 h-3.5" /> Nueva Venta
-            </button>
-          </div>
-
-          {loading ? (
-            <div className="py-8 text-center text-xs font-bold text-gray-400">
-              Cargando historial de ventas...
-            </div>
-          ) : sales.length === 0 ? (
-            <div className="py-10 text-center space-y-3 bg-gray-50/50 dark:bg-white/5 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700">
-              <Package className="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto stroke-1" />
-              <div>
-                <p className="text-xs font-bold text-ink">No hay ventas registradas aún</p>
-                <p className="text-[11px] text-ink-soft">Abre la pantalla de caja para realizar tu primera transacción</p>
-              </div>
-              <button
-                onClick={() => navigate('/pos')}
-                className="px-4 py-2 bg-solid text-white rounded-xl text-xs font-extrabold shadow-sm hover:bg-solid-hover cursor-pointer"
-              >
-                + Ir a la Caja
-              </button>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead>
-                  <tr className="border-b border-gray-100 dark:border-gray-800 text-ink-soft font-bold text-[11px]">
-                    <th className="py-2.5 px-3">Comprobante</th>
-                    <th className="py-2.5 px-3">Fecha / Hora</th>
-                    <th className="py-2.5 px-3">Cliente</th>
-                    <th className="py-2.5 px-3">Estado</th>
-                    <th className="py-2.5 px-3 text-right">Total</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100 dark:divide-gray-800 font-medium text-gray-700 dark:text-gray-300">
-                  {sales.slice(0, 5).map((s, idx) => (
-                    <tr key={s.id || idx} className="hover:bg-gray-50 dark:hover:bg-line/40 transition-colors">
-                      <td className="py-3 px-3 font-bold text-brand dark:text-brand flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-lg bg-brand/10 dark:bg-brand/20 text-brand dark:text-brand flex items-center justify-center">
-                          <Package className="w-3.5 h-3.5" />
-                        </div>
-                        <span>#{s.invoiceNumber || `FAC-${s.id || idx + 1}`}</span>
-                      </td>
-                      <td className="py-3 px-3 text-ink-soft">{s.createdAt || s.date || 'Reciente'}</td>
-                      <td className="py-3 px-3 font-semibold text-ink">{s.customerName || s.customer || 'Cliente General'}</td>
-                      <td className="py-3 px-3">
-                        <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400">
-                          <span className="w-2 h-2 rounded-full bg-emerald-500"></span> Completada
-                        </span>
-                      </td>
-                      <td className="py-3 px-3 text-right font-black text-ink tabular-nums">
-                        ${(s.totalAmount || s.total || 0).toLocaleString('es-CO')} COP
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-
       </div>
+
+      {!isSeller && (
+        <StatusStrip
+          days={days}
+          lowStockCount={lowStockCount}
+          expiring={expiring}
+          expiringDays={expiringDays}
+          purchasesTotal={purchases?.totalInverted}
+          showExpiring={canSeeStock}
+          showPurchases={isAdmin}
+          onNavigate={navigate}
+        />
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {isAdmin && (
+          <div className="lg:col-span-7">
+            <InsightsPanel loading={loading} sales={salesReport} topProducts={topProducts} profitability={profitability} purchases={purchases} heatmap={heatmap} />
+          </div>
+        )}
+        <div className={isAdmin ? 'lg:col-span-5' : 'lg:col-span-12'}>
+          <RecentSales loading={loading} sales={sales} onNavigate={navigate} />
+        </div>
+      </div>
+
+      {canSeeStock && (
+        <InventoryPanel
+          loading={loading}
+          stock={stock}
+          belowMinStock={belowMinStock}
+          onBelowMinStockChange={setBelowMinStock}
+          expiring={expiring}
+          expiringDays={expiringDays}
+          onExpiringDaysChange={setExpiringDays}
+        />
+      )}
     </div>
   );
 }

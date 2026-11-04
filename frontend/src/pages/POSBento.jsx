@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ShoppingCart } from 'lucide-react';
 import { getProductsApi } from '../services/productsApi';
+import { getServicesApi } from '../services/servicesApi';
 import { getCustomersApi } from '../services/customersApi';
 import { createSaleApi } from '../services/salesApi';
 import { getSaleInvoiceApi } from '../services/billingApi';
@@ -12,22 +13,58 @@ import { BarcodeScanner } from '../components/scanner';
 import { getCategoriesApi } from '../services/categoriesApi';
 import { getParameterValuesApi } from '../services/parametersApi';
 import { newIdempotencyKey } from '../services/http';
-import { useModal } from '../context/ModalContext';
+import useModal from '../hooks/useModal';
+import useLoad from '../hooks/useLoad';
+import asList from '../utils/asList';
+import { ITEM_PRODUCT, ITEM_SERVICE, cartKey, isService, toSaleLine } from '../utils/cartItem';
+import { defaultCreditDueDate } from '../utils/credit';
 
 export default function POSBento() {
   const { notify } = useModal();
-  const [productsList, setProductsList] = useState([]);
-  const [customersList, setCustomersList] = useState([]);
-  const [categoriesList, setCategoriesList] = useState(['Todos']);
+  // Stock y precios se refrescan solos sin tocar el carrito ni el cliente elegido.
+  // El catálogo del POS junta productos y servicios activos; un fallo al listar servicios no frena la venta de productos.
+  const { data: productsList, loading: productsLoading, reload: reloadProducts } = useLoad(
+    async () => {
+      const [products, services] = await Promise.all([
+        asList(getProductsApi()),
+        asList(getServicesApi()).catch(() => []),
+      ]);
+      return [
+        ...products.map((p) => ({ ...p, itemType: ITEM_PRODUCT })),
+        ...services.map((s) => ({ ...s, itemType: ITEM_SERVICE })),
+      ];
+    },
+    [],
+    { initial: [], autoRefresh: true },
+  );
+  const { data: customersList, loading: customersLoading, reload: reloadCustomers, setData: setCustomersList } = useLoad(
+    () => asList(getCustomersApi()),
+    [],
+    { initial: [] },
+  );
+  const { data: catalog, loading: catalogLoading } = useLoad(
+    async () => {
+      const [cats, methods] = await Promise.all([
+        asList(getCategoriesApi()).catch(() => []),
+        asList(getParameterValuesApi('PAYMENT_METHODS')).catch(() => []),
+      ]);
+      return { categories: ['Todos', ...cats.map((c) => c.name)], paymentMethods: methods.filter((m) => m.active) };
+    },
+    [],
+    { initial: { categories: ['Todos'], paymentMethods: [] } },
+  );
+  const { categories: categoriesList, paymentMethods } = catalog;
+  const loading = productsLoading || customersLoading || catalogLoading;
   const [selectedCategory, setSelectedCategory] = useState('Todos');
-  const [paymentMethods, setPaymentMethods] = useState([]);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('CASH');
   const [searchQuery, setSearchQuery] = useState('');
   const [cart, setCart] = useState([]);
-  const [selectedCustomer, setSelectedCustomer] = useState(null);
-  const [loading, setLoading] = useState(true);
+  // Sin elección explícita se usa el primer cliente (consumidor final); tras cada venta se vuelve a ese valor.
+  const [customerChoice, setSelectedCustomer] = useState(null);
+  const selectedCustomer = customerChoice ?? customersList[0] ?? null;
 
   const [issueDian, setIssueDian] = useState(false);
+  const [creditDueDate, setCreditDueDate] = useState(defaultCreditDueDate);
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
   const [cashTendered, setCashTendered] = useState('');
   const [saleCompleted, setSaleCompleted] = useState(null);
@@ -79,38 +116,6 @@ export default function POSBento() {
     barcodeInputRef.current?.focus();
   }, []);
 
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      const prods = await getProductsApi();
-      if (Array.isArray(prods)) setProductsList(prods);
-
-      const custs = await getCustomersApi();
-      if (Array.isArray(custs)) {
-        setCustomersList(custs);
-        if (custs.length > 0) setSelectedCustomer(custs[0]);
-      }
-
-      const cats = await getCategoriesApi();
-      if (Array.isArray(cats)) {
-        setCategoriesList(['Todos', ...cats.map(c => c.name)]);
-      }
-
-      const methods = await getParameterValuesApi('PAYMENT_METHODS');
-      if (Array.isArray(methods)) {
-        setPaymentMethods(methods.filter(m => m.active));
-      }
-    } catch (e) {
-      console.warn('Error cargando catálogo POS:', e);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadData();
-  }, []);
-
   // El lector de código de barras funciona como teclado: mantiene el foco en este campo
   // para que escanear (sin hacer click en nada) funcione en cualquier momento del flujo.
   useEffect(() => {
@@ -121,19 +126,22 @@ export default function POSBento() {
     const matchesCategory = selectedCategory === 'Todos' || p.categoryName === selectedCategory;
     const matchesSearch = (p.name && p.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
                           (p.barcode && p.barcode.includes(searchQuery)) ||
-                          (p.internalCode && p.internalCode.toLowerCase().includes(searchQuery.toLowerCase()));
+                          ((p.internalCode || p.code) && (p.internalCode || p.code).toLowerCase().includes(searchQuery.toLowerCase()));
     return matchesCategory && matchesSearch;
   });
 
+  // Un servicio no tiene existencias: no se limita su cantidad ni se bloquea por stock.
   const addToCart = (product) => {
-    const stockVal = product.quantityAvailable ?? product.stock ?? 0;
+    const service = isService(product);
+    const stockVal = service ? Infinity : (product.quantityAvailable ?? product.stock ?? 0);
     if (stockVal <= 0) return;
 
     setCart(prev => {
-      const existing = prev.find(item => item.id === product.id);
+      const key = cartKey(product);
+      const existing = prev.find(item => cartKey(item) === key);
       if (existing) {
         if (existing.quantity >= stockVal) return prev;
-        return prev.map(item => item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item);
+        return prev.map(item => cartKey(item) === key ? { ...item, quantity: item.quantity + 1 } : item);
       }
       const priceVal = product.salePrice || product.price || 0;
       return [...prev, { ...product, price: priceVal, stock: stockVal, quantity: 1 }];
@@ -147,15 +155,16 @@ export default function POSBento() {
     const code = rawCode.trim();
     if (!code) return { ok: false, message: '' };
 
-    const product = productsList.find(p => p.barcode === code) ||
-      productsList.find(p => p.internalCode && p.internalCode.toLowerCase() === code.toLowerCase());
+    // Los servicios no tienen código de barras: se escanean por su código (SRV-…).
+    const product = productsList.find(p => !isService(p) && p.barcode === code) ||
+      productsList.find(p => (p.internalCode || p.code) && (p.internalCode || p.code).toLowerCase() === code.toLowerCase());
 
     let result;
     if (!product) {
       result = { ok: false, message: `Código no encontrado: ${code}` };
     } else {
-      const stockVal = product.quantityAvailable ?? product.stock ?? 0;
-      const inCart = cart.find(item => item.id === product.id)?.quantity ?? 0;
+      const stockVal = isService(product) ? Infinity : (product.quantityAvailable ?? product.stock ?? 0);
+      const inCart = cart.find(item => cartKey(item) === cartKey(product))?.quantity ?? 0;
       if (stockVal <= 0) {
         result = { ok: false, message: `${product.name}: sin stock disponible` };
       } else if (inCart >= stockVal) {
@@ -179,9 +188,9 @@ export default function POSBento() {
     }
   };
 
-  const updateQuantity = (id, delta) => {
+  const updateQuantity = (key, delta) => {
     setCart(prev => prev.map(item => {
-      if (item.id === id) {
+      if (cartKey(item) === key) {
         const newQty = item.quantity + delta;
         return newQty > 0 ? { ...item, quantity: newQty } : null;
       }
@@ -199,6 +208,7 @@ export default function POSBento() {
   const cashNumber = parseFloat(cashTendered) || 0;
   const change = cashNumber - total;
   const paymentIsCash = selectedPaymentMethod === 'CASH';
+  const paymentIsCredit = selectedPaymentMethod === 'CREDIT';
 
   const handleCompleteSale = async () => {
     if (cashNumber < total) return;
@@ -206,15 +216,12 @@ export default function POSBento() {
 
     const saleCommand = {
       customerId: selectedCustomer?.id || null,
-      items: cart.map(item => ({
-        productId: item.id,
-        quantity: item.quantity,
-        unitPrice: item.price
-      })),
-      cashReceived: cashNumber,
+      items: cart.map(toSaleLine),
+      cashReceived: paymentIsCredit ? 0 : cashNumber,
       totalAmount: total,
       sendToFactus: issueDian,
-      paymentMethod: selectedPaymentMethod
+      paymentMethod: selectedPaymentMethod,
+      ...(paymentIsCredit && { creditDueDate })
     };
 
     // Reutiliza la clave del intento actual si existe (reintento); si no, genera una nueva.
@@ -251,6 +258,7 @@ export default function POSBento() {
       number: result?.invoiceNumber || (result?.id ? `#${result.id}` : ''),
       total,
       change: paymentIsCash ? Math.max(0, change) : 0,
+      onCredit: paymentIsCredit,
       customerName: selectedCustomer?.fullName || selectedCustomer?.name || 'Consumidor final',
       customerEmail: selectedCustomer?.email || '',
       dianRequested: issueDian,
@@ -261,8 +269,11 @@ export default function POSBento() {
     setCart([]);
     setCashTendered('');
     setSelectedPaymentMethod('CASH');
+    setCreditDueDate(defaultCreditDueDate());
     setIssueDian(false);
-    await loadData();
+    setSelectedCustomer(null);
+    reloadProducts();
+    reloadCustomers();
     focusBarcodeInput();
   };
 
@@ -270,8 +281,9 @@ export default function POSBento() {
     <div className="relative">
       <ScanToasts toasts={scanToasts} />
 
-      {/* Escáner incrustado arriba: queda fijo mientras se desplaza el catálogo y se cierra con la X. */}
-      {showScanner && (
+      {/* Escáner incrustado arriba: queda fijo mientras se desplaza el catálogo y se cierra con la X.
+          Con el ticket abierto pasa a mostrarse dentro del ticket (una sola cámara a la vez). */}
+      {showScanner && !showMobileCart && (
         <div className="lg:hidden pb-3">
           <BarcodeScanner
             inline
@@ -309,6 +321,13 @@ export default function POSBento() {
           subtotal={subtotal}
           total={total}
           mobileOpen={showMobileCart}
+          scanner={showScanner && (
+            <BarcodeScanner
+              inline
+              onDetect={handleBarcodeScan}
+              onClose={() => { setShowScanner(false); focusBarcodeInput(); }}
+            />
+          )}
           onCloseMobile={() => setShowMobileCart(false)}
           onClear={clearCart}
           onQuantity={updateQuantity}
@@ -326,19 +345,12 @@ export default function POSBento() {
         {cart.length > 0 && (
           <span
             key={cart.length}
-            className="absolute -top-1 -right-1 min-w-6 h-6 px-1.5 rounded-full bg-solid text-white text-xs font-black tabular-nums flex items-center justify-center ring-2 ring-white dark:ring-page animate-bounce-once"
+            className="absolute -top-1 -right-1 min-w-6 h-6 px-1.5 rounded-full bg-solid text-solid-ink text-xs font-black tabular-nums flex items-center justify-center ring-2 ring-white dark:ring-page animate-bounce-once"
           >
             {cart.length}
           </span>
         )}
       </button>
-
-      {showScanner && (
-        <BarcodeScanner
-          onDetect={handleBarcodeScan}
-          onClose={() => { setShowScanner(false); focusBarcodeInput(); }}
-        />
-      )}
 
       {showCheckoutModal && (
         <CheckoutModal
@@ -361,6 +373,8 @@ export default function POSBento() {
           onToggleDian={setIssueDian}
           cashTendered={cashTendered}
           onCashTenderedChange={setCashTendered}
+          creditDueDate={creditDueDate}
+          onCreditDueDateChange={setCreditDueDate}
           isSubmitting={isSubmittingSale}
           onConfirm={handleCompleteSale}
           onClose={() => setShowCheckoutModal(false)}

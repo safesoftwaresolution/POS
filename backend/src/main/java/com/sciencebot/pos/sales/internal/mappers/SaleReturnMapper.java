@@ -5,6 +5,7 @@ import com.sciencebot.pos.sales.SaleReturnItemDto;
 import com.sciencebot.pos.sales.internal.entities.SaleReturn;
 import com.sciencebot.pos.sales.internal.entities.SaleReturnItem;
 import com.sciencebot.pos.products.ProductFacade;
+import com.sciencebot.pos.services.ServiceFacade;
 import com.sciencebot.pos.users.UserFacade;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
@@ -15,10 +16,13 @@ import java.util.stream.Collectors;
 public class SaleReturnMapper {
 
     private final ProductFacade productFacade;
+    private final ServiceFacade serviceFacade;
     private final UserFacade userFacade;
 
-    public SaleReturnMapper(@Lazy ProductFacade productFacade, @Lazy UserFacade userFacade) {
+    public SaleReturnMapper(@Lazy ProductFacade productFacade, @Lazy ServiceFacade serviceFacade,
+                            @Lazy UserFacade userFacade) {
         this.productFacade = productFacade;
+        this.serviceFacade = serviceFacade;
         this.userFacade = userFacade;
     }
 
@@ -51,9 +55,9 @@ public class SaleReturnMapper {
     }
 
     private SaleReturnItemDto toDto(SaleReturnItem item) {
-        String productName = productFacade.getById(item.getProductId())
-                .map(p -> p.name())
-                .orElse("Producto Desconocido");
+        String productName = item.getServiceId() != null
+                ? serviceFacade.getById(item.getServiceId()).map(sv -> sv.name()).orElse("Servicio Desconocido")
+                : productFacade.getById(item.getProductId()).map(p -> p.name()).orElse("Producto Desconocido");
 
         return new SaleReturnItemDto(
                 item.getSaleItemId(),
@@ -61,7 +65,8 @@ public class SaleReturnMapper {
                 productName,
                 item.getQuantity(),
                 item.getUnitPrice(),
-                item.getSubtotal()
+                item.getSubtotal(),
+                item.getServiceId()
         );
     }
 }

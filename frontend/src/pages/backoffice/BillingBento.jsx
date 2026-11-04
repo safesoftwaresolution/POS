@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import {
   Receipt,
   Key,
@@ -22,7 +22,9 @@ import {
   transitionBackofficeBillingStatusApi
 } from '../../services/backoffice/billingApi';
 import { getBackofficeStoresApi } from '../../services/backoffice/storesApi';
-import { useModal } from '../../context/ModalContext';
+import useModal from '../../hooks/useModal';
+import useLoad from '../../hooks/useLoad';
+import asList from '../../utils/asList';
 
 const STATUSES = ['DOCUMENTS_SUBMITTED', 'AWAITING_PROVIDER', 'ACTIVE', 'REJECTED', 'SUSPENDED', 'NOT_REQUESTED'];
 
@@ -62,10 +64,19 @@ const EMPTY_CREDENTIALS = { clientId: '', clientSecret: '', username: '', passwo
 export default function BillingBento() {
   const { notify, confirm } = useModal();
   const [statusFilter, setStatusFilter] = useState('DOCUMENTS_SUBMITTED');
-  const [rows, setRows] = useState([]);
-  const [storesById, setStoresById] = useState({});
-  const [loading, setLoading] = useState(true);
-  const [errorMsg, setErrorMsg] = useState('');
+  const { data: rows, loading, error: errorMsg, reload: reloadRows } = useLoad(
+    () => asList(listBackofficeBillingByStatusApi(statusFilter)),
+    [statusFilter],
+    { initial: [], autoRefresh: true, errorMessage: 'Error al cargar el estado de facturación.' },
+  );
+  const { data: storesById } = useLoad(
+    async () => {
+      const data = await getBackofficeStoresApi('ALL', '', 0, 500);
+      return Object.fromEntries((data.content || []).map((s) => [s.id, s]));
+    },
+    [],
+    { initial: {}, autoRefresh: true },
+  );
 
   const [detail, setDetail] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -77,33 +88,6 @@ export default function BillingBento() {
   const [transitioning, setTransitioning] = useState(false);
   const [reasonTarget, setReasonTarget] = useState(null);
   const [reasonText, setReasonText] = useState('');
-
-  const loadStores = useCallback(async () => {
-    try {
-      const data = await getBackofficeStoresApi('ALL', '', 0, 500);
-      const map = {};
-      for (const s of data.content || []) map[s.id] = s;
-      setStoresById(map);
-    } catch (e) {
-      console.warn('Error cargando locales:', e);
-    }
-  }, []);
-
-  const loadRows = useCallback(async () => {
-    setLoading(true);
-    setErrorMsg('');
-    try {
-      setRows(await listBackofficeBillingByStatusApi(statusFilter));
-    } catch (e) {
-      setErrorMsg(e.message || 'Error al cargar el estado de facturación.');
-      setRows([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [statusFilter]);
-
-  useEffect(() => { loadStores(); }, [loadStores]);
-  useEffect(() => { loadRows(); }, [loadRows]);
 
   const openDetail = async (storeId) => {
     setDetailLoading(true);
@@ -135,7 +119,7 @@ export default function BillingBento() {
       const updated = await updateBackofficeBillingCredentialsApi(detail.storeId, envTab, credentialsForm);
       setDetail(updated);
       setCredentialsForm(EMPTY_CREDENTIALS);
-      await loadRows();
+      reloadRows();
     } catch (err) {
       notify('Error guardando credenciales: ' + err.message);
     } finally {
@@ -161,7 +145,7 @@ export default function BillingBento() {
     try {
       const updated = await switchBackofficeBillingEnvironmentApi(detail.storeId, environment);
       setDetail(updated);
-      await loadRows();
+      reloadRows();
     } catch (err) {
       notify('Error cambiando el entorno activo: ' + err.message);
     }
@@ -187,7 +171,7 @@ export default function BillingBento() {
       setDetail(updated);
       setReasonTarget(null);
       setReasonText('');
-      await loadRows();
+      reloadRows();
     } catch (err) {
       notify('Error cambiando la etapa: ' + err.message);
     } finally {
@@ -219,7 +203,7 @@ export default function BillingBento() {
             <button
               key={s}
               onClick={() => setStatusFilter(s)}
-              className={`px-3 py-1.5 rounded-full text-[11px] font-bold cursor-pointer ${statusFilter === s ? 'bg-solid text-white' : 'bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300'}`}
+              className={`px-3 py-1.5 rounded-full text-[11px] font-bold cursor-pointer ${statusFilter === s ? 'bg-solid text-solid-ink' : 'bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300'}`}
             >
               {STATUS_LABELS[s]}
             </button>
@@ -236,8 +220,8 @@ export default function BillingBento() {
             <p className="text-xs font-bold text-gray-700 dark:text-gray-300">No hay locales en "{STATUS_LABELS[statusFilter]}"</p>
           </div>
         ) : (
-          <div className="overflow-x-auto -mx-2">
-            <table className="w-full text-xs min-w-[760px]">
+          <div className="md:overflow-x-auto md:-mx-2">
+            <table className="table-cards w-full text-xs md:min-w-[760px]">
               <thead>
                 <tr className="text-left text-[10px] font-extrabold text-ink-muted uppercase">
                   <th className="px-2 py-2">Local</th>
@@ -251,25 +235,25 @@ export default function BillingBento() {
               <tbody>
                 {rows.map(r => (
                   <tr key={r.storeId} className="border-t border-line hover:bg-gray-50/60 dark:hover:bg-white/5">
-                    <td className="px-2 py-3">
+                    <td data-label="" className="px-2 py-3">
                       <p className="font-extrabold text-ink">{storeName(r.storeId)}</p>
                       <p className="text-[10px] text-ink-muted">{storesById[r.storeId]?.email || '—'}</p>
                     </td>
-                    <td className="px-2 py-3 font-semibold text-gray-600 dark:text-gray-300">{r.environment}</td>
-                    <td className="px-2 py-3 text-center">
+                    <td data-label="Entorno Activo" className="px-2 py-3 font-semibold text-gray-600 dark:text-gray-300">{r.environment}</td>
+                    <td data-label="Sandbox" className="px-2 py-3 text-center">
                       {r.sandboxConfigured
                         ? <CheckCircle2 className="w-4 h-4 text-emerald-500 inline" />
                         : <XCircle className="w-4 h-4 text-gray-300 dark:text-gray-600 inline" />}
                     </td>
-                    <td className="px-2 py-3 text-center">
+                    <td data-label="Producción" className="px-2 py-3 text-center">
                       {r.productionConfigured
                         ? <CheckCircle2 className="w-4 h-4 text-emerald-500 inline" />
                         : <XCircle className="w-4 h-4 text-gray-300 dark:text-gray-600 inline" />}
                     </td>
-                    <td className="px-2 py-3 font-mono text-[11px] text-ink-soft">
+                    <td data-label="Rango Activo (S / P)" className="px-2 py-3 font-mono text-[11px] text-ink-soft">
                       {r.sandboxNumberingRangeId ?? '—'} / {r.productionNumberingRangeId ?? '—'}
                     </td>
-                    <td className="px-2 py-3 text-right">
+                    <td data-label="Acciones" className="px-2 py-3 text-right">
                       <button
                         onClick={() => openDetail(r.storeId)}
                         className="px-3 py-1.5 bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 text-gray-700 dark:text-gray-200 rounded-xl text-[11px] font-bold cursor-pointer"
@@ -357,7 +341,7 @@ export default function BillingBento() {
                           className={`px-3 py-1.5 rounded-xl text-[11px] font-extrabold cursor-pointer disabled:opacity-50 flex items-center gap-1.5 ${
                             target === 'REJECTED' || target === 'SUSPENDED'
                               ? 'bg-white dark:bg-line border border-red-200 dark:border-red-800/40 text-red-600 dark:text-red-400'
-                              : 'bg-solid hover:bg-solid-hover text-white shadow-sm shadow-[#0A0A0A]/10'
+                              : 'bg-solid hover:bg-solid-hover text-solid-ink shadow-sm shadow-[#0A0A0A]/10'
                           }`}
                         >
                           {target === 'REJECTED' && <Ban size={14} />}
@@ -405,7 +389,7 @@ export default function BillingBento() {
                         key={env}
                         type="button"
                         onClick={() => { setEnvTab(env); setCredentialsForm(EMPTY_CREDENTIALS); setTestResult(null); }}
-                        className={`px-3 py-1.5 rounded-full text-[11px] font-bold cursor-pointer ${envTab === env ? 'bg-solid text-white' : 'bg-white dark:bg-white/10 text-gray-600 dark:text-gray-300'}`}
+                        className={`px-3 py-1.5 rounded-full text-[11px] font-bold cursor-pointer ${envTab === env ? 'bg-solid text-solid-ink' : 'bg-white dark:bg-white/10 text-gray-600 dark:text-gray-300'}`}
                       >
                         {env} {env === 'SANDBOX' ? (detail.sandboxConfigured ? '✓' : '') : (detail.productionConfigured ? '✓' : '')}
                       </button>
@@ -480,7 +464,7 @@ export default function BillingBento() {
                       <button
                         type="submit"
                         disabled={savingCredentials}
-                        className="flex-1 py-2 bg-solid hover:bg-solid-hover disabled:opacity-50 text-white rounded-xl text-[11px] font-extrabold cursor-pointer shadow-sm shadow-[#0A0A0A]/10"
+                        className="flex-1 py-2 bg-solid hover:bg-solid-hover disabled:opacity-50 text-solid-ink rounded-xl text-[11px] font-extrabold cursor-pointer shadow-sm shadow-[#0A0A0A]/10"
                       >
                         {savingCredentials ? 'Guardando...' : `Guardar Credenciales ${envTab}`}
                       </button>

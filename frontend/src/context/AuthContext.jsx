@@ -1,8 +1,7 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { AuthContext } from './contexts';
 import { loginApi, logoutApi, refreshSessionApi } from '../services/authApi';
 import { setAuthToken, SESSION_EXPIRED_EVENT } from '../services/http';
-
-const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
   // Solo se persiste el perfil (usuario, rol, local), nunca un token: la sesion la mantienen las cookies HttpOnly.
@@ -37,7 +36,8 @@ export function AuthProvider({ children }) {
       username: data.username || fallbackUsername,
       role: data.role || 'ADMINISTRATOR',
       fullName: data.fullName || (data.username === 'admin' ? 'Administrador Principal' : data.username || fallbackUsername),
-      storeId: data.storeId ?? null
+      storeId: data.storeId ?? null,
+      avatarUrl: data.avatarUrl ?? null
     };
     setAuthToken(data.token);
     localStorage.setItem('pos_user', JSON.stringify(userData));
@@ -69,6 +69,16 @@ export function AuthProvider({ children }) {
     return applySession(data, user?.username);
   };
 
+  // Refleja al instante un cambio de perfil (ej. la foto) sin pedir otra sesión.
+  const updateUser = (patch) => {
+    setUser((current) => {
+      if (!current) return current;
+      const next = { ...current, ...patch };
+      localStorage.setItem('pos_user', JSON.stringify(next));
+      return next;
+    });
+  };
+
   const logout = async () => {
     setLoading(true);
     await logoutApi();
@@ -78,12 +88,8 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading, isAuthenticated: !!user, setSessionFromResponse, refreshSession }}>
+    <AuthContext.Provider value={{ user, login, logout, loading, isAuthenticated: !!user, setSessionFromResponse, refreshSession, updateUser }}>
       {children}
     </AuthContext.Provider>
   );
-}
-
-export function useAuth() {
-  return useContext(AuthContext);
 }

@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Search, Package, Layers } from 'lucide-react';
-import { getProductsApi, createProductApi, updateProductApi, deleteProductApi, changeProductStatusApi } from '../services/productsApi';
+import React, { useRef, useState } from 'react';
+import { Plus, Search, Package, Layers, FileSpreadsheet } from 'lucide-react';
+import { getProductsApi, createProductApi, updateProductApi, deleteProductApi, changeProductStatusApi, deleteStorageFileApi } from '../services/productsApi';
 import { getCategoriesApi } from '../services/categoriesApi';
 import {
   getSubcategoriesApi,
@@ -9,15 +9,19 @@ import {
   deleteSubcategoryApi
 } from '../services/subcategoriesApi';
 import { createInventoryMovementApi } from '../services/inventoryApi';
-import { useModal } from '../context/ModalContext';
-import { useAuth } from '../context/AuthContext';
+import useModal from '../hooks/useModal';
+import usePermissions from '../hooks/usePermissions';
 import { uploadFileApi } from '../services/http';
 import BarcodeModal from '../components/BarcodeModal';
 import ProductTable from '../components/products/ProductTable';
 import ProductFormModal from '../components/products/ProductFormModal';
+import ProductImportModal from '../components/products/ProductImportModal';
 import SubcategoriesPanel from '../components/products/SubcategoriesPanel';
 import SubcategoryModal from '../components/products/SubcategoryModal';
 import { Button, Card, PageHeader } from '../components/ui';
+import useLoad from '../hooks/useLoad';
+import asList from '../utils/asList';
+import { prepareImageForUpload } from '../utils/image';
 
 const EMPTY_PRODUCT = {
   id: null,
@@ -30,7 +34,9 @@ const EMPTY_PRODUCT = {
   price: '',
   stock: '',
   minStock: 5,
-  imageUrl: ''
+  imageUrl: '',
+  // Vencimiento del stock inicial (solo al crear): viaja con el movimiento de "Stock inicial" y crea un lote.
+  expirationDate: ''
 };
 
 const EMPTY_SUBCATEGORY = { id: null, categoryId: '', name: '', description: '' };
@@ -42,13 +48,12 @@ const TABS = [
 
 export default function ProductsBento() {
   const { confirm, notify } = useModal();
-  const { user } = useAuth();
-  const canManageSubcategories = user?.role === 'ADMINISTRATOR' || user?.role === 'SUPERVISOR';
+  // Mismo criterio que el backend: crear/editar/importar productos y gestionar subcategorías es de ADMINISTRATOR y
+  // SUPERVISOR; eliminar, solo de ADMINISTRATOR. El vendedor solo consulta el catálogo y los códigos de barras.
+  const { canManageStock: canManageProducts, isAdmin } = usePermissions();
+  const canManageSubcategories = canManageProducts;
   const [activeTab, setActiveTab] = useState('catalog');
-  const [products, setProducts] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [subcategories, setSubcategories] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [showImportModal, setShowImportModal] = useState(false);
   const [search, setSearch] = useState('');
   const [showInactive, setShowInactive] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -56,6 +61,8 @@ export default function ProductsBento() {
   const [errorMsg, setErrorMsg] = useState('');
   const [newProduct, setNewProduct] = useState(EMPTY_PRODUCT);
   const [uploadingImage, setUploadingImage] = useState(false);
+  // Clave en R2 de la foto subida en este formulario que todavía no se guardó en un producto.
+  const unsavedUploadKey = useRef(null);
   const [showNewSubcategory, setShowNewSubcategory] = useState(false);
   const [newSubcategoryName, setNewSubcategoryName] = useState('');
   const [subSearch, setSubSearch] = useState('');
@@ -63,42 +70,17 @@ export default function ProductsBento() {
   const [subForm, setSubForm] = useState(EMPTY_SUBCATEGORY);
   const [subErrorMsg, setSubErrorMsg] = useState('');
 
-  const loadProducts = async (inactive = showInactive) => {
-    setLoading(true);
-    try {
-      const data = await getProductsApi('', null, 0, 50, !inactive);
-      setProducts(Array.isArray(data) ? data : []);
-    } catch (e) {
-      console.warn('Error cargando productos:', e);
-      setProducts([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadCategories = async () => {
-    try {
-      setCategories(await getCategoriesApi());
-    } catch (e) {
-      console.warn('Error cargando categorías:', e);
-      setCategories([]);
-    }
-  };
-
-  const loadSubcategories = async () => {
-    try {
-      setSubcategories(await getSubcategoriesApi());
-    } catch (e) {
-      console.warn('Error cargando subcategorías:', e);
-      setSubcategories([]);
-    }
-  };
-
-  useEffect(() => {
-    loadProducts();
-    loadCategories();
-    loadSubcategories();
-  }, []);
+  const { data: products, loading, reload: reloadProducts } = useLoad(
+    () => asList(getProductsApi('', null, 0, 50, !showInactive)),
+    [showInactive],
+    { initial: [], autoRefresh: true },
+  );
+  const { data: categories } = useLoad(() => asList(getCategoriesApi()), [], { initial: [], autoRefresh: true });
+  const { data: subcategories, reload: reloadSubcategories } = useLoad(
+    () => asList(getSubcategoriesApi()),
+    [],
+    { initial: [], autoRefresh: true },
+  );
 
   const subcategoriesForSelectedCategory = subcategories.filter(
     sub => String(sub.categoryId) === String(newProduct.categoryId)
@@ -108,7 +90,7 @@ export default function ProductsBento() {
     if (!newSubcategoryName.trim() || !newProduct.categoryId) return;
     try {
       const created = await createSubcategoryApi(Number(newProduct.categoryId), newSubcategoryName.trim());
-      await loadSubcategories();
+      reloadSubcategories();
       setNewProduct(prev => ({ ...prev, subcategoryId: String(created.id) }));
       setNewSubcategoryName('');
       setShowNewSubcategory(false);
@@ -141,7 +123,7 @@ export default function ProductsBento() {
       }
       setShowSubModal(false);
       setSubForm(EMPTY_SUBCATEGORY);
-      await loadSubcategories();
+      reloadSubcategories();
     } catch (err) {
       setSubErrorMsg(err.message || 'Error al guardar la subcategoría. Intenta nuevamente.');
     }
@@ -152,7 +134,7 @@ export default function ProductsBento() {
     if (!ok) return;
     try {
       await deleteSubcategoryApi(sub.id);
-      await loadSubcategories();
+      reloadSubcategories();
     } catch (err) {
       notify('Error eliminando subcategoría: ' + err.message);
     }
@@ -177,7 +159,8 @@ export default function ProductsBento() {
       price: p.salePrice ?? p.price ?? '',
       stock: '',
       minStock: p.minStock ?? 5,
-      imageUrl: p.imageUrl || ''
+      imageUrl: p.imageUrl || '',
+      expirationDate: ''
     });
     setErrorMsg('');
     setShowAddModal(true);
@@ -202,6 +185,11 @@ export default function ProductsBento() {
           imageUrl: newProduct.imageUrl || null
         });
       } else {
+        const initialStock = parseInt(newProduct.stock) || 0;
+        if (newProduct.expirationDate && initialStock <= 0) {
+          setErrorMsg('Para guardar un vencimiento indica el stock inicial al que corresponde, o deja la fecha vacía.');
+          return;
+        }
         const created = await createProductApi({
           name: newProduct.name,
           barcode: newProduct.barcode || `${Math.floor(1000000000000 + Math.random() * 9000000000000)}`,
@@ -213,18 +201,32 @@ export default function ProductsBento() {
           imageUrl: newProduct.imageUrl || null
         });
 
-        const initialStock = parseInt(newProduct.stock) || 0;
         if (initialStock > 0) {
-          await createInventoryMovementApi(created.id, 'ENTRY', initialStock, 'Stock inicial al crear el producto');
+          await createInventoryMovementApi(created.id, 'ENTRY', initialStock, 'Stock inicial al crear el producto', {
+            expirationDate: newProduct.expirationDate || null,
+          });
         }
       }
 
+      unsavedUploadKey.current = null; // la foto ya quedó guardada en el producto
       setShowAddModal(false);
       setNewProduct(EMPTY_PRODUCT);
-      await loadProducts();
+      reloadProducts();
     } catch (err) {
       setErrorMsg(err.message || 'Error al guardar el producto. Intenta nuevamente.');
     }
+  };
+
+  // Una foto que se subió pero no se guardó (formulario cancelado o foto reemplazada) se borra de R2.
+  const discardUnsavedUpload = () => {
+    const key = unsavedUploadKey.current;
+    unsavedUploadKey.current = null;
+    if (key) deleteStorageFileApi(key).catch(() => {});
+  };
+
+  const closeProductModal = () => {
+    discardUnsavedUpload();
+    setShowAddModal(false);
   };
 
   const handleImageChange = async (e) => {
@@ -235,9 +237,11 @@ export default function ProductsBento() {
     setUploadingImage(true);
     try {
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('file', await prepareImageForUpload(file));
       formData.append('folder', 'imagenes-productos');
       const result = await uploadFileApi('/storage/upload', formData);
+      discardUnsavedUpload();
+      unsavedUploadKey.current = result.key;
       setNewProduct(prev => ({ ...prev, imageUrl: result.url }));
     } catch (err) {
       setErrorMsg(err.message || 'Error al subir la imagen. Intenta nuevamente.');
@@ -246,11 +250,14 @@ export default function ProductsBento() {
     }
   };
 
-  const toggleInactive = () => {
-    const next = !showInactive;
-    setShowInactive(next);
-    loadProducts(next);
+  // Quita la foto del formulario. Si era una recién subida sin guardar se borra de R2 ya; si ya estaba
+  // guardada en el producto, el backend la borra de R2 al guardar el formulario sin foto.
+  const handleImageRemove = () => {
+    discardUnsavedUpload();
+    setNewProduct(prev => ({ ...prev, imageUrl: '' }));
   };
+
+  const toggleInactive = () => setShowInactive((v) => !v);
 
   const handleToggleStatus = async (p) => {
     const activate = p.active === false;
@@ -262,7 +269,7 @@ export default function ProductsBento() {
     }
     try {
       await changeProductStatusApi(p.id, activate);
-      await loadProducts();
+      reloadProducts();
     } catch (e) {
       notify('No se pudo cambiar el estado del producto: ' + e.message);
     }
@@ -273,7 +280,7 @@ export default function ProductsBento() {
     if (!ok) return;
     try {
       await deleteProductApi(id);
-      await loadProducts();
+      reloadProducts();
     } catch (e) {
       notify('Error eliminando producto: ' + e.message);
     }
@@ -294,10 +301,13 @@ export default function ProductsBento() {
     <div className="space-y-6 select-none">
       <PageHeader
         title="Productos"
-        subtitle="Catálogo y subcategorías de tu tienda en BentoPOS"
+        subtitle="Catálogo y subcategorías de tu tienda en PosBento"
         actions={
-          activeTab === 'catalog' ? (
-            <Button icon={Plus} onClick={openCreateModal}>Crear Nuevo Producto</Button>
+          activeTab === 'catalog' && canManageProducts ? (
+            <>
+              <Button variant="outline" icon={FileSpreadsheet} onClick={() => setShowImportModal(true)}>Importar Excel</Button>
+              <Button icon={Plus} onClick={openCreateModal}>Crear Nuevo Producto</Button>
+            </>
           ) : activeTab === 'subcategories' && canManageSubcategories ? (
             <Button icon={Plus} onClick={openCreateSubModal}>Nueva Subcategoría</Button>
           ) : null
@@ -312,7 +322,7 @@ export default function ProductsBento() {
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={`px-4 py-2 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-                activeTab === tab.id ? 'bg-solid text-white shadow-xs' : 'text-ink-soft hover:text-brand'
+                activeTab === tab.id ? 'bg-solid text-solid-ink shadow-xs' : 'text-ink-soft hover:text-brand'
               }`}
             >
               <Icon className="w-4 h-4" /> {tab.label}
@@ -323,8 +333,8 @@ export default function ProductsBento() {
 
       {activeTab === 'catalog' && (
         <Card className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="relative w-72">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="relative w-full sm:w-72">
               <Search className="w-4 h-4 text-ink-muted absolute left-3.5 top-2.5" />
               <input
                 type="text"
@@ -334,11 +344,11 @@ export default function ProductsBento() {
                 className="w-full pl-10 pr-3 py-1.5 bg-page border border-line rounded-2xl text-xs font-semibold text-ink placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-ink"
               />
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <button
                 onClick={toggleInactive}
                 className={`px-3 py-1.5 rounded-full text-[11px] font-bold cursor-pointer border transition-colors ${
-                  showInactive ? 'bg-solid text-white border-transparent' : 'border-line text-ink-soft hover:border-line-strong'
+                  showInactive ? 'bg-solid text-solid-ink border-transparent' : 'border-line text-ink-soft hover:border-line-strong'
                 }`}
               >
                 {showInactive ? 'Viendo inactivos' : 'Ver inactivos'}
@@ -352,8 +362,10 @@ export default function ProductsBento() {
           <ProductTable
             products={filtered}
             loading={loading}
+            canEdit={canManageProducts}
             canToggleStatus={canManageSubcategories}
-            onCreate={openCreateModal}
+            canDelete={isAdmin}
+            onCreate={canManageProducts ? openCreateModal : null}
             onEdit={openEditModal}
             onBarcode={setBarcodeProduct}
             onToggleStatus={handleToggleStatus}
@@ -394,15 +406,25 @@ export default function ProductsBento() {
           categories={categories}
           subcategories={subcategoriesForSelectedCategory}
           errorMsg={errorMsg}
+          canManageLots={canManageProducts}
+          onLotsChanged={() => reloadProducts()}
           uploadingImage={uploadingImage}
           onImageChange={handleImageChange}
+          onImageRemove={handleImageRemove}
           creatingSubcategory={showNewSubcategory}
           setCreatingSubcategory={setShowNewSubcategory}
           newSubcategoryName={newSubcategoryName}
           setNewSubcategoryName={setNewSubcategoryName}
           onCreateSubcategory={handleCreateSubcategory}
           onSubmit={handleSubmitProduct}
-          onClose={() => setShowAddModal(false)}
+          onClose={closeProductModal}
+        />
+      )}
+
+      {showImportModal && (
+        <ProductImportModal
+          onClose={() => setShowImportModal(false)}
+          onImported={() => { reloadProducts(); reloadSubcategories(); }}
         />
       )}
 

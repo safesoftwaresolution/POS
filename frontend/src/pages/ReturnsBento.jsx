@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   RotateCcw,
   Search,
@@ -9,13 +9,18 @@ import {
   X,
 } from 'lucide-react';
 import { getSalesApi, getSaleReturnsApi, createSaleReturnApi } from '../services/salesApi';
+import useLoad from '../hooks/useLoad';
+import asList from '../utils/asList';
 
 const money = (n) => `$${Math.round(n || 0).toLocaleString('es-CO')}`;
 const dateFmt = (iso) => (iso ? new Date(iso).toLocaleString('es-CO', { dateStyle: 'medium', timeStyle: 'short' }) : '—');
 
 export default function ReturnsBento() {
-  const [sales, setSales] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { data: sales, loading, reload: reloadSales } = useLoad(
+    () => asList(getSalesApi(0, 50)),
+    [],
+    { initial: [], autoRefresh: true },
+  );
   const [search, setSearch] = useState('');
 
   const [selectedSale, setSelectedSale] = useState(null);
@@ -25,23 +30,6 @@ export default function ReturnsBento() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-
-  const loadSales = async () => {
-    setLoading(true);
-    try {
-      const data = await getSalesApi(0, 50);
-      setSales(Array.isArray(data) ? data : []);
-    } catch (e) {
-      console.warn('Error cargando ventas:', e);
-      setSales([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadSales();
-  }, []);
 
   const filtered = sales.filter((s) =>
     (s.invoiceNumber && s.invoiceNumber.toLowerCase().includes(search.toLowerCase())) ||
@@ -101,7 +89,9 @@ export default function ReturnsBento() {
         reason,
         itemsToReturn.map((x) => ({ saleItemId: x.saleItemId, quantity: x.quantity }))
       );
-      setSuccess('Devolución registrada. El stock ya fue repuesto.');
+      // Los servicios solo se reembolsan: no hay stock que reponer.
+      const restocks = itemsToReturn.some((x) => x.item.itemType !== 'SERVICE');
+      setSuccess(restocks ? 'Devolución registrada. El stock ya fue repuesto.' : 'Devolución registrada. El servicio se reembolsó sin mover inventario.');
       setReturnQty({});
       setReason('');
       const returns = await getSaleReturnsApi(selectedSale.id);
@@ -122,7 +112,7 @@ export default function ReturnsBento() {
             Busca la venta original y devuelve los ítems necesarios — el stock se repone automáticamente
           </p>
         </div>
-        <button onClick={loadSales} className="text-xs font-bold text-brand dark:text-brand flex items-center gap-1 hover:underline cursor-pointer">
+        <button onClick={() => reloadSales({ silent: false })} className="text-xs font-bold text-brand dark:text-brand flex items-center gap-1 hover:underline cursor-pointer">
           <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Actualizar ventas
         </button>
       </div>
@@ -202,10 +192,10 @@ export default function ReturnsBento() {
               )}
 
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
+                <table className="table-cards w-full text-left text-xs">
                   <thead>
                     <tr className="border-b border-line text-ink-muted uppercase tracking-wider font-extrabold text-[10px]">
-                      <th className="py-2 px-2">Producto</th>
+                      <th className="py-2 px-2">Producto / servicio</th>
                       <th className="py-2 px-2 text-center">Vendido</th>
                       <th className="py-2 px-2 text-center">Disponible</th>
                       <th className="py-2 px-2 text-center">A devolver</th>
@@ -216,10 +206,15 @@ export default function ReturnsBento() {
                       const returnable = returnableFor(item);
                       return (
                         <tr key={item.id}>
-                          <td className="py-2.5 px-2 font-bold text-ink">{item.productName}</td>
-                          <td className="py-2.5 px-2 text-center tabular-nums">{item.quantity}</td>
-                          <td className="py-2.5 px-2 text-center tabular-nums text-ink-soft">{returnable}</td>
-                          <td className="py-2.5 px-2 text-center">
+                          <td data-label="" className="py-2.5 px-2 font-bold text-ink">
+                            {item.productName}
+                            {item.itemType === 'SERVICE' && (
+                              <span className="ml-1.5 text-[9px] font-extrabold uppercase text-brand">Servicio</span>
+                            )}
+                          </td>
+                          <td data-label="Vendido" className="py-2.5 px-2 text-center tabular-nums">{item.quantity}</td>
+                          <td data-label="Disponible" className="py-2.5 px-2 text-center tabular-nums text-ink-soft">{returnable}</td>
+                          <td data-label="A devolver" className="py-2.5 px-2 text-center">
                             <input
                               type="number"
                               min="0"
@@ -257,7 +252,7 @@ export default function ReturnsBento() {
                 <button
                   onClick={submitReturn}
                   disabled={submitting || itemsToReturn.length === 0}
-                  className="px-5 py-2.5 bg-solid hover:bg-solid-hover disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-2xl text-xs font-extrabold flex items-center gap-2 shadow-md shadow-[#0A0A0A]/10 cursor-pointer"
+                  className="px-5 py-2.5 bg-solid hover:bg-solid-hover disabled:opacity-50 disabled:cursor-not-allowed text-solid-ink rounded-2xl text-xs font-extrabold flex items-center gap-2 shadow-md shadow-[#0A0A0A]/10 cursor-pointer"
                 >
                   <RotateCcw className="w-4 h-4" /> {submitting ? 'Procesando...' : 'Registrar Devolución'}
                 </button>

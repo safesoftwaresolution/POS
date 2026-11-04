@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import {
   Store,
   Plus,
@@ -32,8 +32,10 @@ import {
   changeBackofficeStorePlanApi,
   deleteBackofficeStoreApi
 } from '../../services/backoffice/storesApi';
-import { useModal } from '../../context/ModalContext';
-import useAutoRefresh from '../../hooks/useAutoRefresh';
+import useModal from '../../hooks/useModal';
+import useLoad from '../../hooks/useLoad';
+import useDebouncedValue from '../../hooks/useDebouncedValue';
+import asList from '../../utils/asList';
 import { DOC_TYPE_LABELS, DOC_STATUS_STYLES } from '../../constants/storeDocuments';
 
 const STATUSES = ['ACTIVE', 'INACTIVE', 'PENDING_VERIFICATION', 'SUSPENDED'];
@@ -72,14 +74,26 @@ function MetricCard({ label, value, icon: Icon, accent }) {
 
 export default function StoresBento() {
   const { notify } = useModal();
-  const [metrics, setMetrics] = useState(null);
-  const [stores, setStores] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [plans, setPlans] = useState([]);
-  const [planUsage, setPlanUsage] = useState({});
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const debouncedSearch = useDebouncedValue(search, 250);
+
+  const { data: metrics, reload: reloadMetrics } = useLoad(() => getBackofficeMetricsApi(), [], { initial: null, autoRefresh: true });
+  const { data: stores, loading, reload: reloadStores } = useLoad(
+    async () => (await getBackofficeStoresApi(statusFilter, debouncedSearch)).content || [],
+    [statusFilter, debouncedSearch],
+    { initial: [], autoRefresh: true },
+  );
+  const { data: categories, reload: reloadCategories } = useLoad(() => asList(getBackofficeStoreCategoriesApi()), [], { initial: [] });
+  const { data: planData, reload: reloadPlans } = useLoad(
+    async () => {
+      const [planList, usage] = await Promise.all([getPlansApi(), getStorePlanUsageApi()]);
+      return { plans: planList, planUsage: Object.fromEntries(usage.map((u) => [u.storeId, u])) };
+    },
+    [],
+    { initial: { plans: [], planUsage: {} }, autoRefresh: true },
+  );
+  const { plans, planUsage } = planData;
   const [errorMsg, setErrorMsg] = useState('');
 
   const [showStoreModal, setShowStoreModal] = useState(false);
@@ -97,62 +111,19 @@ export default function StoresBento() {
   const [deleteConfirm, setDeleteConfirm] = useState('');
   const [deleteBusy, setDeleteBusy] = useState(false);
 
-  const loadMetrics = useCallback(async () => {
-    try {
-      setMetrics(await getBackofficeMetricsApi());
-    } catch (e) {
-      console.warn('Error cargando métricas del backoffice:', e);
-    }
-  }, []);
-
-  const loadStores = useCallback(async ({ silent = false } = {}) => {
-    if (!silent) setLoading(true);
-    try {
-      const data = await getBackofficeStoresApi(statusFilter, search);
-      setStores(data.content || []);
-    } catch (e) {
-      console.warn('Error cargando locales:', e);
-      if (!silent) setStores([]);
-    } finally {
-      if (!silent) setLoading(false);
-    }
-  }, [statusFilter, search]);
-
-  const loadCategories = useCallback(async () => {
-    try {
-      setCategories(await getBackofficeStoreCategoriesApi());
-    } catch (e) {
-      console.warn('Error cargando categorías de locales:', e);
-    }
-  }, []);
-
-  const loadPlans = useCallback(async () => {
-    try {
-      const [planList, usage] = await Promise.all([getPlansApi(), getStorePlanUsageApi()]);
-      setPlans(planList);
-      setPlanUsage(Object.fromEntries(usage.map(u => [u.storeId, u])));
-    } catch (e) {
-      console.warn('Error cargando planes:', e);
-    }
-  }, []);
-
-  useEffect(() => { loadMetrics(); loadCategories(); loadPlans(); }, [loadMetrics, loadCategories, loadPlans]);
-  useEffect(() => {
-    const t = setTimeout(loadStores, 250);
-    return () => clearTimeout(t);
-  }, [loadStores]);
-
-  useAutoRefresh(() => Promise.all([loadMetrics(), loadStores({ silent: true }), loadPlans()]));
-
-  const refreshAll = async () => {
-    await Promise.all([loadMetrics(), loadStores(), loadCategories(), loadPlans()]);
+  const refreshAll = () => {
+    reloadMetrics();
+    reloadStores();
+    reloadCategories();
+    reloadPlans();
   };
 
   const handleChangePlan = async (store, planCode) => {
     setErrorMsg('');
     try {
       await changeBackofficeStorePlanApi(store.id, planCode);
-      await Promise.all([loadStores(), loadPlans()]);
+      reloadStores();
+      reloadPlans();
     } catch (err) {
       setErrorMsg(err.message || 'No se pudo cambiar el plan.');
     }
@@ -172,7 +143,7 @@ export default function StoresBento() {
       notify(`El local "${deletingStore.name}" fue eliminado. Sus administradores quedaron sin local.`,
         { title: 'Local eliminado', danger: false });
       setDeletingStore(null);
-      await refreshAll();
+      refreshAll();
     } catch (err) {
       setDeletingStore(null);
       setErrorMsg(err.message || 'No se pudo eliminar el local.');
@@ -218,7 +189,7 @@ export default function StoresBento() {
         await createBackofficeStoreApi(payload);
       }
       setShowStoreModal(false);
-      await refreshAll();
+      refreshAll();
     } catch (err) {
       setFormError(err.message || 'Error al guardar el local. Intenta nuevamente.');
     }
@@ -228,7 +199,7 @@ export default function StoresBento() {
     setErrorMsg('');
     try {
       await changeBackofficeStoreStatusApi(store.id, status);
-      await refreshAll();
+      refreshAll();
     } catch (err) {
       setErrorMsg(err.message || 'Error al cambiar el estado del local.');
     }
@@ -238,7 +209,7 @@ export default function StoresBento() {
     setErrorMsg('');
     try {
       await verifyBackofficeStoreEmailApi(store.id);
-      await refreshAll();
+      refreshAll();
     } catch (err) {
       setErrorMsg(err.message || 'Error al verificar el correo del local.');
     }
@@ -291,7 +262,7 @@ export default function StoresBento() {
 
         <button
           onClick={openCreateStore}
-          className="px-4 py-2.5 bg-solid hover:bg-solid-hover text-white rounded-2xl text-xs font-bold flex items-center gap-2 shadow-md shadow-[#0A0A0A]/10 cursor-pointer"
+          className="px-4 py-2.5 bg-solid hover:bg-solid-hover text-solid-ink rounded-2xl text-xs font-bold flex items-center gap-2 shadow-md shadow-[#0A0A0A]/10 cursor-pointer"
         >
           <Plus className="w-4 h-4" /> Nuevo Local
         </button>
@@ -331,7 +302,7 @@ export default function StoresBento() {
           <div className="flex items-center gap-2 flex-wrap">
             <button
               onClick={() => setStatusFilter('ALL')}
-              className={`px-3 py-1.5 rounded-full text-[11px] font-bold cursor-pointer ${statusFilter === 'ALL' ? 'bg-solid text-white' : 'bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300'}`}
+              className={`px-3 py-1.5 rounded-full text-[11px] font-bold cursor-pointer ${statusFilter === 'ALL' ? 'bg-solid text-solid-ink' : 'bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300'}`}
             >
               Todos
             </button>
@@ -339,7 +310,7 @@ export default function StoresBento() {
               <button
                 key={s}
                 onClick={() => setStatusFilter(s)}
-                className={`px-3 py-1.5 rounded-full text-[11px] font-bold cursor-pointer ${statusFilter === s ? 'bg-solid text-white' : 'bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300'}`}
+                className={`px-3 py-1.5 rounded-full text-[11px] font-bold cursor-pointer ${statusFilter === s ? 'bg-solid text-solid-ink' : 'bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300'}`}
               >
                 {STATUS_LABELS[s]}
               </button>
@@ -360,8 +331,8 @@ export default function StoresBento() {
             </div>
           </div>
         ) : (
-          <div className="overflow-x-auto -mx-2">
-            <table className="w-full text-xs min-w-[920px]">
+          <div className="md:overflow-x-auto md:-mx-2">
+            <table className="table-cards w-full text-xs md:min-w-[920px]">
               <thead>
                 <tr className="text-left text-[10px] font-extrabold text-ink-muted uppercase">
                   <th className="px-2 py-2">Local</th>
@@ -375,12 +346,12 @@ export default function StoresBento() {
               <tbody>
                 {stores.map(s => (
                   <tr key={s.id} className="border-t border-line hover:bg-gray-50/60 dark:hover:bg-white/5">
-                    <td className="px-2 py-3">
+                    <td data-label="" className="px-2 py-3">
                       <p className="font-extrabold text-ink">{s.name}</p>
                       <p className="text-[10px] text-ink-muted font-mono">NIT: {s.taxId || '—'}</p>
                     </td>
-                    <td className="px-2 py-3 text-ink-soft font-semibold">{s.categoryName || 'Sin categoría'}</td>
-                    <td className="px-2 py-3">
+                    <td data-label="Categoría" className="px-2 py-3 text-ink-soft font-semibold">{s.categoryName || 'Sin categoría'}</td>
+                    <td data-label="Contacto" className="px-2 py-3">
                       <p className="flex items-center gap-1.5 font-semibold text-gray-600 dark:text-gray-300">
                         <Mail className="w-3.5 h-3.5 text-ink-muted" /> {s.email}
                       </p>
@@ -388,7 +359,7 @@ export default function StoresBento() {
                         <MailCheck className="w-3 h-3" /> {s.emailVerified ? 'Verificado' : 'Sin verificar'}
                       </span>
                     </td>
-                    <td className="px-2 py-3">
+                    <td data-label="Estado" className="px-2 py-3">
                       <select
                         value={s.status}
                         onChange={(e) => handleChangeStatus(s, e.target.value)}
@@ -399,7 +370,7 @@ export default function StoresBento() {
                         ))}
                       </select>
                     </td>
-                    <td className="px-2 py-3">
+                    <td data-label="Plan" className="px-2 py-3">
                       <select
                         value={s.planCode || ''}
                         onChange={(e) => handleChangePlan(s, e.target.value)}
@@ -421,7 +392,7 @@ export default function StoresBento() {
                         </p>
                       )}
                     </td>
-                    <td className="px-2 py-3">
+                    <td data-label="Acciones" className="px-2 py-3">
                       <div className="flex items-center justify-end gap-1">
                         {!s.emailVerified && (
                           <button
@@ -624,7 +595,7 @@ export default function StoresBento() {
               </button>
               <button
                 type="submit"
-                className="w-1/2 py-3 bg-solid hover:bg-solid-hover text-white rounded-2xl text-xs font-extrabold cursor-pointer shadow-md shadow-[#0A0A0A]/10"
+                className="w-1/2 py-3 bg-solid hover:bg-solid-hover text-solid-ink rounded-2xl text-xs font-extrabold cursor-pointer shadow-md shadow-[#0A0A0A]/10"
               >
                 {editingStore ? 'Guardar Cambios' : 'Crear Local'}
               </button>
@@ -709,7 +680,7 @@ export default function StoresBento() {
                           <button
                             type="button"
                             onClick={() => handleApproveDoc(doc)}
-                            className="flex-1 py-1.5 bg-solid hover:bg-solid-hover text-white rounded-xl text-[11px] font-extrabold flex items-center justify-center gap-1 cursor-pointer shadow-sm shadow-[#0A0A0A]/10"
+                            className="flex-1 py-1.5 bg-solid hover:bg-solid-hover text-solid-ink rounded-xl text-[11px] font-extrabold flex items-center justify-center gap-1 cursor-pointer shadow-sm shadow-[#0A0A0A]/10"
                           >
                             <Check className="w-3.5 h-3.5" /> Aprobar
                           </button>

@@ -1,37 +1,31 @@
-import React, { useState, useEffect } from 'react';
-import { Users, UserPlus, Search, Mail, Phone, CheckCircle2, Edit3, Trash2 } from 'lucide-react';
+import React, { useState } from 'react';
+import { Users, UserPlus, Search, Mail, Phone, CheckCircle2, Edit3, Trash2, History, Lock } from 'lucide-react';
 import { getCustomersApi, deleteCustomerApi } from '../services/customersApi';
 import CreateDianCustomerModal from '../components/customers/CreateDianCustomerModal';
-import { useAuth } from '../context/AuthContext';
-import { useModal } from '../context/ModalContext';
+import CustomerHistoryModal from '../components/customers/CustomerHistoryModal';
+import useAuth from '../hooks/useAuth';
+import useModal from '../hooks/useModal';
 import { Button, Badge, Card, EmptyState, PageHeader } from '../components/ui';
+import useLoad from '../hooks/useLoad';
+import asList from '../utils/asList';
+import { formatDateTime } from '../utils/format';
 
 export default function CustomersBento() {
   const { user } = useAuth();
   const { confirm, notify } = useModal();
   const canDelete = user?.role === 'ADMINISTRATOR';
 
-  const [customers, setCustomers] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { data: customers, loading, reload } = useLoad(
+    () => asList(getCustomersApi()),
+    [],
+    { initial: [], autoRefresh: true },
+  );
   const [search, setSearch] = useState('');
   // null = cerrado, {} = alta, {customer} = edición
   const [modal, setModal] = useState(null);
-
-  const fetchCustomers = async () => {
-    try {
-      const data = await getCustomersApi();
-      setCustomers(Array.isArray(data) ? data : []);
-    } catch (e) {
-      console.warn('Error cargando clientes:', e);
-      setCustomers([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchCustomers();
-  }, []);
+  const [historyOf, setHistoryOf] = useState(null);
+  // El historial de cambios es solo del administrador (GET /audit).
+  const canSeeHistory = user?.role === 'ADMINISTRATOR';
 
   const handleDelete = async (c) => {
     const ok = await confirm(
@@ -41,7 +35,7 @@ export default function CustomersBento() {
     if (!ok) return;
     try {
       await deleteCustomerApi(c.id);
-      await fetchCustomers();
+      reload();
     } catch (e) {
       notify('No se pudo eliminar el cliente: ' + e.message);
     }
@@ -58,13 +52,13 @@ export default function CustomersBento() {
     <div className="space-y-6 select-none">
       <PageHeader
         title="Directorio de Clientes"
-        subtitle="Gestión de clientes para emisión y facturación electrónica DIAN en BentoPOS"
+        subtitle="Gestión de clientes para emisión y facturación electrónica DIAN en PosBento"
         actions={<Button icon={UserPlus} onClick={() => setModal({})}>Registrar Nuevo Cliente</Button>}
       />
 
       <Card className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="relative w-72">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="relative w-full sm:w-72">
             <Search className="w-4 h-4 text-ink-muted absolute left-3.5 top-2.5" />
             <input
               type="text"
@@ -90,7 +84,7 @@ export default function CustomersBento() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filtered.map(c => (
               <div key={c.id} className="p-5 bg-card rounded-2xl border border-line space-y-3 shadow-xs hover:border-line-strong transition-all">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <span className="text-[10px] font-mono font-bold text-ink-soft">CC/NIT: {c.identification}</span>
                   <Badge tone={c.active === false ? 'neutral' : 'success'}>
                     {c.active === false ? 'Inactivo' : 'Habilitado'}
@@ -105,18 +99,46 @@ export default function CustomersBento() {
                   </div>
                 </div>
 
+                {(c.createdByUsername || c.updatedByUsername) && (
+                  <p className="text-[10px] text-ink-muted font-medium leading-relaxed">
+                    {c.createdByUsername && <>Creado por <span className="font-bold text-ink-soft">{c.createdByUsername}</span> · {formatDateTime(c.createdAt)}</>}
+                    {c.updatedByUsername && c.updatedAt !== c.createdAt && (
+                      <><br />Editado por <span className="font-bold text-ink-soft">{c.updatedByUsername}</span> · {formatDateTime(c.updatedAt)}</>
+                    )}
+                  </p>
+                )}
+
                 <div className="pt-2 border-t border-line flex justify-between items-center text-xs">
                   <span className="text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
                     <CheckCircle2 className="w-3.5 h-3.5" /> Facturación Activa
                   </span>
                   <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => setModal({ customer: c })}
-                      title="Editar cliente"
-                      className="p-1.5 text-ink-muted hover:text-brand rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer"
-                    >
-                      <Edit3 className="w-4 h-4" />
-                    </button>
+                    {canSeeHistory && (
+                      <button
+                        onClick={() => setHistoryOf(c)}
+                        title="Ver historial de cambios"
+                        className="p-1.5 text-ink-muted hover:text-brand rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer"
+                      >
+                        <History className="w-4 h-4" />
+                      </button>
+                    )}
+                    {/* El backend decide quién edita (`editable`): un vendedor solo edita los clientes que creó. */}
+                    {c.editable === false ? (
+                      <span
+                        title="Solo puedes editar los clientes que tú creaste"
+                        className="p-1.5 text-ink-muted/60 flex items-center"
+                      >
+                        <Lock className="w-4 h-4" />
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => setModal({ customer: c })}
+                        title="Editar cliente"
+                        className="p-1.5 text-ink-muted hover:text-brand rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer"
+                      >
+                        <Edit3 className="w-4 h-4" />
+                      </button>
+                    )}
                     {canDelete && (
                       <button
                         onClick={() => handleDelete(c)}
@@ -138,9 +160,11 @@ export default function CustomersBento() {
         <CreateDianCustomerModal
           customer={modal.customer}
           onClose={() => setModal(null)}
-          onCreated={fetchCustomers}
+          onCreated={() => reload()}
         />
       )}
+
+      {historyOf && <CustomerHistoryModal customer={historyOf} onClose={() => setHistoryOf(null)} />}
     </div>
   );
 }

@@ -1,7 +1,8 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import useAutoRefresh from './hooks/useAutoRefresh';
-import { AuthProvider, useAuth } from './context/AuthContext';
+import { AuthProvider } from './context/AuthContext';
+import useAuth from './hooks/useAuth';
 import { ThemeProvider } from './context/ThemeContext';
 import { ModalProvider } from './context/ModalContext';
 import { getOwnStoreApi } from './services/storesApi';
@@ -23,9 +24,12 @@ const DashboardBento = lazy(() => import('./pages/DashboardBento'));
 const POSBento = lazy(() => import('./pages/POSBento'));
 const InventoryBento = lazy(() => import('./pages/InventoryBento'));
 const ProductsBento = lazy(() => import('./pages/ProductsBento'));
+const ServicesBento = lazy(() => import('./pages/ServicesBento'));
 const CustomersBento = lazy(() => import('./pages/CustomersBento'));
+const CreditBento = lazy(() => import('./pages/CreditBento'));
 const InvoicingBento = lazy(() => import('./pages/InvoicingBento'));
-const ReportsBento = lazy(() => import('./pages/ReportsBento'));
+const SalesBento = lazy(() => import('./pages/SalesBento'));
+const CashBento = lazy(() => import('./pages/CashBento'));
 const SettingsBento = lazy(() => import('./pages/SettingsBento'));
 const UsersBento = lazy(() => import('./pages/UsersBento'));
 const LegalPage = lazy(() => import('./pages/public/LegalPage'));
@@ -163,10 +167,15 @@ function ProtectedLayoutContent({ mobileSidebarOpen, setMobileSidebarOpen, sideb
             <Route path="/inventory" element={<InventoryBento />} />
             <Route path="/suppliers" element={<Navigate to="/inventory?tab=suppliers" replace />} />
             <Route path="/products" element={<ProductsBento />} />
+            {/* Todos los roles de tienda ven el catálogo (GET /services); crear y editar lo limita la propia pantalla. */}
+            <Route path="/services" element={<ServicesBento />} />
             <Route path="/categories" element={<CategoriesBento />} />
             <Route path="/customers" element={<CustomersBento />} />
+            <Route path="/credit" element={<CreditBento />} />
             <Route path="/invoicing" element={<InvoicingBento />} />
-            <Route path="/reports" element={<RequireRole roles={['ADMINISTRATOR', 'SUPERVISOR']}><ReportsBento /></RequireRole>} />
+            <Route path="/sales" element={<SalesBento />} />
+            <Route path="/cash" element={<RequireRole roles={['ADMINISTRATOR']}><CashBento /></RequireRole>} />
+            <Route path="/reports" element={<Navigate to="/" replace />} />
             <Route path="/returns" element={<Navigate to="/inventory?tab=returns" replace />} />
             <Route path="/documents" element={<RequireRole roles={['ADMINISTRATOR']}><DocumentsBento /></RequireRole>} />
             <Route path="/users" element={<RequireRole roles={['ADMINISTRATOR']}><UsersBento /></RequireRole>} />

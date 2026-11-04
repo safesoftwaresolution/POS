@@ -11,11 +11,14 @@ import com.sciencebot.pos.sales.internal.repositories.SaleRepository;
 import com.sciencebot.pos.sales.internal.repositories.SaleReturnRepository;
 import com.sciencebot.pos.sales.internal.mappers.SaleMapper;
 import com.sciencebot.pos.sales.internal.mappers.SaleReturnMapper;
+import com.sciencebot.pos.credit.CreditFacade;
 import com.sciencebot.pos.customers.CreateCustomerCommand;
 import com.sciencebot.pos.customers.CustomerFacade;
 import com.sciencebot.pos.customers.CustomerDto;
 import com.sciencebot.pos.products.ProductFacade;
 import com.sciencebot.pos.products.ProductDto;
+import com.sciencebot.pos.services.ServiceDto;
+import com.sciencebot.pos.services.ServiceFacade;
 import com.sciencebot.pos.inventory.InventoryFacade;
 import com.sciencebot.pos.users.UserFacade;
 import org.springframework.context.annotation.Lazy;
@@ -36,6 +39,8 @@ import java.util.Optional;
 public class SaleServiceImpl implements SaleFacade {
 
     private static final String GENERAL_CUSTOMER_IDENTIFICATION = "9999999999";
+    /** Método de pago "Fiado" (valor del tema PAYMENT_METHODS). */
+    private static final String CREDIT_PAYMENT_METHOD = "CREDIT";
 
     private final SaleRepository saleRepository;
     private final SaleItemRepository saleItemRepository;
@@ -44,6 +49,8 @@ public class SaleServiceImpl implements SaleFacade {
     private final SaleReturnMapper saleReturnMapper;
     private final CustomerFacade customerFacade;
     private final ProductFacade productFacade;
+    private final ServiceFacade serviceFacade;
+    private final CreditFacade creditFacade;
     private final InventoryFacade inventoryFacade;
     private final UserFacade userFacade;
     private final org.springframework.context.ApplicationEventPublisher eventPublisher;
@@ -56,6 +63,8 @@ public class SaleServiceImpl implements SaleFacade {
             SaleReturnMapper saleReturnMapper,
             @Lazy CustomerFacade customerFacade,
             @Lazy ProductFacade productFacade,
+            @Lazy ServiceFacade serviceFacade,
+            @Lazy CreditFacade creditFacade,
             @Lazy InventoryFacade inventoryFacade,
             @Lazy UserFacade userFacade,
             org.springframework.context.ApplicationEventPublisher eventPublisher
@@ -67,6 +76,8 @@ public class SaleServiceImpl implements SaleFacade {
         this.saleReturnMapper = saleReturnMapper;
         this.customerFacade = customerFacade;
         this.productFacade = productFacade;
+        this.serviceFacade = serviceFacade;
+        this.creditFacade = creditFacade;
         this.inventoryFacade = inventoryFacade;
         this.userFacade = userFacade;
         this.eventPublisher = eventPublisher;
@@ -99,8 +110,14 @@ public class SaleServiceImpl implements SaleFacade {
         if (command.items() == null || command.items().isEmpty()) {
             throw new IllegalArgumentException("La venta debe contener al menos un producto");
         }
-        if (command.cashReceived() == null || command.cashReceived().compareTo(BigDecimal.ZERO) < 0) {
+        // Una venta a fiado no recibe dinero: el total pasa a ser deuda del cliente (RN-SALE-006).
+        final String paymentMethod = normalizePaymentMethod(command.paymentMethod());
+        final boolean onCredit = CREDIT_PAYMENT_METHOD.equals(paymentMethod);
+        if (!onCredit && (command.cashReceived() == null || command.cashReceived().compareTo(BigDecimal.ZERO) < 0)) {
             throw new IllegalArgumentException("El efectivo recibido no puede ser negativo");
+        }
+        if (onCredit && command.customerId() == null) {
+            throw new IllegalArgumentException("Una venta a fiado necesita un cliente");
         }
 
         // 1. Resolve customer
@@ -120,6 +137,9 @@ public class SaleServiceImpl implements SaleFacade {
             if (!customer.active()) {
                 throw new IllegalArgumentException("No se pueden realizar ventas a un cliente inactivo");
             }
+            if (onCredit && GENERAL_CUSTOMER_IDENTIFICATION.equals(customer.identification())) {
+                throw new IllegalArgumentException("No se puede fiar al Cliente General: elige un cliente registrado");
+            }
             resolvedCustomerId = customer.id();
         }
 
@@ -128,16 +148,16 @@ public class SaleServiceImpl implements SaleFacade {
         String username = (auth != null) ? auth.getName() : "admin";
         Long userId = userFacade.findByUsername(username)
                 .map(u -> u.id())
-                .orElse(1L);
+                .orElseThrow(() -> new IllegalStateException("No se pudo identificar al usuario autenticado"));
 
         Sale sale = new Sale();
         sale.setStoreId(storeId);
         sale.setCustomerId(resolvedCustomerId);
         sale.setUserId(userId);
         sale.setTotalAmount(BigDecimal.ZERO);
-        sale.setCashReceived(command.cashReceived());
+        sale.setCashReceived(onCredit ? BigDecimal.ZERO : command.cashReceived());
         sale.setCashChange(BigDecimal.ZERO);
-        sale.setPaymentMethod(normalizePaymentMethod(command.paymentMethod()));
+        sale.setPaymentMethod(paymentMethod);
 
         // Generate invoice number from database sequence
         Long seq = saleRepository.getNextInvoiceSeq();
@@ -148,53 +168,27 @@ public class SaleServiceImpl implements SaleFacade {
         List<SaleItem> items = new ArrayList<>();
 
         for (CreateSaleItemCommand itemCommand : command.items()) {
-            if (itemCommand.productId() == null) {
-                throw new IllegalArgumentException("El ID del producto es obligatorio");
+            if ((itemCommand.productId() == null) == (itemCommand.serviceId() == null)) {
+                throw new IllegalArgumentException("Cada ítem debe indicar un producto o un servicio (solo uno de los dos)");
             }
             if (itemCommand.quantity() <= 0) {
                 throw new IllegalArgumentException("La cantidad debe ser mayor a cero");
             }
 
-            // Verify product exists and is active
-            ProductDto product = productFacade.getById(itemCommand.productId())
-                    .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado con ID: " + itemCommand.productId()));
-            if (!product.active()) {
-                throw new IllegalArgumentException("El producto " + product.name() + " está inactivo y no se puede vender");
-            }
-
-            // Verify stock (RN-INV-001)
-            if (product.quantityAvailable() < itemCommand.quantity()) {
-                throw new IllegalArgumentException("Stock insuficiente para el producto: " + product.name() + " (Disponible: " + product.quantityAvailable() + ")");
-            }
-
-            // Register movement in Inventory module (descuenta stock internamente)
-            inventoryFacade.registerMovement(itemCommand.productId(), "VENTA", itemCommand.quantity(), "Venta registrada Factura: " + invoiceNumber);
-
-            BigDecimal subtotal = product.salePrice().multiply(BigDecimal.valueOf(itemCommand.quantity()));
-            total = total.add(subtotal);
-
-            BigDecimal taxRate = product.taxRate() != null ? product.taxRate() : BigDecimal.ZERO;
-            BigDecimal taxFactor = BigDecimal.ONE.add(taxRate.divide(BigDecimal.valueOf(100), 4, java.math.RoundingMode.HALF_UP));
-            BigDecimal netSubtotal = subtotal.divide(taxFactor, 2, java.math.RoundingMode.HALF_UP);
-            BigDecimal taxAmount = subtotal.subtract(netSubtotal);
-
-            SaleItem saleItem = new SaleItem();
+            SaleItem saleItem = itemCommand.serviceId() != null
+                    ? buildServiceItem(itemCommand)
+                    : buildProductItem(itemCommand, invoiceNumber);
             saleItem.setSale(sale);
-            saleItem.setProductId(itemCommand.productId());
-            saleItem.setQuantity(itemCommand.quantity());
-            saleItem.setUnitPrice(product.salePrice());
-            saleItem.setSubtotal(subtotal);
-            saleItem.setTaxRate(taxRate);
-            saleItem.setTaxAmount(taxAmount);
+            total = total.add(saleItem.getSubtotal());
             items.add(saleItem);
         }
 
-        if (command.cashReceived().compareTo(total) < 0) {
+        if (!onCredit && command.cashReceived().compareTo(total) < 0) {
             throw new IllegalArgumentException("El efectivo recibido (" + command.cashReceived() + ") es insuficiente para cubrir el total (" + total + ")");
         }
 
         sale.setTotalAmount(total);
-        sale.setCashChange(command.cashReceived().subtract(total));
+        sale.setCashChange(onCredit ? BigDecimal.ZERO : command.cashReceived().subtract(total));
         sale.setItems(items);
         sale.setIdempotencyKey(key);
 
@@ -202,6 +196,10 @@ public class SaleServiceImpl implements SaleFacade {
         // de facturar: si otro reenvio concurrente gano la carrera, la violacion aborta esta
         // transaccion (revirtiendo el descuento de inventario) antes de emitir a Factus.
         Sale saved = saleRepository.saveAndFlush(sale);
+        if (onCredit) {
+            // Si el fiado supera el cupo del cliente se lanza una excepción y toda la venta se revierte (incluido el stock).
+            creditFacade.registerCharge(resolvedCustomerId, saved.getId(), total, command.creditDueDate());
+        }
         SaleDto saleDto = saleMapper.toDto(saved);
 
         // Publicación desacoplada del evento de dominio para facturación electrónica asíncrona
@@ -233,7 +231,60 @@ public class SaleServiceImpl implements SaleFacade {
     public Optional<SaleDto> getById(Long id) {
         return saleRepository.findById(id)
                 .filter(s -> s.getStoreId().equals(TenantContext.getStoreId()))
+                .filter(s -> isVisibleToCurrentUser(s))
                 .map(saleMapper::toDto);
+    }
+
+    /** Línea de producto: valida stock (RN-INV-001) y descuenta inventario con un movimiento VENTA. */
+    private SaleItem buildProductItem(CreateSaleItemCommand itemCommand, String invoiceNumber) {
+        ProductDto product = productFacade.getById(itemCommand.productId())
+                .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado con ID: " + itemCommand.productId()));
+        if (!product.active()) {
+            throw new IllegalArgumentException("El producto " + product.name() + " está inactivo y no se puede vender");
+        }
+        if (product.quantityAvailable() < itemCommand.quantity()) {
+            throw new IllegalArgumentException("Stock insuficiente para el producto: " + product.name() + " (Disponible: " + product.quantityAvailable() + ")");
+        }
+
+        // Register movement in Inventory module (descuenta stock internamente)
+        inventoryFacade.registerMovement(itemCommand.productId(), "VENTA", itemCommand.quantity(), "Venta registrada Factura: " + invoiceNumber);
+
+        SaleItem saleItem = priced(SaleItemType.PRODUCT, product.name(), product.salePrice(), product.taxRate(), itemCommand.quantity());
+        saleItem.setProductId(itemCommand.productId());
+        return saleItem;
+    }
+
+    /** Línea de servicio: no tiene stock, así que no valida existencias ni mueve inventario. */
+    private SaleItem buildServiceItem(CreateSaleItemCommand itemCommand) {
+        ServiceDto service = serviceFacade.getById(itemCommand.serviceId())
+                .orElseThrow(() -> new EntityNotFoundException("Servicio no encontrado con ID: " + itemCommand.serviceId()));
+        if (!service.active()) {
+            throw new IllegalArgumentException("El servicio " + service.name() + " está inactivo y no se puede vender");
+        }
+
+        SaleItem saleItem = priced(SaleItemType.SERVICE, service.name(), service.price(), service.taxRate(), itemCommand.quantity());
+        saleItem.setServiceId(itemCommand.serviceId());
+        saleItem.setUnitMeasureCode(service.unitMeasureCode());
+        saleItem.setUnspscCode(service.unspscCode());
+        return saleItem;
+    }
+
+    /** Precio con IVA incluido: el impuesto se desglosa del subtotal. */
+    private static SaleItem priced(SaleItemType type, String name, BigDecimal unitPrice, BigDecimal rate, int quantity) {
+        BigDecimal subtotal = unitPrice.multiply(BigDecimal.valueOf(quantity));
+        BigDecimal taxRate = rate != null ? rate : BigDecimal.ZERO;
+        BigDecimal taxFactor = BigDecimal.ONE.add(taxRate.divide(BigDecimal.valueOf(100), 4, java.math.RoundingMode.HALF_UP));
+        BigDecimal netSubtotal = subtotal.divide(taxFactor, 2, java.math.RoundingMode.HALF_UP);
+
+        SaleItem saleItem = new SaleItem();
+        saleItem.setItemType(type);
+        saleItem.setItemName(name);
+        saleItem.setQuantity(quantity);
+        saleItem.setUnitPrice(unitPrice);
+        saleItem.setSubtotal(subtotal);
+        saleItem.setTaxRate(taxRate);
+        saleItem.setTaxAmount(subtotal.subtract(netSubtotal));
+        return saleItem;
     }
 
     private static String normalizePaymentMethod(String paymentMethod) {
@@ -255,7 +306,7 @@ public class SaleServiceImpl implements SaleFacade {
             LocalDateTime dateTo,
             Pageable pageable
     ) {
-        return saleRepository.searchSales(requireCurrentStoreId(), customerId, dateFrom, dateTo, pageable)
+        return saleRepository.searchSales(requireCurrentStoreId(), restrictedSellerId().orElse(null), customerId, dateFrom, dateTo, pageable)
                 .map(saleMapper::toDto);
     }
 
@@ -265,6 +316,7 @@ public class SaleServiceImpl implements SaleFacade {
         Long storeId = requireCurrentStoreId();
         Sale sale = saleRepository.findById(saleId)
                 .filter(s -> s.getStoreId().equals(storeId))
+                .filter(this::isVisibleToCurrentUser)
                 .orElseThrow(() -> new EntityNotFoundException("Venta no encontrada con ID: " + saleId));
 
         if (command.items() == null || command.items().isEmpty()) {
@@ -275,7 +327,7 @@ public class SaleServiceImpl implements SaleFacade {
         String username = (auth != null) ? auth.getName() : "admin";
         Long userId = userFacade.findByUsername(username)
                 .map(u -> u.id())
-                .orElse(1L);
+                .orElseThrow(() -> new IllegalStateException("No se pudo identificar al usuario autenticado"));
 
         SaleReturn saleReturn = new SaleReturn();
         saleReturn.setSaleId(saleId);
@@ -310,8 +362,11 @@ public class SaleServiceImpl implements SaleFacade {
 
             // Repone el stock: una devolución de CLIENTE incrementa inventario (distinto de
             // "RETURN"/"DEVOLUCION", que en este módulo significa devolución al proveedor).
-            inventoryFacade.registerMovement(saleItem.getProductId(), "DEVOLUCION_VENTA", itemCommand.quantity(),
-                    "Devolución de venta Factura: " + sale.getInvoiceNumber());
+            // Un servicio no tiene stock: su devolución solo reembolsa.
+            if (saleItem.getItemType() == SaleItemType.PRODUCT) {
+                inventoryFacade.registerMovement(saleItem.getProductId(), "DEVOLUCION_VENTA", itemCommand.quantity(),
+                        "Devolución de venta Factura: " + sale.getInvoiceNumber());
+            }
 
             BigDecimal subtotal = saleItem.getUnitPrice().multiply(BigDecimal.valueOf(itemCommand.quantity()));
             totalRefund = totalRefund.add(subtotal);
@@ -320,6 +375,7 @@ public class SaleServiceImpl implements SaleFacade {
             returnItem.setSaleReturn(saleReturn);
             returnItem.setSaleItemId(itemCommand.saleItemId());
             returnItem.setProductId(saleItem.getProductId());
+            returnItem.setServiceId(saleItem.getServiceId());
             returnItem.setQuantity(itemCommand.quantity());
             returnItem.setUnitPrice(saleItem.getUnitPrice());
             returnItem.setSubtotal(subtotal);
@@ -330,6 +386,10 @@ public class SaleServiceImpl implements SaleFacade {
         saleReturn.setItems(items);
 
         SaleReturn saved = saleReturnRepository.save(saleReturn);
+        if (CREDIT_PAYMENT_METHOD.equals(sale.getPaymentMethod())) {
+            // Venta a fiado: la devolución baja la deuda en lugar de devolver dinero (RN-SALE-006).
+            creditFacade.registerReturn(sale.getCustomerId(), saleId, totalRefund);
+        }
         return saleReturnMapper.toDto(saved, sale.getInvoiceNumber());
     }
 
@@ -338,11 +398,28 @@ public class SaleServiceImpl implements SaleFacade {
         Long storeId = requireCurrentStoreId();
         Sale sale = saleRepository.findById(saleId)
                 .filter(s -> s.getStoreId().equals(storeId))
+                .filter(this::isVisibleToCurrentUser)
                 .orElseThrow(() -> new EntityNotFoundException("Venta no encontrada con ID: " + saleId));
 
         return saleReturnRepository.findAllBySaleIdOrderByCreatedAtDesc(saleId).stream()
                 .map(r -> saleReturnMapper.toDto(r, sale.getInvoiceNumber()))
                 .toList();
+    }
+
+    /** Un SELLER solo ve las ventas que él registró (RN-SALE-005); los demás roles ven las de todo el local. */
+    @Override
+    public Optional<Long> restrictedSellerId() {
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || auth.getAuthorities().stream().noneMatch(a -> "ROLE_SELLER".equals(a.getAuthority()))) {
+            return Optional.empty();
+        }
+        return Optional.of(userFacade.findByUsername(auth.getName())
+                .map(u -> u.id())
+                .orElseThrow(() -> new IllegalStateException("No se pudo identificar al usuario autenticado")));
+    }
+
+    private boolean isVisibleToCurrentUser(Sale sale) {
+        return restrictedSellerId().map(userId -> userId.equals(sale.getUserId())).orElse(true);
     }
 
     private static Long requireCurrentStoreId() {

@@ -44,7 +44,7 @@ public class StorageController {
         if (!ALLOWED_FOLDERS.contains(folder)) {
             throw new IllegalArgumentException("Carpeta no permitida. Use: " + String.join(", ", ALLOWED_FOLDERS));
         }
-        StorageUploadResult result = storageFacade.uploadFile(file, storeKeyPrefix() + folder);
+        StorageUploadResult result = storageFacade.uploadFile(file, folder + "/" + storeFolder());
         return ResponseEntity.ok(result);
     }
 
@@ -54,22 +54,28 @@ public class StorageController {
             description = "Elimina un archivo del bucket. Solo se pueden borrar claves del propio local. "
                     + "Solo ADMINISTRATOR y SUPERVISOR.")
     public ResponseEntity<Map<String, String>> deleteFile(
-            @Parameter(description = "Clave del archivo en el bucket (ej: tienda-1/imagenes-productos/uuid.jpg)")
+            @Parameter(description = "Clave del archivo en el bucket (ej: imagenes-productos/tienda-1/uuid.jpg)")
             @RequestParam("key") String key
     ) {
-        String prefix = storeKeyPrefix();
-        if (key == null || key.contains("..") || !key.startsWith(prefix)) {
+        if (key == null || key.contains("..") || !belongsToCurrentStore(key)) {
             throw new AccessDeniedException("El archivo no pertenece a este local");
         }
         storageFacade.deleteFile(key);
         return ResponseEntity.ok(Map.of("message", "Archivo eliminado correctamente"));
     }
 
-    private static String storeKeyPrefix() {
+    /** Carpeta del local dentro de cada carpeta raiz: imagenes-productos/tienda-7/... */
+    private static boolean belongsToCurrentStore(String key) {
+        String segment = storeFolder() + "/";
+        // Prefijo antiguo (tienda-7/imagenes-productos/...): se acepta para poder limpiar archivos ya subidos.
+        return key.startsWith(segment) || ALLOWED_FOLDERS.stream().anyMatch(f -> key.startsWith(f + "/" + segment));
+    }
+
+    private static String storeFolder() {
         Long storeId = TenantContext.getStoreId();
         if (storeId == null) {
             throw new AccessDeniedException("Se requiere un local para gestionar archivos");
         }
-        return "tienda-" + storeId + "/";
+        return "tienda-" + storeId;
     }
 }

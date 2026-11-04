@@ -7,11 +7,11 @@ import org.springframework.stereotype.Component;
 @Component
 public class CustomerMapper {
 
-    public CustomerDto toDto(Customer customer) {
+    /** {@code editable}: si el usuario actual puede editar este cliente (lo decide el servicio, no el mapper). */
+    public CustomerDto toDto(Customer customer, boolean editable) {
         if (customer == null) {
             return null;
         }
-
         return new CustomerDto(
                 customer.getId(),
                 customer.getFullName(),
@@ -23,7 +23,12 @@ public class CustomerMapper {
                 customer.getDv(),
                 customer.getLegalOrganizationId(),
                 customer.getTributeId(),
-                customer.getMunicipalityId()
+                customer.getMunicipalityId(),
+                customer.getCreatedByUsername(),
+                customer.getUpdatedByUsername(),
+                customer.getCreatedAt(),
+                customer.getUpdatedAt(),
+                editable
         );
     }
 }

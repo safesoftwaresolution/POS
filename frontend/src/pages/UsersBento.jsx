@@ -1,11 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { UserPlus, Search, Edit3, KeyRound, Power, PowerOff, Trash2, ShieldCheck, Users } from 'lucide-react';
 import {
   getUsersApi, getUserQuotaApi, createUserApi, updateUserApi, changeUserStatusApi, changeUserPasswordApi, deleteUserApi,
 } from '../services/usersApi';
-import { useAuth } from '../context/AuthContext';
-import { useModal } from '../context/ModalContext';
+import useAuth from '../hooks/useAuth';
+import Avatar from '../components/ui/Avatar';
+import useModal from '../hooks/useModal';
 import { Button, Badge, Card, EmptyState, Input, Modal, PageHeader, Select } from '../components/ui';
+import useLoad from '../hooks/useLoad';
 
 const ROLES = [
   { value: 'ADMINISTRATOR', label: 'Administrador', hint: 'Control total del local' },
@@ -132,39 +134,23 @@ function PasswordModal({ user: target, onClose }) {
 export default function UsersBento() {
   const { user: me } = useAuth();
   const { confirm, notify } = useModal();
-  const [users, setUsers] = useState([]);
-  const [total, setTotal] = useState(0);
-  const [quota, setQuota] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const { data: usersData, loading, reload } = useLoad(
+    async () => {
+      const [{ users, total }, quota] = await Promise.all([getUsersApi(), getUserQuotaApi().catch(() => null)]);
+      return { users, total, quota };
+    },
+    [],
+    { initial: { users: [], total: 0, quota: null }, autoRefresh: true },
+  );
+  const { users, total, quota } = usersData;
   const [search, setSearch] = useState('');
   // { type: 'form' | 'password', user? }
   const [modal, setModal] = useState(null);
 
-  const fetchUsers = async () => {
-    try {
-      const [{ users: list, total: count }, quotaStatus] = await Promise.all([
-        getUsersApi(),
-        getUserQuotaApi().catch(() => null),
-      ]);
-      setUsers(list);
-      setTotal(count);
-      setQuota(quotaStatus);
-    } catch (e) {
-      console.warn('Error cargando usuarios:', e);
-      setUsers([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchUsers();
-  }, []);
-
   const run = async (action, errorPrefix) => {
     try {
       await action();
-      await fetchUsers();
+      reload();
     } catch (e) {
       notify(`${errorPrefix}: ${e.message}`);
     }
@@ -244,8 +230,8 @@ export default function UsersBento() {
         ) : filtered.length === 0 ? (
           <EmptyState icon={Users} title="No se encontraron usuarios" description="Ajusta la búsqueda o crea un nuevo usuario" />
         ) : (
-          <div className="overflow-x-auto -mx-6">
-            <table className="w-full text-left text-xs">
+          <div className="md:overflow-x-auto md:-mx-6">
+            <table className="table-cards w-full text-left text-xs">
               <thead>
                 <tr className="text-[10px] uppercase tracking-wider text-ink-muted border-b border-line">
                   <th className="py-3 px-6 font-extrabold">Usuario</th>
@@ -259,11 +245,9 @@ export default function UsersBento() {
                   const isMe = u.username === me?.username;
                   return (
                     <tr key={u.id} className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
-                      <td className="py-3 px-6">
+                      <td data-label="" className="py-3 px-6">
                         <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-full bg-solid text-white flex items-center justify-center font-bold text-[11px] shrink-0">
-                            {(u.fullName || u.username || '?').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
-                          </div>
+                          <Avatar name={u.fullName || u.username} src={u.avatarUrl} className="w-9 h-9 rounded-full text-[11px]" />
                           <div className="min-w-0">
                             <span className="font-bold text-sm text-ink block truncate">
                               {u.fullName} {isMe && <span className="text-[10px] text-brand font-extrabold">(tú)</span>}
@@ -272,16 +256,16 @@ export default function UsersBento() {
                           </div>
                         </div>
                       </td>
-                      <td className="py-3 px-3">
+                      <td data-label="Rol" className="py-3 px-3">
                         <Badge tone={ROLE_TONE[u.role] || 'neutral'}>
                           {u.role === 'ADMINISTRATOR' && <ShieldCheck className="w-3 h-3" />}
                           {ROLE_LABEL[u.role] || u.role}
                         </Badge>
                       </td>
-                      <td className="py-3 px-3">
+                      <td data-label="Estado" className="py-3 px-3">
                         <Badge tone={u.active ? 'success' : 'neutral'}>{u.active ? 'Activo' : 'Inactivo'}</Badge>
                       </td>
-                      <td className="py-3 px-6">
+                      <td data-label="Acciones" className="py-3 px-6">
                         <div className="flex items-center justify-end gap-1">
                           <IconAction title="Editar" onClick={() => setModal({ type: 'form', user: u })}><Edit3 className="w-4 h-4" /></IconAction>
                           <IconAction title="Cambiar contraseña" onClick={() => setModal({ type: 'password', user: u })}><KeyRound className="w-4 h-4" /></IconAction>
@@ -312,7 +296,7 @@ export default function UsersBento() {
       </Card>
 
       {modal?.type === 'form' && (
-        <UserFormModal user={modal.user} storeId={me?.storeId} onClose={() => setModal(null)} onSaved={fetchUsers} />
+        <UserFormModal user={modal.user} storeId={me?.storeId} onClose={() => setModal(null)} onSaved={() => reload()} />
       )}
       {modal?.type === 'password' && <PasswordModal user={modal.user} onClose={() => setModal(null)} />}
     </div>

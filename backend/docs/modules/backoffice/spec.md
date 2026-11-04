@@ -14,12 +14,14 @@ Todo el módulo es **solo `SUPER_ADMIN`** (`@PreAuthorize` a nivel de clase y re
 ## Reglas de Negocio
 - **RN-BO-001 (Staff = SUPER_ADMIN sin local)**: las cuentas gestionadas aquí son siempre `SUPER_ADMIN` con `store_id = null`.
 - **RN-BO-002 (Sin auto-bloqueo)**: no se puede desactivar ni eliminar la propia cuenta (reglas heredadas de `users`).
+- **RN-BO-004 (Invitación)**: un operador nuevo nace con `email_verified = false` y no puede iniciar sesión hasta aceptar el enlace del correo (`/verify-email?token=…`, vence en 24 h), que lo deja activo y lo lleva al backoffice. Si el correo no sale, la creación se revierte. `BackofficeStaffDto.emailVerified = false` se muestra como «Invitación pendiente».
 - **RN-BO-003 (Embudo)**: `pendingUsers` = administradores con correo sin verificar; `pendingStores` = locales pendientes de revisión; `approvedStoresLast30Days` y `rejectedStoresTotal` miden el resultado de la revisión.
 
 ## API Endpoints
 **Staff** (`/api/v1/backoffice/staff`)
 - `GET /` — listado paginado. `GET /{id}` — detalle.
-- `POST /` — crear (`CreateBackofficeStaffCommand`). `PUT /{id}` — actualizar.
+- `POST /` — invitar (`CreateBackofficeStaffCommand`): crea la cuenta con el correo sin verificar y envía el correo de invitación. `PUT /{id}` — actualizar.
+- `POST /{id}/resend-invitation` — reenvía la invitación a un operador pendiente.
 - `PATCH /{id}/status` — body `{ "active": true|false }`. `PATCH /{id}/password` — restablecer contraseña.
 - `DELETE /{id}` — desactivar (borrado lógico).
 

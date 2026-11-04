@@ -39,3 +39,8 @@ export async function setUserActiveApi(userId, active) {
 export async function deleteUserApi(userId) {
   return await fetchApi(`/backoffice/users/${userId}`, { method: 'DELETE' });
 }
+
+export async function getUserDeletionsApi(page = 0, size = 10) {
+  const params = new URLSearchParams({ page, size });
+  return await fetchApi(`/backoffice/user-deletions?${params.toString()}`);
+}

@@ -8,8 +8,8 @@ export default function ScanToasts({ toasts }) {
       {toasts.map(toast => (
         <div
           key={toast.id}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl shadow-xl text-xs font-bold text-white animate-in fade-in slide-in-from-top-2 duration-150 ${
-            toast.type === 'success' ? 'bg-solid' : 'bg-red-600'
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl shadow-xl text-xs font-bold animate-in fade-in slide-in-from-top-2 duration-150 ${
+            toast.type === 'success' ? 'bg-solid text-solid-ink' : 'bg-red-600 text-white'
           }`}
         >
           {toast.type === 'success' ? <CheckCircle className="w-4 h-4 shrink-0" /> : <XCircle className="w-4 h-4 shrink-0" />}

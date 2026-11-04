@@ -1,4 +1,4 @@
-<!-- spec-version: 2.1 | last-updated: 2026-10-16 -->
+<!-- spec-version: 2.4 | last-updated: 2026-10-30 -->
 # Módulo: Facturación Electrónica (Billing)
 
 ## Dependencias
@@ -174,6 +174,18 @@ El mensaje del proveedor se propaga al cliente (truncado a 500 caracteres) para 
 
 ### RN-BILL-018 — Timeouts de Salida
 - Todos los clientes HTTP hacia Factus (`FactusClientHelper`, `FactusTokenManager`) y el sincronizado del logo se crean con `OutboundHttp.restClient()`: conexión 5 s, lectura 45 s. Un proveedor lento ya no deja hilos ni filas bloqueadas indefinidamente.
+
+### RN-BILL-019 — Líneas de Servicio en Facturas y Notas Crédito
+- Una línea de venta de **servicio** (`SaleItemDto.itemType = SERVICE`, ver `sales/spec.md` RN-SALE-004) se factura con el `unit_measure_code` y el `unspsc_code` que **la venta guardó** al momento de cobrar (copiados del catálogo de `services`). Billing no consulta el catálogo de servicios: así editar o desactivar el servicio no cambia lo ya facturado, y no depende de `ServiceFacade`.
+- Sin esos datos se usan los valores por defecto (unidad `94`, estándar `999`). Las líneas de **producto** siguen resolviendo el UNSPSC desde `ProductFacade`.
+- La nota crédito (`createFromSale`) usa los mismos códigos de la línea, para que coincida con la factura que corrige.
+- Pendiente: los códigos de unidad de medida para servicios por hora u otras medidas deben validarse contra el catálogo de Factus; hoy la tienda los escribe en el servicio sin verificación.
+
+### RN-BILL-020 — Un Vendedor Solo Ve las Facturas de sus Ventas
+- Para el rol `SELLER`, `GET /billing/invoices` lista solo las facturas de las ventas que él registró (consulta nativa sobre `sales.user_id`, con orden fijo por `id` descendente; el parámetro `sort` se ignora). Consultar, descargar el PDF o XML y enviar por correo la factura de una venta ajena responde como inexistente. `ADMINISTRATOR` y `SUPERVISOR` ven todas las del local. Ver `sales/spec.md`, RN-SALE-005.
+
+### RN-BILL-021 — Factura de una Venta a Fiado
+- La factura electrónica es opcional también en el fiado: solo se emite si quien vende lo pidió (`sendToFactus`), como en cualquier venta. Cuando la venta es `CREDIT`, `BillingCanonicalMapper` la arma a **crédito**: `payment_form = "2"`, `payment_method_code = "1"` (instrumento no definido) y `payment_due_date` con la fecha límite del fiado (`CreditFacade.findChargeDueDate(storeId, saleId)`, 30 días desde la venta si faltara). El resto de ventas siguen saliendo de contado (`payment_form = "1"`). Ver `credit/spec.md`, RN-CRE-005.
 
 ### RN-BILL-013 — Notas Débito solo con Referencia a Factura
 - Solo se emiten notas débito con `customization_id=30` (con referencia a una factura electrónica). El tipo `32` (sin referencia) exige `billing_period` en Factus y `electronic_debit_notes.bill_number` es `NOT NULL`, así que se rechaza con 400.

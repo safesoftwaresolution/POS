@@ -16,6 +16,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,7 +40,7 @@ public class InvoiceServiceImpl implements InvoiceService {
     private final BillingCanonicalMapper canonicalMapper;
     private final ElectronicInvoiceMapper invoiceMapper;
     private final SaleFacade saleFacade;
-    private final InvoiceService self;
+    private final InvoiceEmissionTransactions emissions;
     private final Map<String, InvoiceProvider> providersMap;
 
     @Value("${billing.provider:factus}")
@@ -50,14 +51,14 @@ public class InvoiceServiceImpl implements InvoiceService {
             BillingCanonicalMapper canonicalMapper,
             ElectronicInvoiceMapper invoiceMapper,
             @Lazy SaleFacade saleFacade,
-            @Lazy InvoiceService self,
+            InvoiceEmissionTransactions emissions,
             List<InvoiceProvider> providers
     ) {
         this.repository = repository;
         this.canonicalMapper = canonicalMapper;
         this.invoiceMapper = invoiceMapper;
         this.saleFacade = saleFacade;
-        this.self = self;
+        this.emissions = emissions;
         this.providersMap = providers.stream()
                 .collect(Collectors.toMap(
                         p -> p.getProviderName().toLowerCase(),
@@ -66,44 +67,59 @@ public class InvoiceServiceImpl implements InvoiceService {
                 ));
     }
 
+    /**
+     * Emite la factura de la venta en tres pasos: reservar (transacción corta con lock), llamar al proveedor SIN
+     * transacción y registrar el resultado (transacción corta). Así ninguna llamada de red retiene una conexión
+     * ni un lock de base de datos, y dos emisiones simultáneas de la misma venta llaman al proveedor una sola vez.
+     */
     @Override
-    @Transactional
     public ElectronicInvoiceDto processElectronicInvoice(SaleDto sale) {
         Objects.requireNonNull(sale, "El objeto SaleDto no puede ser nulo");
         if (sale.id() == null) {
             throw new IllegalArgumentException("El ID de la venta es obligatorio para facturar");
         }
-
-        // 1. Obtener (con bloqueo pesimista) o inicializar el registro de factura para esta venta.
+        // Sin local no se factura: antes se asumía el local 1 y se podía emitir con el equivocado.
         Long effectiveStoreId = sale.storeId() != null ? sale.storeId() : TenantContext.getStoreId();
-        ElectronicInvoice einvoice = lockOrCreateInvoice(sale.id(), effectiveStoreId);
-        einvoice.assignStoreIdIfMissing(effectiveStoreId);
-
-        // 2. Guard de idempotencia delegado al dominio: si ya está validada, no volver a emitir.
-        if (einvoice.isValidated()) {
-            log.info("La venta ID {} ya posee una factura electrónica VALIDATED ({})", sale.id(), einvoice.getFactusNumber());
-            return invoiceMapper.toDto(einvoice);
+        if (effectiveStoreId == null) {
+            throw new IllegalStateException("No se puede facturar la venta " + sale.id() + " sin un local asociado");
         }
 
-        // 3. Resolver la estrategia activa de facturación
-        InvoiceProvider provider = resolveProvider();
+        // Paso A: reservar.
+        InvoiceEmissionTransactions.Reservation reservation = reserve(sale.id(), effectiveStoreId);
+        if (reservation.outcome() == ElectronicInvoice.ReserveOutcome.ALREADY_VALIDATED) {
+            log.info("La venta ID {} ya posee una factura electrónica VALIDATED ({})", sale.id(),
+                    reservation.invoice().factusNumber());
+            return reservation.invoice();
+        }
+        if (reservation.outcome() == ElectronicInvoice.ReserveOutcome.IN_PROGRESS) {
+            log.info("La venta ID {} ya tiene una emisión en curso; no se emite de nuevo", sale.id());
+            return reservation.invoice();
+        }
 
-        // 4. Mapear a solicitud canónica agnóstica
-        InvoiceRequest request = canonicalMapper.toInvoiceRequest(sale);
-
-        // 5. Ejecutar la llamada I/O al proveedor
+        // Paso B: llamada al proveedor, sin transacción. Cualquier fallo se convierte en un resultado de error.
         InvoiceResult result;
+        InvoiceProvider provider = null;
         try {
+            provider = resolveProvider();
+            InvoiceRequest request = canonicalMapper.toInvoiceRequest(sale);
             result = provider.emitInvoice(request);
         } catch (Exception ex) {
-            log.error("Error al ejecutar emision con proveedor {}: {}", provider.getProviderName(), ex.getMessage());
-            result = InvoiceResult.error("Error en proveedor " + provider.getProviderName() + ": " + ex.getMessage());
+            String providerName = provider != null ? provider.getProviderName() : activeProviderName;
+            log.error("Error al ejecutar emision con proveedor {}: {}", providerName, ex.getMessage());
+            result = InvoiceResult.error("Error en proveedor " + providerName + ": " + ex.getMessage());
         }
 
-        // 6. Aplicar resultados normalizados delegando al dominio y persistir.
-        applyResultToEntity(einvoice, result);
-        ElectronicInvoice saved = repository.save(einvoice);
-        return invoiceMapper.toDto(saved);
+        // Paso C: registrar el resultado.
+        return emissions.complete(sale.id(), result);
+    }
+
+    /** Dos hilos creando a la vez la fila de una venta nueva: el perdedor reintenta y ya la encuentra. */
+    private InvoiceEmissionTransactions.Reservation reserve(Long saleId, Long storeId) {
+        try {
+            return emissions.reserve(saleId, storeId);
+        } catch (DataIntegrityViolationException raceOnFirstInsert) {
+            return emissions.reserve(saleId, storeId);
+        }
     }
 
     // No es readOnly: si la venta aún no tiene registro de factura, se crea en PENDING. Antes la
@@ -123,8 +139,8 @@ public class InvoiceServiceImpl implements InvoiceService {
         return Optional.ofNullable(invoiceMapper.toDto(einvoice));
     }
 
+    /** El reintento manual reinicia la factura en una transacción corta y emite fuera de cualquier transacción. */
     @Override
-    @Transactional
     public ElectronicInvoiceDto retryInvoice(Long saleId) {
         if (saleId == null) {
             throw new IllegalArgumentException("El ID de la venta es obligatorio");
@@ -133,12 +149,8 @@ public class InvoiceServiceImpl implements InvoiceService {
         SaleDto sale = saleFacade.getById(saleId)
                 .orElseThrow(() -> new IllegalArgumentException("Venta no encontrada con ID: " + saleId));
 
-        Optional<ElectronicInvoice> existingOpt = repository.findBySaleIdAndStoreId(saleId, requireStoreId());
-        if (existingOpt.isPresent()) {
-            existingOpt.get().prepareForRetry(); // La entidad valida invariante y estado
-        }
-
-        return (self != null ? self : this).processElectronicInvoice(sale);
+        emissions.resetForRetry(saleId, requireStoreId());
+        return processElectronicInvoice(sale);
     }
 
     @Override
@@ -228,15 +240,6 @@ public class InvoiceServiceImpl implements InvoiceService {
         }
     }
 
-    private ElectronicInvoice lockOrCreateInvoice(Long saleId, Long storeId) {
-        // Sin local no se factura: antes se asumía el local 1 y se podía emitir con el equivocado.
-        if (storeId == null) {
-            throw new IllegalStateException("No se puede facturar la venta " + saleId + " sin un local asociado");
-        }
-        return repository.findBySaleIdForUpdate(saleId)
-                .orElseGet(() -> repository.saveAndFlush(ElectronicInvoice.initialize(saleId, storeId)));
-    }
-
     private ElectronicInvoice getOrCreateInitialInvoice(Long saleId, Long storeId) {
         return repository.findBySaleIdAndStoreId(saleId, storeId)
                 .orElseGet(() -> repository.save(ElectronicInvoice.initialize(saleId, storeId)));
@@ -258,26 +261,5 @@ public class InvoiceServiceImpl implements InvoiceService {
             throw new IllegalStateException("Proveedor de facturación '" + key + "' no registrado (billing.provider). Disponibles: " + providersMap.keySet() + ". " + "No hay ningún proveedor de facturación configurado o disponible.");
         }
         return provider;
-    }
-
-    private void applyResultToEntity(ElectronicInvoice einvoice, InvoiceResult result) {
-        if (result == null) {
-            einvoice.markAsError("Respuesta vacía del proveedor de facturación");
-            return;
-        }
-
-        if ("VALIDATED".equalsIgnoreCase(result.status())) {
-            einvoice.markAsValidated(
-                    result.legalInvoiceNumber(),
-                    result.cufe(),
-                    result.qrCode(),
-                    result.pdfUrl(),
-                    result.validatedAt()
-            );
-        } else if ("REJECTED".equalsIgnoreCase(result.status())) {
-            einvoice.markAsRejected(result.errorMessage());
-        } else {
-            einvoice.markAsError(result.errorMessage());
-        }
     }
 }

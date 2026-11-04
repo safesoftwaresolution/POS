@@ -10,6 +10,7 @@ import com.sciencebot.pos.billing.internal.entities.ElectronicInvoice;
 import com.sciencebot.pos.billing.internal.mappers.BillingCanonicalMapper;
 import com.sciencebot.pos.billing.internal.mappers.ElectronicInvoiceMapper;
 import com.sciencebot.pos.billing.internal.repositories.ElectronicInvoiceRepository;
+import com.sciencebot.pos.billing.internal.services.InvoiceEmissionTransactions;
 import com.sciencebot.pos.billing.internal.services.InvoiceServiceImpl;
 import com.sciencebot.pos.config.tenant.TenantContext;
 import com.sciencebot.pos.sales.SaleDto;
@@ -22,6 +23,7 @@ import org.mockito.MockitoAnnotations;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -63,10 +65,9 @@ class InvoiceServiceImplTest {
                 canonicalMapper,
                 invoiceMapper,
                 saleFacade,
-                null,
+                new InvoiceEmissionTransactions(repository, invoiceMapper, Duration.ofMinutes(5)),
                 List.of(mockAdapter, customProvider)
         );
-        ReflectionTestUtils.setField(invoiceService, "self", invoiceService);
     }
 
     @AfterEach

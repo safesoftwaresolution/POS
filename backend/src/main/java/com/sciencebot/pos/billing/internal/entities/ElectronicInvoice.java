@@ -2,6 +2,7 @@ package com.sciencebot.pos.billing.internal.entities;
 
 import com.sciencebot.pos.billing.dto.ElectronicInvoiceStatus;
 import jakarta.persistence.*;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Objects;
 
@@ -50,6 +51,18 @@ public class ElectronicInvoice {
     @Column(name = "validated_at")
     private LocalDateTime validatedAt;
 
+    /** Intentos de emisión desde el último reinicio manual. */
+    @Column(name = "attempts", nullable = false)
+    private int attempts;
+
+    /** Reserva (lease) de la emisión en curso: mientras esté vigente ningún otro hilo emite esta factura. */
+    @Column(name = "processing_started_at")
+    private LocalDateTime processingStartedAt;
+
+    /** Cuándo el reintento automático puede volver a intentarla; null = no se reintenta sola. */
+    @Column(name = "next_retry_at")
+    private LocalDateTime nextRetryAt;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -72,6 +85,41 @@ public class ElectronicInvoice {
         invoice.storeId = Objects.requireNonNull(storeId, "El storeId es obligatorio para inicializar la factura");
         invoice.status = ElectronicInvoiceStatus.PENDING;
         return invoice;
+    }
+
+    /** Resultado de pedir la reserva de la emisión. */
+    public enum ReserveOutcome { RESERVED, ALREADY_VALIDATED, IN_PROGRESS }
+
+    /**
+     * Reserva la emisión: una factura validada no se vuelve a emitir y, con una reserva vigente de otro hilo,
+     * tampoco. Si no, queda PENDING, cuenta el intento y toma la reserva (que caduca pasado {@code lease}).
+     */
+    public ReserveOutcome reserveForEmission(LocalDateTime now, Duration lease) {
+        if (this.status == ElectronicInvoiceStatus.VALIDATED) {
+            return ReserveOutcome.ALREADY_VALIDATED;
+        }
+        if (this.processingStartedAt != null && this.processingStartedAt.plus(lease).isAfter(now)) {
+            return ReserveOutcome.IN_PROGRESS;
+        }
+        this.status = ElectronicInvoiceStatus.PENDING;
+        this.errorMessage = null;
+        this.attempts++;
+        this.processingStartedAt = now;
+        this.nextRetryAt = null;
+        return ReserveOutcome.RESERVED;
+    }
+
+    /** Cierra el intento: libera la reserva y deja programado el siguiente reintento (null = ninguno). */
+    public void completeAttempt(LocalDateTime nextRetryAt) {
+        this.processingStartedAt = null;
+        this.nextRetryAt = nextRetryAt;
+    }
+
+    /** El proveedor todavía no resolvió el documento: sigue PENDING (no es un error) con su mensaje. */
+    public void markAsPending(String message) {
+        assertNotTerminal();
+        this.status = ElectronicInvoiceStatus.PENDING;
+        this.errorMessage = (message != null && !message.isBlank()) ? message.trim() : "Pendiente de respuesta del proveedor";
     }
 
     /**
@@ -127,6 +175,8 @@ public class ElectronicInvoice {
         }
         this.status = ElectronicInvoiceStatus.PENDING;
         this.errorMessage = null;
+        this.attempts = 0;
+        this.nextRetryAt = null;
     }
 
     /**
@@ -197,6 +247,9 @@ public class ElectronicInvoice {
         this.providerDocumentId = value;
     }
 
+    public int getAttempts() { return attempts; }
+    public LocalDateTime getProcessingStartedAt() { return processingStartedAt; }
+    public LocalDateTime getNextRetryAt() { return nextRetryAt; }
     public Long getId() { return id; }
     public Long getStoreId() { return storeId; }
     public Long getSaleId() { return saleId; }

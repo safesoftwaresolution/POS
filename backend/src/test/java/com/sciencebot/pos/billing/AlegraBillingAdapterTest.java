@@ -10,6 +10,7 @@ import com.sciencebot.pos.billing.internal.adapters.alegra.AlegraAccessResolver;
 import com.sciencebot.pos.billing.internal.adapters.alegra.AlegraBillingAdapter;
 import com.sciencebot.pos.billing.internal.adapters.alegra.AlegraCompany;
 import com.sciencebot.pos.billing.internal.adapters.alegra.AlegraCompanyProvider;
+import com.sciencebot.pos.billing.internal.adapters.alegra.AlegraInvoiceClient;
 import com.sciencebot.pos.billing.internal.adapters.alegra.AlegraNumberingRangeClient;
 import com.sciencebot.pos.billing.internal.adapters.dto.CreditNoteResult;
 import com.sciencebot.pos.billing.internal.adapters.dto.DebitNoteResult;
@@ -29,6 +30,7 @@ class AlegraBillingAdapterTest {
     private AlegraAccessResolver resolver;
     private AlegraCompanyProvider companyProvider;
     private AlegraNumberingRangeClient rangeClient;
+    private AlegraInvoiceClient invoiceClient;
     private AlegraBillingAdapter adapter;
 
     @BeforeEach
@@ -36,7 +38,8 @@ class AlegraBillingAdapterTest {
         resolver = mock(AlegraAccessResolver.class);
         companyProvider = mock(AlegraCompanyProvider.class);
         rangeClient = mock(AlegraNumberingRangeClient.class);
-        adapter = new AlegraBillingAdapter(resolver, companyProvider, rangeClient);
+        invoiceClient = mock(AlegraInvoiceClient.class);
+        adapter = new AlegraBillingAdapter(resolver, companyProvider, rangeClient, invoiceClient);
     }
 
     private static AlegraAccess access() {
@@ -87,18 +90,26 @@ class AlegraBillingAdapterTest {
     }
 
     @Test
-    void documentEmissionIsNotImplementedYetAndSaysSoWithoutThrowing() {
-        InvoiceResult invoice = adapter.emitInvoice(null);
+    void invoiceEmissionAndReconciliationGoToTheInvoiceClient() {
+        InvoiceResult emitted = InvoiceResult.pending("x");
+        when(invoiceClient.emitInvoice(null)).thenReturn(emitted);
+        when(invoiceClient.queryInvoiceByProviderId("inv-1")).thenReturn(emitted);
+
+        assertSame(emitted, adapter.emitInvoice(null));
+        assertSame(emitted, adapter.queryInvoiceByProviderId("inv-1"));
+    }
+
+    @Test
+    void noteEmissionIsNotImplementedYetAndSaysSoWithoutThrowing() {
         CreditNoteResult credit = adapter.emitCreditNote(null, 5L);
         DebitNoteResult debit = adapter.emitDebitNote(null, 5L);
         InvoiceResult query = adapter.queryInvoice("SETP1");
 
-        for (String message : List.of(invoice.errorMessage(), credit.errorMessage(), debit.errorMessage(), query.errorMessage())) {
+        for (String message : List.of(credit.errorMessage(), debit.errorMessage(), query.errorMessage())) {
             assertTrue(message.contains("no está implementad"), message);
             assertFalse(message.contains("409"), "los servicios de notas leen 409 como conflicto de Factus");
         }
-        assertFalse(invoice.isSuccess());
-        assertEquals("ERROR", invoice.status());
+        assertEquals("ERROR", credit.status());
     }
 
     @Test
@@ -124,7 +135,7 @@ class AlegraBillingAdapterTest {
 
     @Test
     void companyDataComesFromTheCompanyProviderRecord() {
-        AlegraCompany company = new AlegraCompany("c1", "Nombre", null, "900", "1", null, null, null, null, null, Map.of());
+        AlegraCompany company = new AlegraCompany("c1", "Nombre", null, "900", "1", null, null, null, null, null, null, Map.of());
         assertEquals("c1", company.id());
     }
 }

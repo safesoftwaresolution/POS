@@ -33,7 +33,7 @@ public class AlegraNumberAllocator {
 
     /** Número asignado a una referencia, con los datos de resolución que exige el documento. */
     public record Allocation(Long id, Long rangeId, String prefix, long number, String resolutionNumber,
-                             LocalDate startDate, LocalDate endDate, String technicalKey,
+                             long minNumber, long maxNumber, LocalDate startDate, LocalDate endDate, String technicalKey,
                              String idempotencyKey, boolean completed) {}
 
     private final NumberingRangeRepository rangeRepository;
@@ -158,7 +158,8 @@ public class AlegraNumberAllocator {
 
     private static Allocation toAllocation(DocumentNumberAllocation allocation, NumberingRange range) {
         return new Allocation(allocation.getId(), allocation.getRangeId(), allocation.getPrefix(),
-                allocation.getNumber(), range.getResolutionNumber(), range.getStartDate(), range.getEndDate(),
+                allocation.getNumber(), range.getResolutionNumber(), range.getMinNumber(), range.getMaxNumber(),
+                range.getStartDate(), range.getEndDate(),
                 range.getTechnicalKey(), allocation.getIdempotencyKey(), allocation.isCompleted());
     }
 }

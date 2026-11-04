@@ -20,5 +20,11 @@ public record AlegraCompany(
         String identificationType,
         String email,
         String phone,
+        Address address,
         Map<String, String> governmentStatus
-) {}
+) {
+
+    /** Dirección de la empresa en Alegra. */
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record Address(String address, String city, String department, String country) {}
+}

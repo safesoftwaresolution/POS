@@ -16,9 +16,9 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 
 /**
- * Adaptador de Alegra (proveedor tecnológico DIAN). Por ahora cubre la cuenta (configuración, prueba de conexión
- * y caché de la empresa) y los rangos de numeración locales; emitir facturas y notas llega en FEAT-025 y 026, y
- * mientras tanto devuelve un resultado de error claro en lugar de fingir una emisión.
+ * Adaptador de Alegra (proveedor tecnológico DIAN). Cubre la cuenta (configuración, prueba de conexión y caché
+ * de la empresa), los rangos de numeración locales y la emisión de facturas; las notas crédito y débito llegan en
+ * FEAT-026 y mientras tanto devuelven un resultado de error claro en lugar de fingir una emisión.
  */
 @Component
 @ConditionalOnProperty(name = "billing.provider", havingValue = "alegra")
@@ -29,13 +29,16 @@ public class AlegraBillingAdapter implements ElectronicInvoicingProvider {
     private final AlegraAccessResolver accessResolver;
     private final AlegraCompanyProvider companyProvider;
     private final AlegraNumberingRangeClient rangeClient;
+    private final AlegraInvoiceClient invoiceClient;
 
     public AlegraBillingAdapter(AlegraAccessResolver accessResolver,
                                 AlegraCompanyProvider companyProvider,
-                                AlegraNumberingRangeClient rangeClient) {
+                                AlegraNumberingRangeClient rangeClient,
+                                AlegraInvoiceClient invoiceClient) {
         this.accessResolver = accessResolver;
         this.companyProvider = companyProvider;
         this.rangeClient = rangeClient;
+        this.invoiceClient = invoiceClient;
     }
 
     @Override
@@ -67,17 +70,25 @@ public class AlegraBillingAdapter implements ElectronicInvoicingProvider {
         return "Alegra";
     }
 
-    // --- Facturas y notas (FEAT-025 y 026) ---
+    // --- Facturas ---
 
     @Override
     public InvoiceResult emitInvoice(InvoiceRequest request) {
-        return InvoiceResult.error(String.format(PENDING, "la emisión de facturas"));
+        return invoiceClient.emitInvoice(request);
     }
 
     @Override
-    public InvoiceResult queryInvoice(String legalNumber) {
-        return InvoiceResult.error(String.format(PENDING, "la consulta de facturas"));
+    public InvoiceResult queryInvoiceByProviderId(String providerDocumentId) {
+        return invoiceClient.queryInvoiceByProviderId(providerDocumentId);
     }
+
+    /** Alegra consulta por el id del documento ({@link #queryInvoiceByProviderId}), no por el número legal. */
+    @Override
+    public InvoiceResult queryInvoice(String legalNumber) {
+        return InvoiceResult.error(String.format(PENDING, "la consulta de facturas por número legal"));
+    }
+
+    // --- Notas (FEAT-026) ---
 
     @Override
     public CreditNoteResult emitCreditNote(CreateCreditNoteRequest request, Long storeId) {

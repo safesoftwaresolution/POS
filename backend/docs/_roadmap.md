@@ -21,7 +21,7 @@ Este documento complementa los `spec.md` de cada módulo (que describen el compo
 | suppliers | CRUD por local | — | — |
 | reports | CQRS con `JdbcClient`; incluye cierre de caja (`/cash-closing`), mapa de calor de ventas por día y hora (`/sales-heatmap`, RF-REP-008) y lotes vencidos / próximos a vencer (`/expiring`, RF-REP-007, una fila por lote) | No descuenta devoluciones; rentabilidad usa precios actuales; sin índices (ver abajo) | Rentabilidad por categoría |
 | settings | Datos del negocio + catálogos de parámetros + logo | Importa `billing.internal` (`FactusTokenManager`); creación de la fila por defecto a verificar | Impuesto configurable (hoy 19% fijo en frontend) |
-| billing | Facturas, notas crédito (V23) y débito (V24), habilitación por local (V14), eventos de dominio, timeouts, referencias deterministas | Factus dentro de la transacción con lock; sin reintento automático/outbox; `PENDING` por fallo temporal se trata como `ERROR`; códigos DIAN hardcodeados; cifrado sin rotación; frontend parcial (`InvoicingBento`: activación y facturas del local; `BillingBento` en back office); sin verificación contra el sandbox real | Alertas de rango por agotarse |
+| billing | Facturas, notas crédito (V23) y débito (V24), habilitación por local (V14), eventos de dominio, timeouts, referencias deterministas | Alegra es el proveedor por defecto (facturas, notas, PDF, XML, correo; verificado en sandbox); facturas en tres pasos con reintento automático y conciliación (FEAT-018, 025). Falta: notas crédito/débito aún con la llamada dentro de la transacción con lock (reserva `V35`); conciliación por webhook; token de producción de Alegra por confirmar; nombres heredados de Factus (`factus_number`, `sendToFactus`, `reference_code`); códigos DIAN hardcodeados; cifrado sin rotación; frontend parcial (`InvoicingBento`: activación y facturas del local; `BillingBento` en back office); sin verificación contra el sandbox real | Alertas de rango por agotarse |
 | stores | Onboarding del dueño, KYC, back office, auditoría de estados (V18/V20) y de asignación de dueños (V21), planes por local (V22); spec actualizado | Estados como `String`; documentos KYC con URL pública; `StoreFacade` expone `MultipartFile` | — |
 | legal | Documentos legales de plataforma | Spec sin `spec-version` | — |
 | support | Tickets PQR/bugs con radicado aleatorio y seguimiento público mínimo | Sin rate limiting; acepta `storeId` del cliente | — |
@@ -63,7 +63,7 @@ Una revisión del arnés, los specs y el código encontró desajustes. **Ya corr
 11. Descontar devoluciones en reportes; guardar el costo en `sale_items` para la rentabilidad.
 
 **Facturación** (ver `modules/billing/spec.md`, "Pendiente")
-12. Sacar la llamada a Factus de la transacción con lock; reintento automático / outbox; centralizar mapeo DIAN; rotación de claves de cifrado; validar vigencia y agotamiento del rango antes de emitir; frontend de habilitación, rangos y notas.
+12. Facturas: **hecho** (reserva con lease, llamada sin transacción, reintento automático, conciliación por `providerDocumentId`). Pendiente: lo mismo para notas crédito y débito (`V35`); retirar Factus y renombrar `factus_number`/`factusNumber`/`sendToFactus` a nombres neutros; centralizar mapeo DIAN; rotación de claves de cifrado; validar vigencia y agotamiento del rango antes de emitir; frontend de habilitación, rangos y notas.
 
 **Arquitectura**
 13. Sacar `FactusTokenManager` de `settings` vía `BillingFacade`; añadir ArchUnit para que la regla de encapsulación se verifique.

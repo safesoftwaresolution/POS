@@ -79,7 +79,16 @@ Cada solicitud lleva el `storeId` en `TenantContext`. El aislamiento es manual e
 ## Datos sembrados
 `DatabaseSeeder` ya no crea cuentas con contraseña conocida en producción: el `SUPER_ADMIN` solo se siembra si se define `SEED_SUPERADMIN_PASSWORD`, y `admin`/local 1 solo en el perfil `dev`. Cualquier entorno que haya arrancado antes con la versión anterior puede tener `superadmin / SuperAdmin123!` y `admin / Password123`: **rotarlas**.
 
-## Credenciales de Facturación Electrónica (Factus)
+## Facturación electrónica: Alegra (por defecto)
+
+Con `billing.provider=alegra` el secreto es **un token de plataforma por entorno** (`ALEGRA_API_TOKEN_SANDBOX` / `ALEGRA_API_TOKEN_PRODUCTION`), no uno por local:
+
+- **Custodia**: es una variable de entorno del despliegue. Nunca va en la base de datos, en el repositorio (`.env.example` y `docker-compose.prod.yml` solo traen la variable vacía o una referencia `${...}`; un test lo verifica) ni en los logs. `AlegraAccess.toString()` lo omite y los mensajes de error de Alegra nunca lo incluyen.
+- **Aislamiento entre locales: `company.id` + `TenantContext`, nunca el token.** Cada local es una empresa asociada en Alegra; su `company.id` se guarda por local y entorno (`store_billing_config.sandbox_company_id` / `production_company_id`) y solo lo escribe el SUPER_ADMIN (`PUT /api/v1/backoffice/stores/{storeId}/billing/company-id`). `AlegraAccessResolver` resuelve siempre el local en contexto y falla si no está `ACTIVE` o le falta el `company.id`: no hay respaldo al de otro local. Un `company.id` equivocado significa facturar como otra empresa, por eso es una carga de back office y los endpoints del local no lo aceptan.
+- **Descargas de archivos**: Alegra devuelve enlaces temporales firmados (60 min). Solo se siguen enlaces `https` de dominios `alegra.com` o de un bucket `api-alegra-e-provider-*` de S3; las redirecciones se siguen a mano (máximo 3) validando cada salto, el cliente de descarga no sigue redirecciones por su cuenta, y el token nunca se envía a esos enlaces. Lectura con tope de tamaño y el archivo se valida (PDF o XML) antes de devolverlo.
+- **Cifrado**: la clave `BILLING_ENCRYPTION_KEY` sigue siendo necesaria mientras exista Factus; con Alegra no hay secretos por local en la base.
+
+## Credenciales de Facturación Electrónica (Factus, alterno)
 
 Las credenciales que el proveedor entrega por local son el secreto más sensible del sistema después del
 `JWT_SECRET`: con ellas se emiten documentos legales ante la DIAN consumiendo la bolsa de un local concreto.
@@ -93,8 +102,9 @@ Las credenciales que el proveedor entrega por local son el secreto más sensible
 - **Clave de cifrado**: `BILLING_ENCRYPTION_KEY` (32 bytes en Base64), única pieza fuera de la base de datos.
   Perderla o cambiarla inutiliza los secretos ya guardados. Generación en Windows/PowerShell:
   `$b=New-Object byte[] 32; [Security.Cryptography.RNGCryptoServiceProvider]::new().GetBytes($b); [Convert]::ToBase64String($b)`.
-- **Sin credenciales globales**: no existen variables de entorno con credenciales de Factus. Un local sin
+- **Sin credenciales globales (Factus)**: no existen variables de entorno con credenciales de Factus. Un local sin
   credenciales propias **no factura**: no hay respaldo a una cuenta de plataforma que pudiera consumir la bolsa de otro local.
+  Esta regla es de Factus: con Alegra el token es de plataforma y el aislamiento es por `company.id`.
 - **Aislamiento entre locales**: el token OAuth2 se cachea por (`store_id`, entorno) y se invalida al cambiar
   las credenciales o ante un `401`. Ninguna llamada a Factus se hace sin resolver antes el local dueño.
 - **Nunca en logs ni en respuestas**: `FactusAccess.toString()` omite los secretos y `BillingActivationDto`
@@ -102,4 +112,4 @@ Las credenciales que el proveedor entrega por local son el secreto más sensible
 - **Auditoría**: `store_billing_config.updated_by` guarda quién tocó la configuración por última vez, y
   `numbering_range_audit` registra cada cambio sobre los rangos de numeración (acción, valor anterior y nuevo,
   usuario y fecha).
-- **Proveedor y timeouts**: `billing.provider` desconocido falla (sin respaldo a `mock`) y las llamadas salientes tienen timeouts (ver `modules/billing/spec.md`, RN-BILL-017/018).
+- **Proveedor y timeouts**: `billing.provider` (`alegra` por defecto, `factus`, `mock`) desconocido falla (sin respaldo a `mock`) y las llamadas salientes tienen timeouts (ver `modules/billing/spec.md`, RN-BILL-017/018).

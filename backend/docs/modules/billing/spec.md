@@ -1,4 +1,4 @@
-<!-- spec-version: 2.4 | last-updated: 2026-10-30 -->
+<!-- spec-version: 3.0 | last-updated: 2026-11-04 -->
 # Módulo: Facturación Electrónica (Billing)
 
 ## Dependencias
@@ -25,7 +25,94 @@ El módulo está internamente segregado por responsabilidades (Feature Slicing &
 
 ---
 
+## Proveedores de facturación
+
+`billing.provider` (variable `BILLING_PROVIDER`) elige el adaptador. Un valor desconocido **aborta el arranque** (RN-BILL-017).
+
+| Valor | Adaptador | Estado |
+|---|---|---|
+| `alegra` (**por defecto**) | `AlegraBillingAdapter` (`billing/internal/adapters/alegra/`) | Facturas, notas crédito y débito, PDF, XML y correo. Verificado contra el sandbox de Alegra |
+| `factus` | `FactusBillingAdapter` (`adapters/factus/`) | Alterno, sin cambios. Credenciales por local en la base (RN-BILL-005) |
+| `mock` | `MockBillingAdapter` | Solo desarrollo; se registra únicamente con `billing.provider=mock` |
+
+Los servicios dependen de los puertos (`InvoiceProvider`, `CreditNoteProvider`, `DebitNoteProvider`, `NumberingRangeProvider`, `BillingAccountProvider`), nunca de una clase `Factus*` ni `Alegra*`. Los beans de Alegra existen solo con `billing.provider=alegra`.
+
+> Aún quedan nombres heredados de Factus fuera de los adaptadores (`factus_number`, `factusNumber`, `sendToFactus`, `reference_code`, `numberingRangeId`). No se renombran en esta etapa (ver `_roadmap.md`).
+
+---
+
+## Proveedor Alegra
+
+### Modelo de cuentas
+- **Un token de plataforma por entorno** (`ALEGRA_API_TOKEN_SANDBOX` / `ALEGRA_API_TOKEN_PRODUCTION`), enviado como `Authorization: Bearer`. Vive solo en el entorno de despliegue: nunca en la base, en el repositorio ni en los logs.
+- **Cada local es una empresa asociada** en Alegra con su propio `company.id` (ULID), guardado por local y entorno en `store_billing_config.sandbox_company_id` / `production_company_id`. El SUPER_ADMIN lo carga con `PUT /api/v1/backoffice/stores/{storeId}/billing/company-id?environment=` (body `{ "companyId": "…" }`). Las respuestas solo dicen si está cargado (`sandboxCompanyIdConfigured` / `productionCompanyIdConfigured`), nunca su valor.
+- **El aislamiento entre locales es por `company.id` + `TenantContext`**, no por token: `AlegraAccessResolver` resuelve el acceso del local en contexto y nunca recurre al `company.id` de otro. Con el token de plataforma, un `company.id` equivocado sería facturar como otra empresa; por eso solo lo escribe el SUPER_ADMIN.
+- `isAccountConfigured` = hay token del entorno **y** el local tiene `company.id`. Con `billing.provider=alegra` y sin tokens la aplicación arranca y la cuenta figura como no configurada.
+
+### Alta de una empresa en Alegra (guía operativa)
+1. **Crear la empresa** (`POST /companies`): nombre, NIT (`identification`), DV y `useAlegraCertificate`. Queda como empresa `associated`.
+2. **Completar sus datos** (`PATCH /companies/{id}`): `organizationType`, `identificationType`, `regimeCode`, `email`, `phone` y `address{address, city, department, country}`. Alegra rechaza las facturas (400, `AEP6012`, `AEP6013`, `AEP6015`, `AEP6016`) si faltan. El mapeador de facturas completa por defecto el tipo de identificación (`31`, NIT), el tipo de organización (`1`, jurídica) y el régimen (`R-99-PN`) cuando la empresa no los trae, pero lo correcto es dejarlos guardados.
+3. **Activar las notificaciones por correo** de la empresa (`notificationByEmail.enabled = true`); en una empresa nueva vienen apagadas y sin eso el correo de la factura no sale.
+4. **Habilitarla ante la DIAN** (`POST /test-sets`, `type: invoices`): en el sandbox con el `governmentId` fijo de la documentación de Alegra; en producción con el código que genera la DIAN al asociar a Alegra como proveedor tecnológico. La empresa pasa a `governmentStatus.invoices = AUTHORIZED`.
+5. **Cargar el `company.id`** en el sistema (`PUT …/billing/company-id`) y probar con `POST …/billing/test-connection`.
+6. **Registrar el rango de numeración** de facturas (`POST /api/v1/billing/numbering-ranges`, documento `01`) con la resolución real, el rango `from`/`to`, las fechas de vigencia y la clave técnica, y elegirlo con `set-default`. Para notas crédito y débito se registra un rango con documento `91` / `92` y prefijo propio: **no llevan resolución** (en `resolution_number` basta cualquier texto).
+7. Pasar el local a `ACTIVE` (RN-BILL-006).
+
+> Producción: cómo obtiene la plataforma su token de producción de Alegra y si cambia por entorno **no está documentado** y debe confirmarse con Alegra antes del despliegue.
+
+### Numeración local
+Alegra no asigna el consecutivo: el sistema envía el `number` y la `resolution` completa en cada factura.
+- Tablas `billing_numbering_range` (rangos por local, entorno y documento `01`/`91`/`92`) y `billing_document_number` (libro de números asignados, único por referencia y por `(range_id, number)`).
+- `AlegraNumberAllocator.allocate(store, env, documento, referencia)` corre en su propia transacción y toma el lock pesimista de la fila del rango activo: emisiones simultáneas reciben números únicos y consecutivos, sin huecos. Es **idempotente por referencia**: reintentar devuelve el mismo número y la misma llave de idempotencia.
+- Falla con mensaje accionable si no hay rango activo, está vencido, aún no es vigente o está agotado.
+- `AlegraNumberingRangeClient` implementa la administración de rangos sobre esas tablas con la misma semántica que el puerto (el servicio de rangos y sus guardas RN-BILL-008 no cambian). Un cambio de consecutivo nunca baja de un número ya asignado.
+- Llamar a `allocate` **fuera de cualquier transacción abierta**: usa una conexión propia y desde dentro de otra puede agotar el pool o bloquearse a sí mismo.
+
+### Emisión de facturas (tres pasos)
+`InvoiceServiceImpl.processElectronicInvoice` ya no es una transacción larga:
+1. **Reservar** (`InvoiceEmissionTransactions.reserve`, transacción corta con lock): crea o bloquea la fila, y si no está validada ni tiene una reserva vigente (`processing_started_at` + `billing.emission.lease`, 5 min) la deja `PENDING`, cuenta el intento y toma la reserva.
+2. **Llamar al proveedor sin transacción ni lock**. Dos emisiones simultáneas de la misma venta llaman al proveedor una sola vez; la segunda recibe la factura en curso.
+3. **Registrar el resultado** (`complete`, transacción corta): libera la reserva y programa `next_retry_at`.
+
+Reintento automático (`InvoiceRetryJob`, `billing.retry.enabled`, apagado en el perfil de test): cada `billing.retry.interval` ms (60 000) toma hasta `billing.retry.batch-size` (20) facturas `ERROR`/`PENDING` con el reintento vencido o la reserva caducada y menos de `billing.retry.max-attempts` (8) intentos. Espera `min(2^intentos minutos, 60)` más hasta 10 % de variación. Nunca reintenta `REJECTED` ni `VALIDATED`; omite locales sin facturación `ACTIVE`; un fallo no detiene el lote. El reintento manual (`retry`) reinicia el conteo sin pisar una reserva vigente.
+
+### Decisión del resultado (nunca por el código HTTP)
+Un `201` solo dice que Alegra recibió el documento; un rechazo de la DIAN también llega como `201`.
+
+| Respuesta de Alegra | Resultado | Notas |
+|---|---|---|
+| `legalStatus` `ACCEPTED` o `ACCEPTED_WITH_OBSERVATIONS` | `VALIDATED` | Se guardan número legal, CUFE/CUDE, QR y `providerDocumentId`; la llave queda cerrada |
+| `legalStatus` `REJECTED` | `REJECTED` | Motivos de la DIAN; la llave se cierra y el siguiente intento usa otra conservando el número |
+| `status` `FAILED` | `ERROR` | Igual: llave cerrada |
+| `WAITING_RESPONSE`, `REGISTERED` o `SENT` sin `legalStatus` | `PENDING` | Se guarda el `providerDocumentId`; se concilia, no se vuelve a emitir |
+| HTTP 400 | `REJECTED` | Datos a corregir; llave cerrada |
+| HTTP 422 (llave reutilizada con otro cuerpo) | `PENDING` | Se rota la llave |
+| HTTP 401/403, 5xx, timeout o 409 en curso | `PENDING` | Reintento con la **misma** llave |
+| Otro 4xx (404…) | `ERROR` | |
+
+Ningún mensaje de error propio contiene el texto «409»: los servicios de notas lo leen como el conflicto de documentos pendientes de Factus y borrarían el documento.
+
+### Conciliación e idempotencia
+- Cada documento viaja con la `Idempotency-Key` (UUID v4) de su asignación; Alegra devuelve la respuesta guardada del primer intento (`Idempotent-Replayed: true`), que puede estar desactualizada: por eso se vuelve a leer el documento (`GET /invoices/{id}`).
+- Una factura `PENDING` con `providerDocumentId` se **consulta** en vez de emitirse de nuevo. Si la consulta falla, queda pendiente (ante la duda no se emite); si Alegra confirma que el documento falló o ya no existe, queda en `ERROR` y puede emitirse otro. Tras un rechazo, el reintento manual descarta el id anterior.
+
+### Cuerpo de la factura
+Lo arma `AlegraInvoiceMapper`: cada línea se redondea a 2 decimales (HALF_UP) y los totales son la suma de las líneas ya redondeadas, que es lo que validan Alegra y la DIAN. **El total de la factura puede diferir unos centavos del total del ticket del POS**, que se calculó con otro redondeo. Lleva el bloque `company` completo (con solo el `id` Alegra rechaza), la resolución desde el rango asignado y el cliente de la venta (consumidor final `222222222222` si no hay).
+
+### PDF, XML y correo
+- **PDF**: Alegra lo entrega **dentro de `files.zip`** junto al XML del documento adjunto; no hay que generarlo. `GET /invoices/{id}` da un enlace fresco (caduca a los 60 min, nada se guarda). El zip guarda las entradas sin comprimir y con descriptor de datos, así que se lee con `ZipFile`. Se extrae solo la entrada `.pdf`, con tope de 10 MB, y se exige que sea un PDF.
+- **XML**: desde `files.xml` (si viene vacío se consulta una vez más), tope de 5 MB y debe ser XML.
+- **Descargas**: el enlace del zip redirige al S3 de Alegra. Las redirecciones se siguen a mano (máximo 3) y **cada salto** debe ser `https` de un dominio `alegra.com` o de un bucket de Alegra (`api-alegra-e-provider-*.amazonaws.com`); el token nunca se envía a esos enlaces.
+- **Correo** (`POST /send-email`): Alegra adjunta el XML en un zip, no el PDF. Verificado en el sandbox: **entrega a la dirección de `replyTo` y no a la de `to`**, al contrario de su documentación; por eso las dos llevan la dirección del cliente. Confirmar con Alegra y revisar en producción.
+
+### Notas crédito y débito
+`AlegraNoteClient`: numeración propia (documentos `91`/`92`, prefijo propio) **sin resolución**; el cuerpo lleva `invoicePeriod` (fecha de la factura de origen) y `associatedDocuments` (fecha, tipo `01`, prefijo, número y CUFE de la factura aceptada). La factura de origen se busca por `(tienda, número legal)`; si no existe o no está validada falla **antes de gastar un número**. El cliente sale de la venta original. Misma disciplina que las facturas (llave, estado legal, rotación tras un rechazo). Pendiente: la reserva en tres pasos de los servicios de notas (ver «Pendiente / no verificado»).
+
+---
+
 ## Flujo de habilitación (negocio)
+
+> Con Alegra el alta se hace como se describe en «Alta de una empresa en Alegra»; el ciclo de estados de RN-BILL-006 es el mismo.
 
 El proveedor (Factus) habilita a la **plataforma**, que compra una bolsa de documentos y la reparte entre
 sus locales. Por eso las credenciales llegan al SUPER_ADMIN, no al local:
@@ -68,18 +155,19 @@ sus locales. Por eso las credenciales llegan al SUPER_ADMIN, no al local:
 | `REJECTED` | Rechazada por la DIAN por inconsistencias en los datos fiscales (HTTP 400 / 422) |
 | `ERROR` | Error imprevisto, local sin facturación habilitada, o sin rango de numeración configurado |
 
-### RN-BILL-004 — Cache y Renovación de Token OAuth2
+### RN-BILL-004 — Cache y Renovación de Token OAuth2 (Factus)
 - El token se cachea en memoria **por (`store_id`, entorno)**, con un candado por clave (un local lento no
   bloquea a los demás) y margen de renovación de 60 segundos antes de expirar.
 - El cache se invalida automáticamente cuando cambian las credenciales del local (huella SHA-256 de las
   credenciales) y ante un `401` del proveedor durante la emisión.
 
-### RN-BILL-005 — Credenciales por Local, sin Respaldo Global
+### RN-BILL-005 — Credenciales por Local, sin Respaldo Global (Factus)
 - Cada llamada a Factus usa exclusivamente las credenciales del local correspondiente.
 - **No existe fallback a credenciales de plataforma ni a variables de entorno.** Si el local no está `ACTIVE`
   o le faltan credenciales, se lanza `BillingNotEnabledException` y no se hace ninguna llamada al proveedor.
 - En variables de entorno solo quedan las **URLs públicas** de cada entorno (`FACTUS_URL_SANDBOX`,
   `FACTUS_URL_PRODUCTION`) y la clave de cifrado (`BILLING_ENCRYPTION_KEY`). Ninguna credencial.
+- Esta regla es de Factus. **Con Alegra el token es de plataforma** (una variable de entorno por entorno) y el aislamiento entre locales es por `company.id` + `TenantContext`, nunca por token; ver «Modelo de cuentas».
 
 ### RN-BILL-006 — Ciclo de Habilitación por Local
 ```
@@ -150,7 +238,7 @@ El mensaje del proveedor se propaga al cliente (truncado a 500 caracteres) para 
 - `reference_code` es `UNIQUE` global: si la referencia pertenece a **otro local** se responde 409 sin llamar a Factus ni exponer la nota existente (mismo criterio que RN-BILL-014).
 - Toda operación (emisión, consulta, descarga, eliminación) exige el `storeId` de la solicitud (`TenantContext`); sin local asociado responde 409. **No hay respaldo al local 1** (antes se asumía).
 
-### RN-BILL-011 — Recuperación Automática de Conflicto 409
+### RN-BILL-011 — Recuperación Automática de Conflicto 409 (Factus)
 - Cuando Factus rechaza una creación con HTTP 409 ("Se encontró un documento pendiente por enviar a la DIAN"), el sistema elimina el borrador no validado en Factus y reintenta **una sola vez**. Si el borrador no se puede eliminar, se reporta el conflicto. Aplica a:
   - Notas crédito: `DELETE /v2/credit-notes/reference/{reference_code}`.
   - Notas débito: `DELETE /v2/debit-notes/reference/{reference_code}`.
@@ -166,7 +254,7 @@ El mensaje del proveedor se propaga al cliente (truncado a 500 caracteres) para 
 - Facturar sin local asociado a la venta falla (`IllegalStateException`); no hay respaldo al local 1.
 
 ### RN-BILL-017 — Proveedor Configurado
-- `billing.provider` (`factus` | `mock`) debe corresponder a un adaptador registrado. Si no existe, **la aplicación no arranca** (`BillingProviderStartupValidator`) y el error lista los proveedores disponibles; si aun así una operación lo resolviera en tiempo de ejecución, también falla con ese listado: no hay respaldo silencioso a `mock`, que emitiría facturas falsas por una errata de configuración.
+- `billing.provider` (`alegra` | `factus` | `mock`; por defecto `alegra`) debe corresponder a un adaptador registrado. Si no existe, **la aplicación no arranca** (`BillingProviderStartupValidator`) y el error lista los proveedores disponibles; si aun así una operación lo resolviera en tiempo de ejecución, también falla con ese listado: no hay respaldo silencioso a `mock`, que emitiría facturas falsas por una errata de configuración.
 - `MockBillingAdapter` solo se registra con `billing.provider=mock` (`@ConditionalOnProperty`).
 - **Puerto de cuenta (`BillingAccountProvider`)**: todo adaptador (`ElectronicInvoicingProvider`) implementa además `isAccountConfigured(storeId, env)`, `verifyConnection(storeId, env)`, `onAccountChanged(storeId)` y `displayName()`. `StoreBillingConfigServiceImpl` y `BillingActivationMapper` obtienen el proveedor activo a través de `ActiveBillingProvider` (activación a `ACTIVE`, cambio de entorno, prueba de conexión, invalidación de caché tras cargar credenciales, flags `sandboxConfigured`/`productionConfigured`) y ya no dependen de clases `Factus*`. El mock da la cuenta siempre por configurada y la prueba de conexión por exitosa.
 - `BillingProviderException` es la base común de los errores de un proveedor (`FactusApiException` la extiende). `GlobalExceptionHandler` aplica el mapeo de RN-BILL-009 a la base y responde **501 Not Implemented** a una `UnsupportedOperationException` (operación no implementada por el proveedor activo).
@@ -208,12 +296,14 @@ El mensaje del proveedor se propaga al cliente (truncado a 500 caracteres) para 
 ### 1. Facturas Electrónicas de Ventas (`BillingInvoiceController`)
 - `GET /api/v1/billing/sales/{saleId}` — consultar estado y datos de la factura de una venta.
 - `POST /api/v1/billing/sales/{saleId}/retry` — reintentar facturación fallida (`ERROR` o `PENDING`).
-- `POST /api/v1/billing/sales/{saleId}/send-email` — enviar ZIP con PDF y XML legal al email indicado.
+- `POST /api/v1/billing/sales/{saleId}/send-email` — enviar ZIP con PDF y XML legal al email indicado. Con Alegra lo envía Alegra y adjunta el XML (no el PDF).
 - `GET /api/v1/billing/sales/{saleId}/pdf` — descargar el PDF legal de la factura.
 - `GET /api/v1/billing/sales/{saleId}/xml` — descargar el XML legal de la factura.
 - `GET /api/v1/billing/invoices` — historial paginado de facturas del local, filtrable por estado.
 
 ### 2. Rangos de Numeración DIAN (`BillingNumberingRangeController`)
+> Con Alegra estos endpoints trabajan sobre los rangos locales (ver «Numeración local»); `GET …/dian` todavía no está disponible con Alegra (501).
+
 - `GET /api/v1/billing/numbering-ranges/dian` — resoluciones asociadas al software ante la DIAN.
 - `GET /api/v1/billing/numbering-ranges` — rangos registrados en Factus para el local.
 - `GET /api/v1/billing/numbering-ranges/{id}` — detalle de un rango (`null` → 404 si no existe).
@@ -232,8 +322,11 @@ El mensaje del proveedor se propaga al cliente (truncado a 500 caracteres) para 
 - `PUT /api/v1/backoffice/stores/{storeId}/billing/credentials?environment=SANDBOX|PRODUCTION` — cargar
   credenciales. Un `clientSecret`/`password` vacío **conserva** el valor guardado. El rango de numeración no se carga aquí:
   lo elige el administrador del local (`set-default`).
-- `POST /api/v1/backoffice/stores/{storeId}/billing/test-connection?environment=…` — pide un token real a
-  Factus sin activar nada. Nunca lanza error por rechazo: devuelve `{success, environment, message}`.
+- `PUT /api/v1/backoffice/stores/{storeId}/billing/company-id?environment=SANDBOX|PRODUCTION` — (Alegra) guarda el
+  `company.id` del local en ese entorno. Body `{ "companyId": "…" }` (máx. 64 caracteres). Idempotente; solo SUPER_ADMIN;
+  la respuesta indica si está cargado, no su valor.
+- `POST /api/v1/backoffice/stores/{storeId}/billing/test-connection?environment=…` — con Factus pide un token real; con Alegra
+  lee la empresa del local en Alegra. No activa nada. Nunca lanza error por rechazo: devuelve `{success, environment, message}`.
 - `PATCH /api/v1/backoffice/stores/{storeId}/billing/environment?environment=…` — cambiar entorno activo.
 - `POST /api/v1/backoffice/stores/{storeId}/billing/transition` — cambiar etapa. Body: `{status, reason}`.
 
@@ -278,6 +371,10 @@ El mensaje del proveedor se propaga al cliente (truncado a 500 caracteres) para 
 | error_message | TEXT | NULLABLE |
 | pdf_url | VARCHAR(500) | NULLABLE |
 | validated_at | TIMESTAMP | NULLABLE |
+| provider_document_id | VARCHAR(64) | NULLABLE (`V33`): id del documento en el proveedor; también en las notas |
+| attempts | INT | NOT NULL, DEFAULT 0 (`V34`): intentos desde el último reinicio manual |
+| processing_started_at | TIMESTAMP | NULLABLE (`V34`): reserva (lease) de la emisión en curso |
+| next_retry_at | TIMESTAMP | NULLABLE (`V34`): cuándo puede reintentarla el job; índice `(status, next_retry_at)` |
 | created_at / updated_at | TIMESTAMP | NOT NULL |
 
 ### Tabla: `store_billing_config` (`V14__Store_Billing_Config.sql`)
@@ -364,6 +461,14 @@ Una fila por local (relación 1 a 1 con `stores`).
 
 Índices: `IDX_electronic_debit_notes_store`, `IDX_electronic_debit_notes_store_status`, `IDX_electronic_debit_notes_bill`.
 
+### Tablas de Alegra (`V33__Alegra_Local_Numbering.sql`)
+| Tabla | Contenido |
+|---|---|
+| `billing_numbering_range` | Rangos por local, entorno y documento (`01`, `91`, `92`): `prefix`, `resolution_number`, `min_number`, `max_number`, `next_number`, vigencia, `technical_key`, `active`, `deleted`. Único `(store_id, environment, document, prefix, resolution_number)` |
+| `billing_document_number` | Libro de asignaciones: `reference_code`, `range_id`, `prefix`, `number`, `idempotency_key`, `completed`. Único `(store_id, environment, document, reference_code)` y `(range_id, number)` |
+| `store_billing_config` (columnas nuevas) | `sandbox_company_id`, `production_company_id` (VARCHAR(64)): `company.id` de Alegra por entorno |
+| `electronic_invoices`, `electronic_credit_notes`, `electronic_debit_notes` (columna nueva) | `provider_document_id` |
+
 ---
 
 ## Permisos
@@ -395,6 +500,7 @@ Una fila por local (relación 1 a 1 con `stores`).
 | Solicitar activación | - | ✓ | - |
 | Ver cola de revisión / estado de cualquier local | ✓ | - | - |
 | Cargar credenciales / probar conexión | ✓ | - | - |
+| Cargar el `company.id` del proveedor (Alegra) | ✓ | - | - |
 | Cambiar etapa o entorno | ✓ | - | - |
 
 > El administrador del local **nunca** ve ni envía credenciales: ningún endpoint bajo `/api/v1/billing/activation`
@@ -404,14 +510,17 @@ Una fila por local (relación 1 a 1 con `stores`).
 
 ## Pendiente / no verificado
 
-- **Llamada a Factus dentro de la transacción con bloqueo**: `InvoiceServiceImpl.processElectronicInvoice` sigue
-  llamando al proveedor mientras sostiene el `SELECT … FOR UPDATE` de la factura. Con los timeouts de RN-BILL-018 la espera
-  está acotada, pero lo correcto es dividirla en reservar (`PENDING`) → llamar → registrar resultado.
-- **Reintento automático**: no hay job que reintente facturas `PENDING`/`ERROR` ni outbox; si el proceso cae tras el commit de
-  la venta y antes de emitir, la factura queda sin emitir hasta un `retry` manual.
-- **Estado `PENDING` por fallo temporal**: los clientes Factus devuelven `InvoiceResult.pending(...)` ante fallos de red o
-  autenticación, pero `InvoiceServiceImpl.applyResultToEntity` solo distingue `VALIDATED`/`REJECTED` y trata el resto como
-  `ERROR`. Decidir si se añade `markAsPending` o se ajusta RN-BILL-002.
+- **Notas crédito y débito dentro de la transacción con bloqueo**: `CreditNoteServiceImpl.emit` y `DebitNoteServiceImpl.emit` siguen llamando al
+  proveedor mientras sostienen el lock de la fila (por `reference_code`); con Alegra además gastan una conexión extra por el asignador.
+  Falta pasarlas a reservar → llamar → registrar, con una migración (`V35`) que agregue reserva e intentos a las notas. Las facturas ya están
+  resueltas (ver «Emisión de facturas (tres pasos)»). No hay reintento automático de notas: se reintentan con una nueva solicitud con la misma referencia.
+- **Conciliación**: una factura `PENDING` se concilia cuando el job la toma o alguien la reintenta; no hay webhook de Alegra ni job de conciliación propio.
+- **Token de producción de Alegra**: cómo se obtiene y si cambia por entorno no está documentado; confirmar con Alegra antes del despliegue.
+- **Correo con Alegra**: el sandbox entrega a `replyTo` y no a `to` (ver «PDF, XML y correo»); confirmar con Alegra y revisar en producción. Las
+  empresas nuevas traen las notificaciones apagadas.
+- **Descarga lenta**: el timeout de lectura (45 s) es por lectura, no por descarga completa; un servidor de confianza que gotee datos podría
+  retener un hilo hasta el tope de tamaño.
+- **Centavos**: la factura suma líneas ya redondeadas y puede diferir unos centavos del total del ticket del POS.
 - **Códigos DIAN hardcodeados**: unidad `94`, tributo `01`, municipio `11001` por defecto y el mapeo de medios de pago
   (`TRANSFER→31`, `NEQUI→42`, `CARD→48`) están repetidos en `FactusSaleMapper`, `BillingCanonicalMapper` y
   `CreditNoteServiceImpl`; hay que centralizarlos (el catálogo `PAYMENT_METHODS.extra_value` ya existe).

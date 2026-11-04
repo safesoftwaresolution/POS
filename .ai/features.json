@@ -1,6 +1,6 @@
 {
   "version": "1.5.0",
-  "last_updated": "2026-10-24",
+  "last_updated": "2026-11-04",
   "notes": "Los IDs son únicos y no se reutilizan. FEAT-001..006 son anteriores. FEAT-007..013 se registraron RETROACTIVAMENTE el 2026-10-16: ese trabajo se hizo fuera del protocolo Leader→Implementer→Reviewer→Committer (ver progress/history.md). Ojo: las entradas más antiguas de history.md rotuladas 'FEAT-004 — Módulos Auth y Users' (2026-07-09) corresponden a una tarea previa a la renumeración; el FEAT-004 vigente es la formalización de Billing.",
   "features": [
     {
@@ -230,9 +230,9 @@
         "Dos emisiones simultáneas de la misma venta llaman una sola vez al proveedor",
         "Test de reintento tras un fallo temporal"
       ],
-      "status": "pending",
+      "status": "in_progress",
       "assigned_to": null,
-      "notes": "Alcance acotado el 2026-10-20: el mapeo de códigos DIAN y la rotación de claves de cifrado pasaron a FEAT-030. Prerrequisito de FEAT-025 (Alegra). Ver .ai/tasks/README.md."
+      "notes": "Hecho (2026-11-04): facturas en tres pasos con reserva (lease), job de reintento automático y conciliación (V34). Pendiente: etapa C, mismo patrón para notas crédito y débito (V35: reserva e intentos en las notas) y adaptar sus tests."
     },
     {
       "id": "FEAT-019",
@@ -253,9 +253,10 @@
         "Existe .ai/tasks/FEAT-020-resultados.md con las 6 respuestas",
         "Ningún token ni dato real queda en el repo"
       ],
-      "status": "in_progress",
+      "status": "done",
       "assigned_to": null,
-      "notes": "Spike parcial el 2026-11-04: resuelto bloque company, Idempotency-Key, formato de errores y habilitacion del sandbox; pendiente PDF, correo, notas y token de produccion. Ver .ai/tasks/FEAT-020-resultados.md. Requiere token y company.id del sandbox, aportados por el usuario. Bloquea FEAT-025, 026 y 028."
+      "notes": "Spike en sandbox resuelto (ver .ai/tasks/FEAT-020-resultados.md): bloque company completo, Idempotency-Key, PDF dentro de files.zip, NC/ND sin resolución, formato de errores. Pendiente fuera del repo: cómo se obtiene el token de producción y si cambia por entorno (preguntar a Alegra).",
+      "completed_at": "2026-11-04"
     },
     {
       "id": "FEAT-021",
@@ -278,9 +279,10 @@
         "Test de migración en H2 privada verde",
         "ddl-auto=validate arranca en dev"
       ],
-      "status": "pending",
+      "status": "done",
       "assigned_to": null,
-      "notes": "Usar la siguiente versión libre al implementar (hoy V25; comprobar el directorio de migraciones). Migraciones una a la vez con FEAT-018/019."
+      "notes": "Migración V33, entidades de numeración local, company.id por local y provider_document_id. Sin revisor formal; verificada con tests y arranque en dev con ddl-auto=validate.",
+      "completed_at": "2026-11-04"
     },
     {
       "id": "FEAT-023",
@@ -290,9 +292,10 @@
         "Prueba de concurrencia con hilos reales sin huecos ni duplicados",
         "NumberingRangeServiceImpl sigue verde"
       ],
-      "status": "pending",
+      "status": "done",
       "assigned_to": null,
-      "notes": "Depende de FEAT-022."
+      "notes": "Asignador de consecutivos y cliente de rangos locales. Revisión independiente por subagente (sin bloqueantes; advertencias: llamar al asignador fuera de transacciones, sin timeout de lock). Test de concurrencia con 24 hilos reales; verificado con mutación.",
+      "completed_at": "2026-11-04"
     },
     {
       "id": "FEAT-024",
@@ -302,9 +305,10 @@
         "test-connection funciona contra el sandbox con token y company.id",
         "Sin tokens la app arranca y reporta cuenta no configurada"
       ],
-      "status": "pending",
+      "status": "done",
       "assigned_to": null,
-      "notes": "Depende de FEAT-021 y FEAT-022."
+      "notes": "Esqueleto del adaptador de Alegra: acceso por local, cliente HTTP, caché de empresa y prueba de conexión. Sin revisor formal; verificada con tests y contra el sandbox.",
+      "completed_at": "2026-11-04"
     },
     {
       "id": "FEAT-025",
@@ -314,9 +318,10 @@
         "Venta con sendToFactus=true termina VALIDATED con CUFE y número consecutivo en sandbox",
         "Reintentos no duplican documento ni número"
       ],
-      "status": "pending",
+      "status": "done",
       "assigned_to": null,
-      "notes": "Depende de FEAT-018 (decidido el 2026-10-20: va antes), FEAT-020, 023 y 024."
+      "notes": "Emisión de facturas con Alegra, conciliación por providerDocumentId e idempotencia. Revisión independiente por subagente: un defecto de liveness corregido (factura atascada tras fallo confirmado) y verificado con mutación. Prueba E2E en sandbox (opt-in con ALEGRA_API_TOKEN_SANDBOX).",
+      "completed_at": "2026-11-04"
     },
     {
       "id": "FEAT-026",
@@ -326,9 +331,10 @@
         "NC y ND emitidas en sandbox sobre una factura validada",
         "Idempotencia por reference_code"
       ],
-      "status": "pending",
+      "status": "done",
       "assigned_to": null,
-      "notes": "Depende de FEAT-025."
+      "notes": "Notas crédito y débito con Alegra (numeración propia sin resolución, invoicePeriod, associatedDocuments). E2E en sandbox. Sin revisor formal. Pendiente (FEAT-018 etapa C): reserva en tres pasos en los servicios de notas (V35).",
+      "completed_at": "2026-11-04"
     },
     {
       "id": "FEAT-027",
@@ -338,9 +344,10 @@
         "Correo enviado y XML descargado en sandbox",
         "El Bearer no se envía a hosts de terceros"
       ],
-      "status": "pending",
+      "status": "done",
       "assigned_to": null,
-      "notes": "Depende de FEAT-025."
+      "notes": "Descarga de XML y envío por correo. Hallazgo: Alegra entrega el correo a replyTo, no a to; las dos llevan la dirección del cliente (entrega confirmada en un buzón real). Sin revisor formal.",
+      "completed_at": "2026-11-04"
     },
     {
       "id": "FEAT-028",
@@ -350,9 +357,10 @@
         "GET .../pdf devuelve un PDF con CUFE y QR válidos",
         "Campos contrastados con el anexo técnico DIAN vigente"
       ],
-      "status": "pending",
+      "status": "done",
       "assigned_to": null,
-      "notes": "Depende de FEAT-025 y FEAT-020."
+      "notes": "PDF de la factura desde files.zip (ruta A). Revisión de seguridad independiente por subagente (redirecciones y filtro de hosts endurecidos). E2E en sandbox.",
+      "completed_at": "2026-11-04"
     },
     {
       "id": "FEAT-029",
@@ -362,9 +370,10 @@
         "Suite completa verde; mock, factus y alegra arrancan",
         "Documentación sin contradicciones con el código"
       ],
-      "status": "pending",
+      "status": "done",
       "assigned_to": null,
-      "notes": "Última tarea; depende de FEAT-021..028."
+      "notes": "Alegra por defecto (application.properties, .env.example, docker-compose.prod.yml), documentación (spec de billing, seguridad, despliegue, README, roadmap, CLAUDE.md) y guía de alta de empresas. Verificación: suite completa en verde, E2E en sandbox.",
+      "completed_at": "2026-11-04"
     },
     {
       "id": "FEAT-030",

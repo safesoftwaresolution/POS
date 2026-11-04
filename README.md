@@ -62,7 +62,7 @@ POS/
 * 📦 **Control de Inventario en Tiempo Real**: Deducción automática de stock con un `UPDATE` atómico y condicionado (la fila queda bloqueada hasta el commit y nunca queda negativa), sin pérdida de actualizaciones ni sobreventa con ventas concurrentes.
 * 🏷️ **Generación de Códigos de Barras (Code 128)**: Visualización e impresión de la etiqueta de código de barras de cada producto directamente desde el catálogo y el inventario.
 * 🏢 **Multi-local (SaaS)**: aislamiento de datos por local (`store_id` en el JWT → `TenantContext`), auto-registro del dueño con verificación de correo, onboarding con documentos KYC y back office para la plataforma.
-* 🧾 **Facturación Electrónica DIAN por local**: integración con **Factus API** mediante adaptador desacoplado; las credenciales de cada local se guardan **cifradas (AES-256-GCM)** en base de datos, con ciclo de habilitación, gestión de rangos de numeración y auditoría. La emisión es asíncrona (evento `SaleCompletedEvent`) y nunca bloquea la venta.
+* 🧾 **Facturación Electrónica DIAN por local**: integración con **Alegra** (proveedor por defecto) o **Factus** mediante adaptadores desacoplados. Con Alegra hay un token de plataforma por entorno y cada local es una empresa asociada (`company.id`); la numeración y la resolución las lleva el sistema. Incluye ciclo de habilitación, rangos de numeración, notas crédito y débito, PDF, XML y correo. La emisión es asíncrona (evento `SaleCompletedEvent`), no mantiene transacciones abiertas durante la llamada al proveedor, se reintenta sola y nunca bloquea la venta.
 * ↩️ **Devoluciones, métodos de pago y subcategorías**: devoluciones de venta, catálogo dinámico de métodos de pago y subcategorías propias de cada local.
 * 🔔 **Notificaciones**: alertas por local (stock bajo, estado de facturación, onboarding).
 * ☁️ **Archivos en Cloudflare R2**: documentos KYC y logo del negocio.
@@ -117,7 +117,7 @@ El frontend es un **consumidor puro de la API**: no contiene lógica de negocio,
 * **Base de Datos**: PostgreSQL 16 (Docker / producción) y H2 **en archivo** `backend/data/app_db` (perfil `dev`, por defecto)
 * **Seguridad**: JWT HMAC con refresh token rotativo en cookies `HttpOnly`
 * **Almacenamiento**: Cloudflare R2 (API S3)
-* **Facturación**: Factus API (Estándar DIAN) / Mock Adapter
+* **Facturación**: Alegra (proveedor tecnológico DIAN, por defecto) / Factus API / Mock Adapter
 * **Almacenamiento**: Cloudflare R2 (SDK S3)
 * **Documentación**: SpringDoc OpenAPI 3 / Swagger UI
 * **Contenedores**: Docker & Docker Compose
@@ -146,7 +146,7 @@ El frontend es un **consumidor puro de la API**: no contiene lógica de negocio,
 | **Suppliers** | `com.sciencebot.pos.suppliers` | Directorio de proveedores para compras. |
 | **Purchases** | `com.sciencebot.pos.purchases` | Registro de compras de abastecimiento que aumentan el stock. |
 | **Sales** | `com.sciencebot.pos.sales` | Procesamiento de ventas en efectivo y generación de comprobantes. |
-| **Billing** | `com.sciencebot.pos.billing` | Facturas, notas crédito y débito electrónicas (DIAN vía Factus), habilitación y rangos por local. |
+| **Billing** | `com.sciencebot.pos.billing` | Facturas, notas crédito y débito electrónicas (DIAN vía Alegra o Factus), habilitación y rangos por local. |
 | **Reports** | `com.sciencebot.pos.reports` | Analítica de ventas, productos más vendidos, bajo stock y rentabilidad (CQRS / `JdbcClient`). |
 | **Settings** | `com.sciencebot.pos.settings` | Configuración del negocio (nombre, NIT, logo) y catálogos dinámicos de parámetros. |
 | **Stores** | `com.sciencebot.pos.stores` | Locales (tenants): auto-registro, onboarding y verificación de documentos KYC. |
@@ -327,16 +327,23 @@ Puedes personalizar la configuración del backend mediante variables de entorno 
 | `SEED_SUPERADMIN_PASSWORD` | *(vacío; `dev` tiene un valor)* | Contraseña del `SUPER_ADMIN` inicial. Sin ella no se siembra la cuenta. |
 | `JWT_EXPIRATION_MS` | `900000` (15 minutos) | Tiempo de vida del access token en milisegundos. |
 | `JWT_REFRESH_EXPIRATION_MS` | `604800000` (7 días) | Tiempo de vida del refresh token en milisegundos. |
-| `BILLING_PROVIDER` | `factus` | Proveedor de facturación (`factus` o `mock`). Un valor desconocido hace fallar la facturación (no cae a `mock`). |
-| `BILLING_ENCRYPTION_KEY` | *(vacío)* | Clave AES-256 (32 bytes en Base64) que cifra en la base de datos las credenciales de Factus de cada local. **Sin ella no se pueden guardar credenciales**; si se pierde o cambia, los secretos ya guardados dejan de poder leerse. |
-| `FACTUS_URL_SANDBOX` | `https://api-sandbox.factus.com.co` | URL del entorno de pruebas de Factus. |
-| `FACTUS_URL_PRODUCTION` | `https://api.factus.com.co` | URL del entorno de producción de Factus. |
+| `BILLING_PROVIDER` | `alegra` | Proveedor de facturación (`alegra`, `factus` o `mock`). Un valor desconocido impide el arranque (no cae a `mock`). |
+| `ALEGRA_API_TOKEN_SANDBOX` | *(vacío)* | Token Bearer de plataforma de Alegra para el entorno de pruebas. **Secreto**: solo en el entorno, nunca en el repositorio. |
+| `ALEGRA_API_TOKEN_PRODUCTION` | *(vacío)* | Token Bearer de plataforma de Alegra para producción. **Secreto.** |
+| `ALEGRA_URL_SANDBOX` | `https://sandbox-api.alegra.com/e-provider/col/v1` | URL del entorno de pruebas del e-provider de Alegra. |
+| `ALEGRA_URL_PRODUCTION` | `https://api.alegra.com/e-provider/col/v1` | URL del entorno de producción del e-provider de Alegra. |
+| `BILLING_ENCRYPTION_KEY` | *(vacío)* | Clave AES-256 (32 bytes en Base64) que cifra en la base de datos los secretos de facturación de Factus. Si se pierde o cambia, los secretos ya guardados dejan de poder leerse. |
+| `FACTUS_URL_SANDBOX` | `https://api-sandbox.factus.com.co` | URL del entorno de pruebas de Factus (solo si `BILLING_PROVIDER=factus`). |
+| `FACTUS_URL_PRODUCTION` | `https://api.factus.com.co` | URL del entorno de producción de Factus (solo si `BILLING_PROVIDER=factus`). |
 | `R2_ACCOUNT_ID` | *(vacío)* | ID de cuenta de Cloudflare (define el endpoint `https://<id>.r2.cloudflarestorage.com`). |
 | `R2_ACCESS_KEY_ID` | *(vacío)* | Access Key ID del token API de Cloudflare R2. |
 | `R2_SECRET_ACCESS_KEY` | *(vacío)* | Secret Access Key del token API de Cloudflare R2. |
 | `R2_BUCKET_NAME` | `pos-storage` | Nombre del bucket de R2. Dentro conviven las carpetas `documentos`, `imagenes-productos` e `imagenes-logos`. |
 | `R2_PUBLIC_URL` | *(vacío)* | **Obligatoria para subir archivos.** URL pública del bucket (Public Development URL o dominio propio conectado en R2) con la que se arma la URL de cada archivo. Si falta (o conserva el valor de ejemplo `pub-example.r2.dev`), la subida falla con un error claro en vez de guardar un enlace roto. |
 
+> **Alegra**: el token es de plataforma (variable de entorno); cada local es una empresa asociada y el `SUPER_ADMIN` carga su `company.id` con
+> `PUT /api/v1/backoffice/stores/{storeId}/billing/company-id`. La guía de alta de una empresa está en `backend/docs/modules/billing/spec.md`.
+>
 > **Credenciales de Factus**: no se configuran por variable de entorno. El `SUPER_ADMIN` las carga **por local**
 > desde `PUT /api/v1/backoffice/stores/{storeId}/billing/credentials` y quedan cifradas en la tabla
 > `store_billing_config`. Un local sin credenciales propias no factura: no hay respaldo a una cuenta global.

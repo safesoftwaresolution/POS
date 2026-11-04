@@ -31,6 +31,11 @@ public interface InvoiceProvider {
         throw new UnsupportedOperationException("queryInvoiceByProviderId no soportado por " + getProviderName());
     }
 
+    /** PDF del documento identificado por el id que el proveedor le dio (Alegra no busca por número legal). */
+    default byte[] downloadInvoicePDFByProviderId(String providerDocumentId) {
+        throw new UnsupportedOperationException("downloadInvoicePDFByProviderId no soportado por " + getProviderName());
+    }
+
     default byte[] downloadInvoicePDF(String legalNumber) {
         throw new UnsupportedOperationException("downloadInvoicePDF no soportado por " + getProviderName());
     }

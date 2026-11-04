@@ -138,4 +138,11 @@ class AlegraBillingAdapterTest {
         AlegraCompany company = new AlegraCompany("c1", "Nombre", null, "900", "1", null, null, null, null, null, null, Map.of());
         assertEquals("c1", company.id());
     }
+
+    @Test
+    void thePdfIsDownloadedByTheProviderDocumentId() {
+        when(invoiceClient.downloadInvoicePDF("inv-1")).thenReturn(new byte[]{1, 2, 3});
+
+        assertArrayEquals(new byte[]{1, 2, 3}, adapter.downloadInvoicePDFByProviderId("inv-1"));
+    }
 }

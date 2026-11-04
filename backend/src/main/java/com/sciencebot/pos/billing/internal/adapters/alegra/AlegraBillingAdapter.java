@@ -82,6 +82,11 @@ public class AlegraBillingAdapter implements ElectronicInvoicingProvider {
         return invoiceClient.queryInvoiceByProviderId(providerDocumentId);
     }
 
+    @Override
+    public byte[] downloadInvoicePDFByProviderId(String providerDocumentId) {
+        return invoiceClient.downloadInvoicePDF(providerDocumentId);
+    }
+
     /** Alegra consulta por el id del documento ({@link #queryInvoiceByProviderId}), no por el número legal. */
     @Override
     public InvoiceResult queryInvoice(String legalNumber) {

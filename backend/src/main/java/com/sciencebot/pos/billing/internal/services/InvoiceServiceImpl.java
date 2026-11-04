@@ -249,7 +249,11 @@ public class InvoiceServiceImpl implements InvoiceService {
         einvoice.assertCanDownloadLegalDocument();
 
         InvoiceProvider provider = resolveProvider();
-        return provider.downloadInvoicePDF(einvoice.getFactusNumber());
+        // Alegra identifica el documento por su id (el enlace del PDF caduca, se pide fresco); Factus, por el número legal.
+        String providerDocumentId = einvoice.getProviderDocumentId();
+        return providerDocumentId != null
+                ? provider.downloadInvoicePDFByProviderId(providerDocumentId)
+                : provider.downloadInvoicePDF(einvoice.getFactusNumber());
     }
 
     @Override

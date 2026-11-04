@@ -255,4 +255,31 @@ class InvoiceServiceImplTest {
         assertThrows(IllegalStateException.class, () -> invoiceService.downloadInvoicePDF(1L));
         verify(repository, never()).findBySaleId(any());
     }
+
+    @Test
+    void downloadInvoicePDF_UsesTheProviderDocumentIdWhenTheInvoiceHasOne() {
+        ReflectionTestUtils.setField(invoiceService, "activeProviderName", "factus");
+        ElectronicInvoice validated = ElectronicInvoice.initialize(1L, 1L);
+        validated.markAsValidated("SETP-1", "cufe", "qr", null, LocalDateTime.now());
+        validated.trackProviderDocument("doc-1");
+        when(repository.findBySaleIdAndStoreId(1L, 1L)).thenReturn(Optional.of(validated));
+        when(customProvider.downloadInvoicePDFByProviderId("doc-1")).thenReturn(new byte[]{9});
+
+        assertArrayEquals(new byte[]{9}, invoiceService.downloadInvoicePDF(1L));
+
+        verify(customProvider, never()).downloadInvoicePDF(any());
+    }
+
+    @Test
+    void downloadInvoicePDF_FallsBackToTheLegalNumberWhenThereIsNoProviderDocumentId() {
+        ReflectionTestUtils.setField(invoiceService, "activeProviderName", "factus");
+        ElectronicInvoice validated = ElectronicInvoice.initialize(1L, 1L);
+        validated.markAsValidated("SETP-1", "cufe", "qr", null, LocalDateTime.now());
+        when(repository.findBySaleIdAndStoreId(1L, 1L)).thenReturn(Optional.of(validated));
+        when(customProvider.downloadInvoicePDF("SETP-1")).thenReturn(new byte[]{7});
+
+        assertArrayEquals(new byte[]{7}, invoiceService.downloadInvoicePDF(1L));
+
+        verify(customProvider, never()).downloadInvoicePDFByProviderId(any());
+    }
 }

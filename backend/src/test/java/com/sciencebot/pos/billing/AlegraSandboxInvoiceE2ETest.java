@@ -90,5 +90,11 @@ class AlegraSandboxInvoiceE2ETest {
         assertEquals("SETP" + first, result.legalInvoiceNumber());
         assertNotNull(result.cufe());
         assertNotNull(result.providerDocumentId());
+
+        // El PDF viene dentro de files.zip: se descarga con un enlace fresco y debe ser un PDF de verdad.
+        byte[] pdf = invoiceClient.downloadInvoicePDF(result.providerDocumentId());
+        assertTrue(pdf.length > 1000, "el PDF no puede estar vacio");
+        assertEquals("%PDF-", new String(pdf, 0, 5, java.nio.charset.StandardCharsets.ISO_8859_1));
+        System.out.println("E2E Alegra PDF -> " + pdf.length + " bytes");
     }
 }

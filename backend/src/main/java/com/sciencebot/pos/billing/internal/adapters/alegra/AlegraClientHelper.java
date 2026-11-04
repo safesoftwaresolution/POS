@@ -10,6 +10,8 @@ import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -50,6 +52,42 @@ public class AlegraClientHelper {
         return restClient.post().uri(access.baseUrl() + path)
                 .header("Authorization", bearer(access))
                 .header("Accept", "application/json");
+    }
+
+    /**
+     * Descarga un archivo desde un enlace que devolvió Alegra. Solo se siguen enlaces https de Alegra o de su S3
+     * (el enlace trae su propia firma y NO recibe el token) y la lectura se corta al superar {@code maxBytes}.
+     */
+    public byte[] download(String link, int maxBytes) {
+        URI uri = trustedDownloadUri(link);
+        return restClient.get().uri(uri).exchange((request, response) -> {
+            if (response.getStatusCode().isError()) {
+                throw new RestClientResponseException("Alegra respondió con un error al descargar el archivo",
+                        response.getStatusCode(), response.getStatusText(), response.getHeaders(), null, null);
+            }
+            byte[] data = response.getBody().readNBytes(maxBytes + 1);
+            if (data.length > maxBytes) {
+                throw new IllegalStateException("El archivo que devolvió Alegra supera el tamaño permitido");
+            }
+            return data;
+        });
+    }
+
+    private static URI trustedDownloadUri(String link) {
+        URI uri;
+        try {
+            uri = new URI(link == null ? "" : link.trim());
+        } catch (URISyntaxException ex) {
+            throw new IllegalStateException("Alegra devolvió un enlace de descarga inválido");
+        }
+        String host = uri.getHost();
+        boolean trusted = "https".equalsIgnoreCase(uri.getScheme()) && host != null && uri.getUserInfo() == null
+                && (host.equalsIgnoreCase("alegra.com") || host.toLowerCase().endsWith(".alegra.com")
+                || host.toLowerCase().endsWith(".amazonaws.com"));
+        if (!trusted) {
+            throw new IllegalStateException("Alegra devolvió un enlace de descarga que no es de confianza");
+        }
+        return uri;
     }
 
     /**

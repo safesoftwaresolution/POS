@@ -14,9 +14,15 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
 
 /**
  * Emite facturas en Alegra. El número y la resolución los asigna el sistema ({@link AlegraNumberAllocator}) y
@@ -44,6 +50,15 @@ public class AlegraInvoiceClient {
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     private record GovernmentResponse(String code, String message, List<String> errorMessages) {}
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    private record FilesEnvelope(FileLinks files) {}
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    private record FileLinks(String zip) {}
+
+    private static final int MAX_ZIP_BYTES = 20 * 1024 * 1024;
+    private static final int MAX_PDF_BYTES = 10 * 1024 * 1024;
 
     private final AlegraAccessResolver accessResolver;
     private final AlegraCompanyProvider companyProvider;
@@ -117,6 +132,72 @@ public class AlegraInvoiceClient {
             }
             throw translated;
         }
+    }
+
+    /**
+     * PDF de la factura. Alegra lo entrega dentro de {@code files.zip} (junto al XML del documento adjunto); el enlace
+     * caduca a los 60 minutos, así que siempre se pide uno fresco con {@code GET /invoices/{id}} y nada se guarda.
+     * Se lee solo la entrada .pdf, con tope de tamaño, y se exige que de verdad sea un PDF.
+     */
+    public byte[] downloadInvoicePDF(String providerDocumentId) {
+        AlegraAccess access = accessResolver.resolve(null);
+        try {
+            FilesEnvelope envelope = helper.authorizedGet("/invoices/" + providerDocumentId, access)
+                    .retrieve()
+                    .body(FilesEnvelope.class);
+            String zipLink = envelope != null && envelope.files() != null ? envelope.files().zip() : null;
+            if (zipLink == null || zipLink.isBlank()) {
+                throw new IllegalStateException("Alegra no devolvió el paquete con el PDF de la factura");
+            }
+            return extractPdf(helper.download(zipLink, MAX_ZIP_BYTES));
+        } catch (IllegalStateException ex) {
+            throw ex; // problema con el contenido o el enlace, no con la conexión
+        } catch (Exception ex) {
+            throw helper.translate("No se pudo descargar el PDF de la factura", ex);
+        }
+    }
+
+    /**
+     * Saca el PDF del paquete. El zip de Alegra guarda las entradas sin comprimir y con descriptor de datos, que
+     * {@code ZipInputStream} no sabe leer; {@code ZipFile} sí (lee el directorio central) pero necesita un archivo,
+     * así que el paquete pasa por un temporal que solo el proceso puede leer y que se borra siempre.
+     */
+    private static byte[] extractPdf(byte[] zipBytes) {
+        Path temp = null;
+        try {
+            temp = Files.createTempFile("alegra-invoice-", ".zip");
+            Files.write(temp, zipBytes);
+            try (ZipFile zip = new ZipFile(temp.toFile())) {
+                var entries = zip.entries();
+                while (entries.hasMoreElements()) {
+                    ZipEntry entry = entries.nextElement();
+                    if (entry.isDirectory() || !entry.getName().toLowerCase().endsWith(".pdf")) {
+                        continue;
+                    }
+                    try (InputStream in = zip.getInputStream(entry)) {
+                        byte[] pdf = in.readNBytes(MAX_PDF_BYTES + 1);
+                        if (pdf.length > MAX_PDF_BYTES) {
+                            throw new IllegalStateException("El PDF que devolvió Alegra supera el tamaño permitido");
+                        }
+                        if (pdf.length < 5 || pdf[0] != '%' || pdf[1] != 'P' || pdf[2] != 'D' || pdf[3] != 'F' || pdf[4] != '-') {
+                            throw new IllegalStateException("El archivo PDF que devolvió Alegra no es un PDF válido");
+                        }
+                        return pdf;
+                    }
+                }
+            }
+        } catch (IOException ex) {
+            throw new IllegalStateException("No se pudo leer el paquete de Alegra con el PDF de la factura");
+        } finally {
+            if (temp != null) {
+                try {
+                    Files.deleteIfExists(temp);
+                } catch (IOException ignored) {
+                    // el temporal queda en el directorio temporal del sistema; no impide devolver el PDF
+                }
+            }
+        }
+        throw new IllegalStateException("El paquete de Alegra no incluye el PDF de la factura");
     }
 
     /** Lee un documento ya recibido por Alegra (para conciliar una factura pendiente en vez de emitirla de nuevo). */

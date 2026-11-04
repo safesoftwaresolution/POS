@@ -22,7 +22,7 @@ import java.time.LocalDateTime;
 public class InvoiceEmissionTransactions {
 
     /** Resultado del paso A: quién emite y, si no es este hilo, el estado actual de la factura. */
-    public record Reservation(ReserveOutcome outcome, ElectronicInvoiceDto invoice) {}
+    public record Reservation(ReserveOutcome outcome, ElectronicInvoiceDto invoice, String reconcileProviderDocumentId) {}
 
     private final ElectronicInvoiceRepository repository;
     private final ElectronicInvoiceMapper mapper;
@@ -41,9 +41,11 @@ public class InvoiceEmissionTransactions {
         ElectronicInvoice invoice = repository.findBySaleIdForUpdate(saleId)
                 .orElseGet(() -> repository.saveAndFlush(ElectronicInvoice.initialize(saleId, storeId)));
         invoice.assignStoreIdIfMissing(storeId);
+        // Si el proveedor ya recibió el documento, quien emite lo concilia por su id en vez de emitirlo otra vez.
+        String reconcile = invoice.awaitsProviderResponse() ? invoice.getProviderDocumentId() : null;
         ReserveOutcome outcome = invoice.reserveForEmission(LocalDateTime.now(), lease);
         repository.save(invoice);
-        return new Reservation(outcome, mapper.toDto(invoice));
+        return new Reservation(outcome, mapper.toDto(invoice), reconcile);
     }
 
     /** Paso C: vuelve a bloquear la fila, aplica el resultado del proveedor y programa el reintento que corresponda. */
@@ -58,6 +60,9 @@ public class InvoiceEmissionTransactions {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime retryAt = null;
         try {
+            if (result != null) {
+                invoice.trackProviderDocument(result.providerDocumentId());
+            }
             retryAt = apply(invoice, result, now);
         } catch (IllegalStateException incomplete) {
             invoice.markAsError("Respuesta incompleta del proveedor de facturación: " + incomplete.getMessage());

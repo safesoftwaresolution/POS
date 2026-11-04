@@ -173,6 +173,10 @@ public class ElectronicInvoice {
         if (this.status == ElectronicInvoiceStatus.VALIDATED) {
             throw new IllegalArgumentException("La factura ya está validada y no puede reintentarse");
         }
+        if (this.status != ElectronicInvoiceStatus.PENDING) {
+            // Tras un rechazo o un fallo la nueva emisión crea otro documento en el proveedor; uno en espera se concilia.
+            this.providerDocumentId = null;
+        }
         this.status = ElectronicInvoiceStatus.PENDING;
         this.errorMessage = null;
         this.attempts = 0;
@@ -245,6 +249,27 @@ public class ElectronicInvoice {
             throw new IllegalStateException("El documento ya tiene un id de proveedor y no puede cambiarse");
         }
         this.providerDocumentId = value;
+    }
+
+    /**
+     * Anota el id que el proveedor le dio al documento de este intento. Mientras la factura no esté validada puede
+     * cambiar (un documento rechazado se reemplaza por el de la nueva emisión); una validada nunca cambia de id.
+     */
+    public void trackProviderDocument(String id) {
+        if (id == null || id.isBlank()) {
+            return;
+        }
+        String value = id.trim();
+        if (this.status == ElectronicInvoiceStatus.VALIDATED && this.providerDocumentId != null
+                && !this.providerDocumentId.equals(value)) {
+            throw new IllegalStateException("Una factura VALIDATED no puede cambiar de documento en el proveedor");
+        }
+        this.providerDocumentId = value;
+    }
+
+    /** El proveedor ya recibió el documento y aún no hay respuesta final: se concilia en lugar de emitir de nuevo. */
+    public boolean awaitsProviderResponse() {
+        return this.status == ElectronicInvoiceStatus.PENDING && this.providerDocumentId != null;
     }
 
     public int getAttempts() { return attempts; }

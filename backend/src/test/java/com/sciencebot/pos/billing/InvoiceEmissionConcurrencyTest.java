@@ -155,4 +155,54 @@ class InvoiceEmissionConcurrencyTest {
         assertEquals(ElectronicInvoiceStatus.REJECTED, rejected.getStatus());
         assertNull(rejected.getNextRetryAt(), "un rechazo requiere corregir datos: no se reintenta solo");
     }
+
+    @Test
+    void aPendingInvoiceWithAProviderIdIsReconciledInsteadOfEmittedAgain() {
+        doReturn(InvoiceResult.pending("En espera de respuesta de la DIAN").withProviderDocumentId("doc-1"))
+                .when(provider).emitInvoice(any());
+        invoiceService.processElectronicInvoice(sale());
+        ElectronicInvoice waiting = repository.findBySaleId(saleId).orElseThrow();
+        assertEquals(ElectronicInvoiceStatus.PENDING, waiting.getStatus());
+        assertEquals("doc-1", waiting.getProviderDocumentId());
+
+        doReturn(InvoiceResult.success("SETP990000101", "cufe", "qr", null).withProviderDocumentId("doc-1"))
+                .when(provider).queryInvoiceByProviderId("doc-1");
+        ElectronicInvoiceDto result = invoiceService.processElectronicInvoice(sale());
+
+        assertEquals("VALIDATED", result.status());
+        verify(provider, times(1)).emitInvoice(any());
+        verify(provider).queryInvoiceByProviderId("doc-1");
+        ElectronicInvoice stored = repository.findBySaleId(saleId).orElseThrow();
+        assertEquals("doc-1", stored.getProviderDocumentId());
+        assertEquals("SETP990000101", stored.getFactusNumber());
+    }
+
+    @Test
+    void ifTheReconciliationItselfFailsTheInvoiceStaysPendingAndIsNeverEmittedTwice() {
+        doReturn(InvoiceResult.pending("En espera").withProviderDocumentId("doc-1")).when(provider).emitInvoice(any());
+        invoiceService.processElectronicInvoice(sale());
+        doThrow(new IllegalStateException("alegra caído")).when(provider).queryInvoiceByProviderId("doc-1");
+
+        invoiceService.processElectronicInvoice(sale());
+
+        verify(provider, times(1)).emitInvoice(any());
+        assertEquals(ElectronicInvoiceStatus.PENDING, repository.findBySaleId(saleId).orElseThrow().getStatus());
+    }
+
+    @Test
+    void aRejectedDocumentIsEmittedAgainOnManualRetryAndTheNewIdReplacesTheOldOne() {
+        doReturn(InvoiceResult.rejected("NIT inválido").withProviderDocumentId("doc-1")).when(provider).emitInvoice(any());
+        invoiceService.processElectronicInvoice(sale());
+        assertEquals(ElectronicInvoiceStatus.REJECTED, repository.findBySaleId(saleId).orElseThrow().getStatus());
+
+        doReturn(InvoiceResult.success("SETP990000102", "cufe2", "qr", null).withProviderDocumentId("doc-2"))
+                .when(provider).emitInvoice(any());
+        TenantContext.setStoreId(storeId);
+        invoiceService.retryInvoice(saleId);
+
+        ElectronicInvoice stored = repository.findBySaleId(saleId).orElseThrow();
+        assertEquals(ElectronicInvoiceStatus.VALIDATED, stored.getStatus());
+        assertEquals("doc-2", stored.getProviderDocumentId());
+        verify(provider, never()).queryInvoiceByProviderId(any());
+    }
 }

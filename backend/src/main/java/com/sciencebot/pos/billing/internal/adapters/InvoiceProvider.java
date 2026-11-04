@@ -26,6 +26,11 @@ public interface InvoiceProvider {
     /**
      * Descarga el PDF de la factura electrónica.
      */
+    /** Consulta un documento por el id que el proveedor le dio, para conciliar sin emitir de nuevo. */
+    default InvoiceResult queryInvoiceByProviderId(String providerDocumentId) {
+        throw new UnsupportedOperationException("queryInvoiceByProviderId no soportado por " + getProviderName());
+    }
+
     default byte[] downloadInvoicePDF(String legalNumber) {
         throw new UnsupportedOperationException("downloadInvoicePDF no soportado por " + getProviderName());
     }

@@ -97,12 +97,17 @@ public class InvoiceServiceImpl implements InvoiceService {
         }
 
         // Paso B: llamada al proveedor, sin transacción. Cualquier fallo se convierte en un resultado de error.
-        InvoiceResult result;
+        InvoiceResult result = null;
         InvoiceProvider provider = null;
         try {
             provider = resolveProvider();
-            InvoiceRequest request = canonicalMapper.toInvoiceRequest(sale);
-            result = provider.emitInvoice(request);
+            if (reservation.reconcileProviderDocumentId() != null) {
+                result = reconcile(provider, reservation.reconcileProviderDocumentId());
+            }
+            if (result == null) {
+                InvoiceRequest request = canonicalMapper.toInvoiceRequest(sale);
+                result = provider.emitInvoice(request);
+            }
         } catch (Exception ex) {
             String providerName = provider != null ? provider.getProviderName() : activeProviderName;
             log.error("Error al ejecutar emision con proveedor {}: {}", providerName, ex.getMessage());
@@ -111,6 +116,29 @@ public class InvoiceServiceImpl implements InvoiceService {
 
         // Paso C: registrar el resultado.
         return emissions.complete(sale.id(), result);
+    }
+
+    /**
+     * El proveedor ya recibió este documento: se pregunta por su estado en lugar de emitirlo de nuevo (nunca se crea
+     * un duplicado ante la DIAN). Devuelve null si el proveedor no sabe conciliar, y entonces se emite normalmente.
+     * Un fallo al consultar deja la factura PENDING: ante la duda no se emite.
+     */
+    private InvoiceResult reconcile(InvoiceProvider provider, String providerDocumentId) {
+        try {
+            InvoiceResult queried = provider.queryInvoiceByProviderId(providerDocumentId);
+            if (queried == null || "ERROR".equalsIgnoreCase(queried.status())) {
+                String reason = queried != null ? queried.errorMessage() : "respuesta vacía";
+                return InvoiceResult.pending("No se pudo conciliar la factura con el proveedor: " + reason)
+                        .withProviderDocumentId(providerDocumentId);
+            }
+            return queried;
+        } catch (UnsupportedOperationException cannotReconcile) {
+            return null;
+        } catch (Exception ex) {
+            log.warn("No se pudo conciliar el documento {} con el proveedor: {}", providerDocumentId, ex.getMessage());
+            return InvoiceResult.pending("No se pudo conciliar la factura con el proveedor: " + ex.getMessage())
+                    .withProviderDocumentId(providerDocumentId);
+        }
     }
 
     /** Dos hilos creando a la vez la fila de una venta nueva: el perdedor reintenta y ya la encuentra. */

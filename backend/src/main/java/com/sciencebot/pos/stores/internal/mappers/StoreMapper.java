@@ -3,6 +3,7 @@ package com.sciencebot.pos.stores.internal.mappers;
 import com.sciencebot.pos.stores.StoreCategoryDto;
 import com.sciencebot.pos.stores.StoreDocumentDto;
 import com.sciencebot.pos.stores.StoreDto;
+import com.sciencebot.pos.stores.StoreTemplate;
 import com.sciencebot.pos.stores.internal.entities.StoreCategoryEntity;
 import com.sciencebot.pos.stores.internal.entities.StoreDocumentEntity;
 import com.sciencebot.pos.stores.internal.entities.StoreEntity;
@@ -11,13 +12,13 @@ import org.springframework.stereotype.Component;
 @Component
 public class StoreMapper {
 
-    public StoreDto toDto(StoreEntity entity, String categoryName) {
+    public StoreDto toDto(StoreEntity entity, StoreCategoryEntity category) {
         if (entity == null) return null;
         return new StoreDto(
                 entity.getId(),
                 entity.getName(),
                 entity.getStoreCategoryId(),
-                categoryName,
+                category == null ? null : category.getName(),
                 entity.getPhone(),
                 entity.getEmail(),
                 entity.getWebsite(),
@@ -27,7 +28,8 @@ public class StoreMapper {
                 entity.isEmailVerified(),
                 entity.getRejectionReason(),
                 entity.getCreatedAt(),
-                entity.getPlanCode()
+                entity.getPlanCode(),
+                (category == null ? StoreTemplate.RETAIL : category.getTemplate()).name()
         );
     }
 
@@ -37,7 +39,8 @@ public class StoreMapper {
                 entity.getId(),
                 entity.getName(),
                 entity.getDescription(),
-                entity.isActive()
+                entity.isActive(),
+                entity.getTemplate().name()
         );
     }
 

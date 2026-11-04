@@ -82,7 +82,7 @@ class StoreServiceImplTest {
         saved.setEmail("tienda1@test.com");
         when(storeRepository.save(any(StoreEntity.class))).thenReturn(saved);
 
-        StoreDto dto = new StoreDto(1L, "Tienda 1", 1L, "Retail", "3001234567", "tienda1@test.com", "https://tienda1.com", "Calle 1", "900123", "PENDING_VERIFICATION", false, null, null, "BASIC");
+        StoreDto dto = new StoreDto(1L, "Tienda 1", 1L, "Retail", "3001234567", "tienda1@test.com", "https://tienda1.com", "Calle 1", "900123", "PENDING_VERIFICATION", false, null, null, "BASIC", "RETAIL");
         when(storeMapper.toDto(any(), any())).thenReturn(dto);
 
         StoreDto result = storeService.createStore(command);
@@ -100,7 +100,7 @@ class StoreServiceImplTest {
 
         when(storeRepository.findById(1L)).thenReturn(Optional.of(entity));
         when(storeRepository.save(any())).thenReturn(entity);
-        when(storeMapper.toDto(any(), any())).thenReturn(new StoreDto(1L, "Tienda", null, null, null, "t@test.com", null, null, null, "ACTIVE", false, null, null, "BASIC"));
+        when(storeMapper.toDto(any(), any())).thenReturn(new StoreDto(1L, "Tienda", null, null, null, "t@test.com", null, null, null, "ACTIVE", false, null, null, "BASIC", "RETAIL"));
 
         StoreDto result = storeService.changeStatus(1L, "ACTIVE");
         assertNotNull(result);
@@ -115,7 +115,7 @@ class StoreServiceImplTest {
         entity.setStatus(status);
         when(storeRepository.findById(1L)).thenReturn(Optional.of(entity));
         when(storeRepository.save(any())).thenReturn(entity);
-        when(storeMapper.toDto(any(), any())).thenReturn(new StoreDto(1L, "Arqueo", null, null, null, "local@test.com", null, null, null, "ACTIVE", false, null, null, "BASIC"));
+        when(storeMapper.toDto(any(), any())).thenReturn(new StoreDto(1L, "Arqueo", null, null, null, "local@test.com", null, null, null, "ACTIVE", false, null, null, "BASIC", "RETAIL"));
         return entity;
     }
 
@@ -169,7 +169,7 @@ class StoreServiceImplTest {
         saved.setName("Tienda 1");
         when(storeRepository.save(any(StoreEntity.class))).thenReturn(saved);
         when(storeMapper.toDto(any(), any())).thenReturn(
-                new StoreDto(9L, "Tienda 1", 1L, "Retail", "3001234567", "tienda1@test.com", "https://tienda1.com", "Calle 1", "900123", "PENDING_VERIFICATION", false, null, null, "BASIC"));
+                new StoreDto(9L, "Tienda 1", 1L, "Retail", "3001234567", "tienda1@test.com", "https://tienda1.com", "Calle 1", "900123", "PENDING_VERIFICATION", false, null, null, "BASIC", "RETAIL"));
 
         StoreDto result = storeService.registerOwnStore("carlos", command);
 
@@ -206,7 +206,7 @@ class StoreServiceImplTest {
         when(storeRepository.findById(1L)).thenReturn(Optional.of(entity));
         when(storeRepository.save(any())).thenReturn(entity);
         when(storeMapper.toDto(any(), any())).thenReturn(
-                new StoreDto(1L, "Tienda", null, null, null, "t@test.com", null, null, null, "REJECTED", false, "Documentos incompletos", null, "BASIC"));
+                new StoreDto(1L, "Tienda", null, null, null, "t@test.com", null, null, null, "REJECTED", false, "Documentos incompletos", null, "BASIC", "RETAIL"));
 
         StoreDto result = storeService.rejectStore(1L, "Documentos incompletos");
 
@@ -469,7 +469,7 @@ class StoreServiceImplTest {
         when(storeRepository.save(any(StoreEntity.class))).thenAnswer(inv -> inv.getArgument(0));
         when(storeMapper.toDto(any(), any())).thenAnswer(inv -> {
             StoreEntity e = inv.getArgument(0);
-            return new StoreDto(e.getId(), e.getName(), null, null, e.getPhone(), e.getEmail(), e.getWebsite(), e.getAddress(), e.getTaxId(), e.getStatus(), e.isEmailVerified(), null, null, "BASIC");
+            return new StoreDto(e.getId(), e.getName(), null, null, e.getPhone(), e.getEmail(), e.getWebsite(), e.getAddress(), e.getTaxId(), e.getStatus(), e.isEmailVerified(), null, null, "BASIC", "RETAIL");
         });
 
         UpdateOwnStoreCommand command = new UpdateOwnStoreCommand("Tienda Nueva", "3009999999", "https://nueva.com", "Calle Nueva 1", "900999999-1");
@@ -549,5 +549,43 @@ class StoreServiceImplTest {
         MockMultipartFile file = new MockMultipartFile("file", "doc.pdf", "application/pdf", "x".getBytes());
 
         assertThrows(jakarta.persistence.EntityNotFoundException.class, () -> storeService.uploadOwnDocument("carlos", "RUT", file));
+    }
+
+    @Test
+    void createCategory_StoresTheTemplateAndDefaultsToRetail() {
+        when(categoryRepository.existsByNameIgnoreCase(anyString())).thenReturn(false);
+        when(categoryRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        storeService.createCategory(new CreateStoreCategoryCommand("Barbería", "x", "APPOINTMENTS"));
+        storeService.createCategory(new CreateStoreCategoryCommand("Otra", "x"));
+
+        var captor = org.mockito.ArgumentCaptor.forClass(com.sciencebot.pos.stores.internal.entities.StoreCategoryEntity.class);
+        verify(categoryRepository, times(2)).save(captor.capture());
+        assertEquals(StoreTemplate.APPOINTMENTS, captor.getAllValues().get(0).getTemplate());
+        assertEquals(StoreTemplate.RETAIL, captor.getAllValues().get(1).getTemplate());
+    }
+
+    @Test
+    void createCategory_UnknownTemplate_IsRefused() {
+        when(categoryRepository.existsByNameIgnoreCase(anyString())).thenReturn(false);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> storeService.createCategory(new CreateStoreCategoryCommand("X", "x", "SPA")));
+        verify(categoryRepository, never()).save(any());
+    }
+
+    @Test
+    void updateCategory_ChangesTheTemplateAndKeepsItWhenOmitted() {
+        var entity = new com.sciencebot.pos.stores.internal.entities.StoreCategoryEntity();
+        entity.setName("Salón");
+        entity.setTemplate(StoreTemplate.RETAIL);
+        when(categoryRepository.findById(3L)).thenReturn(Optional.of(entity));
+        when(categoryRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        storeService.updateCategory(3L, new CreateStoreCategoryCommand("Salón", "x", "APPOINTMENTS"));
+        assertEquals(StoreTemplate.APPOINTMENTS, entity.getTemplate());
+
+        storeService.updateCategory(3L, new CreateStoreCategoryCommand("Salón", "x"));
+        assertEquals(StoreTemplate.APPOINTMENTS, entity.getTemplate());
     }
 }

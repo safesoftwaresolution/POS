@@ -83,6 +83,16 @@ public class AlegraBillingAdapter implements ElectronicInvoicingProvider {
     }
 
     @Override
+    public boolean sendInvoiceEmailByProviderId(String providerDocumentId, String email) {
+        return invoiceClient.sendInvoiceEmail(providerDocumentId, email);
+    }
+
+    @Override
+    public byte[] downloadInvoiceXMLByProviderId(String providerDocumentId) {
+        return invoiceClient.downloadInvoiceXML(providerDocumentId);
+    }
+
+    @Override
     public byte[] downloadInvoicePDFByProviderId(String providerDocumentId) {
         return invoiceClient.downloadInvoicePDF(providerDocumentId);
     }

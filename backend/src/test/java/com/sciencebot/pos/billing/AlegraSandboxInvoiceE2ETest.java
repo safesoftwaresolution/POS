@@ -96,5 +96,9 @@ class AlegraSandboxInvoiceE2ETest {
         assertTrue(pdf.length > 1000, "el PDF no puede estar vacio");
         assertEquals("%PDF-", new String(pdf, 0, 5, java.nio.charset.StandardCharsets.ISO_8859_1));
         System.out.println("E2E Alegra PDF -> " + pdf.length + " bytes");
+
+        byte[] xml = invoiceClient.downloadInvoiceXML(result.providerDocumentId());
+        assertTrue(xml.length > 1000, "el XML no puede estar vacio");
+        assertEquals("<?xml", new String(xml, 0, 5, java.nio.charset.StandardCharsets.ISO_8859_1));
     }
 }

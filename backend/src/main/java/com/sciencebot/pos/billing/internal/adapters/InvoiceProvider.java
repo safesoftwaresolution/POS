@@ -31,6 +31,16 @@ public interface InvoiceProvider {
         throw new UnsupportedOperationException("queryInvoiceByProviderId no soportado por " + getProviderName());
     }
 
+    /** Envía el documento (identificado por el id que le dio el proveedor) al correo indicado. */
+    default boolean sendInvoiceEmailByProviderId(String providerDocumentId, String email) {
+        throw new UnsupportedOperationException("sendInvoiceEmailByProviderId no soportado por " + getProviderName());
+    }
+
+    /** XML del documento identificado por el id que le dio el proveedor. */
+    default byte[] downloadInvoiceXMLByProviderId(String providerDocumentId) {
+        throw new UnsupportedOperationException("downloadInvoiceXMLByProviderId no soportado por " + getProviderName());
+    }
+
     /** PDF del documento identificado por el id que el proveedor le dio (Alegra no busca por número legal). */
     default byte[] downloadInvoicePDFByProviderId(String providerDocumentId) {
         throw new UnsupportedOperationException("downloadInvoicePDFByProviderId no soportado por " + getProviderName());

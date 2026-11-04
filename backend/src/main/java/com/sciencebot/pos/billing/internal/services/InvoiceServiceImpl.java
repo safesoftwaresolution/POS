@@ -198,7 +198,10 @@ public class InvoiceServiceImpl implements InvoiceService {
         einvoice.assertCanSendEmail(); // Delegación de invariante a la entidad
 
         InvoiceProvider provider = resolveProvider();
-        boolean sent = provider.sendInvoiceEmail(einvoice.getFactusNumber(), email);
+        String providerDocumentId = einvoice.getProviderDocumentId();
+        boolean sent = providerDocumentId != null
+                ? provider.sendInvoiceEmailByProviderId(providerDocumentId, email)
+                : provider.sendInvoiceEmail(einvoice.getFactusNumber(), email);
         if (!sent) {
             throw new IllegalStateException("El proveedor no pudo procesar el envío de correo para la factura " + einvoice.getFactusNumber());
         }
@@ -266,7 +269,10 @@ public class InvoiceServiceImpl implements InvoiceService {
         einvoice.assertCanDownloadLegalDocument();
 
         InvoiceProvider provider = resolveProvider();
-        return provider.downloadInvoiceXML(einvoice.getFactusNumber());
+        String providerDocumentId = einvoice.getProviderDocumentId();
+        return providerDocumentId != null
+                ? provider.downloadInvoiceXMLByProviderId(providerDocumentId)
+                : provider.downloadInvoiceXML(einvoice.getFactusNumber());
     }
 
     /** Un vendedor no puede operar la factura de una venta ajena: responde como si no existiera. */

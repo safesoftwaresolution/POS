@@ -55,10 +55,11 @@ public class AlegraInvoiceClient {
     private record FilesEnvelope(FileLinks files) {}
 
     @JsonIgnoreProperties(ignoreUnknown = true)
-    private record FileLinks(String zip) {}
+    private record FileLinks(String zip, String xml) {}
 
     private static final int MAX_ZIP_BYTES = 20 * 1024 * 1024;
     private static final int MAX_PDF_BYTES = 10 * 1024 * 1024;
+    private static final int MAX_XML_BYTES = 5 * 1024 * 1024;
 
     private final AlegraAccessResolver accessResolver;
     private final AlegraCompanyProvider companyProvider;
@@ -132,6 +133,69 @@ public class AlegraInvoiceClient {
             }
             throw translated;
         }
+    }
+
+    /**
+     * Pide a Alegra que envíe el documento por correo (solo documentos ya aceptados por la DIAN; Alegra adjunta el XML
+     * en un zip). {@code replyTo} es obligatorio cuando se indica destinatario: se usa el correo de la empresa en
+     * Alegra y, si no tiene, el del propio destinatario. Un rechazo del proveedor sale como excepción con su mensaje.
+     */
+    public boolean sendInvoiceEmail(String providerDocumentId, String to) {
+        AlegraAccess access = accessResolver.resolve(null);
+        AlegraCompany company = companyProvider.get(access);
+        String replyTo = company.email() != null && !company.email().isBlank() ? company.email().trim() : to;
+        Map<String, Object> body = Map.of(
+                "documentType", INVOICE_DOCUMENT,
+                "documentId", providerDocumentId,
+                "email", Map.of("to", to, "replyTo", replyTo));
+        try {
+            helper.authorizedPost("/send-email", access)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(body)
+                    .retrieve()
+                    .toBodilessEntity();
+            return true;
+        } catch (Exception ex) {
+            throw helper.translate("No se pudo enviar la factura por correo con Alegra", ex);
+        }
+    }
+
+    /**
+     * XML de la factura desde {@code files.xml}. El enlace es temporal (60 min) y puede venir vacío mientras Alegra
+     * termina de generarlo: se vuelve a consultar una vez. Solo se sigue un enlace de confianza y se exige XML.
+     */
+    public byte[] downloadInvoiceXML(String providerDocumentId) {
+        AlegraAccess access = accessResolver.resolve(null);
+        try {
+            String link = null;
+            for (int attempt = 0; attempt < 2 && (link == null || link.isBlank()); attempt++) {
+                FilesEnvelope envelope = helper.authorizedGet("/invoices/" + providerDocumentId, access)
+                        .retrieve()
+                        .body(FilesEnvelope.class);
+                link = envelope != null && envelope.files() != null ? envelope.files().xml() : null;
+            }
+            if (link == null || link.isBlank()) {
+                throw new IllegalStateException("Alegra todavía no entrega el XML de la factura; intenta de nuevo en un momento");
+            }
+            byte[] xml = helper.download(link, MAX_XML_BYTES);
+            if (!looksLikeXml(xml)) {
+                throw new IllegalStateException("El archivo que devolvió Alegra no es un XML válido");
+            }
+            return xml;
+        } catch (IllegalStateException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            throw helper.translate("No se pudo descargar el XML de la factura", ex);
+        }
+    }
+
+    private static boolean looksLikeXml(byte[] data) {
+        int i = 0;
+        if (data.length >= 3 && (data[0] & 0xFF) == 0xEF && (data[1] & 0xFF) == 0xBB && (data[2] & 0xFF) == 0xBF) {
+            i = 3; // BOM UTF-8
+        }
+        return data.length >= i + 5 && data[i] == '<' && data[i + 1] == '?' && data[i + 2] == 'x'
+                && data[i + 3] == 'm' && data[i + 4] == 'l';
     }
 
     /**

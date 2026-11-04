@@ -145,4 +145,13 @@ class AlegraBillingAdapterTest {
 
         assertArrayEquals(new byte[]{1, 2, 3}, adapter.downloadInvoicePDFByProviderId("inv-1"));
     }
+
+    @Test
+    void emailAndXmlGoToTheInvoiceClientByProviderId() {
+        when(invoiceClient.sendInvoiceEmail("inv-1", "a@b.co")).thenReturn(true);
+        when(invoiceClient.downloadInvoiceXML("inv-1")).thenReturn(new byte[]{4});
+
+        assertTrue(adapter.sendInvoiceEmailByProviderId("inv-1", "a@b.co"));
+        assertArrayEquals(new byte[]{4}, adapter.downloadInvoiceXMLByProviderId("inv-1"));
+    }
 }

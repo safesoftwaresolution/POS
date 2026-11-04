@@ -282,4 +282,37 @@ class InvoiceServiceImplTest {
 
         verify(customProvider, never()).downloadInvoicePDFByProviderId(any());
     }
+
+    @Test
+    void sendInvoiceEmailAndDownloadXml_UseTheProviderDocumentIdWhenThereIsOne() {
+        ReflectionTestUtils.setField(invoiceService, "activeProviderName", "factus");
+        ElectronicInvoice validated = ElectronicInvoice.initialize(1L, 1L);
+        validated.markAsValidated("SETP-1", "cufe", "qr", null, LocalDateTime.now());
+        validated.trackProviderDocument("doc-1");
+        when(repository.findBySaleIdAndStoreId(1L, 1L)).thenReturn(Optional.of(validated));
+        when(customProvider.sendInvoiceEmailByProviderId("doc-1", "a@b.co")).thenReturn(true);
+        when(customProvider.downloadInvoiceXMLByProviderId("doc-1")).thenReturn(new byte[]{5});
+
+        invoiceService.sendInvoiceEmail(1L, "a@b.co");
+        assertArrayEquals(new byte[]{5}, invoiceService.downloadInvoiceXML(1L));
+
+        verify(customProvider, never()).sendInvoiceEmail(any(), any());
+        verify(customProvider, never()).downloadInvoiceXML(any());
+    }
+
+    @Test
+    void sendInvoiceEmailAndDownloadXml_KeepUsingTheLegalNumberWithoutAProviderId() {
+        ReflectionTestUtils.setField(invoiceService, "activeProviderName", "factus");
+        ElectronicInvoice validated = ElectronicInvoice.initialize(1L, 1L);
+        validated.markAsValidated("SETP-1", "cufe", "qr", null, LocalDateTime.now());
+        when(repository.findBySaleIdAndStoreId(1L, 1L)).thenReturn(Optional.of(validated));
+        when(customProvider.sendInvoiceEmail("SETP-1", "a@b.co")).thenReturn(true);
+        when(customProvider.downloadInvoiceXML("SETP-1")).thenReturn(new byte[]{6});
+
+        invoiceService.sendInvoiceEmail(1L, "a@b.co");
+        assertArrayEquals(new byte[]{6}, invoiceService.downloadInvoiceXML(1L));
+
+        verify(customProvider, never()).sendInvoiceEmailByProviderId(any(), any());
+        verify(customProvider, never()).downloadInvoiceXMLByProviderId(any());
+    }
 }

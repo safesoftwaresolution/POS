@@ -54,24 +54,46 @@ public class AlegraClientHelper {
                 .header("Accept", "application/json");
     }
 
+    private static final int MAX_REDIRECTS = 3;
+
+    /** Resultado de pedir un enlace: los bytes, o la siguiente URL si Alegra respondió con una redirección. */
+    private record Fetched(byte[] data, URI redirect) {}
+
     /**
-     * Descarga un archivo desde un enlace que devolvió Alegra. Solo se siguen enlaces https de Alegra o de su S3
-     * (el enlace trae su propia firma y NO recibe el token) y la lectura se corta al superar {@code maxBytes}.
+     * Descarga un archivo desde un enlace que devolvió Alegra. El enlace de descarga de Alegra redirige a su S3, así
+     * que las redirecciones se siguen A MANO: cada salto (incluido el primero) debe ser https de Alegra o de su bucket
+     * y ninguno recibe el token. El cliente no sigue redirecciones por su cuenta, y la lectura se corta al superar
+     * {@code maxBytes}.
      */
     public byte[] download(String link, int maxBytes) {
         URI uri = trustedDownloadUri(link);
-        return restClient.get().uri(uri).exchange((request, response) -> {
-            // Cualquier cosa que no sea 2xx (incluidas las redirecciones, que no se siguen) es un fallo de la descarga.
-            if (!response.getStatusCode().is2xxSuccessful()) {
-                throw new RestClientResponseException("Alegra respondió con un error al descargar el archivo",
-                        response.getStatusCode(), response.getStatusText(), response.getHeaders(), null, null);
+        for (int hop = 0; hop <= MAX_REDIRECTS; hop++) {
+            URI current = uri;
+            Fetched fetched = restClient.get().uri(current).exchange((request, response) -> {
+                if (response.getStatusCode().is3xxRedirection()) {
+                    String location = response.getHeaders().getFirst("Location");
+                    if (location == null || location.isBlank()) {
+                        throw new RestClientResponseException("Alegra redirigió la descarga sin indicar a dónde",
+                                response.getStatusCode(), response.getStatusText(), response.getHeaders(), null, null);
+                    }
+                    return new Fetched(null, current.resolve(location.trim()));
+                }
+                if (!response.getStatusCode().is2xxSuccessful()) {
+                    throw new RestClientResponseException("Alegra respondió con un error al descargar el archivo",
+                            response.getStatusCode(), response.getStatusText(), response.getHeaders(), null, null);
+                }
+                byte[] data = response.getBody().readNBytes(maxBytes + 1);
+                if (data.length > maxBytes) {
+                    throw new IllegalStateException("El archivo que devolvió Alegra supera el tamaño permitido");
+                }
+                return new Fetched(data, null);
+            });
+            if (fetched.data() != null) {
+                return fetched.data();
             }
-            byte[] data = response.getBody().readNBytes(maxBytes + 1);
-            if (data.length > maxBytes) {
-                throw new IllegalStateException("El archivo que devolvió Alegra supera el tamaño permitido");
-            }
-            return data;
-        });
+            uri = trustedDownloadUri(fetched.redirect().toString());
+        }
+        throw new IllegalStateException("Alegra redirigió la descarga demasiadas veces");
     }
 
     private static URI trustedDownloadUri(String link) {

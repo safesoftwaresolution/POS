@@ -240,14 +240,44 @@ class AlegraInvoicePdfTest {
     }
 
     @Test
-    void aRedirectIsAFailureAndIsNeverFollowed() {
+    void aRedirectToAnUntrustedHostIsRefusedAndNeverCalled() {
         expectInvoice(ZIP_LINK);
         server.expect(once(), requestTo(ZIP_LINK))
                 .andRespond(withStatus(HttpStatus.FOUND).header("Location", "https://evil.example/steal.zip"));
 
-        AlegraApiException error = assertThrows(AlegraApiException.class, () -> client.downloadInvoicePDF("inv-1"));
+        assertThrows(IllegalStateException.class, () -> client.downloadInvoicePDF("inv-1"));
 
-        assertEquals(302, error.getUpstreamStatus());
+        server.verify(); // solo la primera llamada: el destino sospechoso nunca se consulta
+    }
+
+    @Test
+    void theRealAlegraFlowFollowsTheRedirectToItsOwnBucketWithoutSendingTheToken() throws Exception {
+        String bucket = "https://api-alegra-e-provider-col-sand.s3.us-east-1.amazonaws.com/inv.zip?X-Amz-Signature=abc";
+        expectInvoice(ZIP_LINK);
+        server.expect(once(), requestTo(ZIP_LINK))
+                .andExpect(headerDoesNotExist("Authorization"))
+                .andRespond(withStatus(HttpStatus.FOUND).header("Location", bucket));
+        server.expect(once(), requestTo(bucket))
+                .andExpect(headerDoesNotExist("Authorization"))
+                .andRespond(withSuccess(zip("doc.pdf", new String(PDF, StandardCharsets.ISO_8859_1)),
+                        MediaType.parseMediaType("application/zip")));
+
+        assertArrayEquals(PDF, client.downloadInvoicePDF("inv-1"));
+        server.verify();
+    }
+
+    @Test
+    void aRedirectWithoutLocationOrAnEndlessChainIsAFailure() {
+        expectInvoice(ZIP_LINK);
+        server.expect(once(), requestTo(ZIP_LINK)).andRespond(withStatus(HttpStatus.FOUND));
+        AlegraApiException noLocation = assertThrows(AlegraApiException.class, () -> client.downloadInvoicePDF("inv-1"));
+        assertEquals(302, noLocation.getUpstreamStatus());
+
+        server.reset();
+        expectInvoice(ZIP_LINK);
+        server.expect(org.springframework.test.web.client.ExpectedCount.times(4), requestTo(ZIP_LINK))
+                .andRespond(withStatus(HttpStatus.FOUND).header("Location", ZIP_LINK));
+        assertThrows(IllegalStateException.class, () -> client.downloadInvoicePDF("inv-1"));
         server.verify();
     }
 

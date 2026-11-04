@@ -100,5 +100,12 @@ class AlegraSandboxInvoiceE2ETest {
         byte[] xml = invoiceClient.downloadInvoiceXML(result.providerDocumentId());
         assertTrue(xml.length > 1000, "el XML no puede estar vacio");
         assertEquals("<?xml", new String(xml, 0, 5, java.nio.charset.StandardCharsets.ISO_8859_1));
+
+        // Opcional: con ALEGRA_E2E_EMAIL definido se envia el correo de verdad (la direccion nunca va en el codigo).
+        String recipient = System.getenv("ALEGRA_E2E_EMAIL");
+        if (recipient != null && !recipient.isBlank()) {
+            assertTrue(invoiceClient.sendInvoiceEmail(result.providerDocumentId(), recipient.trim()));
+            System.out.println("E2E Alegra email -> enviado");
+        }
     }
 }

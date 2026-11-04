@@ -76,14 +76,14 @@ class AlegraInvoiceEmailXmlTest {
     // ---------------- correo ----------------
 
     @Test
-    void sendsTheEmailForTheProviderDocumentWithTheCompanyAsReplyTo() {
+    void sendsTheEmailForTheProviderDocumentWithTheCustomerInBothAddressesBecauseAlegraDeliversToReplyTo() {
         server.expect(once(), requestTo(URL + "/send-email"))
                 .andExpect(method(HttpMethod.POST))
                 .andExpect(header("Authorization", "Bearer " + TOKEN))
                 .andExpect(jsonPath("$.documentType").value("01"))
                 .andExpect(jsonPath("$.documentId").value("inv-1"))
                 .andExpect(jsonPath("$.email.to").value("cliente@correo.co"))
-                .andExpect(jsonPath("$.email.replyTo").value("facturacion@tienda.co"))
+                .andExpect(jsonPath("$.email.replyTo").value("cliente@correo.co"))
                 .andRespond(withSuccess("{\"message\":\"Email sent\",\"data\":{}}", MediaType.APPLICATION_JSON));
 
         assertTrue(client.sendInvoiceEmail("inv-1", "cliente@correo.co"));
@@ -91,13 +91,14 @@ class AlegraInvoiceEmailXmlTest {
     }
 
     @Test
-    void whenTheCompanyHasNoEmailTheRecipientIsUsedAsReplyTo() {
-        when(companyProvider.get(org.mockito.ArgumentMatchers.any())).thenReturn(company(null));
+    void theCompanyEmailIsNeverUsedAsReplyToEvenWhenItExistsOrTheInvoiceWouldGoToTheCompany() {
         server.expect(once(), requestTo(URL + "/send-email"))
-                .andExpect(jsonPath("$.email.replyTo").value("cliente@correo.co"))
+                .andExpect(jsonPath("$.email.replyTo").value("otro@cliente.co"))
+                .andExpect(jsonPath("$.email.to").value("otro@cliente.co"))
                 .andRespond(withSuccess("{\"message\":\"Email sent\"}", MediaType.APPLICATION_JSON));
 
-        assertTrue(client.sendInvoiceEmail("inv-1", "cliente@correo.co"));
+        assertTrue(client.sendInvoiceEmail("inv-1", "otro@cliente.co"));
+        server.verify();
     }
 
     @Test

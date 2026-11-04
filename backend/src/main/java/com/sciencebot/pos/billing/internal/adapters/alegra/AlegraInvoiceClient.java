@@ -137,17 +137,19 @@ public class AlegraInvoiceClient {
 
     /**
      * Pide a Alegra que envíe el documento por correo (solo documentos ya aceptados por la DIAN; Alegra adjunta el XML
-     * en un zip). {@code replyTo} es obligatorio cuando se indica destinatario: se usa el correo de la empresa en
-     * Alegra y, si no tiene, el del propio destinatario. Un rechazo del proveedor sale como excepción con su mensaje.
+     * en un zip). Un rechazo del proveedor sale como excepción con su mensaje.
+     *
+     * <p>OJO: verificado en el sandbox (4 pruebas, la última con entrega confirmada), Alegra entrega el correo a la
+     * dirección de {@code replyTo} y no a la de {@code to}, al contrario de lo que dice su documentación. Por eso las
+     * dos llevan la dirección del cliente: con el correo de la empresa en {@code replyTo} la factura le llegaría a la
+     * empresa y no al cliente. Cuando Alegra lo corrija se puede volver a usar el correo de la empresa como respuesta.
      */
     public boolean sendInvoiceEmail(String providerDocumentId, String to) {
         AlegraAccess access = accessResolver.resolve(null);
-        AlegraCompany company = companyProvider.get(access);
-        String replyTo = company.email() != null && !company.email().isBlank() ? company.email().trim() : to;
         Map<String, Object> body = Map.of(
                 "documentType", INVOICE_DOCUMENT,
                 "documentId", providerDocumentId,
-                "email", Map.of("to", to, "replyTo", replyTo));
+                "email", Map.of("to", to, "replyTo", to));
         try {
             helper.authorizedPost("/send-email", access)
                     .contentType(MediaType.APPLICATION_JSON)

@@ -253,9 +253,9 @@
         "Existe .ai/tasks/FEAT-020-resultados.md con las 6 respuestas",
         "Ningún token ni dato real queda en el repo"
       ],
-      "status": "pending",
+      "status": "in_progress",
       "assigned_to": null,
-      "notes": "Requiere token y company.id del sandbox, aportados por el usuario. Bloquea FEAT-025, 026 y 028."
+      "notes": "Spike parcial el 2026-11-04: resuelto bloque company, Idempotency-Key, formato de errores y habilitacion del sandbox; pendiente PDF, correo, notas y token de produccion. Ver .ai/tasks/FEAT-020-resultados.md. Requiere token y company.id del sandbox, aportados por el usuario. Bloquea FEAT-025, 026 y 028."
     },
     {
       "id": "FEAT-021",

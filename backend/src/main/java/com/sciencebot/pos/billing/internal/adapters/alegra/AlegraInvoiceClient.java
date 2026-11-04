@@ -11,6 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
@@ -67,6 +68,10 @@ public class AlegraInvoiceClient {
      * servicio); cualquier respuesta de Alegra o fallo de red sale como un {@link InvoiceResult}.
      */
     public InvoiceResult emitInvoice(InvoiceRequest request) {
+        String invalid = invalidRequest(request);
+        if (invalid != null) {
+            return InvoiceResult.error(invalid); // antes de asignar número: no se gasta un consecutivo en algo que no puede enviarse
+        }
         Long storeId = request.storeId() != null ? request.storeId() : TenantContext.getStoreId();
         AlegraAccess access = accessResolver.resolve(storeId);
 
@@ -91,13 +96,20 @@ public class AlegraInvoiceClient {
         }
 
         try {
-            Envelope envelope = helper.authorizedPost("/invoices", access)
+            ResponseEntity<Envelope> response = helper.authorizedPost("/invoices", access)
                     .header("Idempotency-Key", allocation.idempotencyKey())
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(body)
                     .retrieve()
-                    .body(Envelope.class);
-            return fromInvoice(envelope != null ? envelope.invoice() : null, allocation);
+                    .toEntity(Envelope.class);
+            Envelope envelope = response.getBody();
+            Invoice invoice = envelope != null ? envelope.invoice() : null;
+            if (invoice != null && invoice.id() != null
+                    && "true".equalsIgnoreCase(response.getHeaders().getFirst("Idempotent-Replayed"))) {
+                // Un replay devuelve la respuesta GUARDADA del primer intento: el documento pudo cambiar de estado.
+                invoice = refreshed(access, invoice);
+            }
+            return fromInvoice(invoice, allocation);
         } catch (Exception ex) {
             RuntimeException translated = helper.translate("No se pudo emitir la factura en Alegra", ex);
             if (translated instanceof BillingProviderException provider) {
@@ -118,10 +130,38 @@ public class AlegraInvoiceClient {
         } catch (Exception ex) {
             RuntimeException translated = helper.translate("No se pudo consultar la factura en Alegra", ex);
             if (translated instanceof BillingProviderException provider) {
+                if (provider.getUpstreamStatus() == 404) {
+                    // Alegra confirma que ese documento no existe: no hay nada que conciliar y puede emitirse de nuevo.
+                    return InvoiceResult.error("El documento " + providerDocumentId + " ya no existe en Alegra")
+                            .withProviderDocumentId(providerDocumentId);
+                }
                 return fromProviderError(provider, null);
             }
             throw translated;
         }
+    }
+
+    /** Estado actual del documento (GET); si no se puede leer se usa el guardado, que nunca es peor que no saber nada. */
+    private Invoice refreshed(AlegraAccess access, Invoice stored) {
+        try {
+            Envelope envelope = helper.authorizedGet("/invoices/" + stored.id(), access).retrieve().body(Envelope.class);
+            return envelope != null && envelope.invoice() != null ? envelope.invoice() : stored;
+        } catch (Exception ex) {
+            log.warn("No se pudo refrescar el documento {} tras un replay: {}", stored.id(), ex.getMessage());
+            return stored;
+        }
+    }
+
+    private static String invalidRequest(InvoiceRequest request) {
+        if (request.items() == null || request.items().isEmpty()) {
+            return "La factura no tiene ítems";
+        }
+        for (var item : request.items()) {
+            if (item.quantity() == null || item.unitPrice() == null) {
+                return "Un ítem de la factura no tiene cantidad o precio";
+            }
+        }
+        return null;
     }
 
     /** La respuesta de Alegra manda: el 201 solo dice que el documento se recibió, no que la DIAN lo aceptó. */

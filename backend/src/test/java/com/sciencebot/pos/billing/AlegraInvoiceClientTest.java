@@ -304,4 +304,58 @@ class AlegraInvoiceClientTest {
                         .body("{\"errors\":[{\"code\":\"AEP2001\",\"message\":\"Document not found\"}]}"));
         assertEquals("ERROR", client.queryInvoiceByProviderId("inv-404").status());
     }
+
+    @Test
+    void aReplayIsRefreshedWithTheCurrentStateOfTheDocumentBecauseTheStoredResponseMayBeStale() {
+        expectPost(withSuccess(response("WAITING_RESPONSE", null, "", ""), MediaType.APPLICATION_JSON)
+                .header("Idempotent-Replayed", "true"));
+        server.expect(once(), requestTo(URL + "/invoices/inv-123"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess(response("SENT", "REJECTED", "99", "x", "Regla: 90"), MediaType.APPLICATION_JSON));
+
+        InvoiceResult result = client.emitInvoice(request());
+
+        assertEquals("REJECTED", result.status());
+        assertEquals("inv-123", result.providerDocumentId());
+        verify(allocator).markCompleted(11L);
+        server.verify();
+    }
+
+    @Test
+    void ifTheRefreshOfAReplayFailsTheStoredResponseIsUsed() {
+        expectPost(withSuccess(response("WAITING_RESPONSE", null, "", ""), MediaType.APPLICATION_JSON)
+                .header("Idempotent-Replayed", "true"));
+        server.expect(once(), requestTo(URL + "/invoices/inv-123")).andRespond(withStatus(HttpStatus.BAD_GATEWAY));
+
+        InvoiceResult result = client.emitInvoice(request());
+
+        assertEquals("PENDING", result.status());
+        assertEquals("inv-123", result.providerDocumentId());
+    }
+
+    @Test
+    void aRequestThatCannotBeSentIsRefusedBeforeSpendingANumber() {
+        InvoiceRequest noItems = new InvoiceRequest(7L, 5L, null, "FAC-1", "1", "10", null, List.of(), BigDecimal.ZERO, null);
+        InvoiceItemData noPrice = new InvoiceItemData("REF", "X", BigDecimal.ONE, null, BigDecimal.ZERO, BigDecimal.ZERO,
+                "94", "999", "01", BigDecimal.ZERO, false);
+        InvoiceRequest broken = new InvoiceRequest(7L, 5L, null, "FAC-1", "1", "10", null, List.of(noPrice), BigDecimal.ZERO, null);
+
+        assertEquals("ERROR", client.emitInvoice(noItems).status());
+        assertEquals("ERROR", client.emitInvoice(broken).status());
+        verifyNoInteractions(allocator);
+        server.verify();
+    }
+
+    @Test
+    void aDocumentThatAlegraSaysDoesNotExistIsAConfirmedErrorCarryingItsId() {
+        TenantContext.setStoreId(5L);
+        server.expect(once(), requestTo(URL + "/invoices/inv-gone"))
+                .andRespond(withStatus(HttpStatus.NOT_FOUND).contentType(MediaType.APPLICATION_JSON)
+                        .body("{\"errors\":[{\"code\":\"AEP2001\",\"message\":\"Document not found\"}]}"));
+
+        InvoiceResult result = client.queryInvoiceByProviderId("inv-gone");
+
+        assertEquals("ERROR", result.status());
+        assertEquals("inv-gone", result.providerDocumentId());
+    }
 }

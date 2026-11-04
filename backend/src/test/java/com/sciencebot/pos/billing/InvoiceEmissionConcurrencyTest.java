@@ -205,4 +205,27 @@ class InvoiceEmissionConcurrencyTest {
         assertEquals("doc-2", stored.getProviderDocumentId());
         verify(provider, never()).queryInvoiceByProviderId(any());
     }
+
+    @Test
+    void aWaitingDocumentThatAlegraLaterReportsAsFailedIsNotStuckAndGetsEmittedAgain() {
+        doReturn(InvoiceResult.pending("En espera").withProviderDocumentId("doc-1")).when(provider).emitInvoice(any());
+        invoiceService.processElectronicInvoice(sale());
+        doReturn(InvoiceResult.error("Alegra no pudo procesar la factura").withProviderDocumentId("doc-1"))
+                .when(provider).queryInvoiceByProviderId("doc-1");
+
+        invoiceService.processElectronicInvoice(sale());
+
+        ElectronicInvoice failed = repository.findBySaleId(saleId).orElseThrow();
+        assertEquals(ElectronicInvoiceStatus.ERROR, failed.getStatus(), "un fallo confirmado no se vuelve PENDING");
+        assertFalse(failed.awaitsProviderResponse());
+
+        doReturn(InvoiceResult.success("SETP990000103", "cufe3", "qr", null).withProviderDocumentId("doc-3"))
+                .when(provider).emitInvoice(any());
+        invoiceService.processElectronicInvoice(sale());
+
+        ElectronicInvoice stored = repository.findBySaleId(saleId).orElseThrow();
+        assertEquals(ElectronicInvoiceStatus.VALIDATED, stored.getStatus());
+        assertEquals("doc-3", stored.getProviderDocumentId());
+        verify(provider, times(2)).emitInvoice(any());
+    }
 }

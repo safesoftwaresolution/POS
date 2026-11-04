@@ -126,7 +126,11 @@ public class InvoiceServiceImpl implements InvoiceService {
     private InvoiceResult reconcile(InvoiceProvider provider, String providerDocumentId) {
         try {
             InvoiceResult queried = provider.queryInvoiceByProviderId(providerDocumentId);
-            if (queried == null || "ERROR".equalsIgnoreCase(queried.status())) {
+            boolean lookupFailed = queried == null
+                    || ("ERROR".equalsIgnoreCase(queried.status()) && queried.providerDocumentId() == null);
+            if (lookupFailed) {
+                // No se pudo preguntar (red, credenciales): ante la duda no se emite. Un error CON id es distinto: el
+                // proveedor confirmó que ese documento falló o ya no existe, y debe poder emitirse de nuevo.
                 String reason = queried != null ? queried.errorMessage() : "respuesta vacía";
                 return InvoiceResult.pending("No se pudo conciliar la factura con el proveedor: " + reason)
                         .withProviderDocumentId(providerDocumentId);

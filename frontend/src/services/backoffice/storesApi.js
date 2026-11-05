@@ -94,17 +94,17 @@ export async function getBackofficeStoreCategoriesApi() {
   return await fetchApi('/backoffice/store-categories');
 }
 
-export async function createBackofficeStoreCategoryApi(name, description = '', template = 'RETAIL') {
+export async function createBackofficeStoreCategoryApi(name, description = '', template = 'RETAIL', theme = 'DEFAULT') {
   return await fetchApi('/backoffice/store-categories', {
     method: 'POST',
-    body: JSON.stringify({ name, description, template }),
+    body: JSON.stringify({ name, description, template, theme }),
   });
 }
 
-export async function updateBackofficeStoreCategoryApi(id, name, description = '', template = 'RETAIL') {
+export async function updateBackofficeStoreCategoryApi(id, name, description = '', template = 'RETAIL', theme = 'DEFAULT') {
   return await fetchApi(`/backoffice/store-categories/${id}`, {
     method: 'PUT',
-    body: JSON.stringify({ name, description, template }),
+    body: JSON.stringify({ name, description, template, theme }),
   });
 }
 

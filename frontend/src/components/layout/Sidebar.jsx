@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import useAuth from '../../hooks/useAuth';
 import useStoreTemplate from '../../hooks/useStoreTemplate';
+import { DEFAULT_STORE_THEME, storeThemeFor } from '../../constants/storeThemes';
 import useTheme from '../../hooks/useTheme';
 import { getProductsApi } from '../../services/productsApi';
 import useLoad from '../../hooks/useLoad';
@@ -39,7 +40,9 @@ import useAvatarUpload from '../../hooks/useAvatarUpload';
 
 export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }) {
   const { logout, user } = useAuth();
-  const { features } = useStoreTemplate();
+  const { features, theme } = useStoreTemplate();
+  const storeTheme = storeThemeFor(theme);
+  const ThemeIcon = storeTheme.icon;
   const { darkMode, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [profileOpen, setProfileOpen] = useState(false);
@@ -134,6 +137,11 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
               <div className="min-w-0 space-y-1">
                 <BrandLogo className="h-10" />
                 <p className="text-[10px] text-gray-400 font-semibold tracking-wide truncate">Tu negocio, en equilibrio</p>
+                {theme !== DEFAULT_STORE_THEME && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-brand/10 text-brand border border-brand/20 text-[10px] font-extrabold">
+                    <ThemeIcon className="w-3 h-3" /> {storeTheme.label}
+                  </span>
+                )}
               </div>
             ) : (
               <BentoIcon />

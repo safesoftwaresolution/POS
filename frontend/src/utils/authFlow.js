@@ -10,3 +10,15 @@ export function destinationAfterVerification(session) {
 export function isEmailNotVerified(error) {
   return error?.data?.error === 'EmailNotVerified';
 }
+
+/**
+ * A dónde sacar a quien abre `/onboarding/store` sin tener que registrar un local: sin sesión al login, el
+ * operador de la plataforma al backoffice, y quien ya tiene local (o no es ADMINISTRATOR) a la app.
+ * `null` = debe registrar su local.
+ */
+export function onboardingRedirect(user) {
+  if (!user) return '/login';
+  if (user.role === 'SUPER_ADMIN') return '/backoffice';
+  if (user.role !== 'ADMINISTRATOR' || user.storeId) return '/';
+  return null;
+}

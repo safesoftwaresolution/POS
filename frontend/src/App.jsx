@@ -187,7 +187,6 @@ function ProtectedLayoutContent({ mobileSidebarOpen, setMobileSidebarOpen, sideb
             {/* Todos los roles de tienda ven el catálogo (GET /services); crear y editar lo limita la propia pantalla. */}
             <Route path="/services" element={<ServicesBento />} />
             <Route path="/appointments" element={<RequireFeature feature="appointments"><AppointmentsBento /></RequireFeature>} />
-            <Route path="/categories" element={<CategoriesBento />} />
             <Route path="/customers" element={<CustomersBento />} />
             <Route path="/credit" element={<CreditBento />} />
             <Route path="/invoicing" element={<InvoicingBento />} />

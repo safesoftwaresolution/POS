@@ -1,5 +1,6 @@
 package com.sciencebot.pos.stores.internal.controllers;
 
+import jakarta.validation.Valid;
 import com.sciencebot.pos.stores.CreateStoreCommand;
 import com.sciencebot.pos.stores.StoreDocumentDto;
 import com.sciencebot.pos.stores.StoreDto;
@@ -35,7 +36,7 @@ public class StoreOnboardingController {
     @PostMapping
     @PreAuthorize("hasRole('ADMINISTRATOR')")
     @Operation(summary = "Registrar mi local", description = "Crea el local del ADMINISTRATOR autenticado (que aun no tiene uno). Queda en PENDING_VERIFICATION.")
-    public ResponseEntity<StoreDto> registerOwnStore(@RequestBody CreateStoreCommand command, Authentication authentication) {
+    public ResponseEntity<StoreDto> registerOwnStore(@Valid @RequestBody CreateStoreCommand command, Authentication authentication) {
         StoreDto created = storeFacade.registerOwnStore(authentication.getName(), command);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }

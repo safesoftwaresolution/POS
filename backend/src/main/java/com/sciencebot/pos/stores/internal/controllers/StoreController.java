@@ -1,5 +1,6 @@
 package com.sciencebot.pos.stores.internal.controllers;
 
+import jakarta.validation.Valid;
 import com.sciencebot.pos.stores.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -60,7 +61,7 @@ public class StoreController {
     @PostMapping("/api/v1/backoffice/stores")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     @Operation(summary = "Crear un nuevo local")
-    public ResponseEntity<StoreDto> createStore(@RequestBody CreateStoreCommand command) {
+    public ResponseEntity<StoreDto> createStore(@Valid @RequestBody CreateStoreCommand command) {
         return ResponseEntity.status(HttpStatus.CREATED).body(storeFacade.createStore(command));
     }
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { destinationAfterVerification, isEmailNotVerified } from './authFlow';
+import { destinationAfterVerification, isEmailNotVerified, onboardingRedirect } from './authFlow';
 
 describe('destinationAfterVerification', () => {
   it('sends a platform operator to the backoffice', () => {
@@ -18,5 +18,18 @@ describe('isEmailNotVerified', () => {
     expect(isEmailNotVerified({ data: { error: 'EmailNotVerified' }, message: 'cualquier texto' })).toBe(true);
     expect(isEmailNotVerified({ data: { error: 'Forbidden' }, message: 'Debes verificar tu correo' })).toBe(false);
     expect(isEmailNotVerified(new Error('sin datos'))).toBe(false);
+  });
+});
+
+describe('onboardingRedirect', () => {
+  it('lets an administrator without a store register one', () => {
+    expect(onboardingRedirect({ role: 'ADMINISTRATOR', storeId: null })).toBeNull();
+  });
+
+  it('sends everyone else away from the store onboarding', () => {
+    expect(onboardingRedirect(null)).toBe('/login');
+    expect(onboardingRedirect({ role: 'SUPER_ADMIN', storeId: null })).toBe('/backoffice');
+    expect(onboardingRedirect({ role: 'ADMINISTRATOR', storeId: 4 })).toBe('/');
+    expect(onboardingRedirect({ role: 'SELLER', storeId: 4 })).toBe('/');
   });
 });

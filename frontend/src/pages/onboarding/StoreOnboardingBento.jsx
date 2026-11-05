@@ -1,18 +1,31 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Store, ArrowRight, AlertCircle } from 'lucide-react';
+import { Navigate, useNavigate } from 'react-router-dom';
+import { Store, ArrowRight, AlertCircle, LogOut, CheckCircle2 } from 'lucide-react';
 import { registerOwnStoreApi } from '../../services/storesApi';
 import useAuth from '../../hooks/useAuth';
 import StoreProfileFields from '../../components/store/StoreProfileFields';
+import { onboardingRedirect } from '../../utils/authFlow';
 
 const EMPTY_FORM = { name: '', phone: '', email: '', website: '', address: '', taxId: '' };
 
 export default function StoreOnboardingBento() {
   const navigate = useNavigate();
-  const { refreshSession } = useAuth();
+  const { user, refreshSession, logout } = useAuth();
   const [form, setForm] = useState(EMPTY_FORM);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  // El local se creó pero no se pudo renovar la sesión (el token sigue sin storeId): no se debe volver a enviar.
+  const [registeredWithoutSession, setRegisteredWithoutSession] = useState(false);
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login', { replace: true });
+  };
+
+  const redirect = onboardingRedirect(user);
+  if (redirect && !registeredWithoutSession) {
+    return <Navigate to={redirect} replace />;
+  }
 
   const handleChange = (field) => (e) => setForm(prev => ({ ...prev, [field]: e.target.value }));
 
@@ -22,14 +35,42 @@ export default function StoreOnboardingBento() {
     setLoading(true);
     try {
       await registerOwnStoreApi({ ...form, storeCategoryId: null });
-      await refreshSession();
-      navigate('/', { replace: true });
     } catch (err) {
       setError(err.message || 'No se pudo registrar el local.');
+      setLoading(false);
+      return;
+    }
+    try {
+      await refreshSession();
+      navigate('/', { replace: true });
+    } catch {
+      setRegisteredWithoutSession(true);
     } finally {
       setLoading(false);
     }
   };
+
+  if (registeredWithoutSession) {
+    return (
+      <div className="min-h-screen bg-page text-ink flex items-center justify-center p-4 select-none">
+        <div className="max-w-md w-full bento-card p-8 rounded-3xl shadow-xl space-y-5 text-center">
+          <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto" />
+          <h1 className="text-lg font-black">Tu local quedó registrado</h1>
+          <p className="text-xs text-ink-soft font-semibold leading-relaxed">
+            No pudimos actualizar tu sesión. Inicia sesión de nuevo para ver el estado de tu local.
+          </p>
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="w-full py-3 bg-solid hover:bg-solid-hover text-solid-ink font-black text-xs rounded-2xl flex items-center justify-center gap-2 transition-all cursor-pointer"
+          >
+            <LogOut className="w-4 h-4" />
+            <span>Iniciar sesión de nuevo</span>
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-page text-ink flex items-center justify-center p-4 select-none">
@@ -63,6 +104,15 @@ export default function StoreOnboardingBento() {
             <ArrowRight className="w-4 h-4" />
           </button>
         </form>
+
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="w-full py-2.5 text-ink-soft hover:text-ink font-bold text-xs flex items-center justify-center gap-2 cursor-pointer transition-colors"
+        >
+          <LogOut className="w-4 h-4" />
+          <span>Cerrar sesión</span>
+        </button>
       </div>
     </div>
   );

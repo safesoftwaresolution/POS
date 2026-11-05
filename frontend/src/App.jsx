@@ -1,4 +1,4 @@
-import React, { useState, lazy, Suspense } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import useAutoRefresh from './hooks/useAutoRefresh';
 import useLoad from './hooks/useLoad';
@@ -8,7 +8,8 @@ import useStoreTemplate from './hooks/useStoreTemplate';
 import { ThemeProvider } from './context/ThemeContext';
 import { ModalProvider } from './context/ModalContext';
 import { StoreTemplateProvider } from './context/StoreTemplateContext';
-import { getOwnStoreApi } from './services/storesApi';
+import { getOwnStoreApi, getOwnStoreStatusApi } from './services/storesApi';
+import { STORE_NOT_ACTIVE_EVENT } from './services/http';
 
 import Sidebar from './components/layout/Sidebar';
 import Header from './components/layout/Header';
@@ -77,13 +78,27 @@ function RequireFeature({ feature, children }) {
   return features[feature] ? children : <Navigate to="/" replace />;
 }
 
-/** Mientras el ADMINISTRATOR no tenga un local ACTIVE, bloquea el POS y muestra el estado. */
-function RequireActiveStore({ children }) {
-  const { data: store, loading, error, reload, setData } = useLoad(getOwnStoreApi, []);
+/**
+ * Mientras el local no esté ACTIVE, bloquea el POS para cualquier rol del local y muestra su estado (el backend
+ * responde 403 `StoreNotActive` al resto de la API). El ADMINISTRATOR ve su local completo para corregirlo; el
+ * resto del personal solo su estado (`/stores/me` es solo para el administrador).
+ */
+function RequireActiveStore({ canManage, children }) {
+  const { data: store, loading, error, reload, setData } = useLoad(
+    canManage ? getOwnStoreApi : getOwnStoreStatusApi,
+    [canManage],
+  );
 
   // Mientras el local no está activo, consulta su estado cada cierto tiempo: al aprobarse, el POS se
   // abre solo sin que la persona tenga que recargar.
   useAutoRefresh(reload, 15000, Boolean(error) || (Boolean(store) && store.status !== 'ACTIVE'));
+
+  // Si el local deja de estar activo mientras se trabaja, la primera respuesta 403 lo detecta.
+  useEffect(() => {
+    const onNotActive = () => reload();
+    window.addEventListener(STORE_NOT_ACTIVE_EVENT, onNotActive);
+    return () => window.removeEventListener(STORE_NOT_ACTIVE_EVENT, onNotActive);
+  }, [reload]);
 
   if (loading) {
     return null;
@@ -93,6 +108,7 @@ function RequireActiveStore({ children }) {
       <PendingStoreReviewBento
         store={store}
         loadError={Boolean(error) || !store}
+        canManage={canManage}
         onRetry={() => reload({ silent: false })}
         onStoreChange={setData}
       />
@@ -128,26 +144,15 @@ function ProtectedLayout() {
     return <Navigate to="/onboarding/store" replace />;
   }
 
-  if (user?.role === 'ADMINISTRATOR') {
-    return (
-      <RequireActiveStore>
-        <ProtectedLayoutContent
-          mobileSidebarOpen={mobileSidebarOpen}
-          setMobileSidebarOpen={setMobileSidebarOpen}
-          sidebarCollapsed={sidebarCollapsed}
-          toggleSidebarCollapse={toggleSidebarCollapse}
-        />
-      </RequireActiveStore>
-    );
-  }
-
   return (
-    <ProtectedLayoutContent
-      mobileSidebarOpen={mobileSidebarOpen}
-      setMobileSidebarOpen={setMobileSidebarOpen}
-      sidebarCollapsed={sidebarCollapsed}
-      toggleSidebarCollapse={toggleSidebarCollapse}
-    />
+    <RequireActiveStore canManage={user?.role === 'ADMINISTRATOR'}>
+      <ProtectedLayoutContent
+        mobileSidebarOpen={mobileSidebarOpen}
+        setMobileSidebarOpen={setMobileSidebarOpen}
+        sidebarCollapsed={sidebarCollapsed}
+        toggleSidebarCollapse={toggleSidebarCollapse}
+      />
+    </RequireActiveStore>
   );
 }
 

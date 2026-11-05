@@ -35,6 +35,7 @@ Ciclo de vida de los comercios/locales de la plataforma SaaS: el **auto-registro
 - `GET /api/v1/backoffice/stores/{id}/documents`: listado de documentos KYC.
 - `PATCH /api/v1/backoffice/stores/{id}/documents/{docId}`: aprobación/rechazo de documento.
 - `PUT /api/v1/backoffice/stores/{id}/templates` (`{ "extraTemplates": ["APPOINTMENTS"] }`, solo `SUPER_ADMIN`): reemplaza las plantillas extra del local.
+- `GET /api/v1/stores/me/status`: estado del local (`{ "status": "ACTIVE" }`) para cualquier rol del local; responde aunque el local no esté activo (ver `_security.md`, "Local no activo").
 - `GET /api/v1/stores/me/template`: plantillas y tema (`{ "template": "APPOINTMENTS", "theme": "BEAUTY", "templates": ["RETAIL", "APPOINTMENTS"] }`) del local del usuario autenticado, para cualquier rol del local (`/stores/me` es solo `ADMINISTRATOR`). `StoreDto` y `StoreCategoryDto` también exponen `template`.
 - `GET|POST /api/v1/backoffice/store-categories`, `PUT|DELETE /api/v1/backoffice/store-categories/{id}`: categorías de comercios (DELETE desactiva).
 - `GET /api/v1/backoffice/store-status-audit`: Historial de solo lectura de cambios de estado de locales (registro, aprobación, rechazo, suspensión…) con quién y cuándo. Filtros `status` (estado nuevo) y `q` (local, NIT, correo o responsable), paginado. Se alimenta de `store_status_audit` (V18), que solo se inserta; los locales anteriores a V18 tienen una fila de respaldo con `performed_by` nulo.

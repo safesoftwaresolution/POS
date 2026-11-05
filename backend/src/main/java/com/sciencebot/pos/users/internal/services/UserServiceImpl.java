@@ -22,6 +22,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.sciencebot.pos.storage.StorageFacade;
+import com.sciencebot.pos.stores.StoreFacade;
+import org.springframework.beans.factory.ObjectProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -54,6 +56,8 @@ public class UserServiceImpl implements UserFacade, UserDetailsService {
     private final UserDeletionAuditRepository deletionAuditRepository;
     private final org.springframework.context.ApplicationEventPublisher eventPublisher;
     private final StorageFacade storageFacade;
+    /** Diferido: StoreServiceImpl ya depende de UserFacade, así que inyectarlo directo crearía un ciclo. */
+    private final ObjectProvider<StoreFacade> storeFacadeProvider;
 
     public UserServiceImpl(
             UserRepository userRepository,
@@ -62,7 +66,9 @@ public class UserServiceImpl implements UserFacade, UserDetailsService {
             UserQuotaPolicy userQuotaPolicy,
             UserDeletionAuditRepository deletionAuditRepository,
             org.springframework.context.ApplicationEventPublisher eventPublisher,
-            @Autowired(required = false) StorageFacade storageFacade) {
+            @Autowired(required = false) StorageFacade storageFacade,
+            ObjectProvider<StoreFacade> storeFacadeProvider) {
+        this.storeFacadeProvider = storeFacadeProvider;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.userMapper = userMapper;
@@ -82,8 +88,18 @@ public class UserServiceImpl implements UserFacade, UserDetailsService {
                 user.getPassword(),
                 user.isActive() && user.isEmailVerified(),
                 List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole())),
-                user.getStoreId()
+                user.getStoreId(),
+                storeStatusOf(user.getStoreId())
         );
+    }
+
+    /** Estado del local vía su fachada; JwtAuthenticationFilter lo usa para bloquear a los locales no activos. */
+    private String storeStatusOf(Long storeId) {
+        if (storeId == null || storeFacadeProvider == null) {
+            return null;
+        }
+        StoreFacade storeFacade = storeFacadeProvider.getIfAvailable();
+        return storeFacade == null ? null : storeFacade.getStoreStatus(storeId);
     }
 
     @Override

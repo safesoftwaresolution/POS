@@ -40,6 +40,16 @@ function notifySessionExpired() {
   }
 }
 
+// Aviso para que RequireActiveStore vuelva a consultar el local: el backend respondió 403 `StoreNotActive`
+// (el local dejó de estar ACTIVE mientras la persona trabajaba).
+export const STORE_NOT_ACTIVE_EVENT = 'store:not-active';
+
+function notifyStoreNotActive(error) {
+  if (error?.status === 403 && error.data?.error === 'StoreNotActive' && typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent(STORE_NOT_ACTIVE_EVENT, { detail: { status: error.data.status ?? null } }));
+  }
+}
+
 export function getAuthToken() {
   return authToken;
 }
@@ -115,6 +125,7 @@ async function httpError(response) {
   const error = new Error(errorData.message || `Error HTTP ${response.status}`);
   error.status = response.status;
   error.data = errorData;
+  notifyStoreNotActive(error);
   return error;
 }
 

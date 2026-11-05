@@ -81,6 +81,22 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     "{\"error\":\"StoreOnboardingRequired\",\"message\":\"Completa el registro de tu local antes de continuar.\"}");
                             return;
                         }
+
+                        // Un local que no está ACTIVE (en revisión, rechazado, suspendido, inactivo) no opera:
+                        // su personal solo puede consultar o corregir el local y usar autenticación y soporte.
+                        if (storeId != null && userDetails instanceof PosUserDetails posUser
+                                && !"SUPER_ADMIN".equals(jwtService.extractRole(jwt))
+                                && !"ACTIVE".equals(posUser.getStoreStatus())
+                                && !isStoreSetupPath(request)) {
+                            String status = posUser.getStoreStatus();
+                            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                            response.setContentType("application/json");
+                            response.setCharacterEncoding("UTF-8");
+                            response.getWriter().write("{\"error\":\"StoreNotActive\",\"status\":"
+                                    + (status == null ? "null" : "\"" + status + "\"")
+                                    + ",\"message\":\"Tu local no está activo. Revisa su estado para continuar.\"}");
+                            return;
+                        }
                     }
                 } catch (Exception e) {
                     // Ignored
@@ -108,6 +124,35 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return true;
         }
         return path.equals(storesPath + "/me") && "GET".equalsIgnoreCase(method);
+    }
+
+    /**
+     * Rutas permitidas al personal de un local que no está ACTIVE: las de onboarding, consultar y corregir el
+     * local, sus documentos KYC, reenviarlo a revisión, su estado, autenticación, documentos legales y soporte.
+     * Lo que no es de la API (Swagger, estáticos) no se bloquea aquí.
+     */
+    private boolean isStoreSetupPath(HttpServletRequest request) {
+        String api = request.getContextPath() + "/api/";
+        String path = request.getRequestURI();
+        String method = request.getMethod();
+        if (!path.startsWith(api) || isOnboardingPath(request)) {
+            return true;
+        }
+        String v1 = api + "v1";
+        if (path.startsWith(v1 + "/legal/") || path.startsWith(v1 + "/support/")) {
+            return true;
+        }
+        String me = v1 + "/stores/me";
+        if (path.equals(me)) {
+            return "GET".equalsIgnoreCase(method) || "PUT".equalsIgnoreCase(method);
+        }
+        if (path.equals(me + "/status")) {
+            return "GET".equalsIgnoreCase(method);
+        }
+        if (path.equals(me + "/documents")) {
+            return "GET".equalsIgnoreCase(method) || "POST".equalsIgnoreCase(method);
+        }
+        return path.equals(me + "/resubmit") && "POST".equalsIgnoreCase(method);
     }
 
     private String extractToken(HttpServletRequest request) {

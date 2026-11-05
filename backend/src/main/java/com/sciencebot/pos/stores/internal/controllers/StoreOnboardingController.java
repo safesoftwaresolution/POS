@@ -5,6 +5,7 @@ import com.sciencebot.pos.stores.StoreDocumentDto;
 import com.sciencebot.pos.stores.StoreDto;
 import com.sciencebot.pos.config.tenant.TenantContext;
 import com.sciencebot.pos.stores.StoreFacade;
+import com.sciencebot.pos.stores.StoreStatusDto;
 import com.sciencebot.pos.stores.StoreTemplateDto;
 import jakarta.persistence.EntityNotFoundException;
 import com.sciencebot.pos.stores.UpdateOwnStoreCommand;
@@ -56,6 +57,17 @@ public class StoreOnboardingController {
         }
         StoreDto store = storeFacade.getById(storeId);
         return ResponseEntity.ok(new StoreTemplateDto(store.template(), store.theme(), store.templates()));
+    }
+
+    @GetMapping("/me/status")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Estado de mi local", description = "Estado del local del usuario autenticado, para cualquier rol del local. Se puede consultar aunque el local no esté activo (el resto de la API responde 403 StoreNotActive).")
+    public ResponseEntity<StoreStatusDto> getOwnStatus() {
+        Long storeId = TenantContext.getStoreId();
+        if (storeId == null) {
+            throw new EntityNotFoundException("El usuario no pertenece a un local.");
+        }
+        return ResponseEntity.ok(new StoreStatusDto(storeFacade.getStoreStatus(storeId)));
     }
 
     @PutMapping("/me")

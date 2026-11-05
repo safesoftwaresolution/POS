@@ -27,6 +27,7 @@
 
 ### RN-AUTH-005 — Administrador sin local
 - Un `ADMINISTRATOR` con `storeId = null` solo puede usar `/api/v1/auth/**` y registrar su local (`POST /api/v1/stores`, `GET/PUT /api/v1/stores/me*`). Cualquier otra ruta responde `403 StoreOnboardingRequired` desde `JwtAuthenticationFilter`.
+- **Local no activo**: cualquier rol del local (`ADMINISTRATOR`, `SUPERVISOR`, `SELLER`) de un local que no está `ACTIVE` (`PENDING_VERIFICATION`, `REJECTED`, `SUSPENDED`, `INACTIVE` o desconocido) recibe `403 {"error":"StoreNotActive","status":"...","message":"..."}` desde `JwtAuthenticationFilter`, salvo en `/api/v1/auth/**`, las rutas de onboarding, `GET/PUT /api/v1/stores/me`, `GET /api/v1/stores/me/status`, `GET/POST /api/v1/stores/me/documents`, `POST /api/v1/stores/me/resubmit`, `/api/v1/legal/**` y `/api/v1/support/**`. El estado lo carga `UserServiceImpl.loadUserByUsername` vía `StoreFacade.getStoreStatus` (una consulta liviana por petición) en `PosUserDetails.storeStatus`; el bloqueo aplica en la siguiente petición tras cambiar el estado, sin esperar a que venza el token. El frontend (`RequireActiveStore`) muestra la pantalla de estado a todos los roles y `services/http.js` emite `store:not-active` al recibir ese 403.
 
 ## Requerimientos Funcionales
 

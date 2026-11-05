@@ -14,6 +14,8 @@ public interface StoreFacade {
     StoreDto changeStatus(Long id, String newStatus);
     StoreDto verifyEmail(Long id);
     StoreDto getById(Long id);
+    /** Estado del local (ACTIVE, PENDING_VERIFICATION...) o null si no existe; consulta liviana para el filtro JWT. */
+    String getStoreStatus(Long storeId);
     /** Auto-registro self-service: crea el local del ADMINISTRATOR autenticado (que aun no tiene uno). */
     StoreDto registerOwnStore(String ownerUsername, CreateStoreCommand command);
     /** Local del ADMINISTRATOR autenticado. */

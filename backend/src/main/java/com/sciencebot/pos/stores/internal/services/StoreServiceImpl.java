@@ -117,6 +117,11 @@ public class StoreServiceImpl implements StoreFacade {
     }
 
     @Override
+    public String getStoreStatus(Long storeId) {
+        return storeId == null ? null : storeRepository.findStatusById(storeId).orElse(null);
+    }
+
+    @Override
     @Transactional
     public StoreDto createStore(CreateStoreCommand command) {
         if (storeRepository.existsByEmail(command.email())) {

@@ -33,6 +33,14 @@ const STATUS_COPY = {
   },
 };
 
+// El personal (SUPERVISOR, SELLER) no puede corregir el local: solo esperar a que el administrador lo resuelva.
+const STAFF_MESSAGE = {
+  PENDING_VERIFICATION: 'El local todavía está en revisión. Podrás entrar en cuanto la plataforma lo apruebe.',
+  REJECTED: 'El registro del local necesita correcciones. El administrador del local debe corregirlo para que vuelva a revisión.',
+  SUSPENDED: 'El local está suspendido temporalmente. Consulta con el administrador del local.',
+  INACTIVE: 'El local está inactivo. Consulta con el administrador del local.',
+};
+
 const LOAD_ERROR_COPY = {
   icon: WifiOff,
   iconClass: 'text-gray-500',
@@ -119,17 +127,19 @@ function OptionalDocuments() {
 }
 
 /**
- * Pantalla que reemplaza al POS mientras el local no está ACTIVE. `store` es el local del ADMINISTRATOR;
- * con `loadError` se muestra el aviso de error de carga y `onRetry` vuelve a consultar.
+ * Pantalla que reemplaza al POS mientras el local no está ACTIVE. Con `canManage` (ADMINISTRATOR) `store` es el
+ * local completo y se puede corregir o adelantar documentos; para el resto del personal solo trae `status`.
+ * Con `loadError` se muestra el aviso de error de carga y `onRetry` vuelve a consultar.
  */
-export default function PendingStoreReviewBento({ store, loadError = false, onRetry, onStoreChange }) {
+export default function PendingStoreReviewBento({ store, loadError = false, canManage = true, onRetry, onStoreChange }) {
   const { logout } = useAuth();
   const navigate = useNavigate();
   const copy = loadError ? LOAD_ERROR_COPY : (STATUS_COPY[store?.status] || STATUS_COPY.PENDING_VERIFICATION);
   const Icon = copy.icon;
-  const rejected = !loadError && store?.status === 'REJECTED';
+  const rejected = canManage && !loadError && store?.status === 'REJECTED';
+  const message = !loadError && !canManage ? (STAFF_MESSAGE[store?.status] || copy.message) : copy.message;
   // Mientras se revisa (o se corrige) el local se pueden adelantar los documentos; no son obligatorios.
-  const canUploadDocuments = !loadError && (store?.status === 'PENDING_VERIFICATION' || rejected);
+  const canUploadDocuments = canManage && !loadError && (store?.status === 'PENDING_VERIFICATION' || rejected);
 
   const handleLogout = async () => {
     await logout();
@@ -144,7 +154,7 @@ export default function PendingStoreReviewBento({ store, loadError = false, onRe
         </div>
         <h1 className="text-lg font-black">{copy.title}</h1>
         <p className="text-xs text-ink-soft font-semibold leading-relaxed">
-          {copy.message}
+          {message}
         </p>
         {rejected && store?.rejectionReason && (
           <div className="p-3.5 bg-red-100 dark:bg-red-500/10 border border-red-300 dark:border-red-500/30 rounded-2xl text-xs font-bold text-red-600 dark:text-red-300 text-left">

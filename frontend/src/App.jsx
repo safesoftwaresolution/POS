@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import useAutoRefresh from './hooks/useAutoRefresh';
 import { AuthProvider } from './context/AuthContext';
 import useAuth from './hooks/useAuth';
+import useStoreTemplate from './hooks/useStoreTemplate';
 import { ThemeProvider } from './context/ThemeContext';
 import { ModalProvider } from './context/ModalContext';
 import { StoreTemplateProvider } from './context/StoreTemplateContext';
@@ -26,6 +27,7 @@ const POSBento = lazy(() => import('./pages/POSBento'));
 const InventoryBento = lazy(() => import('./pages/InventoryBento'));
 const ProductsBento = lazy(() => import('./pages/ProductsBento'));
 const ServicesBento = lazy(() => import('./pages/ServicesBento'));
+const AppointmentsBento = lazy(() => import('./pages/AppointmentsBento'));
 const CustomersBento = lazy(() => import('./pages/CustomersBento'));
 const CreditBento = lazy(() => import('./pages/CreditBento'));
 const InvoicingBento = lazy(() => import('./pages/InvoicingBento'));
@@ -61,6 +63,16 @@ function PageFallback() {
 function RequireRole({ roles, children }) {
   const { user } = useAuth();
   return roles.includes(user?.role) ? children : <Navigate to="/" replace />;
+}
+
+/**
+ * Restringe una ruta a los locales cuya plantilla habilita la función (p. ej. `appointments`). El backend responde 403
+ * al resto; esto evita ver la pantalla vacía escribiendo la URL. Mientras la plantilla carga no redirige.
+ */
+function RequireFeature({ feature, children }) {
+  const { features, loading } = useStoreTemplate();
+  if (loading) return null;
+  return features[feature] ? children : <Navigate to="/" replace />;
 }
 
 /** Mientras el ADMINISTRATOR no tenga un local ACTIVE, bloquea el POS y muestra el estado. */
@@ -171,6 +183,7 @@ function ProtectedLayoutContent({ mobileSidebarOpen, setMobileSidebarOpen, sideb
             <Route path="/products" element={<ProductsBento />} />
             {/* Todos los roles de tienda ven el catálogo (GET /services); crear y editar lo limita la propia pantalla. */}
             <Route path="/services" element={<ServicesBento />} />
+            <Route path="/appointments" element={<RequireFeature feature="appointments"><AppointmentsBento /></RequireFeature>} />
             <Route path="/categories" element={<CategoriesBento />} />
             <Route path="/customers" element={<CustomersBento />} />
             <Route path="/credit" element={<CreditBento />} />

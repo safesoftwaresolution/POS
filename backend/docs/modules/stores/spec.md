@@ -57,7 +57,7 @@ Ciclo de vida de los comercios/locales de la plataforma SaaS: el **auto-registro
 - `POST /api/v1/stores`: registrar el propio local (`CreateStoreCommand`).
 - `GET /api/v1/stores/me`: consultar el propio local. `PUT /api/v1/stores/me`: editarlo (`UpdateOwnStoreCommand`).
 - `POST /api/v1/stores/me/resubmit` (`ADMINISTRATOR`): reenvía a revisión el local rechazado: `REJECTED` → `PENDING_VERIFICATION`, borra `rejection_reason` y deja el cambio en `store_status_audit`. `400` si el local no está `REJECTED`. La pantalla de revisión (`PendingStoreReviewBento`) muestra un texto por estado (en revisión, rechazado, suspendido, inactivo, error de carga) y, si fue rechazado, el formulario del local (el mismo del alta, `components/store/StoreProfileFields`) con "Reenviar a revisión" (`PUT /stores/me` y luego `resubmit`).
-- `GET /api/v1/stores/me/documents`: documentos propios. `POST /api/v1/stores/me/documents` (multipart): subir un documento.
+- `GET /api/v1/stores/me/documents`: documentos propios. `POST /api/v1/stores/me/documents` (multipart): subir un documento. Los documentos son opcionales (no se exigen para aprobar ni para facturar); la pantalla de revisión los ofrece mientras el local está `PENDING_VERIFICATION` o `REJECTED` ("ayuda a aprobar más rápido"), con las mismas tarjetas que `/documents` (`components/store/StoreDocumentsGrid`, `hooks/useStoreDocuments`).
 
 ## Modelo de Datos
 Tablas `store_categories`, `stores` y `store_documents` (`V3`; `V7` añade `stores.rejection_reason`; `V33` añade `store_categories.template`; `V35` añade `store_categories.theme`; `V36` añade `store_category_templates` y `store_templates`). Ver `_database-schema.md`.

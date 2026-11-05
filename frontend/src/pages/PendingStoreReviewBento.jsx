@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Clock, XCircle, PauseCircle, Ban, WifiOff, LogOut, Send, AlertCircle, RefreshCw } from 'lucide-react';
+import { Clock, XCircle, PauseCircle, Ban, WifiOff, LogOut, Send, AlertCircle, RefreshCw, FileCheck2, ChevronDown } from 'lucide-react';
 import useAuth from '../hooks/useAuth';
 import { updateOwnStoreApi, resubmitOwnStoreApi } from '../services/storesApi';
 import StoreProfileFields from '../components/store/StoreProfileFields';
+import StoreDocumentsGrid from '../components/store/StoreDocumentsGrid';
 
 const STATUS_COPY = {
   PENDING_VERIFICATION: {
@@ -96,6 +97,27 @@ function RejectedStoreForm({ store, onStoreChange }) {
   );
 }
 
+/** Documentos KYC opcionales mientras el local está en revisión: subirlos ayuda a aprobarlo más rápido. */
+function OptionalDocuments() {
+  return (
+    <details className="group text-left rounded-2xl border border-line">
+      <summary className="list-none cursor-pointer p-3.5 flex items-center gap-2 text-xs font-bold text-ink">
+        <FileCheck2 className="w-4 h-4 text-brand shrink-0" />
+        <span className="flex-1">
+          Sube los documentos de tu local (opcional)
+          <span className="block text-[11px] font-semibold text-ink-muted">
+            Ayuda a aprobar más rápido: RUT, Cámara de Comercio, cédula... No son obligatorios para facturar.
+          </span>
+        </span>
+        <ChevronDown className="w-4 h-4 text-ink-muted transition-transform group-open:rotate-180" />
+      </summary>
+      <div className="p-3.5 pt-0 space-y-3">
+        <StoreDocumentsGrid className="grid grid-cols-1 sm:grid-cols-2 gap-3" />
+      </div>
+    </details>
+  );
+}
+
 /**
  * Pantalla que reemplaza al POS mientras el local no está ACTIVE. `store` es el local del ADMINISTRATOR;
  * con `loadError` se muestra el aviso de error de carga y `onRetry` vuelve a consultar.
@@ -106,6 +128,8 @@ export default function PendingStoreReviewBento({ store, loadError = false, onRe
   const copy = loadError ? LOAD_ERROR_COPY : (STATUS_COPY[store?.status] || STATUS_COPY.PENDING_VERIFICATION);
   const Icon = copy.icon;
   const rejected = !loadError && store?.status === 'REJECTED';
+  // Mientras se revisa (o se corrige) el local se pueden adelantar los documentos; no son obligatorios.
+  const canUploadDocuments = !loadError && (store?.status === 'PENDING_VERIFICATION' || rejected);
 
   const handleLogout = async () => {
     await logout();
@@ -114,7 +138,7 @@ export default function PendingStoreReviewBento({ store, loadError = false, onRe
 
   return (
     <div className="min-h-screen bg-page text-ink flex items-center justify-center p-4 select-none">
-      <div className={`${rejected ? 'max-w-lg' : 'max-w-md'} w-full bento-card p-8 rounded-3xl shadow-xl space-y-5 text-center`}>
+      <div className={`${canUploadDocuments ? 'max-w-2xl' : 'max-w-md'} w-full bento-card p-8 rounded-3xl shadow-xl space-y-5 text-center`}>
         <div className={`w-16 h-16 rounded-2xl bg-gray-100 dark:bg-white/10 flex items-center justify-center mx-auto ${copy.iconClass}`}>
           <Icon className="w-9 h-9" />
         </div>
@@ -128,6 +152,7 @@ export default function PendingStoreReviewBento({ store, loadError = false, onRe
           </div>
         )}
         {rejected && <RejectedStoreForm key={store.id} store={store} onStoreChange={onStoreChange} />}
+        {canUploadDocuments && <OptionalDocuments />}
         {loadError && onRetry && (
           <button
             type="button"

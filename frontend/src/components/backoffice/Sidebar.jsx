@@ -4,6 +4,7 @@ import {
   Store,
   Tags,
   Package,
+  Sparkles,
   Puzzle,
   ScrollText,
   LifeBuoy,
@@ -45,6 +46,7 @@ export default function BackofficeSidebar({ isOpen, onClose, isCollapsed, onTogg
       items: [
         { path: '/backoffice/categories', label: 'Categorías de Locales', icon: Tags },
         { path: '/backoffice/product-categories', label: 'Categorías de Producto', icon: Package },
+        { path: '/backoffice/service-categories', label: 'Categorías de Servicio', icon: Sparkles },
         { path: '/backoffice/parameters', label: 'Parámetros y Catálogos', icon: Puzzle },
         { path: '/backoffice/legal-documents', label: 'Textos Legales', icon: ScrollText },
       ],

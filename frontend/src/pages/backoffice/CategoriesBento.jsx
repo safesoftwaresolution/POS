@@ -9,10 +9,13 @@ import {
 import useModal from '../../hooks/useModal';
 import useLoad from '../../hooks/useLoad';
 import asList from '../../utils/asList';
-import { DEFAULT_STORE_TEMPLATE, STORE_TEMPLATE_OPTIONS, storeTemplateLabel } from '../../constants/storeTemplates';
+import { DEFAULT_STORE_TEMPLATE } from '../../constants/storeTemplates';
+import { templatesOf } from '../../utils/templateSelection';
+import TemplateCheckboxes from '../../components/backoffice/TemplateCheckboxes';
+import TemplateChips from '../../components/backoffice/TemplateChips';
 import { DEFAULT_STORE_THEME, STORE_THEME_OPTIONS, storeThemeFor } from '../../constants/storeThemes';
 
-const EMPTY_FORM = { id: null, name: '', description: '', template: DEFAULT_STORE_TEMPLATE, theme: DEFAULT_STORE_THEME };
+const EMPTY_FORM = { id: null, name: '', description: '', templates: [DEFAULT_STORE_TEMPLATE], theme: DEFAULT_STORE_THEME };
 
 export default function CategoriesBento() {
   const { confirm, notify } = useModal();
@@ -28,7 +31,7 @@ export default function CategoriesBento() {
   };
 
   const openEdit = (cat) => {
-    setForm({ id: cat.id, name: cat.name, description: cat.description || '', template: cat.template || DEFAULT_STORE_TEMPLATE, theme: cat.theme || DEFAULT_STORE_THEME });
+    setForm({ id: cat.id, name: cat.name, description: cat.description || '', templates: templatesOf(cat).length ? templatesOf(cat) : [DEFAULT_STORE_TEMPLATE], theme: cat.theme || DEFAULT_STORE_THEME });
     setError('');
     setShowForm(true);
   };
@@ -36,11 +39,15 @@ export default function CategoriesBento() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    if (form.templates.length === 0) {
+      setError('Elige al menos una plantilla.');
+      return;
+    }
     try {
       if (form.id) {
-        await updateBackofficeStoreCategoryApi(form.id, form.name, form.description, form.template, form.theme);
+        await updateBackofficeStoreCategoryApi(form.id, form.name, form.description, form.templates, form.theme);
       } else {
-        await createBackofficeStoreCategoryApi(form.name, form.description, form.template, form.theme);
+        await createBackofficeStoreCategoryApi(form.name, form.description, form.templates, form.theme);
       }
       setShowForm(false);
       setForm(EMPTY_FORM);
@@ -99,9 +106,7 @@ export default function CategoriesBento() {
                     <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-extrabold">
                       Activa
                     </span>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-brand/10 text-brand border border-brand/20 font-extrabold">
-                      {storeTemplateLabel(cat.template)}
-                    </span>
+                    <TemplateChips entity={cat} />
                     <span
                       className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border font-extrabold"
                       style={{ color: storeThemeFor(cat.theme).accent, borderColor: `${storeThemeFor(cat.theme).accent}55`, backgroundColor: `${storeThemeFor(cat.theme).accent}1A` }}
@@ -182,18 +187,12 @@ export default function CategoriesBento() {
                 />
               </div>
               <div>
-                <label htmlFor="category-template" className="font-bold text-gray-700 dark:text-gray-300 block mb-1">Plantilla del local:</label>
-                <select
-                  id="category-template"
-                  value={form.template}
-                  onChange={e => setForm({ ...form, template: e.target.value })}
-                  className="w-full p-2.5 bg-page border border-line rounded-2xl text-xs font-semibold text-ink focus:outline-none focus:border-ink dark:focus:border-brand"
-                >
-                  {STORE_TEMPLATE_OPTIONS.map(opt => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                  ))}
-                </select>
-                <p className="text-[11px] text-ink-muted mt-1">Los locales de esta categoría usan esta plantilla automáticamente.</p>
+                <TemplateCheckboxes
+                  legend="Plantillas del local:"
+                  value={form.templates}
+                  onChange={templates => setForm({ ...form, templates })}
+                />
+                <p className="text-[11px] text-ink-muted mt-1">Los locales de esta categoría usan estas plantillas automáticamente.</p>
               </div>
               <div>
                 <label htmlFor="category-theme" className="font-bold text-gray-700 dark:text-gray-300 block mb-1">Tema visual:</label>

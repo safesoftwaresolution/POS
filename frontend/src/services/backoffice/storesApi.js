@@ -94,17 +94,25 @@ export async function getBackofficeStoreCategoriesApi() {
   return await fetchApi('/backoffice/store-categories');
 }
 
-export async function createBackofficeStoreCategoryApi(name, description = '', template = 'RETAIL', theme = 'DEFAULT') {
+export async function createBackofficeStoreCategoryApi(name, description = '', templates = ['RETAIL'], theme = 'DEFAULT') {
   return await fetchApi('/backoffice/store-categories', {
     method: 'POST',
-    body: JSON.stringify({ name, description, template, theme }),
+    body: JSON.stringify({ name, description, templates, theme }),
   });
 }
 
-export async function updateBackofficeStoreCategoryApi(id, name, description = '', template = 'RETAIL', theme = 'DEFAULT') {
+export async function updateBackofficeStoreCategoryApi(id, name, description = '', templates = ['RETAIL'], theme = 'DEFAULT') {
   return await fetchApi(`/backoffice/store-categories/${id}`, {
     method: 'PUT',
-    body: JSON.stringify({ name, description, template, theme }),
+    body: JSON.stringify({ name, description, templates, theme }),
+  });
+}
+
+// Plantillas extra de un local (se suman a las de su categoría). Una lista vacía las quita.
+export async function updateBackofficeStoreTemplatesApi(storeId, extraTemplates) {
+  return await fetchApi(`/backoffice/stores/${storeId}/templates`, {
+    method: 'PUT',
+    body: JSON.stringify({ extraTemplates }),
   });
 }
 

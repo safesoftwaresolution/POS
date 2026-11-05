@@ -106,7 +106,15 @@ Lo arma `AlegraInvoiceMapper`: cada línea se redondea a 2 decimales (HALF_UP) y
 - **Correo** (`POST /send-email`): Alegra adjunta el XML en un zip, no el PDF. Verificado en el sandbox: **entrega a la dirección de `replyTo` y no a la de `to`**, al contrario de su documentación; por eso las dos llevan la dirección del cliente. Confirmar con Alegra y revisar en producción.
 
 ### Notas crédito y débito
-`AlegraNoteClient`: numeración propia (documentos `91`/`92`, prefijo propio) **sin resolución**; el cuerpo lleva `invoicePeriod` (fecha de la factura de origen) y `associatedDocuments` (fecha, tipo `01`, prefijo, número y CUFE de la factura aceptada). La factura de origen se busca por `(tienda, número legal)`; si no existe o no está validada falla **antes de gastar un número**. El cliente sale de la venta original. Misma disciplina que las facturas (llave, estado legal, rotación tras un rechazo). Pendiente: la reserva en tres pasos de los servicios de notas (ver «Pendiente / no verificado»).
+`AlegraNoteClient`: numeración propia (documentos `91`/`92`, prefijo propio) **sin resolución**; el cuerpo lleva `invoicePeriod` (fecha de la factura de origen) y `associatedDocuments` (fecha, tipo `01`, prefijo, número y CUFE de la factura aceptada). La factura de origen se busca por `(tienda, número legal)`; si no existe o no está validada falla **antes de gastar un número**. El cliente sale de la venta original. Misma disciplina que las facturas (llave, estado legal, rotación tras un rechazo). Los servicios de notas emiten en tres pasos como las facturas (ver «Notas: reserva en tres pasos»).
+
+### Notas: reserva en tres pasos
+`CreditNoteServiceImpl` y `DebitNoteServiceImpl` ya no son transaccionales y nunca llaman al proveedor con una transacción abierta ni con el lock de la fila (`V35` agrega `attempts` y `processing_started_at` a `electronic_credit_notes` y `electronic_debit_notes`):
+1. **Reservar** (`CreditNoteEmissionTransactions.reserve` / `DebitNoteEmissionTransactions.reserve`, transacción corta con lock por `reference_code`): crea o bloquea la nota; si no está validada ni tiene una reserva vigente (`billing.emission.lease`, 5 min) la deja `PENDING`, cuenta el intento y toma la reserva. Una nota validada o en curso devuelve su estado sin llamar al proveedor. Si dos hilos crean la misma referencia a la vez, el segundo reintenta la reserva y ya la encuentra.
+2. **Llamar al proveedor sin transacción** (incluida la recuperación del 409 de Factus, que no cambió).
+3. **Registrar el resultado** (`complete`, transacción corta): vuelve a bloquear la fila, aplica el resultado y libera la reserva. Una respuesta incompleta (por ejemplo, validada sin número legal) deja la nota en `ERROR` en vez de revertirla.
+
+Una reserva abandonada (el proceso murió entre los pasos) la retoma la siguiente solicitud pasado el lease. Las notas **no** tienen reintento automático ni conciliación por `providerDocumentId`: un resultado `PENDING` del proveedor se registra como `ERROR` y se reintenta con una nueva solicitud con la misma referencia. `createFromSale` y el borrado de notas sin validar tampoco abren transacción alrededor de la llamada al proveedor.
 
 ---
 
@@ -510,10 +518,8 @@ Una fila por local (relación 1 a 1 con `stores`).
 
 ## Pendiente / no verificado
 
-- **Notas crédito y débito dentro de la transacción con bloqueo**: `CreditNoteServiceImpl.emit` y `DebitNoteServiceImpl.emit` siguen llamando al
-  proveedor mientras sostienen el lock de la fila (por `reference_code`); con Alegra además gastan una conexión extra por el asignador.
-  Falta pasarlas a reservar → llamar → registrar, con una migración (`V35`) que agregue reserva e intentos a las notas. Las facturas ya están
-  resueltas (ver «Emisión de facturas (tres pasos)»). No hay reintento automático de notas: se reintentan con una nueva solicitud con la misma referencia.
+- **Notas: fallo del paso de registro y borrado en curso** (advertencias de la revisión independiente): si `complete` falla después de llamar al proveedor (base caída), el resultado se pierde y, vencido el lease, un reintento vuelve a emitir (con Alegra la llave de idempotencia lo cubre; las facturas además concilian por id). El borrado de una nota sin validar no respeta el lease: si coincide con una emisión en curso, el emisor termina con error en `complete`. Mitigación pendiente: rechazar el borrado con reserva vigente y conciliar notas por `providerDocumentId`.
+- **Notas sin conciliación ni reintento automático**: un documento de nota que Alegra deja en espera (`WAITING_RESPONSE`) se registra como `ERROR`, guarda su `providerDocumentId` y se reintenta a mano con la misma referencia (la llave de idempotencia evita duplicarlo). Falta conciliarlo por id y un job de reintento como el de las facturas.
 - **Conciliación**: una factura `PENDING` se concilia cuando el job la toma o alguien la reintenta; no hay webhook de Alegra ni job de conciliación propio.
 - **Token de producción de Alegra**: cómo se obtiene y si cambia por entorno no está documentado; confirmar con Alegra antes del despliegue.
 - **Correo con Alegra**: el sandbox entrega a `replyTo` y no a `to` (ver «PDF, XML y correo»); confirmar con Alegra y revisar en producción. Las

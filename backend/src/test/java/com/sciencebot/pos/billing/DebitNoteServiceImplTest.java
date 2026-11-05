@@ -9,6 +9,7 @@ import com.sciencebot.pos.billing.internal.entities.ElectronicInvoice;
 import com.sciencebot.pos.billing.internal.mappers.ElectronicDebitNoteMapper;
 import com.sciencebot.pos.billing.internal.repositories.ElectronicDebitNoteRepository;
 import com.sciencebot.pos.billing.internal.repositories.ElectronicInvoiceRepository;
+import com.sciencebot.pos.billing.internal.services.DebitNoteEmissionTransactions;
 import com.sciencebot.pos.billing.internal.services.DebitNoteServiceImpl;
 import com.sciencebot.pos.config.tenant.TenantContext;
 import jakarta.persistence.EntityNotFoundException;
@@ -19,6 +20,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -48,12 +50,24 @@ class DebitNoteServiceImplTest {
 
         when(factusProvider.getProviderName()).thenReturn("factus");
 
+        ElectronicDebitNoteMapper mapper = new ElectronicDebitNoteMapper();
         service = new DebitNoteServiceImpl(
                 repository,
-                new ElectronicDebitNoteMapper(),
+                mapper,
                 invoiceRepository,
+                new DebitNoteEmissionTransactions(repository, mapper, Duration.ofMinutes(5)),
                 List.of(factusProvider)
         );
+    }
+
+    /** La nota se crea en la reserva y se vuelve a leer al registrar el resultado: un repositorio con estado minimo. */
+    private void givenTheNoteIsStoredOnceCreated() {
+        java.util.concurrent.atomic.AtomicReference<ElectronicDebitNote> stored = new java.util.concurrent.atomic.AtomicReference<>();
+        when(repository.findByReferenceCodeForUpdate(any())).thenAnswer(i -> Optional.ofNullable(stored.get()));
+        when(repository.saveAndFlush(any(ElectronicDebitNote.class))).thenAnswer(i -> {
+            stored.set(i.getArgument(0));
+            return i.getArgument(0);
+        });
     }
 
     @AfterEach
@@ -83,8 +97,7 @@ class DebitNoteServiceImplTest {
     }
 
     private void stubNewNotePersistence() {
-        when(repository.findByReferenceCodeForUpdate(any())).thenReturn(Optional.empty());
-        when(repository.saveAndFlush(any(ElectronicDebitNote.class))).thenAnswer(i -> i.getArgument(0));
+        givenTheNoteIsStoredOnceCreated();
         when(repository.save(any(ElectronicDebitNote.class))).thenAnswer(i -> i.getArgument(0));
     }
 
@@ -111,7 +124,7 @@ class DebitNoteServiceImplTest {
         assertEquals("cude-abc", result.cude());
         assertEquals(1L, result.storeId());
         assertNull(result.saleId());
-        verify(repository).save(any(ElectronicDebitNote.class));
+        verify(repository, times(2)).save(any(ElectronicDebitNote.class)); // reserva + resultado
     }
 
     @Test

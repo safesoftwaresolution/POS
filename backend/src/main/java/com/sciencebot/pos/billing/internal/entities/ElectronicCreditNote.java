@@ -62,6 +62,14 @@ public class ElectronicCreditNote {
     @Column(name = "validated_at")
     private LocalDateTime validatedAt;
 
+    /** Intentos de emision de la nota. */
+    @Column(name = "attempts", nullable = false)
+    private int attempts;
+
+    /** Reserva (lease) de la emision en curso: mientras este vigente ningun otro hilo emite esta nota. */
+    @Column(name = "processing_started_at")
+    private LocalDateTime processingStartedAt;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -146,6 +154,32 @@ public class ElectronicCreditNote {
         this.status = ElectronicInvoiceStatus.PENDING;
         this.errorMessage = null;
     }
+
+    /**
+     * Reserva la emision: una nota validada no se vuelve a emitir y, con una reserva vigente de otro hilo, tampoco.
+     * Si no, queda PENDING, cuenta el intento y toma la reserva (que caduca pasado {@code lease}).
+     */
+    public ElectronicInvoice.ReserveOutcome reserveForEmission(LocalDateTime now, java.time.Duration lease) {
+        if (this.status == ElectronicInvoiceStatus.VALIDATED) {
+            return ElectronicInvoice.ReserveOutcome.ALREADY_VALIDATED;
+        }
+        if (this.processingStartedAt != null && this.processingStartedAt.plus(lease).isAfter(now)) {
+            return ElectronicInvoice.ReserveOutcome.IN_PROGRESS;
+        }
+        this.status = ElectronicInvoiceStatus.PENDING;
+        this.errorMessage = null;
+        this.attempts++;
+        this.processingStartedAt = now;
+        return ElectronicInvoice.ReserveOutcome.RESERVED;
+    }
+
+    /** Cierra el intento: libera la reserva. */
+    public void completeAttempt() {
+        this.processingStartedAt = null;
+    }
+
+    public int getAttempts() { return attempts; }
+    public LocalDateTime getProcessingStartedAt() { return processingStartedAt; }
 
     public boolean isValidated() {
         return this.status == ElectronicInvoiceStatus.VALIDATED;

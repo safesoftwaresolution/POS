@@ -18,6 +18,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -38,6 +39,7 @@ public class CreditNoteServiceImpl implements CreditNoteService {
     private final ElectronicCreditNoteMapper mapper;
     private final ElectronicInvoiceRepository invoiceRepository;
     private final SaleFacade saleFacade;
+    private final CreditNoteEmissionTransactions emissionTransactions;
     private final Map<String, CreditNoteProvider> providersMap;
 
     @Value("${billing.provider:alegra}")
@@ -48,12 +50,14 @@ public class CreditNoteServiceImpl implements CreditNoteService {
             ElectronicCreditNoteMapper mapper,
             ElectronicInvoiceRepository invoiceRepository,
             @Lazy SaleFacade saleFacade,
+            CreditNoteEmissionTransactions emissionTransactions,
             List<CreditNoteProvider> providers
     ) {
         this.repository = repository;
         this.mapper = mapper;
         this.invoiceRepository = invoiceRepository;
         this.saleFacade = saleFacade;
+        this.emissionTransactions = emissionTransactions;
         this.providersMap = providers.stream()
                 .collect(Collectors.toMap(
                         p -> p.getProviderName().toLowerCase(),
@@ -63,11 +67,14 @@ public class CreditNoteServiceImpl implements CreditNoteService {
     }
 
     @Override
-    @Transactional
     public CreditNoteDTO createAndValidateCreditNote(CreateCreditNoteRequest request) {
         return emit(request, null);
     }
 
+    /**
+     * Emision en tres pasos: reservar (transaccion corta con lock) -> llamar al proveedor SIN transaccion ni lock ->
+     * registrar el resultado (transaccion corta). Emisiones simultaneas de la misma referencia llaman al proveedor una vez.
+     */
     private CreditNoteDTO emit(CreateCreditNoteRequest request, Long saleId) {
         Objects.requireNonNull(request, "La solicitud de nota crédito no puede ser nula");
         if (request.referenceCode() == null || request.referenceCode().isBlank()) {
@@ -76,36 +83,16 @@ public class CreditNoteServiceImpl implements CreditNoteService {
 
         // Sin local en la sesión no se emite: antes se asumía el local 1 y se facturaba con el equivocado.
         Long storeId = requireStoreId();
-
-        // 1. Guard de idempotencia: si ya existe una nota crédito con esta referencia
-        Optional<ElectronicCreditNote> existingOpt = repository.findByReferenceCodeForUpdate(request.referenceCode());
-        ElectronicCreditNote note;
-        if (existingOpt.isPresent()) {
-            note = existingOpt.get();
-            // reference_code es UNIQUE global: nunca se reutiliza ni se expone la nota de otro local
-            Preconditions.checkState(storeId.equals(note.getStoreId()),
-                    "El reference_code " + request.referenceCode() + " ya está en uso");
-            if (note.isValidated()) {
-                log.info("La nota crédito con referencia {} ya se encuentra VALIDATED en el sistema ({})",
-                        request.referenceCode(), note.getCreditNoteNumber());
-                return mapper.toDto(note);
-            }
-            note.prepareForRetry();
-        } else {
-            note = repository.saveAndFlush(ElectronicCreditNote.initialize(
-                    storeId,
-                    saleId,
-                    request.referenceCode(),
-                    request.billNumber(),
-                    request.correctionConceptCode(),
-                    request.customizationId()
-            ));
-        }
-
-        // 2. Resolver estrategia de proveedor activa
         CreditNoteProvider provider = resolveProvider();
 
-        // 3. Ejecutar emisión hacia el proveedor
+        // Paso A: reserva. Si la nota ya está validada o la emite otro hilo, se devuelve su estado actual.
+        CreditNoteEmissionTransactions.Reservation reservation = reserve(request, saleId, storeId);
+        if (reservation.outcome() != ElectronicInvoice.ReserveOutcome.RESERVED) {
+            log.info("La nota crédito con referencia {} no se emite ahora: {}", request.referenceCode(), reservation.outcome());
+            return reservation.note();
+        }
+
+        // Paso B: proveedor, sin transacción abierta.
         CreditNoteResult result;
         try {
             result = provider.emitCreditNote(request, storeId);
@@ -123,10 +110,17 @@ public class CreditNoteServiceImpl implements CreditNoteService {
             result = CreditNoteResult.error("Error en proveedor " + provider.getProviderName() + ": " + ex.getMessage());
         }
 
-        // 4. Aplicar resultados a la entidad y persistir
-        applyResultToEntity(note, result);
-        ElectronicCreditNote saved = repository.save(note);
-        return mapper.toDto(saved);
+        // Paso C: registrar el resultado.
+        return emissionTransactions.complete(request.referenceCode(), storeId, result);
+    }
+
+    private CreditNoteEmissionTransactions.Reservation reserve(CreateCreditNoteRequest request, Long saleId, Long storeId) {
+        try {
+            return emissionTransactions.reserve(request, saleId, storeId);
+        } catch (DataIntegrityViolationException concurrentInsert) {
+            // Dos hilos crearon la misma referencia a la vez: el segundo ya la encuentra y se encola detrás del lock.
+            return emissionTransactions.reserve(request, saleId, storeId);
+        }
     }
 
     @Override
@@ -203,7 +197,6 @@ public class CreditNoteServiceImpl implements CreditNoteService {
     }
 
     @Override
-    @Transactional
     public boolean deleteUnvalidatedCreditNote(String referenceCode) {
         if (referenceCode == null || referenceCode.isBlank()) {
             throw new IllegalArgumentException("El reference_code es obligatorio");
@@ -223,7 +216,6 @@ public class CreditNoteServiceImpl implements CreditNoteService {
     }
 
     @Override
-    @Transactional
     public CreditNoteDTO createFromSale(Long saleId, String conceptCode, String observation) {
         Objects.requireNonNull(saleId, "El saleId es obligatorio");
 
@@ -319,25 +311,4 @@ public class CreditNoteServiceImpl implements CreditNoteService {
         return provider;
     }
 
-    private void applyResultToEntity(ElectronicCreditNote note, CreditNoteResult result) {
-        if (result == null) {
-            note.markAsError("Respuesta vacía del proveedor de facturación");
-            return;
-        }
-
-        note.trackProviderDocument(result.providerDocumentId());
-        if ("VALIDATED".equalsIgnoreCase(result.status())) {
-            note.markAsValidated(
-                    result.creditNoteNumber(),
-                    result.cude(),
-                    result.qrCode(),
-                    result.pdfUrl(),
-                    result.validatedAt()
-            );
-        } else if ("REJECTED".equalsIgnoreCase(result.status())) {
-            note.markAsRejected(result.errorMessage());
-        } else {
-            note.markAsError(result.errorMessage());
-        }
-    }
 }

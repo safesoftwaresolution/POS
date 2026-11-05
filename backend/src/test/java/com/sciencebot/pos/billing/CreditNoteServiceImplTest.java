@@ -9,6 +9,7 @@ import com.sciencebot.pos.billing.internal.entities.ElectronicInvoice;
 import com.sciencebot.pos.billing.internal.mappers.ElectronicCreditNoteMapper;
 import com.sciencebot.pos.billing.internal.repositories.ElectronicCreditNoteRepository;
 import com.sciencebot.pos.billing.internal.repositories.ElectronicInvoiceRepository;
+import com.sciencebot.pos.billing.internal.services.CreditNoteEmissionTransactions;
 import com.sciencebot.pos.billing.internal.services.CreditNoteServiceImpl;
 import com.sciencebot.pos.config.tenant.TenantContext;
 import com.sciencebot.pos.sales.SaleDto;
@@ -20,6 +21,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -52,13 +54,25 @@ class CreditNoteServiceImplTest {
 
         when(factusProvider.getProviderName()).thenReturn("factus");
 
+        ElectronicCreditNoteMapper mapper = new ElectronicCreditNoteMapper();
         service = new CreditNoteServiceImpl(
                 repository,
-                new ElectronicCreditNoteMapper(),
+                mapper,
                 invoiceRepository,
                 saleFacade,
+                new CreditNoteEmissionTransactions(repository, mapper, Duration.ofMinutes(5)),
                 List.of(factusProvider)
         );
+    }
+
+    /** La nota se crea en la reserva y se vuelve a leer al registrar el resultado: un repositorio con estado minimo. */
+    private void givenTheNoteIsStoredOnceCreated() {
+        java.util.concurrent.atomic.AtomicReference<ElectronicCreditNote> stored = new java.util.concurrent.atomic.AtomicReference<>();
+        when(repository.findByReferenceCodeForUpdate(any())).thenAnswer(i -> Optional.ofNullable(stored.get()));
+        when(repository.saveAndFlush(any(ElectronicCreditNote.class))).thenAnswer(i -> {
+            stored.set(i.getArgument(0));
+            return i.getArgument(0);
+        });
     }
 
     @AfterEach
@@ -86,10 +100,9 @@ class CreditNoteServiceImplTest {
     void createAndValidateCreditNote_SuccessfulEmission_SavesAndReturnsValidatedDto() {
         CreateCreditNoteRequest request = createSampleRequest();
 
-        when(repository.findByReferenceCodeForUpdate(request.referenceCode())).thenReturn(Optional.empty());
+        givenTheNoteIsStoredOnceCreated();
 
         ElectronicCreditNote initialNote = ElectronicCreditNote.initialize(1L, null, request.referenceCode(), request.billNumber(), "2", "20");
-        when(repository.saveAndFlush(any(ElectronicCreditNote.class))).thenReturn(initialNote);
         when(repository.save(any(ElectronicCreditNote.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         CreditNoteResult successResult = CreditNoteResult.success("NC990000001", "cude-abc", "qr-url", "pdf-url");
@@ -101,7 +114,7 @@ class CreditNoteServiceImplTest {
         assertEquals("NC990000001", result.creditNoteNumber());
         assertEquals("VALIDATED", result.status());
         assertEquals("cude-abc", result.cude());
-        verify(repository).save(any(ElectronicCreditNote.class));
+        verify(repository, times(2)).save(any(ElectronicCreditNote.class)); // reserva + resultado
         verify(factusProvider).emitCreditNote(eq(request), eq(1L));
     }
 
@@ -126,10 +139,9 @@ class CreditNoteServiceImplTest {
     void createAndValidateCreditNote_WhenConflict409_AttemptsDeleteAndRetries() {
         CreateCreditNoteRequest request = createSampleRequest();
 
-        when(repository.findByReferenceCodeForUpdate(request.referenceCode())).thenReturn(Optional.empty());
+        givenTheNoteIsStoredOnceCreated();
 
         ElectronicCreditNote initialNote = ElectronicCreditNote.initialize(1L, null, request.referenceCode(), request.billNumber(), "2", "20");
-        when(repository.saveAndFlush(any(ElectronicCreditNote.class))).thenReturn(initialNote);
         when(repository.save(any(ElectronicCreditNote.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         CreditNoteResult conflictResult = CreditNoteResult.error("Error 409 Conflict: documento pendiente");
@@ -166,8 +178,7 @@ class CreditNoteServiceImplTest {
         SaleDto sale = new SaleDto(10L, "FACT-001", LocalDateTime.now(), "Cliente", BigDecimal.valueOf(100), BigDecimal.valueOf(100), BigDecimal.ZERO, "cajero", List.of(), "CASH");
         when(saleFacade.getById(10L)).thenReturn(Optional.of(sale));
 
-        when(repository.findByReferenceCodeForUpdate(any())).thenReturn(Optional.empty());
-        when(repository.saveAndFlush(any(ElectronicCreditNote.class))).thenAnswer(i -> i.getArgument(0));
+        givenTheNoteIsStoredOnceCreated();
         when(repository.save(any(ElectronicCreditNote.class))).thenAnswer(i -> i.getArgument(0));
 
         CreditNoteResult successResult = CreditNoteResult.success("NC-888", "cude-888", "qr", "pdf");
@@ -235,8 +246,7 @@ class CreditNoteServiceImplTest {
         when(invoiceRepository.findBySaleIdAndStoreId(10L, 1L)).thenReturn(Optional.of(invoice));
         SaleDto sale = new SaleDto(10L, "FACT-001", LocalDateTime.now(), "Cliente", BigDecimal.valueOf(100), BigDecimal.valueOf(100), BigDecimal.ZERO, "cajero", List.of(), "CASH");
         when(saleFacade.getById(10L)).thenReturn(Optional.of(sale));
-        when(repository.findByReferenceCodeForUpdate(any())).thenReturn(Optional.empty());
-        when(repository.saveAndFlush(any(ElectronicCreditNote.class))).thenAnswer(i -> i.getArgument(0));
+        givenTheNoteIsStoredOnceCreated();
         when(repository.save(any(ElectronicCreditNote.class))).thenAnswer(i -> i.getArgument(0));
         when(factusProvider.emitCreditNote(any(), eq(1L))).thenReturn(CreditNoteResult.success("NC-1", "cude", "qr", "pdf"));
 

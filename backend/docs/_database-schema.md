@@ -1,7 +1,7 @@
 <!-- doc-version: 1.7 | last-updated: 2026-10-29 -->
 # Esquema de Base de Datos — Vista Global
 
-Fuente de verdad: las migraciones Flyway en `src/main/resources/db/migration/` (hoy `V1` … `V34`). Este documento es el mapa;
+Fuente de verdad: las migraciones Flyway en `src/main/resources/db/migration/` (hoy `V1` … `V35`). Este documento es el mapa;
 el DDL columna a columna vive en las migraciones y, para los módulos con tablas propias complejas, en su `spec.md`.
 
 ## Diagrama Entidad-Relación
@@ -78,8 +78,8 @@ erDiagram
 | billing | `electronic_invoices` | V2, V5, V13 (`store_id`), V33 (`provider_document_id`), V34 (`attempts`, `processing_started_at`, `next_retry_at`) | Una por venta; `provider_document_id` también en las notas; V34: reserva (lease) de la emisión y reintento automático |
 | billing | `store_billing_config` | V14 | PK = `store_id`; secretos cifrados |
 | billing | `numbering_range_audit` | V15, V17 | Bitácora de rangos |
-| billing | `electronic_credit_notes` | V18 | `reference_code` único global |
-| billing | `electronic_debit_notes` | V19 | `reference_code` único global |
+| billing | `electronic_credit_notes` | V18, V33 (`provider_document_id`), V35 (`attempts`, `processing_started_at`) | `reference_code` único global; V35: reserva (lease) de la emisión |
+| billing | `electronic_debit_notes` | V19, V33 (`provider_document_id`), V35 (`attempts`, `processing_started_at`) | `reference_code` único global; V35: reserva (lease) de la emisión |
 | billing | `billing_numbering_range` | V33 | Rangos de numeración locales (Alegra): único `(store_id, environment, document, prefix, resolution_number)` |
 | billing | `billing_document_number` | V33 | Libro de números asignados: único por referencia y por `(range_id, number)` |
 

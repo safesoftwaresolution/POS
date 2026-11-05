@@ -16,6 +16,7 @@ import jakarta.persistence.EntityNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -43,6 +44,7 @@ public class DebitNoteServiceImpl implements DebitNoteService {
     private final ElectronicDebitNoteRepository repository;
     private final ElectronicDebitNoteMapper mapper;
     private final ElectronicInvoiceRepository invoiceRepository;
+    private final DebitNoteEmissionTransactions emissionTransactions;
     private final Map<String, DebitNoteProvider> providersMap;
 
     @Value("${billing.provider:alegra}")
@@ -52,11 +54,13 @@ public class DebitNoteServiceImpl implements DebitNoteService {
             ElectronicDebitNoteRepository repository,
             ElectronicDebitNoteMapper mapper,
             ElectronicInvoiceRepository invoiceRepository,
+            DebitNoteEmissionTransactions emissionTransactions,
             List<DebitNoteProvider> providers
     ) {
         this.repository = repository;
         this.mapper = mapper;
         this.invoiceRepository = invoiceRepository;
+        this.emissionTransactions = emissionTransactions;
         this.providersMap = providers.stream()
                 .collect(Collectors.toMap(
                         p -> p.getProviderName().toLowerCase(),
@@ -66,13 +70,11 @@ public class DebitNoteServiceImpl implements DebitNoteService {
     }
 
     @Override
-    @Transactional
     public DebitNoteDTO createAndValidateDebitNote(CreateDebitNoteRequest request) {
         return emit(request, null);
     }
 
     @Override
-    @Transactional
     public DebitNoteDTO createForSale(Long saleId, CreateDebitNoteRequest request) {
         Preconditions.requireNotNull(saleId, "El saleId es obligatorio");
         Preconditions.requireNotNull(request, "La solicitud de nota débito no puede ser nula");
@@ -161,7 +163,6 @@ public class DebitNoteServiceImpl implements DebitNoteService {
     }
 
     @Override
-    @Transactional
     public boolean deleteUnvalidatedDebitNote(String referenceCode) {
         String reference = Preconditions.requireNotBlank(referenceCode, "El reference_code es obligatorio");
         Long storeId = requireStoreId();
@@ -189,37 +190,17 @@ public class DebitNoteServiceImpl implements DebitNoteService {
         Preconditions.requireNotEmpty(request.items(), "La nota débito debe contener al menos un ítem");
         Long storeId = requireStoreId();
 
-        // 1. Guard de idempotencia bajo bloqueo pesimista sobre la referencia
-        Optional<ElectronicDebitNote> existingOpt = repository.findByReferenceCodeForUpdate(referenceCode);
-        ElectronicDebitNote note;
-        if (existingOpt.isPresent()) {
-            note = existingOpt.get();
-            // reference_code es UNIQUE global: nunca se reutiliza ni se expone la nota de otro local
-            Preconditions.checkState(storeId.equals(note.getStoreId()),
-                    "El reference_code " + referenceCode + " ya está en uso");
-            Preconditions.checkState(billNumber.equals(note.getBillNumber()),
-                    "El reference_code " + referenceCode + " ya fue usado para la factura " + note.getBillNumber());
-            if (note.isValidated()) {
-                log.info("La nota débito con referencia {} ya se encuentra VALIDATED en el sistema ({})",
-                        referenceCode, note.getDebitNoteNumber());
-                return mapper.toDto(note);
-            }
-            note.prepareForResend();
-        } else {
-            note = repository.saveAndFlush(ElectronicDebitNote.initialize(
-                    storeId,
-                    saleId,
-                    referenceCode,
-                    billNumber,
-                    request.correctionConceptCode(),
-                    request.customizationId()
-            ));
-        }
-
-        // 2. Resolver estrategia de proveedor activa
         DebitNoteProvider provider = resolveProvider();
 
-        // 3. Ejecutar emisión hacia el proveedor
+        // Paso A: reserva (transacción corta con lock). Si la nota ya está validada o la emite otro hilo, se
+        // devuelve su estado actual.
+        DebitNoteEmissionTransactions.Reservation reservation = reserve(request, saleId, storeId);
+        if (reservation.outcome() != ElectronicInvoice.ReserveOutcome.RESERVED) {
+            log.info("La nota débito con referencia {} no se emite ahora: {}", referenceCode, reservation.outcome());
+            return reservation.note();
+        }
+
+        // Paso B: proveedor, sin transacción abierta.
         DebitNoteResult result;
         try {
             result = provider.emitDebitNote(request, storeId);
@@ -237,10 +218,17 @@ public class DebitNoteServiceImpl implements DebitNoteService {
             result = DebitNoteResult.error("Error en proveedor " + provider.getProviderName() + ": " + ex.getMessage());
         }
 
-        // 4. Aplicar resultados a la entidad y persistir
-        applyResultToEntity(note, result);
-        ElectronicDebitNote saved = repository.save(note);
-        return mapper.toDto(saved);
+        // Paso C: registrar el resultado.
+        return emissionTransactions.complete(referenceCode, storeId, result);
+    }
+
+    private DebitNoteEmissionTransactions.Reservation reserve(CreateDebitNoteRequest request, Long saleId, Long storeId) {
+        try {
+            return emissionTransactions.reserve(request, saleId, storeId);
+        } catch (DataIntegrityViolationException concurrentInsert) {
+            // Dos hilos crearon la misma referencia a la vez: el segundo ya la encuentra y se encola detrás del lock.
+            return emissionTransactions.reserve(request, saleId, storeId);
+        }
     }
 
     private ElectronicDebitNote findValidatedNote(Long id, Long storeId) {
@@ -268,29 +256,4 @@ public class DebitNoteServiceImpl implements DebitNoteService {
         return provider;
     }
 
-    private void applyResultToEntity(ElectronicDebitNote note, DebitNoteResult result) {
-        if (result == null) {
-            note.markAsError("Respuesta vacía del proveedor de facturación");
-            return;
-        }
-
-        note.trackProviderDocument(result.providerDocumentId());
-        if ("VALIDATED".equalsIgnoreCase(result.status())) {
-            if (result.debitNoteNumber() == null || result.debitNoteNumber().isBlank()) {
-                note.markAsError("El proveedor reportó la nota débito como validada pero no retornó su número legal");
-                return;
-            }
-            note.markAsValidated(
-                    result.debitNoteNumber(),
-                    result.cude(),
-                    result.qrCode(),
-                    result.pdfUrl(),
-                    result.validatedAt()
-            );
-        } else if ("REJECTED".equalsIgnoreCase(result.status())) {
-            note.markAsRejected(Preconditions.defaultIfBlank(result.errorMessage(), "Nota débito rechazada por la DIAN"));
-        } else {
-            note.markAsError(Preconditions.defaultIfBlank(result.errorMessage(), "Error en proceso de nota débito"));
-        }
-    }
 }

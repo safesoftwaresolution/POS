@@ -1,6 +1,6 @@
 {
   "version": "1.5.0",
-  "last_updated": "2026-11-04",
+  "last_updated": "2026-11-05",
   "notes": "Los IDs son únicos y no se reutilizan. FEAT-001..006 son anteriores. FEAT-007..013 se registraron RETROACTIVAMENTE el 2026-10-16: ese trabajo se hizo fuera del protocolo Leader→Implementer→Reviewer→Committer (ver progress/history.md). Ojo: las entradas más antiguas de history.md rotuladas 'FEAT-004 — Módulos Auth y Users' (2026-07-09) corresponden a una tarea previa a la renumeración; el FEAT-004 vigente es la formalización de Billing.",
   "features": [
     {
@@ -230,9 +230,10 @@
         "Dos emisiones simultáneas de la misma venta llaman una sola vez al proveedor",
         "Test de reintento tras un fallo temporal"
       ],
-      "status": "in_progress",
+      "status": "done",
       "assigned_to": null,
-      "notes": "Hecho (2026-11-04): facturas en tres pasos con reserva (lease), job de reintento automático y conciliación (V34). Pendiente: etapa C, mismo patrón para notas crédito y débito (V35: reserva e intentos en las notas) y adaptar sus tests."
+      "notes": "Facturas (V34) y notas crédito/débito (V35) en tres pasos: reserva con lease, llamada al proveedor sin transacción, registro del resultado. Reintento automático y conciliación solo para facturas. Revisión independiente sin bloqueantes; 2 advertencias documentadas (spec, Pendiente). Tests de concurrencia con hilos reales verificados por mutación.",
+      "completed_at": "2026-11-05"
     },
     {
       "id": "FEAT-019",
@@ -333,7 +334,7 @@
       ],
       "status": "done",
       "assigned_to": null,
-      "notes": "Notas crédito y débito con Alegra (numeración propia sin resolución, invoicePeriod, associatedDocuments). E2E en sandbox. Sin revisor formal. Pendiente (FEAT-018 etapa C): reserva en tres pasos en los servicios de notas (V35).",
+      "notes": "Notas crédito y débito con Alegra (numeración propia sin resolución, invoicePeriod, associatedDocuments). E2E en sandbox. Sin revisor formal. Reserva en tres pasos de las notas hecha en FEAT-018 etapa C (V35).",
       "completed_at": "2026-11-04"
     },
     {

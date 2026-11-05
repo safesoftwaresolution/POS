@@ -1,26 +1,26 @@
 package com.sciencebot.pos.services.internal.mappers;
 
-import com.sciencebot.pos.categories.CategoryFacade;
 import com.sciencebot.pos.services.ServiceDto;
+import com.sciencebot.pos.services.internal.entities.ServiceCategory;
 import com.sciencebot.pos.services.internal.entities.ServiceItem;
-import org.springframework.context.annotation.Lazy;
+import com.sciencebot.pos.services.internal.repositories.ServiceCategoryRepository;
 import org.springframework.stereotype.Component;
 
 @Component
 public class ServiceMapper {
 
-    private final CategoryFacade categoryFacade;
+    private final ServiceCategoryRepository categoryRepository;
 
-    public ServiceMapper(@Lazy CategoryFacade categoryFacade) {
-        this.categoryFacade = categoryFacade;
+    public ServiceMapper(ServiceCategoryRepository categoryRepository) {
+        this.categoryRepository = categoryRepository;
     }
 
     public ServiceDto toDto(ServiceItem service) {
         if (service == null) {
             return null;
         }
-        String categoryName = categoryFacade.getById(service.getCategoryId())
-                .map(category -> category.name())
+        String categoryName = categoryRepository.findById(service.getCategoryId())
+                .map(ServiceCategory::getName)
                 .orElse("Sin Categoría");
 
         return new ServiceDto(

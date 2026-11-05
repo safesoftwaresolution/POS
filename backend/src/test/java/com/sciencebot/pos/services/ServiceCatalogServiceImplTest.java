@@ -1,12 +1,13 @@
 package com.sciencebot.pos.services;
 
-import com.sciencebot.pos.categories.CategoryDto;
-import com.sciencebot.pos.categories.CategoryFacade;
 import com.sciencebot.pos.config.tenant.TenantContext;
+import com.sciencebot.pos.services.internal.entities.ServiceCategory;
 import com.sciencebot.pos.services.internal.entities.ServiceItem;
 import com.sciencebot.pos.services.internal.mappers.ServiceMapper;
+import com.sciencebot.pos.services.internal.repositories.ServiceCategoryRepository;
 import com.sciencebot.pos.services.internal.repositories.ServiceItemRepository;
 import com.sciencebot.pos.services.internal.services.ServiceCatalogServiceImpl;
+import com.sciencebot.pos.services.internal.services.ServiceCategoryServiceImpl;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -25,15 +26,19 @@ class ServiceCatalogServiceImplTest {
     private static final Long STORE_ID = 7L;
 
     private ServiceItemRepository repository;
-    private CategoryFacade categoryFacade;
+    private ServiceCategoryServiceImpl categoryService;
+    private ServiceCategoryRepository categoryRepository;
     private ServiceCatalogServiceImpl service;
 
     @BeforeEach
     void setUp() {
         repository = mock(ServiceItemRepository.class);
-        categoryFacade = mock(CategoryFacade.class);
-        service = new ServiceCatalogServiceImpl(repository, new ServiceMapper(categoryFacade), categoryFacade);
-        when(categoryFacade.getById(3L)).thenReturn(Optional.of(mock(CategoryDto.class)));
+        categoryService = mock(ServiceCategoryServiceImpl.class);
+        categoryRepository = mock(ServiceCategoryRepository.class);
+        service = new ServiceCatalogServiceImpl(repository, new ServiceMapper(categoryRepository), categoryService);
+        ServiceCategory category = new ServiceCategory();
+        category.setName("Corte");
+        when(categoryRepository.findById(3L)).thenReturn(Optional.of(category));
         when(repository.save(any(ServiceItem.class))).thenAnswer(inv -> inv.getArgument(0));
         TenantContext.setStoreId(STORE_ID);
     }
@@ -69,6 +74,7 @@ class ServiceCatalogServiceImplTest {
 
     @Test
     void createService_InvalidInput_Throws() {
+        doThrow(new IllegalArgumentException("no existe")).when(categoryService).requireAvailableForCurrentStore(99L);
         assertThrows(IllegalArgumentException.class, () -> service.createService(command("", BigDecimal.TEN)));
         assertThrows(IllegalArgumentException.class, () -> service.createService(command("A", BigDecimal.ZERO)));
         assertThrows(IllegalArgumentException.class, () -> service.createService(command("A", null)));
@@ -137,9 +143,31 @@ class ServiceCatalogServiceImplTest {
     }
 
     @Test
-    void validateBeforeDelete_CategoryWithActiveServices_Throws() {
-        when(repository.existsByCategoryIdAndActiveTrue(3L)).thenReturn(true);
+    void createService_UsesTheCategoryOfTheCatalogAndChecksItIsAvailableForTheStore() {
+        ServiceDto dto = service.createService(command("SRV-2", BigDecimal.TEN));
 
-        assertThrows(IllegalStateException.class, () -> service.validateBeforeDelete(3L));
+        assertEquals("Corte", dto.categoryName());
+        verify(categoryService).requireAvailableForCurrentStore(3L);
+    }
+
+    @Test
+    void createService_CategoryNotAvailableForTheStore_IsRefusedAndNothingIsSaved() {
+        doThrow(new IllegalArgumentException("no disponible")).when(categoryService).requireAvailableForCurrentStore(3L);
+
+        assertThrows(IllegalArgumentException.class, () -> service.createService(command("SRV-3", BigDecimal.TEN)));
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void updateService_KeepingTheSameCategory_DoesNotRevalidateIt() {
+        ServiceItem existing = new ServiceItem();
+        existing.setStoreId(STORE_ID);
+        existing.setCategoryId(3L);
+        existing.setPrice(BigDecimal.TEN);
+        when(repository.findByIdAndStoreId(1L, STORE_ID)).thenReturn(Optional.of(existing));
+
+        service.updateService(1L, new UpdateServiceCommand(null, null, 3L, null, null, null, null, null));
+
+        verify(categoryService, never()).requireAvailableForCurrentStore(anyLong());
     }
 }

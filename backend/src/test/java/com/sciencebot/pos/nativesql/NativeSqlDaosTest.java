@@ -221,8 +221,8 @@ class NativeSqlDaosTest {
     void storePurge_alsoRemovesExtraTemplatesAppointmentsAndServices_leavingOtherStoresUntouched() {
         long keep = store("Appt Keep", "appt-keep@test.com", "ACTIVE");
         long victim = store("Appt Victim", "appt-victim@test.com", "ACTIVE");
-        jdbc.sql("INSERT INTO categories (name, created_at, updated_at) "
-                + "SELECT :c, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP WHERE NOT EXISTS (SELECT 1 FROM categories WHERE name = :c)")
+        jdbc.sql("INSERT INTO service_categories (name, active, created_at, updated_at) "
+                + "SELECT :c, TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP WHERE NOT EXISTS (SELECT 1 FROM service_categories WHERE name = :c)")
                 .param("c", "Cat Purge").update();
         for (long storeId : new long[]{keep, victim}) {
             jdbc.sql("INSERT INTO store_templates (store_id, template) VALUES (:s, 'APPOINTMENTS')").param("s", storeId).update();
@@ -230,7 +230,7 @@ class NativeSqlDaosTest {
                     + "VALUES ('Cliente', :i, :s, TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
                     .param("i", "appt-c-" + storeId).param("s", storeId).update();
             jdbc.sql("INSERT INTO services (store_id, code, name, category_id, price, active, created_at, updated_at) "
-                    + "VALUES (:s, 'SRV', 'Corte', (SELECT id FROM categories WHERE name = 'Cat Purge'), 10, TRUE, "
+                    + "VALUES (:s, 'SRV', 'Corte', (SELECT id FROM service_categories WHERE name = 'Cat Purge'), 10, TRUE, "
                     + "CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)").param("s", storeId).update();
             jdbc.sql("INSERT INTO appointments (store_id, customer_id, customer_name, service_id, service_name, start_at, "
                     + "end_at, status, created_at, updated_at) VALUES (:s, "

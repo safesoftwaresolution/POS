@@ -152,13 +152,13 @@ public class UserServiceImpl implements UserFacade, UserDetailsService {
         }
 
         if (userRepository.existsByUsername(command.username())) {
-            throw new IllegalArgumentException("El nombre de usuario ya esta registrado");
+            throw new IllegalArgumentException("El nombre de usuario ya está registrado");
         }
         if (!"SUPER_ADMIN".equals(effectiveRole)) {
             enforceUserQuota(effectiveStoreId);
         }
         if (userRepository.existsByEmail(command.email())) {
-            throw new IllegalArgumentException("El correo electronico ya esta registrado");
+            throw new IllegalArgumentException("El correo electrónico ya está registrado");
         }
 
         User user = new User();
@@ -196,7 +196,7 @@ public class UserServiceImpl implements UserFacade, UserDetailsService {
         }
 
         if (!user.getEmail().equalsIgnoreCase(command.email()) && userRepository.existsByEmail(command.email())) {
-            throw new IllegalArgumentException("El correo electronico ya esta registrado");
+            throw new IllegalArgumentException("El correo electrónico ya está registrado");
         }
 
         if (user.getRole().equals("ADMINISTRATOR") && !command.role().equalsIgnoreCase("ADMINISTRATOR")) {
@@ -338,10 +338,10 @@ public class UserServiceImpl implements UserFacade, UserDetailsService {
         validatePasswordStrength(command.password());
 
         if (userRepository.existsByUsername(command.username())) {
-            throw new IllegalArgumentException("El nombre de usuario ya esta registrado");
+            throw new IllegalArgumentException("El nombre de usuario ya está registrado");
         }
         if (userRepository.existsByEmail(command.email())) {
-            throw new IllegalArgumentException("El correo electronico ya esta registrado");
+            throw new IllegalArgumentException("El correo electrónico ya está registrado");
         }
 
         User user = new User();

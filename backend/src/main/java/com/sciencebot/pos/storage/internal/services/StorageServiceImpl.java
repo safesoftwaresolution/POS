@@ -199,7 +199,7 @@ public class StorageServiceImpl implements StorageFacade {
         String mime = contentType == null ? "" : contentType.toLowerCase().split(";")[0].trim();
         String expected = ALLOWED_UPLOAD_TYPES.get(extension);
         if (expected == null || !(expected.equals(mime) || ("image/jpeg".equals(expected) && "image/jpg".equals(mime)))) {
-            throw new IllegalArgumentException("Tipo de archivo no permitido. Formatos validos: jpg, png, webp, gif, pdf");
+            throw new IllegalArgumentException("Tipo de archivo no permitido. Formatos válidos: jpg, png, webp, gif, pdf");
         }
     }
 

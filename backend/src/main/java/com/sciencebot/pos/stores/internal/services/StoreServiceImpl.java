@@ -125,7 +125,7 @@ public class StoreServiceImpl implements StoreFacade {
     @Transactional
     public StoreDto createStore(CreateStoreCommand command) {
         if (storeRepository.existsByEmail(command.email())) {
-            throw new IllegalArgumentException("El correo ya esta registrado para otro local.");
+            throw new IllegalArgumentException("El correo ya está registrado para otro local.");
         }
         StoreEntity entity = new StoreEntity();
         entity.setName(command.name());
@@ -154,7 +154,7 @@ public class StoreServiceImpl implements StoreFacade {
         entity.setAddress(command.address());
         entity.setTaxId(command.taxId());
         if (!entity.getEmail().equalsIgnoreCase(command.email()) && storeRepository.existsByEmail(command.email())) {
-            throw new IllegalArgumentException("El correo ya esta registrado para otro local.");
+            throw new IllegalArgumentException("El correo ya está registrado para otro local.");
         }
         entity.setEmail(command.email());
         return toStoreDto(storeRepository.save(entity));
@@ -258,7 +258,7 @@ public class StoreServiceImpl implements StoreFacade {
         UserDto owner = userFacade.findByUsername(ownerUsername)
                 .orElseThrow(() -> new EntityNotFoundException("Usuario no encontrado: " + ownerUsername));
         if (owner.storeId() == null) {
-            throw new EntityNotFoundException("Aun no has registrado un local.");
+            throw new EntityNotFoundException("Aún no has registrado un local.");
         }
         return getById(owner.storeId());
     }
@@ -317,7 +317,7 @@ public class StoreServiceImpl implements StoreFacade {
         UserDto owner = userFacade.findByUsername(ownerUsername)
                 .orElseThrow(() -> new EntityNotFoundException("Usuario no encontrado: " + ownerUsername));
         if (owner.storeId() == null) {
-            throw new EntityNotFoundException("Aun no has registrado un local.");
+            throw new EntityNotFoundException("Aún no has registrado un local.");
         }
         return owner.storeId();
     }

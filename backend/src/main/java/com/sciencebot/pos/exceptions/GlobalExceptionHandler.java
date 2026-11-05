@@ -1,5 +1,7 @@
 package com.sciencebot.pos.exceptions;
 
+import com.sciencebot.pos.auth.EmailNotVerifiedException;
+import com.sciencebot.pos.auth.InvalidVerificationTokenException;
 import com.sciencebot.pos.billing.exception.BillingProviderException;
 import com.sciencebot.pos.billing.exception.FactusApiException;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -36,6 +38,24 @@ public class GlobalExceptionHandler {
         response.put("error", "Unauthorized");
         response.put("message", "Usuario o contraseña incorrectos");
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+    }
+
+    /** Enlace de verificación de correo inválido, usado o vencido: 400 con el motivo, no "credenciales incorrectas". */
+    @ExceptionHandler(InvalidVerificationTokenException.class)
+    public ResponseEntity<Map<String, String>> handleInvalidVerificationToken(InvalidVerificationTokenException ex) {
+        Map<String, String> response = new HashMap<>();
+        response.put("error", "InvalidVerificationToken");
+        response.put("message", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+
+    /** Login de una cuenta sin verificar: el frontend reconoce el código y ofrece reenviar el enlace. */
+    @ExceptionHandler(EmailNotVerifiedException.class)
+    public ResponseEntity<Map<String, String>> handleEmailNotVerified(EmailNotVerifiedException ex) {
+        Map<String, String> response = new HashMap<>();
+        response.put("error", "EmailNotVerified");
+        response.put("message", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
     }
 
     @ExceptionHandler(DisabledException.class)

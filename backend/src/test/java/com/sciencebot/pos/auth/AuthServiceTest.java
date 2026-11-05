@@ -141,7 +141,7 @@ class AuthServiceTest {
         when(userDetailsService.loadUserByUsername("admin")).thenReturn(userDetails);
         when(userFacade.findByUsername("admin")).thenReturn(Optional.of(unverifiedUserDto()));
 
-        DisabledException ex = assertThrows(DisabledException.class, () -> authService.login("admin", "Password123"));
+        EmailNotVerifiedException ex = assertThrows(EmailNotVerifiedException.class, () -> authService.login("admin", "Password123"));
         assertTrue(ex.getMessage().contains("verificar tu correo"));
     }
 

@@ -6,6 +6,7 @@ import { LANDING_URL } from '../constants/site';
 import { resendVerificationApi } from '../services/authApi';
 import WelcomeSplash from '../components/brand/WelcomeSplash';
 import { welcomeGreeting } from '../utils/greeting';
+import { isEmailNotVerified } from '../utils/authFlow';
 
 export default function LoginBento() {
   const { login, loading } = useAuth();
@@ -42,7 +43,7 @@ export default function LoginBento() {
     } catch (err) {
       const message = err.message || 'Error de autenticación. Verifica tu usuario y contraseña.';
       setError(message);
-      setNeedsVerification(/verificar tu correo/i.test(message));
+      setNeedsVerification(isEmailNotVerified(err));
     }
   };
 

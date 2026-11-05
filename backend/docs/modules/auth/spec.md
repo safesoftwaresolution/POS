@@ -22,7 +22,7 @@
 
 ### RN-AUTH-004 — Verificación de Correo en el Auto-registro
 - `POST /auth/register` crea un `ADMINISTRATOR` **sin local** (`store_id = null`) y con `email_verified = false`, y envía un enlace con un token de un solo uso (hash SHA-256 en `email_verification_tokens`, vigencia `EMAIL_VERIFICATION_EXPIRATION_MS`, 24 h por defecto).
-- Mientras el correo no está verificado, el login responde `403` ("verifica tu correo").
+- Mientras el correo no está verificado, el login responde `403 {"error":"EmailNotVerified","message":"..."}` (`EmailNotVerifiedException`); el frontend usa el código, no el texto, para ofrecer reenviar el enlace.
 - `GET /auth/verify-email?token=` consume el token, marca `email_verified = true` y **autologuea** (setea ambas cookies).
 
 ### RN-AUTH-005 — Administrador sin local
@@ -70,7 +70,7 @@
 
 ### GET /api/v1/auth/verify-email?token=
 - **Permisos**: Público
-- **Response 200**: igual que login (autologuea). **Errores**: 400/401 si el token es inválido, usado o expirado.
+- **Response 200**: igual que login (autologuea). **Errores**: `400 {"error":"InvalidVerificationToken","message":"..."}` (`InvalidVerificationTokenException`) con un mensaje distinto si el enlace falta, no existe (o fue reemplazado), ya se usó o venció. La pantalla `/verify-email` muestra ese mensaje, ofrece pedir un enlace nuevo y, si la cuenta ya tiene local, entra al POS en vez de al alta del local.
 
 ### POST /api/v1/auth/resend-verification
 - **Permisos**: Público

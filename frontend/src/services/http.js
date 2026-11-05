@@ -148,7 +148,11 @@ export async function fetchApi(endpoint, options = {}, _retried = false) {
     // Endpoints publicos: un 401 aqui es un rechazo del servidor (credenciales, token vencido), no una sesion que expiro.
     if (endpoint === '/auth/login' || PUBLIC_AUTH_ENDPOINT.test(endpoint)) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || (endpoint === '/auth/login' ? 'Usuario o contraseña incorrectos' : 'El enlace no es válido o ya venció.'));
+      const error = new Error(errorData.message || (endpoint === '/auth/login' ? 'Usuario o contraseña incorrectos' : 'El enlace no es válido o ya venció.'));
+      // Igual que httpError: el código (`error`) del backend deja a la pantalla distinguir el caso sin leer el texto.
+      error.status = response.status;
+      error.data = errorData;
+      throw error;
     }
     if (!_retried && endpoint !== '/auth/refresh') {
       const refreshed = await refreshAccessToken();

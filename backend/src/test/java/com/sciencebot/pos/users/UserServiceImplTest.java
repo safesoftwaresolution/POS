@@ -489,7 +489,7 @@ class UserServiceImplTest {
         when(userRepository.existsByUsername("carlos.m")).thenReturn(true);
 
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> userService.registerPendingAdmin(command));
-        assertTrue(ex.getMessage().contains("usuario ya esta registrado"));
+        assertTrue(ex.getMessage().contains("usuario ya está registrado"));
     }
 
     @Test

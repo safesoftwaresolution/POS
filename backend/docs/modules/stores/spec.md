@@ -1,4 +1,4 @@
-<!-- spec-version: 1.2 | last-updated: 2026-11-04 -->
+<!-- spec-version: 1.3 | last-updated: 2026-11-05 -->
 # Módulo: Stores (Locales / Comercios SaaS)
 
 ## Dependencias

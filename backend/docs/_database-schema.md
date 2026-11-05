@@ -60,6 +60,7 @@ erDiagram
 | categories | `categories` | V1 | **Global** (sin `store_id`) |
 | categories | `product_subcategories` | V12 | Por local; única por (`store_id`, `category_id`, `name`) |
 | products | `products`, `product_lots` | V1, V2 (`tax_rate`, `unspsc_code`), V3, V12 (`subcategory_id`), V27 (`product_lots`: lotes de vencimiento) | Único por local: `internal_code` y `barcode` (V9) |
+| appointments | `appointments` | V34 | Agenda de citas por local (solo plantilla `APPOINTMENTS`); copia `customer_name`/`service_name`; `CK_appointments_range` (`end_at > start_at`) |
 | services | `services` | V29 | Catálogo sin stock; único por local: `code` (`UK_services_store_code`) |
 | customers | `customers` | V1, V2 (campos DIAN), V3, V30 (`created_by`, `updated_by` y sus nombres de usuario) | Un "Cliente General" por local |
 | audit | `audit_log` | V30 | Bitácora genérica por entidad; sin FK a `users` |
@@ -198,6 +199,7 @@ Bitácora de cambios sobre rangos de numeración DIAN (`V15`, ampliada en `V17`)
 | IDX_electronic_debit_notes_store / _store_status / _bill | electronic_debit_notes | V19 |
 | IDX_product_lots_product, IDX_product_lots_store_expiration | product_lots(product_id), product_lots(store_id, expiration_date) | V27 |
 | IDX_services_store_active | services(store_id, active) | V29 |
+| IDX_appointments_store_start | appointments(store_id, start_at) | V34 |
 | IDX_audit_log_entity | audit_log(store_id, entity_type, entity_id, created_at) | V30 |
 | IDX_credit_accounts_store_balance | credit_accounts(store_id, balance) | V31 |
 | IDX_credit_movements_account | credit_movements(account_id, created_at) | V31 |

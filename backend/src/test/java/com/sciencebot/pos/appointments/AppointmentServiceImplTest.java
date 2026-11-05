@@ -18,6 +18,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.security.access.AccessDeniedException;
 
 import java.time.LocalDateTime;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
 
@@ -40,7 +41,7 @@ class AppointmentServiceImplTest {
     void setUp() {
         TenantContext.setStoreId(STORE_ID);
         service = new AppointmentServiceImpl(repository, new AppointmentMapper(), serviceFacade, customerFacade, storeFacade);
-        when(storeFacade.getTemplateForStore(STORE_ID)).thenReturn(StoreTemplate.APPOINTMENTS);
+        when(storeFacade.getTemplatesForStore(STORE_ID)).thenReturn(EnumSet.of(StoreTemplate.APPOINTMENTS));
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
     }
 
@@ -96,11 +97,19 @@ class AppointmentServiceImplTest {
 
     @Test
     void create_StoreWithoutTheAppointmentsTemplate_IsRefused() {
-        when(storeFacade.getTemplateForStore(STORE_ID)).thenReturn(StoreTemplate.RETAIL);
+        when(storeFacade.getTemplatesForStore(STORE_ID)).thenReturn(EnumSet.of(StoreTemplate.RETAIL, StoreTemplate.FOOD));
 
         assertThrows(AccessDeniedException.class,
                 () -> service.create(new CreateAppointmentCommand(3L, 5L, START, null)));
         verify(repository, never()).save(any());
+    }
+
+    @Test
+    void create_StoreWithAppointmentsAmongSeveralTemplates_IsAllowed() {
+        when(storeFacade.getTemplatesForStore(STORE_ID)).thenReturn(EnumSet.of(StoreTemplate.RETAIL, StoreTemplate.APPOINTMENTS));
+        givenCustomerAndService(30, true);
+
+        assertEquals("SCHEDULED", service.create(new CreateAppointmentCommand(3L, 5L, START, null)).status());
     }
 
     @Test

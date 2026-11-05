@@ -126,13 +126,13 @@ public class AppointmentServiceImpl implements AppointmentFacade {
                 .orElseThrow(() -> new EntityNotFoundException("Cita no encontrada con ID: " + id));
     }
 
-    /** Local actual, que además debe usar la plantilla de citas (el backend decide, no el menú del frontend). */
+    /** Local actual, que además debe tener la plantilla de citas (de su categoría o como extra) (el backend decide, no el menú del frontend). */
     private Long requireAppointmentsStore() {
         Long storeId = TenantContext.getStoreId();
         if (storeId == null) {
             throw new IllegalStateException("No hay un local activo en el contexto de la solicitud");
         }
-        if (storeFacade.getTemplateForStore(storeId) != StoreTemplate.APPOINTMENTS) {
+        if (!storeFacade.getTemplatesForStore(storeId).contains(StoreTemplate.APPOINTMENTS)) {
             throw new AccessDeniedException("Las citas solo están disponibles para locales con plantilla de citas.");
         }
         return storeId;

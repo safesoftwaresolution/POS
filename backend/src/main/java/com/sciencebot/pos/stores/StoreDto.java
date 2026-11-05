@@ -1,6 +1,7 @@
 package com.sciencebot.pos.stores;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 public record StoreDto(
     Long id,
@@ -18,5 +19,7 @@ public record StoreDto(
     LocalDateTime createdAt,
     String planCode,
     String template,
-    String theme
+    String theme,
+    List<String> templates,
+    List<String> extraTemplates
 ) {}

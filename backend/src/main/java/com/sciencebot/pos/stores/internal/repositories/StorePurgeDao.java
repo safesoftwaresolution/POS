@@ -21,7 +21,7 @@ public class StorePurgeDao {
     /** Tablas de negocio con store_id: si alguna tiene filas, el local operó (el borrado pide confirmación). */
     private static final List<String> BUSINESS_TABLES = List.of(
             "products", "customers", "suppliers", "sales", "purchases",
-            "inventory_movements", "sale_returns", "electronic_invoices");
+            "inventory_movements", "sale_returns", "electronic_invoices", "services", "appointments");
 
     private final JdbcClient jdbcClient;
 
@@ -70,6 +70,9 @@ public class StorePurgeDao {
         delete("DELETE FROM sale_returns WHERE store_id = :storeId", storeId);
         delete("DELETE FROM electronic_invoices WHERE store_id = :storeId", storeId);
         delete("DELETE FROM sale_items WHERE sale_id IN (SELECT id FROM sales WHERE store_id = :storeId)", storeId);
+        // Citas antes que clientes y servicios (FK); los servicios, después de los renglones de venta que los referencian.
+        delete("DELETE FROM appointments WHERE store_id = :storeId", storeId);
+        delete("DELETE FROM services WHERE store_id = :storeId", storeId);
         delete("DELETE FROM purchase_items WHERE purchase_id IN (SELECT id FROM purchases WHERE store_id = :storeId)", storeId);
         delete("DELETE FROM inventory_movements WHERE store_id = :storeId", storeId);
         delete("DELETE FROM sales WHERE store_id = :storeId", storeId);
@@ -90,6 +93,7 @@ public class StorePurgeDao {
         // Datos propios del local.
         delete("DELETE FROM notifications WHERE store_id = :storeId", storeId);
         delete("DELETE FROM store_documents WHERE store_id = :storeId", storeId);
+        delete("DELETE FROM store_templates WHERE store_id = :storeId", storeId);
         delete("DELETE FROM support_tickets WHERE store_id = :storeId", storeId);
         delete("DELETE FROM numbering_range_audit WHERE store_id = :storeId", storeId);
         delete("DELETE FROM store_billing_config WHERE store_id = :storeId", storeId);

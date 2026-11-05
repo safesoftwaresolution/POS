@@ -529,8 +529,20 @@ public class StoreServiceImpl implements StoreFacade {
 
     @Override
     @Transactional(readOnly = true)
-    public StoreTemplate getTemplateForStore(Long storeId) {
-        return StoreTemplate.parse(getById(storeId).template(), StoreTemplate.RETAIL);
+    public java.util.Set<StoreTemplate> getTemplatesForStore(Long storeId) {
+        return StoreTemplate.parseAll(getById(storeId).templates());
+    }
+
+    @Override
+    @Transactional
+    public StoreDto updateExtraTemplates(Long storeId, UpdateStoreTemplatesCommand command) {
+        if (command == null || command.extraTemplates() == null) {
+            throw new IllegalArgumentException("Las plantillas extra son obligatorias (puede ser una lista vacía).");
+        }
+        StoreEntity entity = storeRepository.findById(storeId)
+                .orElseThrow(() -> new EntityNotFoundException("Local no encontrado con ID: " + storeId));
+        entity.setExtraTemplates(new java.util.LinkedHashSet<>(StoreTemplate.parseAll(command.extraTemplates())));
+        return toStoreDto(storeRepository.save(entity));
     }
 
     @Override
@@ -548,7 +560,8 @@ public class StoreServiceImpl implements StoreFacade {
         StoreCategoryEntity entity = new StoreCategoryEntity();
         entity.setName(command.name());
         entity.setDescription(command.description());
-        entity.setTemplate(StoreTemplate.parse(command.template(), StoreTemplate.RETAIL));
+        java.util.Set<StoreTemplate> templates = StoreTemplate.parseAll(command.templateKeys());
+        entity.setTemplates(new java.util.LinkedHashSet<>(templates.isEmpty() ? java.util.Set.of(StoreTemplate.RETAIL) : templates));
         entity.setTheme(StoreTheme.parse(command.theme(), StoreTheme.DEFAULT));
         entity.setActive(true);
         return storeMapper.toCategoryDto(categoryRepository.save(entity));
@@ -561,7 +574,10 @@ public class StoreServiceImpl implements StoreFacade {
                 .orElseThrow(() -> new EntityNotFoundException("Categoria no encontrada con ID: " + id));
         entity.setName(command.name());
         entity.setDescription(command.description());
-        entity.setTemplate(StoreTemplate.parse(command.template(), entity.getTemplate()));
+        java.util.Set<StoreTemplate> templates = StoreTemplate.parseAll(command.templateKeys());
+        if (!templates.isEmpty()) {
+            entity.setTemplates(new java.util.LinkedHashSet<>(templates));
+        }
         entity.setTheme(StoreTheme.parse(command.theme(), entity.getTheme()));
         return storeMapper.toCategoryDto(categoryRepository.save(entity));
     }

@@ -142,6 +142,27 @@ class AppointmentServiceImplTest {
     }
 
     @Test
+    void create_OverlappingAnotherAppointment_IsRefusedWith409Semantics() {
+        givenCustomerAndService(60, true);
+        when(repository.existsOverlapping(STORE_ID, START, START.plusMinutes(60), null)).thenReturn(true);
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> service.create(new CreateAppointmentCommand(3L, 5L, START, null)));
+        assertEquals("Ya hay una cita agendada en ese horario", ex.getMessage());
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void reschedule_IntoAnOccupiedSlot_IsRefusedAndIgnoresItself() {
+        when(repository.findByIdAndStoreId(1L, STORE_ID)).thenReturn(Optional.of(stored(AppointmentStatus.SCHEDULED)));
+        LocalDateTime newStart = START.plusHours(1);
+        when(repository.existsOverlapping(STORE_ID, newStart, newStart.plusMinutes(45), 1L)).thenReturn(true);
+
+        assertThrows(IllegalStateException.class, () -> service.reschedule(1L, new RescheduleAppointmentCommand(newStart)));
+        verify(repository, never()).save(any());
+    }
+
+    @Test
     void reschedule_MovesTheAppointmentKeepingItsDuration() {
         when(repository.findByIdAndStoreId(1L, STORE_ID)).thenReturn(Optional.of(stored(AppointmentStatus.SCHEDULED)));
         LocalDateTime newStart = START.plusDays(1).plusHours(2);

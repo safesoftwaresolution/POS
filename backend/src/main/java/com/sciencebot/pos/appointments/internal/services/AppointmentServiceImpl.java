@@ -70,6 +70,9 @@ public class AppointmentServiceImpl implements AppointmentFacade {
         }
         Integer duration = catalogService.durationMinutes();
 
+        LocalDateTime endAt = command.startAt().plusMinutes(duration != null && duration > 0 ? duration : DEFAULT_DURATION_MINUTES);
+        requireFreeSlot(storeId, command.startAt(), endAt, null);
+
         Appointment appointment = new Appointment();
         appointment.setStoreId(storeId);
         appointment.setCustomerId(command.customerId());
@@ -77,7 +80,7 @@ public class AppointmentServiceImpl implements AppointmentFacade {
         appointment.setServiceId(command.serviceId());
         appointment.setServiceName(catalogService.name());
         appointment.setStartAt(command.startAt());
-        appointment.setEndAt(command.startAt().plusMinutes(duration != null && duration > 0 ? duration : DEFAULT_DURATION_MINUTES));
+        appointment.setEndAt(endAt);
         appointment.setStatus(AppointmentStatus.SCHEDULED);
         appointment.setNotes(command.notes());
         return appointmentMapper.toDto(appointmentRepository.save(appointment));
@@ -104,8 +107,10 @@ public class AppointmentServiceImpl implements AppointmentFacade {
             throw new IllegalArgumentException("Una cita cancelada no se puede mover");
         }
         Duration duration = Duration.between(appointment.getStartAt(), appointment.getEndAt());
+        LocalDateTime newEnd = command.startAt().plus(duration);
+        requireFreeSlot(appointment.getStoreId(), command.startAt(), newEnd, appointment.getId());
         appointment.setStartAt(command.startAt());
-        appointment.setEndAt(command.startAt().plus(duration));
+        appointment.setEndAt(newEnd);
         return appointmentMapper.toDto(appointmentRepository.save(appointment));
     }
 
@@ -118,6 +123,13 @@ public class AppointmentServiceImpl implements AppointmentFacade {
             appointment = appointmentRepository.save(appointment);
         }
         return appointmentMapper.toDto(appointment);
+    }
+
+    /** El local tiene una sola agenda: no puede haber dos citas agendadas que se crucen (los extremos pueden tocarse). */
+    private void requireFreeSlot(Long storeId, LocalDateTime start, LocalDateTime end, Long excludeId) {
+        if (appointmentRepository.existsOverlapping(storeId, start, end, excludeId)) {
+            throw new IllegalStateException("Ya hay una cita agendada en ese horario");
+        }
     }
 
     private Appointment findOwn(Long id) {

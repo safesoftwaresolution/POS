@@ -1,4 +1,4 @@
-<!-- spec-version: 1.1 | last-updated: 2026-11-05 -->
+<!-- spec-version: 1.2 | last-updated: 2026-11-05 -->
 # Módulo: Citas (Appointments)
 
 Calendario y agendamiento de citas para los locales que tienen la plantilla `APPOINTMENTS` (barbería, peluquería, salón de uñas y pies, boutique, o cualquier local al que el `SUPER_ADMIN` se la sume como extra; ver RN-STORE-006 en el módulo stores). Versión mínima: agendar, ver por día o semana, mover y cancelar.
@@ -24,8 +24,10 @@ Calendario y agendamiento de citas para los locales que tienen la plantilla `APP
 ### RN-APPT-005 — Copia de nombres
 - Se guardan `customer_name` y `service_name` al agendar, para que editar o desactivar el cliente o el servicio no reescriba la agenda.
 
-### RN-APPT-006 — Sin control de solapes ni profesionales (alcance actual)
-- No se valida que dos citas se crucen y no hay profesionales con agenda propia. Ver `_roadmap.md`.
+### RN-APPT-006 — Sin solapes en la agenda del local
+- El local tiene una sola agenda (aún no hay profesionales): no puede haber dos citas `SCHEDULED` que se crucen. Una cita de 9:00 a 10:00 bloquea cualquier otra que empiece antes de las 10:00 y termine después de las 9:00; los extremos pueden tocarse (10:00 a 10:30 es válido).
+- Se valida al agendar y al mover (la cita que se mueve no choca consigo misma). Las citas canceladas no cuentan. Si hay choque responde `409` con "Ya hay una cita agendada en ese horario".
+- Siguen pendientes los profesionales con agenda propia (ver `_roadmap.md`): con ellos el cruce se evaluará por profesional.
 
 ### RN-APPT-007 — Consulta por rango
 - `GET` exige `from` y `to`; se devuelven las citas cuyo inicio cae en `[from, to)`, ordenadas por inicio. Rango máximo de 62 días (`400` si es mayor o inválido).

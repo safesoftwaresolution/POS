@@ -42,6 +42,7 @@ const StoresBento = lazy(() => import('./pages/backoffice/StoresBento'));
 const BillingBento = lazy(() => import('./pages/backoffice/BillingBento'));
 const CategoriesBento = lazy(() => import('./pages/backoffice/CategoriesBento'));
 const ProductCategoriesBento = lazy(() => import('./pages/backoffice/ProductCategoriesBento'));
+const ServiceCategoriesBento = lazy(() => import('./pages/backoffice/ServiceCategoriesBento'));
 const ParametersBento = lazy(() => import('./pages/backoffice/ParametersBento'));
 const LegalDocumentsBento = lazy(() => import('./pages/backoffice/LegalDocumentsBento'));
 const SupportTicketsBento = lazy(() => import('./pages/backoffice/SupportTicketsBento'));
@@ -251,6 +252,7 @@ function BackofficeProtectedLayout() {
             <Route path="/billing" element={<BillingBento />} />
             <Route path="/categories" element={<CategoriesBento />} />
             <Route path="/product-categories" element={<ProductCategoriesBento />} />
+            <Route path="/service-categories" element={<ServiceCategoriesBento />} />
             <Route path="/parameters" element={<ParametersBento />} />
             <Route path="/legal-documents" element={<LegalDocumentsBento />} />
             <Route path="/support" element={<SupportTicketsBento />} />

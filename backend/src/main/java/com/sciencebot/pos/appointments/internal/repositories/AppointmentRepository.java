@@ -17,4 +17,12 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     List<Appointment> findInRange(@Param("storeId") Long storeId,
                                   @Param("from") LocalDateTime from,
                                   @Param("to") LocalDateTime to);
+
+    /** Citas agendadas (no canceladas) del local que se cruzan con [start, end); {@code excludeId} omite la cita que se está moviendo. */
+    @Query("SELECT COUNT(a) > 0 FROM Appointment a WHERE a.storeId = :storeId AND a.status = com.sciencebot.pos.appointments.AppointmentStatus.SCHEDULED "
+            + "AND a.startAt < :end AND a.endAt > :start AND (:excludeId IS NULL OR a.id <> :excludeId)")
+    boolean existsOverlapping(@Param("storeId") Long storeId,
+                              @Param("start") LocalDateTime start,
+                              @Param("end") LocalDateTime end,
+                              @Param("excludeId") Long excludeId);
 }

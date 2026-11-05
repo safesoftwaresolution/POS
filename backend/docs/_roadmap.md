@@ -49,6 +49,7 @@ Una revisión del arnés, los specs y el código encontró desajustes. **Ya corr
 ## Pendientes priorizados (de la misma auditoría)
 
 **Seguridad / datos**
+- **Dependencia `users` ↔ `stores` (2026-11-05)**: para bloquear a los locales no activos (`403 StoreNotActive`), `UserServiceImpl.loadUserByUsername` lee el estado del local con `StoreFacade` a través de `ObjectProvider` (`stores` ya dependía de `UserFacade`; inyectarlo directo crearía un ciclo). Añade una consulta liviana por petición autenticada, sin caché. Alternativa pendiente de decidir: que `config/security` consulte `StoreFacade` directamente y `users` deje de conocer a `stores`.
 1. Rate limiting (login por IP, `/register`, `/refresh`, `/support/tickets`) y lockout persistente.
 2. Revocar los refresh tokens al cambiar o restablecer la contraseña; hacer público el logout.
 3. ~~Frontend: tokens en `localStorage`~~ — resuelto (2026-10-16): `http.js` guarda los tokens solo en memoria; la sesión viaja en cookies `HttpOnly`.

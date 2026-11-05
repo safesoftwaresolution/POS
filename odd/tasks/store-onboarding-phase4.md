@@ -12,13 +12,15 @@ Branch: feature/store-onboarding-phase4 (from main). Runner: `.\mvnw.cmd test` i
 - S7 Route guards: `/settings` read-only for SUPERVISOR (no admin-only `getOwnStoreApi`); `/categories` store route removed; `/onboarding/store` requires a session, redirects if the user already has a store, offers logout, handles `refreshSession()` failure; `createStore` validated with `@Valid` (name ≤100, phone ≤20, email format) and inputs get `maxLength`.
 
 ## Tasks
-- [ ] T1 S1 inline
-- [ ] T2 S2 inline
-- [ ] T3 S3 inline (Risk: item 2, security guard)
-- [ ] T4 S4 inline
-- [ ] T5 S5 inline
-- [ ] T6 S6 inline
-- [ ] T7 S7 inline
+- [x] T1 S1 inline — ca9f6ef
+- [x] T2 S2 inline — 24f3efd
+- [x] T3 S3 inline (Risk: item 2, security guard) — 89e027a
+- [x] T4 S4 inline — ef1932b
+- [x] T5 S5 inline — 4a9d521
+- [x] T6 S6 inline — b5cf789
+- [x] T7 S7 inline — c3ae6c7
 
 ## Log
 L1 (session brief, 2026-11-05): "Implement "Fase 4: alta del local" in its own branch, one work-unit commit per item (tests with code), then report." Items 1-7 as quoted in Specs. Do not touch billing files (`billing/`, `POSBento.jsx`, `CheckoutModal.jsx`, `components/invoicing/`, `InvoicingBento.jsx`, `pages/backoffice/BillingBento.jsx`); V37 is taken by the billing session, use V38 if needed.
+L2 Verified per item: focused backend tests and frontend Vitest per commit; independent read-only verifier on T3 found no blockers (advisories: users↔stores dependency via ObjectProvider, one extra status query per request, prefix allow-lists rely on the default Spring Security firewall). Final checks: see L3.
+L3 Final checks (2026-11-05): backend `mvnw test` 926 tests, 0 failures; frontend `npm test` 97 passed, `npm run lint` 0 warnings, `npm run build` ok. Not exercised in a running app.

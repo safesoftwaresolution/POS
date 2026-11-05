@@ -17,6 +17,8 @@ import {
   Trash2
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { storeTemplateLabel } from '../../constants/storeTemplates';
+import { storeUpdatePayload } from '../../utils/storePayload';
 import {
   getBackofficeMetricsApi,
   getBackofficeStoresApi,
@@ -195,6 +197,17 @@ export default function StoresBento() {
     }
   };
 
+  // La plantilla del local sigue a su categoría, así que cambiar la categoría aquí cambia la plantilla.
+  const handleChangeCategory = async (store, categoryId) => {
+    setErrorMsg('');
+    try {
+      await updateBackofficeStoreApi(store.id, storeUpdatePayload(store, categoryId));
+      refreshAll();
+    } catch (err) {
+      setErrorMsg(err.message || 'Error al cambiar la categoría del local.');
+    }
+  };
+
   const handleChangeStatus = async (store, status) => {
     setErrorMsg('');
     try {
@@ -350,7 +363,22 @@ export default function StoresBento() {
                       <p className="font-extrabold text-ink">{s.name}</p>
                       <p className="text-[10px] text-ink-muted font-mono">NIT: {s.taxId || '—'}</p>
                     </td>
-                    <td data-label="Categoría" className="px-2 py-3 text-ink-soft font-semibold">{s.categoryName || 'Sin categoría'}</td>
+                    <td data-label="Categoría" className="px-2 py-3">
+                      <select
+                        value={s.storeCategoryId || ''}
+                        onChange={(e) => handleChangeCategory(s, e.target.value)}
+                        aria-label={`Categoría de ${s.name}`}
+                        className="max-w-44 p-1.5 bg-page border border-line rounded-xl text-[11px] font-semibold text-ink-soft cursor-pointer focus:outline-none focus:border-ink dark:focus:border-brand"
+                      >
+                        <option value="">Sin categoría</option>
+                        {categories.map(c => (
+                          <option key={c.id} value={c.id}>{c.name}</option>
+                        ))}
+                      </select>
+                      <span className="mt-1 inline-block text-[10px] px-2 py-0.5 rounded-full bg-brand/10 text-brand border border-brand/20 font-extrabold">
+                        {storeTemplateLabel(s.template)}
+                      </span>
+                    </td>
                     <td data-label="Contacto" className="px-2 py-3">
                       <p className="flex items-center gap-1.5 font-semibold text-gray-600 dark:text-gray-300">
                         <Mail className="w-3.5 h-3.5 text-ink-muted" /> {s.email}

@@ -1,6 +1,7 @@
 package com.sciencebot.pos.backoffice.internal.repositories;
 
 import com.sciencebot.pos.backoffice.OnboardingStatsDto;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
@@ -14,8 +15,10 @@ import java.time.LocalDateTime;
 public class OnboardingStatsDao {
 
     private final JdbcClient jdbcClient;
+    private final String emailProvider;
 
-    public OnboardingStatsDao(JdbcClient jdbcClient) {
+    public OnboardingStatsDao(JdbcClient jdbcClient, @Value("${email.provider:log}") String emailProvider) {
+        this.emailProvider = emailProvider == null ? "log" : emailProvider.trim().toLowerCase();
         this.jdbcClient = jdbcClient;
     }
 
@@ -36,6 +39,6 @@ public class OnboardingStatsDao {
                 SELECT COUNT(*) FROM stores WHERE status = 'REJECTED'
                 """).query(Long.class).single();
 
-        return new OnboardingStatsDto(pendingUsers, pendingStores, approvedLast30Days, rejectedTotal);
+        return new OnboardingStatsDto(pendingUsers, pendingStores, approvedLast30Days, rejectedTotal, emailProvider);
     }
 }

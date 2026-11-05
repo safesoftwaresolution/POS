@@ -84,6 +84,10 @@ Todos los correos (verificación, recuperación de contraseña y aprobación de 
 - **Permisos**: `SUPER_ADMIN` (controlador en el módulo `backoffice`, que llega a `auth` solo por `AuthFacade.resendVerificationToUser`).
 - **Response**: `204 No Content`. A diferencia del reenvío público, informa de los problemas: `400` si la cuenta ya está verificada o se envió otro correo hace menos de un minuto (el enfriamiento se comparte con el reenvío público), `409` si el proveedor de correo falla (un fallo no inicia el enfriamiento, así que se puede reintentar).
 
+### POST /api/v1/backoffice/onboarding/pending-users/{userId}/verify
+- **Permisos**: `SUPER_ADMIN` (vía `AuthFacade.verifyAccountManually`).
+- **Response**: `204 No Content`. Marca el correo como verificado sin el enlace (cuando no le llega) e invalida los enlaces pendientes; la persona ya puede iniciar sesión y registrar su local. `400` si ya estaba verificada, `404` si no existe. `GET /api/v1/backoffice/onboarding/stats` incluye `emailProvider` (`smtp` o `log`) y el backoffice advierte cuando es `log`.
+
 ### POST /api/v1/auth/forgot-password
 - **Permisos**: Público
 - **Request**: `{ "email": "..." }`

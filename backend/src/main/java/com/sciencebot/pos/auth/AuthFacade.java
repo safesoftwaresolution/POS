@@ -16,6 +16,12 @@ public interface AuthFacade {
     void deleteUnverifiedAccount(Long userId);
 
     /**
+     * Marca como verificado el correo de una cuenta pendiente sin pasar por el enlace (SUPER_ADMIN, p. ej. si el
+     * correo no le llega). Invalida los enlaces pendientes. 400 si la cuenta ya está verificada.
+     */
+    void verifyAccountManually(Long userId);
+
+    /**
      * Inactiva o reactiva a un usuario (acción del SUPER_ADMIN). Al inactivar revoca sus sesiones. Falla con un
      * SUPER_ADMIN, con uno mismo, con el último administrador activo del local o si reactivar supera el plan.
      */

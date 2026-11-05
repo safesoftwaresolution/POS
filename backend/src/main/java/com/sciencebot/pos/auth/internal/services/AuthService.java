@@ -196,6 +196,19 @@ public class AuthService implements AuthFacade {
     }
 
     @Override
+    @Transactional
+    public void verifyAccountManually(Long userId) {
+        UserDto user = userFacade.getById(userId);
+        if (user.emailVerified()) {
+            throw new IllegalArgumentException("La cuenta ya tiene el correo verificado.");
+        }
+        // Los enlaces pendientes ya no hacen falta: la cuenta queda verificada por la plataforma.
+        emailVerificationService.deleteForUser(userId);
+        userFacade.markEmailVerified(userId);
+        log.info("Correo de la cuenta {} verificado manualmente desde el backoffice", user.username());
+    }
+
+    @Override
     public void resendVerificationToUser(Long userId) {
         UserDto user = userFacade.getById(userId);
         if (user.emailVerified()) {

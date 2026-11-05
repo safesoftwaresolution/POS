@@ -4,7 +4,6 @@ import com.sciencebot.pos.billing.dto.BillingActivationDto;
 import com.sciencebot.pos.billing.dto.BillingActivationStatus;
 import com.sciencebot.pos.billing.dto.BillingConnectionTestResult;
 import com.sciencebot.pos.billing.dto.BillingEnvironment;
-import com.sciencebot.pos.billing.dto.UpdateBillingCredentialsCommand;
 import com.sciencebot.pos.billing.exception.BillingNotEnabledException;
 import com.sciencebot.pos.billing.exception.BillingProviderException;
 import com.sciencebot.pos.billing.exception.AlegraApiException;
@@ -53,8 +52,8 @@ class StoreBillingConfigServiceImplTest {
             db.put(saved.getStoreId(), saved);
             return saved;
         });
-        provider = providerWhoseAccountsAreTheStoredFactusCredentials();
-        activeProvider = new ActiveBillingProvider(List.of(provider), "factus");
+        provider = providerWhoseAccountsAreTheLoadedCompanyIds();
+        activeProvider = new ActiveBillingProvider(List.of(provider), "alegra");
         notificationFacade = mock(NotificationFacade.class);
         storeFacade = mock(StoreFacade.class);
         // Por defecto el local ya tiene documentos subidos (no es lo que prueban estos tests).
@@ -66,16 +65,16 @@ class StoreBillingConfigServiceImplTest {
     }
 
     /**
-     * Proveedor "Factus" simulado: la cuenta está configurada cuando el local guardó credenciales
-     * completas del entorno (lo mismo que hace el adaptador real a través de su resolver).
+     * Proveedor "Alegra" simulado: la cuenta está configurada cuando el local ya tiene el company.id del entorno
+     * (lo mismo que hace el adaptador real a través de su resolver).
      */
-    private ElectronicInvoicingProvider providerWhoseAccountsAreTheStoredFactusCredentials() {
+    private ElectronicInvoicingProvider providerWhoseAccountsAreTheLoadedCompanyIds() {
         ElectronicInvoicingProvider fake = mock(ElectronicInvoicingProvider.class);
-        when(fake.getProviderName()).thenReturn("factus");
-        when(fake.displayName()).thenReturn("Factus");
+        when(fake.getProviderName()).thenReturn("alegra");
+        when(fake.displayName()).thenReturn("Alegra");
         when(fake.isAccountConfigured(any(), any())).thenAnswer(inv -> {
             StoreBillingConfig config = db.get(inv.<Long>getArgument(0));
-            return config != null && config.credentialsFor(inv.<BillingEnvironment>getArgument(1)).isComplete();
+            return config != null && config.companyIdFor(inv.<BillingEnvironment>getArgument(1)) != null;
         });
         return fake;
     }
@@ -86,8 +85,8 @@ class StoreBillingConfigServiceImplTest {
                 notificationFacade, storeFacade);
     }
 
-    private static UpdateBillingCredentialsCommand fullCredentials() {
-        return new UpdateBillingCredentialsCommand("client-1", "secret-1", "user@x.co", "pass-1");
+    private BillingActivationDto loadCompanyId(BillingEnvironment environment) {
+        return service.updateProviderCompanyId(STORE, environment, "company-1", "sa");
     }
 
     /** Lleva al local por el camino normal hasta el estado indicado. */
@@ -147,52 +146,29 @@ class StoreBillingConfigServiceImplTest {
                 () -> service.transition(STORE, BillingActivationStatus.ACTIVE, null, "sa"));
 
         // Credenciales de producción no sirven mientras el entorno activo es SANDBOX.
-        service.updateCredentials(STORE, BillingEnvironment.PRODUCTION, fullCredentials(), "sa");
+        loadCompanyId(BillingEnvironment.PRODUCTION);
         assertThrows(IllegalStateException.class,
                 () -> service.transition(STORE, BillingActivationStatus.ACTIVE, null, "sa"));
 
-        service.updateCredentials(STORE, BillingEnvironment.SANDBOX, fullCredentials(), "sa");
+        loadCompanyId(BillingEnvironment.SANDBOX);
         BillingActivationDto dto = service.transition(STORE, BillingActivationStatus.ACTIVE, null, "sa");
         assertEquals(BillingActivationStatus.ACTIVE, dto.status());
     }
 
     @Test
-    void blankSecretKeepsTheStoredOne() {
-        service.updateCredentials(STORE, BillingEnvironment.SANDBOX, fullCredentials(), "sa");
-
-        service.updateCredentials(STORE, BillingEnvironment.SANDBOX,
-                new UpdateBillingCredentialsCommand("client-2", "", "user2@x.co", null), "sa");
-
-        var credentials = db.get(STORE).getSandbox();
-        assertEquals("client-2", credentials.getClientId());
-        assertEquals("user2@x.co", credentials.getUsername());
-        assertEquals("secret-1", credentials.getClientSecret());
-        assertEquals("pass-1", credentials.getPassword());
-    }
-
-    @Test
-    void blankClientIdOrUsernameIsRejected() {
-        assertThrows(IllegalArgumentException.class, () -> service.updateCredentials(STORE,
-                BillingEnvironment.SANDBOX, new UpdateBillingCredentialsCommand(" ", null, null, null), "sa"));
-        assertThrows(IllegalArgumentException.class, () -> service.updateCredentials(STORE,
-                BillingEnvironment.SANDBOX, new UpdateBillingCredentialsCommand(null, null, "", null), "sa"));
-    }
-
-    @Test
-    void dtoNeverExposesSecretsOnlyWhetherEnvironmentIsComplete() {
+    void dtoNeverExposesTheCompanyIdOnlyWhetherEnvironmentIsConfigured() {
         BillingActivationDto dto =
-                service.updateCredentials(STORE, BillingEnvironment.PRODUCTION, fullCredentials(), "sa");
+                loadCompanyId(BillingEnvironment.PRODUCTION);
 
         assertTrue(dto.productionConfigured());
         assertFalse(dto.sandboxConfigured());
         assertNull(dto.productionNumberingRangeId());
-        assertFalse(dto.toString().contains("secret-1"));
-        assertFalse(dto.toString().contains("pass-1"));
+        assertFalse(dto.toString().contains("company-1"));
     }
 
     @Test
     void credentialsAreKeptPerStore() {
-        service.updateCredentials(STORE, BillingEnvironment.SANDBOX, fullCredentials(), "sa");
+        loadCompanyId(BillingEnvironment.SANDBOX);
 
         assertFalse(service.get(OTHER_STORE).sandboxConfigured());
         assertTrue(service.get(STORE).sandboxConfigured());
@@ -200,13 +176,13 @@ class StoreBillingConfigServiceImplTest {
 
     @Test
     void activeStoreCannotSwitchToAnEnvironmentWithoutCredentials() {
-        service.updateCredentials(STORE, BillingEnvironment.SANDBOX, fullCredentials(), "sa");
+        loadCompanyId(BillingEnvironment.SANDBOX);
         moveTo(BillingActivationStatus.ACTIVE);
 
         assertThrows(IllegalStateException.class,
                 () -> service.switchEnvironment(STORE, BillingEnvironment.PRODUCTION, "sa"));
 
-        service.updateCredentials(STORE, BillingEnvironment.PRODUCTION, fullCredentials(), "sa");
+        loadCompanyId(BillingEnvironment.PRODUCTION);
         assertEquals(BillingEnvironment.PRODUCTION,
                 service.switchEnvironment(STORE, BillingEnvironment.PRODUCTION, "sa").environment());
     }
@@ -220,11 +196,11 @@ class StoreBillingConfigServiceImplTest {
         assertEquals("super@platform.co", db.get(STORE).getUpdatedBy());
     }
 
-    // --- updateCredentials invalida el token guardado ---
+    // --- cargar el company.id invalida los datos en caché del proveedor ---
 
     @Test
-    void updatingCredentialsInvalidatesTheCachedToken() {
-        service.updateCredentials(STORE, BillingEnvironment.SANDBOX, fullCredentials(), "sa");
+    void loadingTheCompanyIdInvalidatesTheCachedProviderData() {
+        loadCompanyId(BillingEnvironment.SANDBOX);
 
         verify(provider).onAccountChanged(STORE);
     }
@@ -297,7 +273,7 @@ class StoreBillingConfigServiceImplTest {
 
     @Test
     void activationNotifiesTheStore() {
-        service.updateCredentials(STORE, BillingEnvironment.SANDBOX, fullCredentials(), "sa");
+        loadCompanyId(BillingEnvironment.SANDBOX);
         service.transition(STORE, BillingActivationStatus.DOCUMENTS_SUBMITTED, null, "admin");
         service.transition(STORE, BillingActivationStatus.AWAITING_PROVIDER, null, "sa");
         reset(notificationFacade);
@@ -358,7 +334,7 @@ class StoreBillingConfigServiceImplTest {
     void testConnectionSuccessMessageNamesTheActiveProvider() {
         BillingConnectionTestResult result = service.testConnection(STORE, BillingEnvironment.SANDBOX);
 
-        assertEquals("Conexión exitosa con Factus (SANDBOX)", result.message());
+        assertEquals("Conexión exitosa con Alegra (SANDBOX)", result.message());
         verify(provider).verifyConnection(STORE, BillingEnvironment.SANDBOX);
     }
 
@@ -386,7 +362,7 @@ class StoreBillingConfigServiceImplTest {
 
     @Test
     void activationAndEnvironmentSwitchAskTheProviderIfTheAccountIsConfigured() {
-        service.updateCredentials(STORE, BillingEnvironment.SANDBOX, fullCredentials(), "sa");
+        loadCompanyId(BillingEnvironment.SANDBOX);
         moveTo(BillingActivationStatus.ACTIVE);
 
         verify(provider, atLeastOnce()).isAccountConfigured(STORE, BillingEnvironment.SANDBOX);
@@ -398,7 +374,7 @@ class StoreBillingConfigServiceImplTest {
 
     @Test
     void configuredFlagsInTheDtoComeFromTheProvider() {
-        service.updateCredentials(STORE, BillingEnvironment.SANDBOX, fullCredentials(), "sa");
+        loadCompanyId(BillingEnvironment.SANDBOX);
         when(provider.isAccountConfigured(STORE, BillingEnvironment.PRODUCTION)).thenReturn(true);
 
         BillingActivationDto dto = service.get(STORE);
@@ -446,6 +422,6 @@ class StoreBillingConfigServiceImplTest {
                 () -> misconfigured.testConnection(STORE, BillingEnvironment.SANDBOX));
 
         assertTrue(ex.getMessage().contains("siigo"));
-        assertTrue(ex.getMessage().contains("factus"));
+        assertTrue(ex.getMessage().contains("alegra"));
     }
 }

@@ -354,12 +354,12 @@ export default function SettingsBento() {
               </div>
             </div>
 
-            {/* Facturación electrónica: las credenciales de Factus las carga el SUPER_ADMIN por local
-                (ver backend/docs/modules/billing/spec.md, RN-BILL-005) — el admin del local nunca las
-                ve ni las envía. El estado de habilitación y los rangos DIAN se gestionan en Facturación DIAN. */}
+            {/* Facturación electrónica: la empresa del local en el proveedor (company.id) la carga el SUPER_ADMIN
+                (ver backend/docs/modules/billing/spec.md, RN-BILL-005) — el admin del local nunca la
+                ve ni la envía. El estado de habilitación y los rangos DIAN se gestionan en Facturación DIAN. */}
             <div className="bento-card p-6 space-y-3">
               <h3 className="font-extrabold text-sm text-ink flex items-center gap-2">
-                <Key className="w-4 h-4 text-brand dark:text-brand" /> Facturación Electrónica Factus DIAN
+                <Key className="w-4 h-4 text-brand dark:text-brand" /> Facturación Electrónica DIAN
               </h3>
               <p className="text-xs text-ink-soft font-medium">
                 El estado de habilitación y los rangos de numeración DIAN de tu local se gestionan desde{' '}

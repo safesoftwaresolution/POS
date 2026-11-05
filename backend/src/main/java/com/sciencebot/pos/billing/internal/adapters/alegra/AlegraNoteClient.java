@@ -127,15 +127,15 @@ public class AlegraNoteClient {
     private InvoiceResult emit(String document, String endpoint, Draft draft, Long storeId) {
         AlegraAccess access = accessResolver.resolve(storeId);
 
-        Optional<ElectronicInvoice> found = invoiceRepository.findByStoreIdAndFactusNumber(access.storeId(), draft.billNumber());
+        Optional<ElectronicInvoice> found = invoiceRepository.findByStoreIdAndLegalNumber(access.storeId(), draft.billNumber());
         if (found.isEmpty() || !found.get().isValidated() || found.get().getCufe() == null) {
             return InvoiceResult.error("No existe una factura electrónica validada con el número " + draft.billNumber()
                     + " en esta tienda; solo se puede emitir una nota sobre una factura aceptada por la DIAN");
         }
         ElectronicInvoice invoice = found.get();
-        Matcher legal = LEGAL_NUMBER.matcher(invoice.getFactusNumber() == null ? "" : invoice.getFactusNumber().trim());
+        Matcher legal = LEGAL_NUMBER.matcher(invoice.getLegalNumber() == null ? "" : invoice.getLegalNumber().trim());
         if (!legal.matches()) {
-            return InvoiceResult.error("El número de la factura " + invoice.getFactusNumber()
+            return InvoiceResult.error("El número de la factura " + invoice.getLegalNumber()
                     + " no tiene el formato prefijo + número que Alegra exige para relacionar la nota");
         }
         LocalDate invoiceDate = invoice.getValidatedAt() != null ? invoice.getValidatedAt().toLocalDate() : LocalDate.now();

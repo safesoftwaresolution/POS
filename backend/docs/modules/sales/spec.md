@@ -60,7 +60,7 @@
     - Stock reducido atómicamente para cada ítem.
     - Movimiento de inventario tipo VENTA registrado.
     - Número de factura correlativo generado (ej. FACT-000001).
-    - Se publica `SaleCompletedEvent` (siempre). Si `sendToFactus: true`, `billing` lo escucha tras el commit (`@Async` + `AFTER_COMMIT`) y emite la factura electrónica DIAN; una falla del proveedor no afecta a la venta.
+    - Se publica `SaleCompletedEvent` (siempre). Si `sendElectronicInvoice: true` (se sigue aceptando `sendToFactus`), `billing` lo escucha tras el commit (`@Async` + `AFTER_COMMIT`) y emite la factura electrónica DIAN; una falla del proveedor no afecta a la venta.
   - Idempotencia: el header `Idempotency-Key` (opcional, máx. 80 caracteres) evita duplicar la venta ante reenvíos; la misma clave devuelve la venta original.
 
 ### RF-SALE-003 — Generar Factura y Ticket POS
@@ -92,7 +92,7 @@
 - **Request**:
   ```json
   {
-    "customerId": 1, "cashReceived": 20.00, "paymentMethod": "CASH", "sendToFactus": false,
+    "customerId": 1, "cashReceived": 20.00, "paymentMethod": "CASH", "sendElectronicInvoice": false,
     "items": [{ "productId": 1, "quantity": 2 }, { "serviceId": 4, "quantity": 1 }]
   }
   ```

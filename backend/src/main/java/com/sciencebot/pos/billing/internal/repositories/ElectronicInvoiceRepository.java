@@ -57,7 +57,7 @@ public interface ElectronicInvoiceRepository extends JpaRepository<ElectronicInv
     Optional<ElectronicInvoice> findBySaleIdAndStoreId(Long saleId, Long storeId);
 
     /** La factura de un local por su número legal (la que una nota crédito o débito referencia). */
-    Optional<ElectronicInvoice> findByStoreIdAndFactusNumber(Long storeId, String factusNumber);
+    Optional<ElectronicInvoice> findByStoreIdAndLegalNumber(Long storeId, String legalNumber);
 
     /**
      * Facturas que el reintento automático puede emitir de nuevo, de cualquier local (es un job de plataforma; el

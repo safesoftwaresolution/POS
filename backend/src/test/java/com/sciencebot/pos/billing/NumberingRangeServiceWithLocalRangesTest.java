@@ -94,7 +94,7 @@ class NumberingRangeServiceWithLocalRangesTest {
         NumberingRangeDto first = service.createNumberingRange(request("01", "SETP", "111"));
 
         assertEquals(first.id().intValue(),
-                configRepository.findById(storeId).orElseThrow().credentialsFor(BillingEnvironment.SANDBOX).getNumberingRangeId());
+                configRepository.findById(storeId).orElseThrow().getSandboxNumberingRangeId());
         assertThrows(IllegalStateException.class, () -> service.createNumberingRange(request("01", "SETQ", "222")));
         assertDoesNotThrow(() -> service.createNumberingRange(request("91", "NC", "333")), "otro documento si puede tener su rango");
         assertEquals(2, service.listNumberingRanges().size());

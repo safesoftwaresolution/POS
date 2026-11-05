@@ -18,7 +18,7 @@ public class ElectronicInvoiceMapper {
                 entity.getId(),
                 entity.getStoreId(),
                 entity.getSaleId(),
-                entity.getFactusNumber(),
+                entity.getLegalNumber(),
                 entity.getCufe(),
                 entity.getQrCode(),
                 status,

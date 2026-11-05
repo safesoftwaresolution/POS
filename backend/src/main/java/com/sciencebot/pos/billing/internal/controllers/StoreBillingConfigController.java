@@ -5,7 +5,6 @@ import com.sciencebot.pos.billing.dto.BillingActivationStatus;
 import com.sciencebot.pos.billing.dto.BillingConnectionTestResult;
 import com.sciencebot.pos.billing.dto.BillingEnvironment;
 import com.sciencebot.pos.billing.dto.TransitionBillingStatusRequest;
-import com.sciencebot.pos.billing.dto.UpdateBillingCredentialsCommand;
 import com.sciencebot.pos.billing.dto.UpdateProviderCompanyIdCommand;
 import com.sciencebot.pos.billing.internal.controllers.doc.StoreBillingConfigApiDoc;
 import com.sciencebot.pos.billing.internal.services.StoreBillingConfigService;
@@ -43,17 +42,6 @@ public class StoreBillingConfigController implements StoreBillingConfigApiDoc {
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<BillingActivationDto> get(@PathVariable Long storeId) {
         return ResponseEntity.ok(service.get(storeId));
-    }
-
-    @Override
-    @PutMapping("/api/v1/backoffice/stores/{storeId}/billing/credentials")
-    @PreAuthorize("hasRole('SUPER_ADMIN')")
-    public ResponseEntity<BillingActivationDto> updateCredentials(
-            @PathVariable Long storeId,
-            @RequestParam BillingEnvironment environment,
-            @Valid @RequestBody UpdateBillingCredentialsCommand command,
-            Authentication authentication) {
-        return ResponseEntity.ok(service.updateCredentials(storeId, environment, command, authentication.getName()));
     }
 
     @Override

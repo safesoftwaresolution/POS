@@ -5,7 +5,6 @@ import com.sciencebot.pos.billing.dto.BillingActivationStatus;
 import com.sciencebot.pos.billing.dto.BillingConnectionTestResult;
 import com.sciencebot.pos.billing.dto.BillingEnvironment;
 import com.sciencebot.pos.billing.dto.TransitionBillingStatusRequest;
-import com.sciencebot.pos.billing.dto.UpdateBillingCredentialsCommand;
 import com.sciencebot.pos.billing.internal.controllers.StoreBillingConfigController;
 import com.sciencebot.pos.billing.internal.services.StoreBillingConfigService;
 import org.junit.jupiter.api.BeforeEach;
@@ -63,19 +62,6 @@ class StoreBillingConfigControllerTest {
 
         assertEquals(BillingActivationStatus.ACTIVE, response.getBody().status());
         verify(service).get(STORE);
-    }
-
-    @Test
-    void updateCredentials_PassesTheAuthenticatedUserAsActor() {
-        UpdateBillingCredentialsCommand command = new UpdateBillingCredentialsCommand("c", "s", "u", "p");
-        when(service.updateCredentials(STORE, BillingEnvironment.SANDBOX, command, "super@platform.co"))
-                .thenReturn(dto(BillingActivationStatus.NOT_REQUESTED));
-
-        ResponseEntity<BillingActivationDto> response =
-                controller.updateCredentials(STORE, BillingEnvironment.SANDBOX, command, authentication);
-
-        assertEquals(200, response.getStatusCode().value());
-        verify(service).updateCredentials(STORE, BillingEnvironment.SANDBOX, command, "super@platform.co");
     }
 
     @Test

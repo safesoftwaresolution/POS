@@ -1137,118 +1137,6 @@
           }
         },
         {
-          "name": "Cargar Credenciales Factus — SANDBOX",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"200 OK\", () => pm.response.to.have.status(200));",
-                  "console.log('✅ Credenciales SANDBOX cargadas para el local.');"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{superadmin_token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"clientId\": \"TU_CLIENT_ID_SANDBOX\",\n  \"clientSecret\": \"TU_CLIENT_SECRET_SANDBOX\",\n  \"username\": \"tu_usuario@factus.com\",\n  \"password\": \"TU_PASSWORD_SANDBOX\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/backoffice/stores/{{store_id}}/billing/credentials?environment=SANDBOX",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "backoffice",
-                "stores",
-                "{{store_id}}",
-                "billing",
-                "credentials"
-              ],
-              "query": [
-                {
-                  "key": "environment",
-                  "value": "SANDBOX"
-                }
-              ]
-            },
-            "description": "El campo `numberingRangeId` es OPCIONAL. El rango lo elige el administrador del local con el endpoint `set-default`. Un secret/password vacío conserva el valor ya guardado."
-          }
-        },
-        {
-          "name": "Cargar Credenciales Factus — PRODUCTION",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{superadmin_token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"clientId\": \"TU_CLIENT_ID_PRODUCCION\",\n  \"clientSecret\": \"TU_CLIENT_SECRET_PRODUCCION\",\n  \"username\": \"tu_usuario@factus.com\",\n  \"password\": \"TU_PASSWORD_PRODUCCION\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/backoffice/stores/{{store_id}}/billing/credentials?environment=PRODUCTION",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "backoffice",
-                "stores",
-                "{{store_id}}",
-                "billing",
-                "credentials"
-              ],
-              "query": [
-                {
-                  "key": "environment",
-                  "value": "PRODUCTION"
-                }
-              ]
-            }
-          }
-        },
-        {
           "name": "Probar Conexión con Factus",
           "event": [
             {
@@ -1725,7 +1613,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"customerId\": {{customer_id}},\n  \"cashReceived\": 50000.00,\n  \"sendToFactus\": true,\n  \"paymentMethod\": \"CASH\",\n  \"items\": [\n    {\n      \"productId\": {{product_id}},\n      \"quantity\": 2\n    }\n  ]\n}"
+              "raw": "{\n  \"customerId\": {{customer_id}},\n  \"cashReceived\": 50000.00,\n  \"sendElectronicInvoice\": true,\n  \"paymentMethod\": \"CASH\",\n  \"items\": [\n    {\n      \"productId\": {{product_id}},\n      \"quantity\": 2\n    }\n  ]\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/sales",
@@ -1738,7 +1626,7 @@
                 "sales"
               ]
             },
-            "description": "⚡ **Emisión Asíncrona por Eventos de Dominio:**\nAl registrar la venta con `sendToFactus: true`, el POS responde de inmediato (`201 Created` en ~50ms) y publica internamente el evento de dominio `SaleCompletedEvent`.\nLa emisión ante la DIAN/Factus se ejecuta en segundo plano. La factura nace en estado `PENDING` y transiciona de forma reactiva a `VALIDATED`, `ERROR` o `REJECTED`."
+            "description": "⚡ **Emisión Asíncrona por Eventos de Dominio:**\nAl registrar la venta con `sendElectronicInvoice: true`, el POS responde de inmediato (`201 Created` en ~50ms) y publica internamente el evento de dominio `SaleCompletedEvent`.\nLa emisión ante la DIAN/Factus se ejecuta en segundo plano. La factura nace en estado `PENDING` y transiciona de forma reactiva a `VALIDATED`, `ERROR` o `REJECTED`."
           }
         },
         {
@@ -1771,7 +1659,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"customerId\": null,\n  \"cashReceived\": 10000.00,\n  \"sendToFactus\": false,\n  \"paymentMethod\": \"CASH\",\n  \"items\": [\n    {\n      \"productId\": {{product_id}},\n      \"quantity\": 1\n    }\n  ]\n}"
+              "raw": "{\n  \"customerId\": null,\n  \"cashReceived\": 10000.00,\n  \"sendElectronicInvoice\": false,\n  \"paymentMethod\": \"CASH\",\n  \"items\": [\n    {\n      \"productId\": {{product_id}},\n      \"quantity\": 1\n    }\n  ]\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/sales",
@@ -1803,7 +1691,7 @@
                   "if (d.status === \"PENDING\") {",
                   "  console.log(\"⏳ Factura en procesamiento asíncrono ante la DIAN...\");",
                   "} else if (d.status === \"VALIDATED\") {",
-                  "  console.log(\"✅ Factura Validada por la DIAN. CUFE:\", d.cufe, \"| Número Factus:\", d.factusNumber);",
+                  "  console.log(\"✅ Factura Validada por la DIAN. CUFE:\", d.cufe, \"| Número Factus:\", d.legalNumber);",
                   "} else if (d.status === \"ERROR\" || d.status === \"REJECTED\") {",
                   "  console.log(\"❌ Error o rechazo en facturación:\", d.errorMessage);",
                   "}"

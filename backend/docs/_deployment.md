@@ -36,7 +36,6 @@ Todas se leen con `${VAR:default}` desde `application*.properties`; en local se 
 | `ALEGRA_URL_SANDBOX` / `ALEGRA_URL_PRODUCTION` | URLs del e-provider de Alegra | `https://sandbox-api.alegra.com/e-provider/col/v1` / `https://api.alegra.com/e-provider/col/v1` |
 | `BILLING_EMISSION_LEASE` | Reserva de una emisión en curso (duración ISO-8601) | `PT5M` |
 | `BILLING_RETRY_ENABLED`, `BILLING_RETRY_INTERVAL_MS`, `BILLING_RETRY_BATCH_SIZE`, `BILLING_RETRY_MAX_ATTEMPTS` | Reintento automático de facturas pendientes o con error | `true`, `60000`, `20`, `8` |
-| `BILLING_ENCRYPTION_KEY` | Clave AES-256 (32 bytes en Base64) que cifra las credenciales heredadas de Factus que aún guarda la base | Sin valor por defecto; no perderla ni cambiarla |
 | `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, `R2_PUBLIC_URL` | Cloudflare R2 (módulo `storage`) | |
 | `SEED_SUPERADMIN_PASSWORD` | Contraseña del `SUPER_ADMIN` inicial. Sin ella no se siembra | solo `dev` tiene valor por defecto |
 | `SPRING_FLYWAY_ENABLED`, `SPRING_JPA_HIBERNATE_DDL_AUTO`, `SPRING_H2_CONSOLE_ENABLED` | Overrides de infraestructura | Flyway activo; `validate`; consola H2 solo en `dev` |
@@ -88,7 +87,7 @@ docker compose -f docker-compose.prod.yml down
 
 ### Transición de Desarrollo a Producción
 1. **Sin dependencias del host**: el empaquetado final ocurre en la etapa `builder`.
-2. **Variables de entorno**: define al menos `SPRING_PROFILES_ACTIVE=prod`, `DB_*`, `JWT_SECRET`, `JWT_COOKIE_SECURE=true`, `APP_FRONTEND_URL`, `EMAIL_PROVIDER=smtp` + `SMTP_*`, `BILLING_ENCRYPTION_KEY`, `ALEGRA_API_TOKEN_PRODUCTION` (y `ALEGRA_API_TOKEN_SANDBOX` si se prueba), `R2_*` y `SEED_SUPERADMIN_PASSWORD`.
+2. **Variables de entorno**: define al menos `SPRING_PROFILES_ACTIVE=prod`, `DB_*`, `JWT_SECRET`, `JWT_COOKIE_SECURE=true`, `APP_FRONTEND_URL`, `EMAIL_PROVIDER=smtp` + `SMTP_*`, `ALEGRA_API_TOKEN_PRODUCTION` (y `ALEGRA_API_TOKEN_SANDBOX` si se prueba), `R2_*` y `SEED_SUPERADMIN_PASSWORD`.
 3. **Hibernate**: `validate` en todos los entornos; el esquema solo cambia con migraciones Flyway.
 4. **Sirve el SPA detrás de HTTPS** (proxy inverso): las cookies de sesión y el CORS dependen de ello.
 5. La imagen `prod` fija la zona horaria `America/Bogota` (`TZ` y `-Duser.timezone`), trae un `HEALTHCHECK` TCP y limita la JVM con `-XX:MaxRAMPercentage=75` (ver «Capacidad y límites»).

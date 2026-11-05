@@ -5,7 +5,6 @@ import com.sciencebot.pos.billing.dto.BillingActivationStatus;
 import com.sciencebot.pos.billing.dto.BillingConnectionTestResult;
 import com.sciencebot.pos.billing.dto.BillingEnvironment;
 import com.sciencebot.pos.billing.dto.TransitionBillingStatusRequest;
-import com.sciencebot.pos.billing.dto.UpdateBillingCredentialsCommand;
 import com.sciencebot.pos.billing.dto.UpdateProviderCompanyIdCommand;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -26,16 +25,6 @@ public interface StoreBillingConfigApiDoc {
     @Operation(summary = "Estado de facturación electrónica de un local",
             description = "Nunca incluye secretos: solo indica si cada entorno tiene credenciales completas.")
     ResponseEntity<BillingActivationDto> get(Long storeId);
-
-    @Operation(summary = "Cargar las credenciales heredadas de Factus de un local (en retiro)",
-            description = "Un client_secret o password vacío conserva el valor ya guardado para ese entorno. "
-                    + "El rango de numeración lo elige el administrador del local; numberingRangeId es opcional.")
-    ResponseEntity<BillingActivationDto> updateCredentials(
-            Long storeId,
-            @Parameter(description = "Entorno que se está configurando", example = "SANDBOX") BillingEnvironment environment,
-            UpdateBillingCredentialsCommand command,
-            Authentication authentication
-    );
 
     @Operation(summary = "Cargar el company.id que el proveedor asignó al local en un entorno",
             description = "Alegra identifica a cada local por su company.id (empresa asociada bajo el token de plataforma). "

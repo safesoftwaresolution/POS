@@ -133,7 +133,7 @@ export default function CheckoutModal({
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="text-xs font-extrabold text-ink">Emitir factura electrónica DIAN</span>
                     </div>
-                    <p className="text-[11px] text-ink-soft">Se envía a la DIAN a través de Factus, nuestro proveedor autorizado (incluye CUFE, QR y XML)</p>
+                    <p className="text-[11px] text-ink-soft">Se envía a la DIAN a través de Alegra, nuestro proveedor autorizado (incluye CUFE, QR y XML)</p>
                   </div>
                 </div>
 
@@ -378,7 +378,7 @@ export function SaleResultModal({ sale, onClose }) {
   const download = async (type) => {
     try {
       const blob = type === 'pdf' ? await downloadInvoicePdfApi(sale.saleId) : await downloadInvoiceXmlApi(sale.saleId);
-      deliverBlob(blob, `factura-${invoice.factusNumber || sale.saleId}.${type}`, { openInTab: type === 'pdf' });
+      deliverBlob(blob, `factura-${invoice.legalNumber || sale.saleId}.${type}`, { openInTab: type === 'pdf' });
     } catch (err) {
       notify(`Error descargando el ${type.toUpperCase()}: ` + err.message);
     }
@@ -432,7 +432,7 @@ export function SaleResultModal({ sale, onClose }) {
                 <div className="grid grid-cols-2 gap-3 text-xs">
                   <div className="min-w-0">
                     <span className="text-[10px] text-ink-muted block">Número</span>
-                    <span className="font-mono font-bold text-ink">{invoice.factusNumber || '—'}</span>
+                    <span className="font-mono font-bold text-ink">{invoice.legalNumber || '—'}</span>
                   </div>
                   <div className="min-w-0">
                     <span className="text-[10px] text-ink-muted block">Receptor</span>

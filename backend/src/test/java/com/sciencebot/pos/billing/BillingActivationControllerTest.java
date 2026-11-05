@@ -74,15 +74,13 @@ class BillingActivationControllerTest {
     }
 
     @Test
-    void requestActivation_NeverReceivesCredentials() {
-        // El controlador no declara ningún parámetro de credenciales: lo garantiza el compilador,
-        // pero lo dejamos explícito como intención del diseño (defensa en profundidad).
+    void requestActivation_UsesTheStoreOfTheSessionAndTheAuthenticatedUser() {
         TenantContext.setStoreId(STORE);
         when(authentication.getName()).thenReturn("admin@local.co");
         when(service.requestActivation(any(), any())).thenReturn(dto(BillingActivationStatus.DOCUMENTS_SUBMITTED));
 
         controller.requestActivation(authentication);
 
-        verify(service, never()).updateCredentials(any(), any(), any(), any());
+        verify(service).requestActivation(STORE, "admin@local.co");
     }
 }

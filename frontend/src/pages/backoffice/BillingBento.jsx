@@ -16,7 +16,7 @@ import {
 import {
   listBackofficeBillingByStatusApi,
   getBackofficeStoreBillingApi,
-  updateBackofficeBillingCredentialsApi,
+  updateBackofficeBillingCompanyIdApi,
   testBackofficeBillingConnectionApi,
   switchBackofficeBillingEnvironmentApi,
   transitionBackofficeBillingStatusApi
@@ -31,7 +31,7 @@ const STATUSES = ['DOCUMENTS_SUBMITTED', 'AWAITING_PROVIDER', 'ACTIVE', 'REJECTE
 const STATUS_LABELS = {
   NOT_REQUESTED: 'Sin Solicitar',
   DOCUMENTS_SUBMITTED: 'Docs. Enviados',
-  AWAITING_PROVIDER: 'Esperando Factus',
+  AWAITING_PROVIDER: 'Esperando al proveedor',
   ACTIVE: 'Activo',
   REJECTED: 'Rechazado',
   SUSPENDED: 'Suspendido'
@@ -59,8 +59,6 @@ const TRANSITIONS = {
 
 const REASON_REQUIRED = new Set(['REJECTED', 'SUSPENDED']);
 
-const EMPTY_CREDENTIALS = { clientId: '', clientSecret: '', username: '', password: '' };
-
 export default function BillingBento() {
   const { notify, confirm } = useModal();
   const [statusFilter, setStatusFilter] = useState('DOCUMENTS_SUBMITTED');
@@ -81,8 +79,8 @@ export default function BillingBento() {
   const [detail, setDetail] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [envTab, setEnvTab] = useState('SANDBOX');
-  const [credentialsForm, setCredentialsForm] = useState(EMPTY_CREDENTIALS);
-  const [savingCredentials, setSavingCredentials] = useState(false);
+  const [companyIdForm, setCompanyIdForm] = useState('');
+  const [savingCompanyId, setSavingCompanyId] = useState(false);
   const [testResult, setTestResult] = useState(null);
   const [testing, setTesting] = useState(false);
   const [transitioning, setTransitioning] = useState(false);
@@ -94,7 +92,7 @@ export default function BillingBento() {
     setTestResult(null);
     setReasonTarget(null);
     setReasonText('');
-    setCredentialsForm(EMPTY_CREDENTIALS);
+    setCompanyIdForm('');
     try {
       const data = await getBackofficeStoreBillingApi(storeId);
       setDetail(data);
@@ -110,20 +108,20 @@ export default function BillingBento() {
     setDetail(null);
   };
 
-  const handleSaveCredentials = async (e) => {
+  const handleSaveCompanyId = async (e) => {
     e.preventDefault();
     if (!detail) return;
-    setSavingCredentials(true);
+    setSavingCompanyId(true);
     setTestResult(null);
     try {
-      const updated = await updateBackofficeBillingCredentialsApi(detail.storeId, envTab, credentialsForm);
+      const updated = await updateBackofficeBillingCompanyIdApi(detail.storeId, envTab, companyIdForm.trim());
       setDetail(updated);
-      setCredentialsForm(EMPTY_CREDENTIALS);
+      setCompanyIdForm('');
       reloadRows();
     } catch (err) {
-      notify('Error guardando credenciales: ' + err.message);
+      notify('Error guardando el company.id: ' + err.message);
     } finally {
-      setSavingCredentials(false);
+      setSavingCompanyId(false);
     }
   };
 
@@ -186,7 +184,7 @@ export default function BillingBento() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-[#17171B] dark:text-white">Facturación Electrónica</h1>
-          <p className="text-xs text-ink-soft font-medium">Habilitación DIAN/Factus por local: revisión, credenciales y etapa del proceso</p>
+          <p className="text-xs text-ink-soft font-medium">Habilitación DIAN por local: revisión, empresa en el proveedor y etapa del proceso</p>
         </div>
       </div>
 
@@ -377,10 +375,10 @@ export default function BillingBento() {
                   </div>
                 </div>
 
-                {/* Credenciales */}
+                {/* Empresa en el proveedor */}
                 <div className="p-4 bg-gray-50/60 dark:bg-white/5 rounded-2xl border border-line space-y-3">
                   <h4 className="font-extrabold text-xs text-ink flex items-center gap-2">
-                    <Key className="w-3.5 h-3.5 text-brand" /> Credenciales de Factus
+                    <Key className="w-3.5 h-3.5 text-brand" /> Empresa en el proveedor (company.id)
                   </h4>
 
                   <div className="flex gap-2">
@@ -388,56 +386,28 @@ export default function BillingBento() {
                       <button
                         key={env}
                         type="button"
-                        onClick={() => { setEnvTab(env); setCredentialsForm(EMPTY_CREDENTIALS); setTestResult(null); }}
+                        onClick={() => { setEnvTab(env); setCompanyIdForm(''); setTestResult(null); }}
                         className={`px-3 py-1.5 rounded-full text-[11px] font-bold cursor-pointer ${envTab === env ? 'bg-solid text-solid-ink' : 'bg-white dark:bg-white/10 text-gray-600 dark:text-gray-300'}`}
                       >
-                        {env} {env === 'SANDBOX' ? (detail.sandboxConfigured ? '✓' : '') : (detail.productionConfigured ? '✓' : '')}
+                        {env} {env === 'SANDBOX' ? (detail.sandboxCompanyIdConfigured ? '✓' : '') : (detail.productionCompanyIdConfigured ? '✓' : '')}
                       </button>
                     ))}
                   </div>
 
-                  <form onSubmit={handleSaveCredentials} className="space-y-2 text-xs">
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <label className="font-bold text-gray-700 dark:text-gray-300 block mb-1">Client ID:</label>
-                        <input
-                          type="text"
-                          value={credentialsForm.clientId}
-                          onChange={e => setCredentialsForm({ ...credentialsForm, clientId: e.target.value })}
-                          className="w-full p-2.5 bg-white dark:bg-page border border-line rounded-xl text-[11px] text-ink focus:outline-none focus:border-ink dark:focus:border-brand"
-                        />
-                      </div>
-                      <div>
-                        <label className="font-bold text-gray-700 dark:text-gray-300 block mb-1">Client Secret:</label>
-                        <input
-                          type="password"
-                          value={credentialsForm.clientSecret}
-                          onChange={e => setCredentialsForm({ ...credentialsForm, clientSecret: e.target.value })}
-                          placeholder="Vacío = conservar el guardado"
-                          className="w-full p-2.5 bg-white dark:bg-page border border-line rounded-xl text-[11px] text-ink focus:outline-none focus:border-ink dark:focus:border-brand"
-                        />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <label className="font-bold text-gray-700 dark:text-gray-300 block mb-1">Usuario:</label>
-                        <input
-                          type="text"
-                          value={credentialsForm.username}
-                          onChange={e => setCredentialsForm({ ...credentialsForm, username: e.target.value })}
-                          className="w-full p-2.5 bg-white dark:bg-page border border-line rounded-xl text-[11px] text-ink focus:outline-none focus:border-ink dark:focus:border-brand"
-                        />
-                      </div>
-                      <div>
-                        <label className="font-bold text-gray-700 dark:text-gray-300 block mb-1">Contraseña:</label>
-                        <input
-                          type="password"
-                          value={credentialsForm.password}
-                          onChange={e => setCredentialsForm({ ...credentialsForm, password: e.target.value })}
-                          placeholder="Vacío = conservar la guardada"
-                          className="w-full p-2.5 bg-white dark:bg-page border border-line rounded-xl text-[11px] text-ink focus:outline-none focus:border-ink dark:focus:border-brand"
-                        />
-                      </div>
+                  <form onSubmit={handleSaveCompanyId} className="space-y-2 text-xs">
+                    <div>
+                      <label className="font-bold text-gray-700 dark:text-gray-300 block mb-1">company.id de la empresa en Alegra:</label>
+                      <input
+                        type="text"
+                        value={companyIdForm}
+                        required
+                        maxLength={64}
+                        onChange={e => setCompanyIdForm(e.target.value)}
+                        placeholder={(envTab === 'SANDBOX' ? detail.sandboxCompanyIdConfigured : detail.productionCompanyIdConfigured)
+                          ? 'Ya cargado: escribe uno nuevo para reemplazarlo'
+                          : 'Identificador de la empresa asociada'}
+                        className="w-full p-2.5 bg-white dark:bg-page border border-line rounded-xl text-[11px] text-ink focus:outline-none focus:border-ink dark:focus:border-brand"
+                      />
                     </div>
 
                     {testResult && (
@@ -463,10 +433,10 @@ export default function BillingBento() {
                       </button>
                       <button
                         type="submit"
-                        disabled={savingCredentials}
+                        disabled={savingCompanyId}
                         className="flex-1 py-2 bg-solid hover:bg-solid-hover disabled:opacity-50 text-solid-ink rounded-xl text-[11px] font-extrabold cursor-pointer shadow-sm shadow-[#0A0A0A]/10"
                       >
-                        {savingCredentials ? 'Guardando...' : `Guardar Credenciales ${envTab}`}
+                        {savingCompanyId ? 'Guardando...' : `Guardar company.id ${envTab}`}
                       </button>
                     </div>
                   </form>

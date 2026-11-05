@@ -815,7 +815,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"customerId\": {{customer_id}},\n  \"cashReceived\": 50000.00,\n  \"sendToFactus\": true,\n  \"paymentMethod\": \"CASH\",\n  \"items\": [\n    {\n      \"productId\": {{product_id}},\n      \"quantity\": 2\n    }\n  ]\n}"
+              "raw": "{\n  \"customerId\": {{customer_id}},\n  \"cashReceived\": 50000.00,\n  \"sendElectronicInvoice\": true,\n  \"paymentMethod\": \"CASH\",\n  \"items\": [\n    {\n      \"productId\": {{product_id}},\n      \"quantity\": 2\n    }\n  ]\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/sales",
@@ -828,7 +828,7 @@
                 "sales"
               ]
             },
-            "description": "Registra la venta:\n1. Valida y descuenta stock automáticamente en inventario.\n2. Genera número de factura consecutivo.\n3. Dispara la emisión de la Factura Electrónica a Factus/DIAN (si sendToFactus es true).\n4. Guarda el ID de la venta en {{sale_id}}."
+            "description": "Registra la venta:\n1. Valida y descuenta stock automáticamente en inventario.\n2. Genera número de factura consecutivo.\n3. Dispara la emisión de la Factura Electrónica a Factus/DIAN (si sendElectronicInvoice es true).\n4. Guarda el ID de la venta en {{sale_id}}."
           }
         },
         {

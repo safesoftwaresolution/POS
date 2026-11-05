@@ -87,7 +87,7 @@ class AlegraNoteClientTest {
         ElectronicInvoice invoice = ElectronicInvoice.initialize(7L, 5L);
         invoice.markAsValidated("SETP993836500", "cufe-abc", "qr", null, LocalDateTime.of(2026, 11, 4, 10, 30));
         invoice.trackProviderDocument("inv-1");
-        when(invoiceRepository.findByStoreIdAndFactusNumber(5L, "SETP993836500")).thenReturn(Optional.of(invoice));
+        when(invoiceRepository.findByStoreIdAndLegalNumber(5L, "SETP993836500")).thenReturn(Optional.of(invoice));
         when(allocator.allocate(eq(5L), eq(BillingEnvironment.SANDBOX), anyString(), anyString()))
                 .thenReturn(allocation(false, "key-1"));
     }
@@ -258,7 +258,7 @@ class AlegraNoteClientTest {
         assertTrue(missing.errorMessage().contains("SETP-NOEXISTE"), missing.errorMessage());
 
         ElectronicInvoice pending = ElectronicInvoice.initialize(8L, 5L);
-        when(invoiceRepository.findByStoreIdAndFactusNumber(5L, "SETP-PEND")).thenReturn(Optional.of(pending));
+        when(invoiceRepository.findByStoreIdAndLegalNumber(5L, "SETP-PEND")).thenReturn(Optional.of(pending));
         assertEquals("ERROR", client.emitCreditNote(credit("SETP-PEND"), 5L).status());
 
         verifyNoInteractions(allocator);

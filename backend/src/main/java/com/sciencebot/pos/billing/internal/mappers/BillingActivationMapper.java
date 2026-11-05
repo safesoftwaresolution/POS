@@ -29,8 +29,8 @@ public class BillingActivationMapper {
                 entity.getEnvironment(),
                 account.isAccountConfigured(entity.getStoreId(), BillingEnvironment.SANDBOX),
                 account.isAccountConfigured(entity.getStoreId(), BillingEnvironment.PRODUCTION),
-                entity.getSandbox().getNumberingRangeId(),
-                entity.getProduction().getNumberingRangeId(),
+                entity.getSandboxNumberingRangeId(),
+                entity.getProductionNumberingRangeId(),
                 entity.companyIdFor(BillingEnvironment.SANDBOX) != null,
                 entity.companyIdFor(BillingEnvironment.PRODUCTION) != null,
                 entity.getUpdatedAt()

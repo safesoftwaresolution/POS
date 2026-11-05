@@ -4,7 +4,6 @@ import com.sciencebot.pos.billing.dto.CreateNumberingRangeRequest;
 import com.sciencebot.pos.billing.dto.NumberingRangeDto;
 import com.sciencebot.pos.billing.exception.BillingNotEnabledException;
 import com.sciencebot.pos.billing.internal.adapters.NumberingRangeProvider;
-import com.sciencebot.pos.billing.internal.entities.FactusCredentials;
 import com.sciencebot.pos.billing.internal.entities.NumberingRangeAudit;
 import com.sciencebot.pos.billing.internal.entities.StoreBillingConfig;
 import com.sciencebot.pos.billing.internal.repositories.NumberingRangeAuditRepository;
@@ -138,14 +137,13 @@ public class NumberingRangeServiceImpl implements NumberingRangeService {
             return;
         }
         billingConfigRepository.findById(storeId)
-                .filter(config -> config.credentialsFor(config.getEnvironment()).getNumberingRangeId() == null)
+                .filter(config -> config.numberingRangeIdFor(config.getEnvironment()) == null)
                 .ifPresent(config -> applyDefault(config, storeId, created.id()));
     }
 
     private void applyDefault(StoreBillingConfig config, Long storeId, Long rangeId) {
-        FactusCredentials credentials = config.credentialsFor(config.getEnvironment());
-        Integer previous = credentials.getNumberingRangeId();
-        credentials.setNumberingRangeId(Math.toIntExact(rangeId));
+        Integer previous = config.numberingRangeIdFor(config.getEnvironment());
+        config.assignNumberingRangeId(config.getEnvironment(), Math.toIntExact(rangeId));
         billingConfigRepository.save(config);
         audit(storeId, rangeId, "SET_DEFAULT",
                 previous != null ? String.valueOf(previous) : null,
@@ -239,7 +237,7 @@ public class NumberingRangeServiceImpl implements NumberingRangeService {
             return null;
         }
         return billingConfigRepository.findById(storeId)
-                .map(config -> config.credentialsFor(config.getEnvironment()).getNumberingRangeId())
+                .map(config -> config.numberingRangeIdFor(config.getEnvironment()))
                 .orElse(null);
     }
 

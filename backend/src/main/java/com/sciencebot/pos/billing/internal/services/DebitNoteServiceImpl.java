@@ -82,10 +82,10 @@ public class DebitNoteServiceImpl implements DebitNoteService {
 
         ElectronicInvoice invoice = invoiceRepository.findBySaleIdAndStoreId(saleId, storeId)
                 .orElseThrow(() -> new EntityNotFoundException("No existe factura electrónica registrada para la venta ID: " + saleId));
-        Preconditions.checkState(invoice.isValidated() && invoice.getFactusNumber() != null,
+        Preconditions.checkState(invoice.isValidated() && invoice.getLegalNumber() != null,
                 "Solo se puede emitir una nota débito sobre una factura electrónica en estado VALIDATED. Estado actual: " + invoice.getStatus());
 
-        String billNumber = invoice.getFactusNumber();
+        String billNumber = invoice.getLegalNumber();
         if (request.billNumber() != null && !request.billNumber().isBlank()) {
             Preconditions.checkArgument(billNumber.equals(request.billNumber().trim()),
                     "El bill_number " + request.billNumber().trim() + " no corresponde a la factura de la venta (" + billNumber + ")");

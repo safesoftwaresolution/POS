@@ -17,7 +17,7 @@ export const INVOICE_STATUS_STYLES = {
 export const ACTIVATION_LABELS = {
   NOT_REQUESTED: 'Sin solicitar',
   DOCUMENTS_SUBMITTED: 'Documentos enviados',
-  AWAITING_PROVIDER: 'Esperando a Factus',
+  AWAITING_PROVIDER: 'Esperando al proveedor',
   ACTIVE: 'Activa',
   REJECTED: 'Rechazada',
   SUSPENDED: 'Suspendida'

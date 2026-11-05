@@ -34,7 +34,7 @@ public class ElectronicInvoiceEventListener {
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onSaleCompleted(SaleCompletedEvent event) {
-        if (!event.sendToFactus()) {
+        if (!event.sendElectronicInvoice()) {
             log.debug("Venta ID {} no requiere emisión automática a la DIAN", event.saleId());
             return;
         }

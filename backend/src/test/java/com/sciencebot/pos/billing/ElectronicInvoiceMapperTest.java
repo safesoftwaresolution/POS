@@ -40,7 +40,7 @@ class ElectronicInvoiceMapperTest {
         assertEquals(50L, dto.id());
         assertEquals(1L, dto.storeId());
         assertEquals(10L, dto.saleId());
-        assertEquals("SETP990001", dto.factusNumber());
+        assertEquals("SETP990001", dto.legalNumber());
         assertEquals("cufe-abc-123", dto.cufe());
         assertEquals("https://qr.dian.gov.co", dto.qrCode());
         assertEquals("VALIDATED", dto.status());

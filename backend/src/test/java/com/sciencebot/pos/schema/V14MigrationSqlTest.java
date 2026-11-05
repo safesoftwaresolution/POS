@@ -27,8 +27,9 @@ class V14MigrationSqlTest {
             for (String column : new String[]{"STORE_ID", "STATUS", "ENVIRONMENT", "CREATED_AT", "UPDATED_AT"}) {
                 assertEquals("NO", nullable(conn, column), column + " debería ser NOT NULL");
             }
+            // V36 borró las credenciales Factus de esta tabla: solo sobrevive el rango de numeración de cada entorno.
             for (String env : new String[]{"SANDBOX", "PRODUCTION"}) {
-                for (String field : new String[]{"CLIENT_ID", "CLIENT_SECRET", "USERNAME", "PASSWORD", "NUMBERING_RANGE_ID"}) {
+                for (String field : new String[]{"NUMBERING_RANGE_ID"}) {
                     assertEquals("YES", nullable(conn, env + "_" + field));
                 }
             }

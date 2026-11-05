@@ -12,7 +12,7 @@ public record CreateSaleCommand(
         @Schema(description = "Efectivo recibido del cliente (se ignora si el pago es CREDIT)", example = "50000.00", requiredMode = Schema.RequiredMode.REQUIRED)
         BigDecimal cashReceived,
         @Schema(description = "Emitir automáticamente a DIAN (opcional — false para solo guardar en POS y emitir manualmente después)", example = "false")
-        Boolean sendToFactus,
+        @com.fasterxml.jackson.annotation.JsonAlias("sendToFactus") Boolean sendElectronicInvoice,
         @jakarta.validation.constraints.NotEmpty @jakarta.validation.Valid
         @Schema(description = "Lista de productos a vender", requiredMode = Schema.RequiredMode.REQUIRED)
         List<CreateSaleItemCommand> items,
@@ -23,8 +23,8 @@ public record CreateSaleCommand(
         LocalDate creditDueDate
 ) {
     /** Venta sin fecha de pago acordada (la mayoría de las ventas: contado). */
-    public CreateSaleCommand(Long customerId, BigDecimal cashReceived, Boolean sendToFactus,
+    public CreateSaleCommand(Long customerId, BigDecimal cashReceived, Boolean sendElectronicInvoice,
                              List<CreateSaleItemCommand> items, String paymentMethod) {
-        this(customerId, cashReceived, sendToFactus, items, paymentMethod, null);
+        this(customerId, cashReceived, sendElectronicInvoice, items, paymentMethod, null);
     }
 }

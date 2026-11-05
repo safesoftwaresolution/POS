@@ -30,25 +30,12 @@ public class StoreBillingConfig {
     @Column(name = "environment", nullable = false, length = 12)
     private BillingEnvironment environment = BillingEnvironment.SANDBOX;
 
-    @Embedded
-    @AttributeOverrides({
-            @AttributeOverride(name = "clientId", column = @Column(name = "sandbox_client_id", length = 255)),
-            @AttributeOverride(name = "clientSecret", column = @Column(name = "sandbox_client_secret", length = 1024)),
-            @AttributeOverride(name = "username", column = @Column(name = "sandbox_username", length = 255)),
-            @AttributeOverride(name = "password", column = @Column(name = "sandbox_password", length = 1024)),
-            @AttributeOverride(name = "numberingRangeId", column = @Column(name = "sandbox_numbering_range_id"))
-    })
-    private FactusCredentials sandbox = new FactusCredentials();
+    /** Rango de numeración activo del local en cada entorno (lo elige el administrador del local con set-default). */
+    @Column(name = "sandbox_numbering_range_id")
+    private Integer sandboxNumberingRangeId;
 
-    @Embedded
-    @AttributeOverrides({
-            @AttributeOverride(name = "clientId", column = @Column(name = "production_client_id", length = 255)),
-            @AttributeOverride(name = "clientSecret", column = @Column(name = "production_client_secret", length = 1024)),
-            @AttributeOverride(name = "username", column = @Column(name = "production_username", length = 255)),
-            @AttributeOverride(name = "password", column = @Column(name = "production_password", length = 1024)),
-            @AttributeOverride(name = "numberingRangeId", column = @Column(name = "production_numbering_range_id"))
-    })
-    private FactusCredentials production = new FactusCredentials();
+    @Column(name = "production_numbering_range_id")
+    private Integer productionNumberingRangeId;
 
     /** company.id del proveedor (Alegra) por entorno: cada local es una empresa asociada bajo el token de plataforma. */
     @Column(name = "sandbox_company_id", length = 64)
@@ -66,9 +53,18 @@ public class StoreBillingConfig {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
-    /** Credenciales del entorno indicado. */
-    public FactusCredentials credentialsFor(BillingEnvironment env) {
-        return env == BillingEnvironment.PRODUCTION ? production : sandbox;
+    /** Rango de numeración activo del entorno indicado, o null si aún no se eligió. */
+    public Integer numberingRangeIdFor(BillingEnvironment env) {
+        return env == BillingEnvironment.PRODUCTION ? productionNumberingRangeId : sandboxNumberingRangeId;
+    }
+
+    /** Elige el rango de numeración activo del entorno indicado. */
+    public void assignNumberingRangeId(BillingEnvironment env, Integer rangeId) {
+        if (env == BillingEnvironment.PRODUCTION) {
+            this.productionNumberingRangeId = rangeId;
+        } else {
+            this.sandboxNumberingRangeId = rangeId;
+        }
     }
 
     /** company.id del proveedor para el entorno indicado, o null si aún no se cargó. */
@@ -90,12 +86,6 @@ public class StoreBillingConfig {
         } else {
             this.sandboxCompanyId = value;
         }
-    }
-
-    @PostLoad
-    protected void onLoad() {
-        if (this.sandbox == null) this.sandbox = new FactusCredentials();
-        if (this.production == null) this.production = new FactusCredentials();
     }
 
     @PrePersist

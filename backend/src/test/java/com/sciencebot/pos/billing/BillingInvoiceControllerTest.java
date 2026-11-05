@@ -51,7 +51,7 @@ class BillingInvoiceControllerTest {
         assertNotNull(response);
         assertEquals(200, response.getStatusCode().value());
         assertEquals(1, response.getBody().getTotalElements());
-        assertEquals("SETP-001", response.getBody().getContent().get(0).factusNumber());
+        assertEquals("SETP-001", response.getBody().getContent().get(0).legalNumber());
     }
 
     @Test
@@ -88,7 +88,7 @@ class BillingInvoiceControllerTest {
         ResponseEntity<ElectronicInvoiceDto> response = controller.retryInvoice(10L);
 
         assertEquals(200, response.getStatusCode().value());
-        assertEquals("SETP-002", response.getBody().factusNumber());
+        assertEquals("SETP-002", response.getBody().legalNumber());
     }
 
     @Test

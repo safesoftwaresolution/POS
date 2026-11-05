@@ -89,7 +89,7 @@ export function storeFlow() {
   const p = products[Math.floor(Math.random() * products.length)];
   const body = JSON.stringify({
     cashReceived: 1000000,
-    sendToFactus: false,          // la facturacion electronica es asincrona y externa: no se mide aqui
+    sendElectronicInvoice: false,          // la facturacion electronica es asincrona y externa: no se mide aqui
     paymentMethod: 'CASH',
     items: [{ productId: p.id, quantity: 1 }],
   });

@@ -51,7 +51,7 @@ Una revisión del arnés, los specs y el código encontró desajustes. **Ya corr
 1. Rate limiting (login por IP, `/register`, `/refresh`, `/support/tickets`) y lockout persistente.
 2. Revocar los refresh tokens al cambiar o restablecer la contraseña; hacer público el logout.
 3. ~~Frontend: tokens en `localStorage`~~ — resuelto (2026-10-16): `http.js` guarda los tokens solo en memoria; la sesión viaja en cookies `HttpOnly`.
-4. Validar al arrancar `JWT_SECRET` (≥ 32 bytes) y `BILLING_ENCRYPTION_KEY`; quitar el perfil `dev` por defecto y H2 del JAR de producción.
+4. Validar al arrancar `JWT_SECRET` (≥ 32 bytes); quitar el perfil `dev` por defecto y H2 del JAR de producción.
 5. ~~`docker-compose.prod.yml` no reenviaba `EMAIL_*`, `SMTP_*`, `APP_FRONTEND_URL`, `JWT_COOKIE_SECURE`, `BILLING_PROVIDER`~~ — resuelto (2026-10-16); `JWT_SECRET`, `DB_PASSWORD` y `APP_FRONTEND_URL` son obligatorios.
 6. Aislamiento por local automático (`@Filter` de Hibernate o RLS) en vez de manual por servicio; `ProductFacade.updatePurchasePrice` aún no valida el local.
 7. Documentos KYC y archivos en bucket privado con URLs prefirmadas.
@@ -63,7 +63,7 @@ Una revisión del arnés, los specs y el código encontró desajustes. **Ya corr
 11. Descontar devoluciones en reportes; guardar el costo en `sale_items` para la rentabilidad.
 
 **Facturación** (ver `modules/billing/spec.md`, "Pendiente")
-12. Facturas: **hecho** (reserva con lease, llamada sin transacción, reintento automático, conciliación por `providerDocumentId`). Notas crédito y débito: **hecho** igual (`V35`). Factus ya fue retirado del código; pendiente retirar sus credenciales del esquema y renombrar `factus_number`/`factusNumber`/`sendToFactus` a nombres neutros; centralizar mapeo DIAN; rotación de claves de cifrado; validar vigencia y agotamiento del rango antes de emitir; frontend de habilitación, rangos y notas.
+12. Facturas: **hecho** (reserva con lease, llamada sin transacción, reintento automático, conciliación por `providerDocumentId`). Notas crédito y débito: **hecho** igual (`V35`). Factus ya fue retirado del todo (código, credenciales y nombres: `V36`); centralizar mapeo DIAN; rotación de claves de cifrado; validar vigencia y agotamiento del rango antes de emitir; frontend de habilitación, rangos y notas.
 
 **Arquitectura**
 13. ~~Sacar `FactusTokenManager` de `settings`~~ — resuelto al retirar Factus (el logo ya no se sincroniza con el proveedor). Añadir ArchUnit para que la regla de encapsulación se verifique.
@@ -73,7 +73,7 @@ Una revisión del arnés, los specs y el código encontró desajustes. **Ya corr
 **Calidad**
 16. ~~CI y Dependabot~~ — añadidos (`.github/workflows/ci.yml`: backend `mvnw verify`, frontend lint + build, `init.sh --skip-tests`; `.github/dependabot.yml`), **sin ejecutarse aún en GitHub**. Pendiente: dependency-check y Testcontainers con PostgreSQL (los tests y la concurrencia corren solo sobre H2).
 17. ~~springdoc 2.8.x (Boot 3)~~ — resuelto: springdoc 3.1.1 (Boot 4.1), AWS SDK 2.56, jjwt 0.13, jacoco 0.8.15 y `spring-boot-starter-flyway`; `/v3/api-docs` y Swagger UI verificados. Sigue pendiente el análisis de vulnerabilidades (dependency-check) además de Dependabot.
-18. ~~IVA fijo 19% y CUFE inventado en `POSBento.jsx`~~ — resuelto: el total es la suma de precios (IVA incluido), se envía `sendToFactus` y no se muestra un CUFE falso. Sigue pendiente completar la UI de facturación (hoy `InvoicingBento` cubre activación y facturas).
+18. ~~IVA fijo 19% y CUFE inventado en `POSBento.jsx`~~ — resuelto: el total es la suma de precios (IVA incluido), se envía `sendElectronicInvoice` y no se muestra un CUFE falso. Sigue pendiente completar la UI de facturación (hoy `InvoicingBento` cubre activación y facturas).
 19. Tests de seguridad por rol con `MockMvc`; `V23MigrationSqlTest` (notas crédito); test concurrente del stock.
 
 - **`docker-compose.prod.yml` no reenvía variables nuevas** (`BILLING_PROVIDER`, `EMAIL_*`/`SMTP_*`, `APP_FRONTEND_URL`, `JWT_COOKIE_SECURE`): en producción por compose el correo de verificación quedaría en modo `log` y las cookies sin `Secure`. Decidir y agregarlas. (2026-10-02)

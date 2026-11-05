@@ -68,7 +68,7 @@ class BillingServiceImplTest {
         Optional<ElectronicInvoiceDto> result = billingService.getBySaleId(1L);
 
         assertTrue(result.isPresent());
-        assertEquals("SETP-001", result.get().factusNumber());
+        assertEquals("SETP-001", result.get().legalNumber());
         verify(invoiceService).getBySaleId(1L);
     }
 
@@ -80,7 +80,7 @@ class BillingServiceImplTest {
         ElectronicInvoiceDto result = billingService.retryInvoice(1L);
 
         assertNotNull(result);
-        assertEquals("SETP-001", result.factusNumber());
+        assertEquals("SETP-001", result.legalNumber());
         verify(invoiceService).retryInvoice(1L);
     }
 

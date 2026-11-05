@@ -208,7 +208,7 @@ public class SaleServiceImpl implements SaleFacade {
                 saved.getStoreId(),
                 saved.getInvoiceNumber(),
                 saved.getTotalAmount(),
-                Boolean.TRUE.equals(command.sendToFactus()),
+                Boolean.TRUE.equals(command.sendElectronicInvoice()),
                 LocalDateTime.now()
         ));
 

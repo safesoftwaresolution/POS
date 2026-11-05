@@ -8,10 +8,10 @@ export async function getBackofficeStoreBillingApi(storeId) {
   return await fetchApi(`/backoffice/stores/${storeId}/billing`);
 }
 
-export async function updateBackofficeBillingCredentialsApi(storeId, environment, credentials) {
-  return await fetchApi(`/backoffice/stores/${storeId}/billing/credentials?environment=${environment}`, {
+export async function updateBackofficeBillingCompanyIdApi(storeId, environment, companyId) {
+  return await fetchApi(`/backoffice/stores/${storeId}/billing/company-id?environment=${environment}`, {
     method: 'PUT',
-    body: JSON.stringify(credentials),
+    body: JSON.stringify({ companyId }),
   });
 }
 

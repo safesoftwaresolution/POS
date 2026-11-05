@@ -25,8 +25,8 @@ public class ElectronicInvoice {
     @Column(name = "sale_id", nullable = false, unique = true, updatable = false)
     private Long saleId;
 
-    @Column(name = "factus_number", length = 50)
-    private String factusNumber;
+    @Column(name = "legal_number", length = 50)
+    private String legalNumber;
 
     @Column(name = "cufe", length = 255)
     private String cufe;
@@ -138,7 +138,7 @@ public class ElectronicInvoice {
             throw new IllegalStateException("El CUFE es obligatorio para certificar una factura electrónica ante la DIAN");
         }
 
-        this.factusNumber = legalNumber.trim();
+        this.legalNumber = legalNumber.trim();
         this.cufe = cufe.trim();
         this.qrCode = qrCode;
         this.pdfUrl = pdfUrl;
@@ -187,7 +187,7 @@ public class ElectronicInvoice {
      * Invariante de Negocio: Valida si la factura está en condiciones fiscales de ser enviada por correo.
      */
     public void assertCanSendEmail() {
-        if (this.status != ElectronicInvoiceStatus.VALIDATED || this.factusNumber == null || this.factusNumber.isBlank()) {
+        if (this.status != ElectronicInvoiceStatus.VALIDATED || this.legalNumber == null || this.legalNumber.isBlank()) {
             throw new IllegalStateException("La factura no ha sido validada por la DIAN (estado actual: " + getStatus() + ")");
         }
     }
@@ -196,7 +196,7 @@ public class ElectronicInvoice {
      * Invariante de Negocio: Valida si la factura tiene asignado número legal para descargar PDF o XML.
      */
     public void assertCanDownloadLegalDocument() {
-        if (this.factusNumber == null || this.factusNumber.isBlank()) {
+        if (this.legalNumber == null || this.legalNumber.isBlank()) {
             throw new IllegalStateException("La factura no tiene número legal asignado");
         }
     }
@@ -278,7 +278,7 @@ public class ElectronicInvoice {
     public Long getId() { return id; }
     public Long getStoreId() { return storeId; }
     public Long getSaleId() { return saleId; }
-    public String getFactusNumber() { return factusNumber; }
+    public String getLegalNumber() { return legalNumber; }
     public String getCufe() { return cufe; }
     public String getQrCode() { return qrCode; }
     public ElectronicInvoiceStatus getStatus() { return status; }

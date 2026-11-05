@@ -65,10 +65,10 @@ export default function InvoicingBento() {
         <div>
           <div className="flex items-center gap-2.5 flex-wrap">
             <h1 className="text-2xl font-black text-ink tracking-tight">Facturación Electrónica DIAN</h1>
-            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-brand text-white">Factus</span>
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-brand text-white">Alegra</span>
           </div>
           <p className="text-xs text-ink-soft font-medium mt-1">
-            Seguimiento de facturas, CUFE y numeración oficial de tu local ante la DIAN. Factus es el proveedor tecnológico autorizado que las transmite.
+            Seguimiento de facturas, CUFE y numeración oficial de tu local ante la DIAN. Alegra es el proveedor tecnológico autorizado que las transmite.
           </p>
         </div>
 

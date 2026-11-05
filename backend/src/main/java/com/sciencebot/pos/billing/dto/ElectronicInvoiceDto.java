@@ -12,7 +12,7 @@ public record ElectronicInvoiceDto(
         @Schema(description = "ID de la venta asociada", example = "5")
         Long saleId,
         @Schema(description = "Número de factura asignado por el proveedor", example = "SETP990000001")
-        String factusNumber,
+        String legalNumber,
         @Schema(description = "Código Único de Factura Electrónica (CUFE) de la DIAN", example = "fe0abc1234...")
         String cufe,
         @Schema(description = "Contenido del código QR para verificación DIAN")
@@ -28,8 +28,8 @@ public record ElectronicInvoiceDto(
         @Schema(description = "Fecha y hora de validación por la DIAN", example = "2025-03-15T10:35:00")
         LocalDateTime validatedAt
 ) {
-    public ElectronicInvoiceDto(Long id, Long saleId, String factusNumber, String cufe, String qrCode,
+    public ElectronicInvoiceDto(Long id, Long saleId, String legalNumber, String cufe, String qrCode,
                                 String status, String errorMessage, String pdfUrl, LocalDateTime validatedAt) {
-        this(id, null, saleId, factusNumber, cufe, qrCode, status, errorMessage, pdfUrl, validatedAt);
+        this(id, null, saleId, legalNumber, cufe, qrCode, status, errorMessage, pdfUrl, validatedAt);
     }
 }

@@ -4,7 +4,6 @@ import com.sciencebot.pos.billing.dto.BillingActivationDto;
 import com.sciencebot.pos.billing.dto.BillingActivationStatus;
 import com.sciencebot.pos.billing.dto.BillingConnectionTestResult;
 import com.sciencebot.pos.billing.dto.BillingEnvironment;
-import com.sciencebot.pos.billing.dto.UpdateBillingCredentialsCommand;
 
 import java.util.List;
 
@@ -33,10 +32,6 @@ public interface StoreBillingConfigService {
      * documento subido (RUT, cámara de comercio, etc., ya gestionados por el módulo de locales).
      */
     BillingActivationDto requestActivation(Long storeId, String actor);
-
-    /** Guarda las credenciales de un entorno. Un secret o password vacío conserva el actual. */
-    BillingActivationDto updateCredentials(Long storeId, BillingEnvironment environment,
-                                           UpdateBillingCredentialsCommand command, String actor);
 
     /**
      * Guarda el company.id que el proveedor (Alegra) asignó al local en un entorno. Idempotente:

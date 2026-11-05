@@ -120,7 +120,7 @@ export default function ActivationTab({ role, activation, ranges, rangesLoading,
               <Building2 className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-extrabold text-sm text-ink">Estado de habilitación ante Factus y la DIAN</h3>
+              <h3 className="font-extrabold text-sm text-ink">Estado de habilitación ante el proveedor y la DIAN</h3>
               <p className="text-[11px] text-ink-soft font-medium">
                 {activation ? `Entorno activo: ${activation.environment}` : 'Consultando...'}
               </p>

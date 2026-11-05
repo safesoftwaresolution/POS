@@ -1,7 +1,7 @@
 <!-- doc-version: 1.7 | last-updated: 2026-10-29 -->
 # Esquema de Base de Datos — Vista Global
 
-Fuente de verdad: las migraciones Flyway en `src/main/resources/db/migration/` (hoy `V1` … `V35`). Este documento es el mapa;
+Fuente de verdad: las migraciones Flyway en `src/main/resources/db/migration/` (hoy `V1` … `V36`). Este documento es el mapa;
 el DDL columna a columna vive en las migraciones y, para los módulos con tablas propias complejas, en su `spec.md`.
 
 ## Diagrama Entidad-Relación
@@ -76,7 +76,7 @@ erDiagram
 | support | `support_tickets` | V3 | `ticket_number` único |
 | notifications | `notifications` | V11 | Por local; `read` |
 | billing | `electronic_invoices` | V2, V5, V13 (`store_id`), V33 (`provider_document_id`), V34 (`attempts`, `processing_started_at`, `next_retry_at`) | Una por venta; `provider_document_id` también en las notas; V34: reserva (lease) de la emisión y reintento automático |
-| billing | `store_billing_config` | V14 | PK = `store_id`; secretos cifrados |
+| billing | `store_billing_config` | V14, V33 (`*_company_id`), V36 (se borran las credenciales Factus) | PK = `store_id`; sin secretos |
 | billing | `numbering_range_audit` | V15, V17 | Bitácora de rangos |
 | billing | `electronic_credit_notes` | V18, V33 (`provider_document_id`), V35 (`attempts`, `processing_started_at`) | `reference_code` único global; V35: reserva (lease) de la emisión |
 | billing | `electronic_debit_notes` | V19, V33 (`provider_document_id`), V35 (`attempts`, `processing_started_at`) | `reference_code` único global; V35: reserva (lease) de la emisión |
@@ -99,7 +99,7 @@ Sesiones de refresh token rotativas (`V4__Refresh_Tokens.sql`).
 | created_at / updated_at | TIMESTAMP | |
 
 ## Tabla `store_billing_config` (módulo billing)
-Habilitación y credenciales de facturación electrónica **por local** (`V14__Store_Billing_Config.sql`).
+Habilitación de facturación electrónica **por local** (`V14__Store_Billing_Config.sql`).
 Relación 1 a 1 con `stores`: la PK **es** el `store_id`. DDL completo en `modules/billing/spec.md`.
 
 | Columna | Tipo | Notas |
@@ -108,9 +108,8 @@ Relación 1 a 1 con `stores`: la PK **es** el `store_id`. DDL completo en `modul
 | status | VARCHAR(30) | Etapa de habilitación (CHECK: `NOT_REQUESTED`…`SUSPENDED`) |
 | status_reason | VARCHAR(500) | Motivo obligatorio para `REJECTED` / `SUSPENDED` |
 | environment | VARCHAR(12) | `SANDBOX` o `PRODUCTION` (CHECK) |
-| sandbox_* / production_* | VARCHAR / INT | Dos juegos de credenciales + id de rango por entorno |
+| sandbox_numbering_range_id / production_numbering_range_id | INT | Rango de numeración activo por entorno (V36 borró las columnas de credenciales Factus) |
 | sandbox_company_id / production_company_id | VARCHAR(64) | `company.id` del proveedor (Alegra) por entorno, V33; no es secreto |
-| …_client_secret, …_password | VARCHAR(1024) | **Cifrados AES-256-GCM por la aplicación**, nunca en claro |
 | updated_by | VARCHAR(100) | Último usuario que modificó la configuración |
 | created_at / updated_at | TIMESTAMP | |
 

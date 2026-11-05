@@ -98,7 +98,7 @@ class InvoiceServiceImplTest {
 
         assertNotNull(result);
         assertEquals("VALIDATED", result.status());
-        assertEquals("SETP-MOCK-000001", result.factusNumber());
+        assertEquals("SETP-MOCK-000001", result.legalNumber());
         verify(repository, atLeastOnce()).save(any(ElectronicInvoice.class));
     }
 

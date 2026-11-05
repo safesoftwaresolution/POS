@@ -48,7 +48,7 @@ export default function InvoicesTab({ role, refreshKey, onChanged }) {
   const handleDownload = async (invoice, type) => {
     try {
       const blob = type === 'pdf' ? await downloadInvoicePdfApi(invoice.saleId) : await downloadInvoiceXmlApi(invoice.saleId);
-      deliverBlob(blob, `factura-${invoice.factusNumber || invoice.saleId}.${type}`, { openInTab: type === 'pdf' });
+      deliverBlob(blob, `factura-${invoice.legalNumber || invoice.saleId}.${type}`, { openInTab: type === 'pdf' });
     } catch (err) {
       notify(`Error descargando el ${type.toUpperCase()}: ` + err.message);
     }
@@ -90,7 +90,7 @@ export default function InvoicesTab({ role, refreshKey, onChanged }) {
     const q = search.trim().toLowerCase();
     if (!q) return data.content || [];
     return (data.content || []).filter(inv =>
-      (inv.factusNumber || '').toLowerCase().includes(q) ||
+      (inv.legalNumber || '').toLowerCase().includes(q) ||
       (inv.cufe || '').toLowerCase().includes(q) ||
       String(inv.saleId).includes(q)
     );
@@ -166,7 +166,7 @@ export default function InvoicesTab({ role, refreshKey, onChanged }) {
                   return (
                     <tr key={inv.id} className="hover:bg-gray-50/60 dark:hover:bg-white/5">
                       <td data-label="" className="py-3.5 px-5">
-                        <span className="font-mono font-bold text-ink block">{inv.factusNumber || '—'}</span>
+                        <span className="font-mono font-bold text-ink block">{inv.legalNumber || '—'}</span>
                         <span className="text-[10px] text-ink-muted font-mono">Venta #{inv.saleId}</span>
                       </td>
                       <td data-label="Validada el" className="py-3.5 px-4 text-gray-600 dark:text-gray-300 font-medium">{formatDateTime(inv.validatedAt)}</td>
@@ -268,7 +268,7 @@ export default function InvoicesTab({ role, refreshKey, onChanged }) {
               </button>
             </div>
             <p className="text-[11px] text-ink-soft font-medium">
-              Se enviará el PDF y el XML de la factura <span className="font-mono font-bold">{emailTarget.factusNumber}</span>.
+              Se enviará el PDF y el XML de la factura <span className="font-mono font-bold">{emailTarget.legalNumber}</span>.
             </p>
             <div>
               <label htmlFor="invoice-email" className="font-bold text-xs text-gray-700 dark:text-gray-300 block mb-1">Correo de destino:</label>
@@ -296,7 +296,7 @@ export default function InvoicesTab({ role, refreshKey, onChanged }) {
           <div className="bento-card max-w-lg w-full bg-card p-6 rounded-3xl shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-3 border-b border-line">
               <h3 className="font-extrabold text-base text-ink flex items-center gap-2">
-                <FileText className="w-5 h-5 text-brand" /> Factura {detail.factusNumber || `de la venta #${detail.saleId}`}
+                <FileText className="w-5 h-5 text-brand" /> Factura {detail.legalNumber || `de la venta #${detail.saleId}`}
               </h3>
               <button type="button" onClick={() => setDetail(null)} aria-label="Cerrar" className="p-1 text-gray-400 hover:text-gray-700 dark:hover:text-white cursor-pointer">
                 <X className="w-5 h-5" />

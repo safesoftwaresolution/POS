@@ -86,23 +86,10 @@ Con `billing.provider=alegra` el secreto es **un token de plataforma por entorno
 - **Custodia**: es una variable de entorno del despliegue. Nunca va en la base de datos, en el repositorio (`.env.example` y `docker-compose.prod.yml` solo traen la variable vacía o una referencia `${...}`; un test lo verifica) ni en los logs. `AlegraAccess.toString()` lo omite y los mensajes de error de Alegra nunca lo incluyen.
 - **Aislamiento entre locales: `company.id` + `TenantContext`, nunca el token.** Cada local es una empresa asociada en Alegra; su `company.id` se guarda por local y entorno (`store_billing_config.sandbox_company_id` / `production_company_id`) y solo lo escribe el SUPER_ADMIN (`PUT /api/v1/backoffice/stores/{storeId}/billing/company-id`). `AlegraAccessResolver` resuelve siempre el local en contexto y falla si no está `ACTIVE` o le falta el `company.id`: no hay respaldo al de otro local. Un `company.id` equivocado significa facturar como otra empresa, por eso es una carga de back office y los endpoints del local no lo aceptan.
 - **Descargas de archivos**: Alegra devuelve enlaces temporales firmados (60 min). Solo se siguen enlaces `https` de dominios `alegra.com` o de un bucket `api-alegra-e-provider-*` de S3; las redirecciones se siguen a mano (máximo 3) validando cada salto, el cliente de descarga no sigue redirecciones por su cuenta, y el token nunca se envía a esos enlaces. Lectura con tope de tamaño y el archivo se valida (PDF o XML) antes de devolverlo.
-- **Cifrado**: la clave `BILLING_ENCRYPTION_KEY` sigue siendo necesaria mientras la base guarde las credenciales heredadas de Factus; con Alegra no hay secretos por local en la base.
+- **Sin secretos por local en la base**: con Alegra el único secreto es el token de plataforma (variable de entorno). Las credenciales cifradas de Factus y la clave `BILLING_ENCRYPTION_KEY` se retiraron (`V36`).
 
-## Credenciales heredadas de Factus (pendientes de retirar)
+## Facturación electrónica: auditoría y proveedor
 
-Factus fue retirado del código, pero `store_billing_config` aún guarda sus credenciales cifradas y el endpoint de carga sigue vivo hasta la migración del esquema. Mientras existan siguen siendo un secreto sensible:
-
-- **Custodia**: solo el **SUPER_ADMIN** puede cargarlas
-  (`PUT /api/v1/backoffice/stores/{storeId}/billing/credentials`). El administrador del local nunca las ve ni
-  las envía: ningún endpoint bajo `/api/v1/billing/activation` las acepta ni las devuelve.
-- **Cifrado en reposo**: `client_secret` y `password` se guardan cifrados con **AES-256-GCM**
-  (`SecretCryptoConverter`, un `AttributeConverter` de JPA). Formato: `v1:` + Base64(IV de 12 bytes ‖ cifrado ‖
-  etiqueta GCM). Una fuga de la tabla `store_billing_config` no expone las credenciales. Limitaciones: la clave se valida de forma perezosa y `v1:` no lleva identificador de clave, así que no hay rotación.
-- **Clave de cifrado**: `BILLING_ENCRYPTION_KEY` (32 bytes en Base64), única pieza fuera de la base de datos.
-  Perderla o cambiarla inutiliza los secretos ya guardados. Generación en Windows/PowerShell:
-  `$b=New-Object byte[] 32; [Security.Cryptography.RNGCryptoServiceProvider]::new().GetBytes($b); [Convert]::ToBase64String($b)`.
-- **Sin credenciales globales**: no existen variables de entorno con credenciales de Factus. Con Alegra el token es de plataforma y el aislamiento entre locales es por `company.id`.
-- **Nunca en logs ni en respuestas**: `BillingActivationDto` solo informa si cada entorno está completo, nunca el valor.
 - **Auditoría**: `store_billing_config.updated_by` guarda quién tocó la configuración por última vez, y
   `numbering_range_audit` registra cada cambio sobre los rangos de numeración (acción, valor anterior y nuevo,
   usuario y fecha).

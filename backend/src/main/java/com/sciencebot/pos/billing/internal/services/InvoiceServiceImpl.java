@@ -88,7 +88,7 @@ public class InvoiceServiceImpl implements InvoiceService {
         InvoiceEmissionTransactions.Reservation reservation = reserve(sale.id(), effectiveStoreId);
         if (reservation.outcome() == ElectronicInvoice.ReserveOutcome.ALREADY_VALIDATED) {
             log.info("La venta ID {} ya posee una factura electrónica VALIDATED ({})", sale.id(),
-                    reservation.invoice().factusNumber());
+                    reservation.invoice().legalNumber());
             return reservation.invoice();
         }
         if (reservation.outcome() == ElectronicInvoice.ReserveOutcome.IN_PROGRESS) {
@@ -201,9 +201,9 @@ public class InvoiceServiceImpl implements InvoiceService {
         String providerDocumentId = einvoice.getProviderDocumentId();
         boolean sent = providerDocumentId != null
                 ? provider.sendInvoiceEmailByProviderId(providerDocumentId, email)
-                : provider.sendInvoiceEmail(einvoice.getFactusNumber(), email);
+                : provider.sendInvoiceEmail(einvoice.getLegalNumber(), email);
         if (!sent) {
-            throw new IllegalStateException("El proveedor no pudo procesar el envío de correo para la factura " + einvoice.getFactusNumber());
+            throw new IllegalStateException("El proveedor no pudo procesar el envío de correo para la factura " + einvoice.getLegalNumber());
         }
     }
 
@@ -256,7 +256,7 @@ public class InvoiceServiceImpl implements InvoiceService {
         String providerDocumentId = einvoice.getProviderDocumentId();
         return providerDocumentId != null
                 ? provider.downloadInvoicePDFByProviderId(providerDocumentId)
-                : provider.downloadInvoicePDF(einvoice.getFactusNumber());
+                : provider.downloadInvoicePDF(einvoice.getLegalNumber());
     }
 
     @Override
@@ -272,7 +272,7 @@ public class InvoiceServiceImpl implements InvoiceService {
         String providerDocumentId = einvoice.getProviderDocumentId();
         return providerDocumentId != null
                 ? provider.downloadInvoiceXMLByProviderId(providerDocumentId)
-                : provider.downloadInvoiceXML(einvoice.getFactusNumber());
+                : provider.downloadInvoiceXML(einvoice.getLegalNumber());
     }
 
     /** Un vendedor no puede operar la factura de una venta ajena: responde como si no existiera. */

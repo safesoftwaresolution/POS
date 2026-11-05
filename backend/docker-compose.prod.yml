@@ -60,7 +60,6 @@ services:
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
       # --- Facturacion electronica ---
       BILLING_PROVIDER: ${BILLING_PROVIDER:-alegra}
-      BILLING_ENCRYPTION_KEY: ${BILLING_ENCRYPTION_KEY:-}
       # Alegra (token de plataforma por entorno; nunca va en este archivo, solo en el entorno de despliegue)
       ALEGRA_URL_SANDBOX: ${ALEGRA_URL_SANDBOX:-https://sandbox-api.alegra.com/e-provider/col/v1}
       ALEGRA_API_TOKEN_SANDBOX: ${ALEGRA_API_TOKEN_SANDBOX:-}

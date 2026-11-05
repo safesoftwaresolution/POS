@@ -5,10 +5,8 @@ import com.sciencebot.pos.billing.dto.BillingActivationStatus;
 import com.sciencebot.pos.billing.dto.BillingConnectionTestResult;
 import com.sciencebot.pos.billing.dto.BillingEnvironment;
 import com.sciencebot.pos.billing.exception.BillingProviderException;
-import com.sciencebot.pos.billing.dto.UpdateBillingCredentialsCommand;
 import com.sciencebot.pos.billing.internal.adapters.ActiveBillingProvider;
 import com.sciencebot.pos.billing.internal.adapters.BillingAccountProvider;
-import com.sciencebot.pos.billing.internal.entities.FactusCredentials;
 import com.sciencebot.pos.billing.internal.entities.StoreBillingConfig;
 import com.sciencebot.pos.billing.internal.mappers.BillingActivationMapper;
 import com.sciencebot.pos.billing.internal.repositories.StoreBillingConfigRepository;
@@ -107,36 +105,6 @@ public class StoreBillingConfigServiceImpl implements StoreBillingConfigService 
         if (notify) {
             notifyStore(saved, target, reason);
         }
-        return mapper.toDto(saved);
-    }
-
-    @Override
-    @Transactional
-    public BillingActivationDto updateCredentials(Long storeId, BillingEnvironment environment,
-                                                  UpdateBillingCredentialsCommand command, String actor) {
-        Objects.requireNonNull(environment, "El entorno es obligatorio");
-        Objects.requireNonNull(command, "Las credenciales son obligatorias");
-        StoreBillingConfig config = getOrCreate(storeId);
-        FactusCredentials credentials = config.credentialsFor(environment);
-
-        if (command.clientId() != null) {
-            credentials.setClientId(requireNotBlank(command.clientId(), "El client_id"));
-        }
-        if (command.username() != null) {
-            credentials.setUsername(requireNotBlank(command.username(), "El usuario"));
-        }
-        // Vacío significa "conservar el valor guardado": el secreto nunca se devuelve al cliente.
-        if (command.clientSecret() != null && !command.clientSecret().isBlank()) {
-            credentials.setClientSecret(command.clientSecret().trim());
-        }
-        if (command.password() != null && !command.password().isBlank()) {
-            credentials.setPassword(command.password().trim());
-        }
-
-        config.setUpdatedBy(actor);
-        StoreBillingConfig saved = repository.save(config);
-        // Las credenciales cambiaron: cualquier token en caché de ese local queda obsoleto.
-        activeBillingProvider.get().onAccountChanged(saved.getStoreId());
         return mapper.toDto(saved);
     }
 

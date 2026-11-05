@@ -12,7 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/** Verifica con Hibernate y H2 reales que los secretos quedan cifrados en la columna. */
+/** Verifica con Hibernate y H2 reales que la configuración de facturación del local se guarda y se lee completa. */
 @SpringBootTest
 @Transactional
 class StoreBillingConfigPersistenceTest {
@@ -24,32 +24,29 @@ class StoreBillingConfigPersistenceTest {
     private EntityManager em;
 
     @Test
-    void secretsAreEncryptedInTheDatabaseAndDecryptedWhenRead() {
+    void theRangeAndTheCompanyIdOfEachEnvironmentRoundTrip() {
         StoreBillingConfig config = new StoreBillingConfig();
         config.setStoreId(9001L);
-        config.getSandbox().setClientId("client-visible");
-        config.getSandbox().setClientSecret("secreto-sandbox");
-        config.getSandbox().setUsername("user@x.co");
-        config.getSandbox().setPassword("clave-sandbox");
-        config.getProduction().setClientSecret("secreto-prod");
+        config.assignNumberingRangeId(BillingEnvironment.SANDBOX, 14);
+        config.assignNumberingRangeId(BillingEnvironment.PRODUCTION, 15);
+        config.assignCompanyId(BillingEnvironment.SANDBOX, "company-sandbox");
+        config.assignCompanyId(BillingEnvironment.PRODUCTION, "company-production");
         repository.saveAndFlush(config);
 
         Object[] row = (Object[]) em.createNativeQuery(
-                "SELECT sandbox_client_id, sandbox_client_secret, sandbox_password, production_client_secret "
-                        + "FROM store_billing_config WHERE store_id = 9001").getSingleResult();
-
-        assertEquals("client-visible", row[0]);
-        for (int i = 1; i <= 3; i++) {
-            String stored = (String) row[i];
-            assertTrue(stored.startsWith("v1:"), "columna " + i + " debe estar cifrada");
-            assertFalse(stored.contains("secreto") || stored.contains("clave"));
-        }
+                "SELECT sandbox_numbering_range_id, production_numbering_range_id, sandbox_company_id, "
+                        + "production_company_id FROM store_billing_config WHERE store_id = 9001").getSingleResult();
+        assertEquals(14, ((Number) row[0]).intValue());
+        assertEquals(15, ((Number) row[1]).intValue());
+        assertEquals("company-sandbox", row[2]);
+        assertEquals("company-production", row[3]);
 
         em.clear();
         StoreBillingConfig reloaded = repository.findById(9001L).orElseThrow();
-        assertEquals("secreto-sandbox", reloaded.getSandbox().getClientSecret());
-        assertEquals("clave-sandbox", reloaded.getSandbox().getPassword());
-        assertEquals("secreto-prod", reloaded.getProduction().getClientSecret());
+        assertEquals(14, reloaded.numberingRangeIdFor(BillingEnvironment.SANDBOX));
+        assertEquals(15, reloaded.numberingRangeIdFor(BillingEnvironment.PRODUCTION));
+        assertEquals("company-sandbox", reloaded.companyIdFor(BillingEnvironment.SANDBOX));
+        assertEquals("company-production", reloaded.companyIdFor(BillingEnvironment.PRODUCTION));
         assertEquals(BillingActivationStatus.NOT_REQUESTED, reloaded.getStatus());
         assertEquals(BillingEnvironment.SANDBOX, reloaded.getEnvironment());
         assertNotNull(reloaded.getCreatedAt());

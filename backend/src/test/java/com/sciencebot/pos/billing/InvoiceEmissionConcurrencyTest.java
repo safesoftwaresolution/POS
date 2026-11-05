@@ -174,7 +174,7 @@ class InvoiceEmissionConcurrencyTest {
         verify(provider).queryInvoiceByProviderId("doc-1");
         ElectronicInvoice stored = repository.findBySaleId(saleId).orElseThrow();
         assertEquals("doc-1", stored.getProviderDocumentId());
-        assertEquals("SETP990000101", stored.getFactusNumber());
+        assertEquals("SETP990000101", stored.getLegalNumber());
     }
 
     @Test

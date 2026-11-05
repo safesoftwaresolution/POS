@@ -219,7 +219,7 @@ export default function POSBento() {
       items: cart.map(toSaleLine),
       cashReceived: paymentIsCredit ? 0 : cashNumber,
       totalAmount: total,
-      sendToFactus: issueDian,
+      sendElectronicInvoice: issueDian,
       paymentMethod: selectedPaymentMethod,
       ...(paymentIsCredit && { creditDueDate })
     };

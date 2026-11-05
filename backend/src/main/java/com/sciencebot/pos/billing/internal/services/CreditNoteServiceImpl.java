@@ -195,7 +195,7 @@ public class CreditNoteServiceImpl implements CreditNoteService {
         ElectronicInvoice invoice = invoiceRepository.findBySaleIdAndStoreId(saleId, requireStoreId())
                 .orElseThrow(() -> new IllegalArgumentException("No existe factura electrónica registrada para la venta ID: " + saleId));
 
-        if (!invoice.isValidated() || invoice.getFactusNumber() == null) {
+        if (!invoice.isValidated() || invoice.getLegalNumber() == null) {
             throw new IllegalStateException("Solo se puede emitir una nota crédito sobre una factura electrónica en estado VALIDATED. Estado actual: " + invoice.getStatus());
         }
 
@@ -210,7 +210,7 @@ public class CreditNoteServiceImpl implements CreditNoteService {
         String referenceCode = "NC-" + (sale.invoiceNumber() != null ? sale.invoiceNumber() : ("SALE-" + saleId)) + "-C" + chosenConcept;
         String obs = (observation != null && !observation.isBlank())
                 ? observation.trim()
-                : "Nota crédito sobre factura " + invoice.getFactusNumber();
+                : "Nota crédito sobre factura " + invoice.getLegalNumber();
 
         // Mapear payment_details
         String paymentMethod = sale.paymentMethod() != null ? sale.paymentMethod().trim().toUpperCase() : "CASH";
@@ -256,7 +256,7 @@ public class CreditNoteServiceImpl implements CreditNoteService {
                 referenceCode,
                 chosenConcept,
                 "20",
-                invoice.getFactusNumber(),
+                invoice.getLegalNumber(),
                 null,
                 obs,
                 payments,

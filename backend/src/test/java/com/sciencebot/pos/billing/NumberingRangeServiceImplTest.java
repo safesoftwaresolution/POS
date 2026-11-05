@@ -69,7 +69,7 @@ class NumberingRangeServiceImplTest {
         StoreBillingConfig config = new StoreBillingConfig();
         config.setStoreId(STORE);
         config.setEnvironment(BillingEnvironment.SANDBOX);
-        config.getSandbox().setNumberingRangeId(rangeId);
+        config.assignNumberingRangeId(BillingEnvironment.SANDBOX, rangeId);
         return config;
     }
 
@@ -261,10 +261,6 @@ class NumberingRangeServiceImplTest {
         config.setStoreId(STORE);
         config.setStatus(BillingActivationStatus.ACTIVE);
         config.setEnvironment(BillingEnvironment.SANDBOX);
-        config.getSandbox().setClientId("client");
-        config.getSandbox().setClientSecret("secret");
-        config.getSandbox().setUsername("user");
-        config.getSandbox().setPassword("pass");
         return config;
     }
 
@@ -275,7 +271,7 @@ class NumberingRangeServiceImplTest {
                 new UsernamePasswordAuthenticationToken("admin@local.co", null, List.of()));
         StoreBillingConfig config = configWithActiveRange(14);
         config.setEnvironment(BillingEnvironment.PRODUCTION);
-        config.getProduction().setNumberingRangeId(7);
+        config.assignNumberingRangeId(BillingEnvironment.PRODUCTION, 7);
         when(billingConfigRepository.findById(STORE)).thenReturn(Optional.of(config));
         useCustomProvider();
         when(customProvider.getNumberingRange(20L)).thenReturn(range(20L, true));
@@ -283,8 +279,8 @@ class NumberingRangeServiceImplTest {
         NumberingRangeDto result = service.setDefaultNumberingRange(20L);
 
         assertEquals(20L, result.id());
-        assertEquals(20, config.getProduction().getNumberingRangeId());
-        assertEquals(14, config.getSandbox().getNumberingRangeId(), "el otro entorno no se toca");
+        assertEquals(20, config.getProductionNumberingRangeId());
+        assertEquals(14, config.getSandboxNumberingRangeId(), "el otro entorno no se toca");
         verify(billingConfigRepository).save(config);
         verify(auditRepository).save(argThat(entry ->
                 entry.getStoreId().equals(STORE)
@@ -306,7 +302,7 @@ class NumberingRangeServiceImplTest {
         assertThrows(jakarta.persistence.EntityNotFoundException.class,
                 () -> service.setDefaultNumberingRange(99L));
 
-        assertEquals(14, config.getSandbox().getNumberingRangeId());
+        assertEquals(14, config.getSandboxNumberingRangeId());
         verify(billingConfigRepository, never()).save(any());
         verifyNoInteractions(auditRepository);
     }
@@ -323,7 +319,7 @@ class NumberingRangeServiceImplTest {
                 () -> service.setDefaultNumberingRange(20L));
 
         assertTrue(ex.getMessage().contains("inactivo"));
-        assertEquals(14, config.getSandbox().getNumberingRangeId());
+        assertEquals(14, config.getSandboxNumberingRangeId());
         verify(billingConfigRepository, never()).save(any());
         verifyNoInteractions(auditRepository);
     }
@@ -349,14 +345,14 @@ class NumberingRangeServiceImplTest {
         // El flujo de venta lee el rango de la misma configuración que acaba de actualizar el administrador.
         TenantContext.setStoreId(STORE);
         StoreBillingConfig config = activeConfigWithCredentials();
-        config.getSandbox().setNumberingRangeId(14);
+        config.assignNumberingRangeId(BillingEnvironment.SANDBOX, 14);
         when(billingConfigRepository.findById(STORE)).thenReturn(Optional.of(config));
         useCustomProvider();
         when(customProvider.getNumberingRange(20L)).thenReturn(range(20L, true));
 
-        assertEquals(14, config.getSandbox().getNumberingRangeId());
+        assertEquals(14, config.getSandboxNumberingRangeId());
         service.setDefaultNumberingRange(20L);
-        assertEquals(20, config.getSandbox().getNumberingRangeId());
+        assertEquals(20, config.getSandboxNumberingRangeId());
     }
 
     @Test
@@ -371,7 +367,7 @@ class NumberingRangeServiceImplTest {
 
         service.createNumberingRange(request);
 
-        assertEquals(21, config.getSandbox().getNumberingRangeId());
+        assertEquals(21, config.getSandboxNumberingRangeId());
         verify(billingConfigRepository).save(config);
         verify(auditRepository).save(argThat(entry -> entry.getAction().equals("CREATE")));
         verify(auditRepository).save(argThat(entry -> entry.getAction().equals("SET_DEFAULT")));
@@ -389,7 +385,7 @@ class NumberingRangeServiceImplTest {
 
         service.createNumberingRange(request);
 
-        assertEquals(14, config.getSandbox().getNumberingRangeId());
+        assertEquals(14, config.getSandboxNumberingRangeId());
         verify(billingConfigRepository, never()).save(any());
         verify(auditRepository, never()).save(argThat(entry -> entry.getAction().equals("SET_DEFAULT")));
     }

@@ -332,7 +332,6 @@ Puedes personalizar la configuración del backend mediante variables de entorno 
 | `ALEGRA_API_TOKEN_PRODUCTION` | *(vacío)* | Token Bearer de plataforma de Alegra para producción. **Secreto.** |
 | `ALEGRA_URL_SANDBOX` | `https://sandbox-api.alegra.com/e-provider/col/v1` | URL del entorno de pruebas del e-provider de Alegra. |
 | `ALEGRA_URL_PRODUCTION` | `https://api.alegra.com/e-provider/col/v1` | URL del entorno de producción del e-provider de Alegra. |
-| `BILLING_ENCRYPTION_KEY` | *(vacío)* | Clave AES-256 (32 bytes en Base64) que cifra en la base de datos las credenciales heredadas de Factus que aún guarda `store_billing_config`. Si se pierde o cambia, esos secretos dejan de poder leerse. |
 | `R2_ACCOUNT_ID` | *(vacío)* | ID de cuenta de Cloudflare (define el endpoint `https://<id>.r2.cloudflarestorage.com`). |
 | `R2_ACCESS_KEY_ID` | *(vacío)* | Access Key ID del token API de Cloudflare R2. |
 | `R2_SECRET_ACCESS_KEY` | *(vacío)* | Secret Access Key del token API de Cloudflare R2. |
@@ -342,8 +341,7 @@ Puedes personalizar la configuración del backend mediante variables de entorno 
 > **Alegra**: el token es de plataforma (variable de entorno); cada local es una empresa asociada y el `SUPER_ADMIN` carga su `company.id` con
 > `PUT /api/v1/backoffice/stores/{storeId}/billing/company-id`. La guía de alta de una empresa está en `backend/docs/modules/billing/spec.md`.
 >
-> **Factus**: ya no es un proveedor soportado. Las credenciales que se cargaron para él siguen cifradas en `store_billing_config` hasta que se retiren con la migración del esquema.
-> Ver `backend/docs/modules/billing/spec.md`.
+> **Factus** ya no es un proveedor soportado y sus credenciales se borraron de la base (`V36`). Ver `backend/docs/modules/billing/spec.md`.
 
 > Sin las 5 variables `R2_*`, `POST /api/v1/storage/upload` sigue respondiendo pero falla al intentar conectarse a R2 (no hay fallback silencioso). Corriendo con `mvnw spring-boot:run`, `backend/.env` se carga automáticamente (la propia aplicación lo importa con `spring.config.import`); con Docker Compose, `docker-compose.yml`/`docker-compose.prod.yml` ya las reenvían al contenedor.
 

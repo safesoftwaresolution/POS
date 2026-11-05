@@ -11,6 +11,6 @@ public record SaleCompletedEvent(
         Long storeId,
         String invoiceNumber,
         BigDecimal totalAmount,
-        boolean sendToFactus,
+        boolean sendElectronicInvoice,
         LocalDateTime completedAt
 ) {}

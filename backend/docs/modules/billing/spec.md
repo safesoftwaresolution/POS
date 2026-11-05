@@ -1,4 +1,4 @@
-<!-- spec-version: 4.0 | last-updated: 2026-11-05 -->
+<!-- spec-version: 4.1 | last-updated: 2026-11-05 -->
 # Módulo: Facturación Electrónica (Billing)
 
 ## Dependencias
@@ -6,7 +6,7 @@
 - **Requerido por**: otros módulos solo a través de `BillingFacade`
 
 > `sales` **no** invoca a billing. Publica `SaleCompletedEvent` y `ElectronicInvoiceEventListener`
-> (`@Async` + `@TransactionalEventListener(AFTER_COMMIT)`) emite la factura cuando `sendToFactus` (nombre heredado del campo) es verdadero.
+> (`@Async` + `@TransactionalEventListener(AFTER_COMMIT)`) emite la factura cuando `sendElectronicInvoice` es verdadero (el nombre anterior, `sendToFactus`, se sigue aceptando al recibir la solicitud).
 > Una falla del proveedor nunca revierte ni retrasa la venta.
 
 > **No depende de `settings`**: el estado de facturación de cada local vive en `store_billing_config` (tabla propia de este módulo).
@@ -36,7 +36,7 @@ El módulo está internamente segregado por responsabilidades (Feature Slicing &
 
 Los servicios dependen de los puertos (`InvoiceProvider`, `CreditNoteProvider`, `DebitNoteProvider`, `NumberingRangeProvider`, `BillingAccountProvider`), nunca de la clase de un adaptador concreto. Los beans de Alegra existen solo con `billing.provider=alegra`.
 
-> **Factus fue retirado del código.** Quedan nombres y datos heredados que se retiran con la migración del esquema (ver `_roadmap.md`): `factus_number` / `factusNumber` / `sendToFactus`, las credenciales Factus cifradas en `store_billing_config` con el endpoint `PUT …/billing/credentials`, y el rango de numeración activo por entorno que esa misma fila guarda.
+> **Factus fue retirado por completo**: el código antes y, con `V36`, sus credenciales cifradas (`store_billing_config`), el endpoint `PUT …/billing/credentials`, la clave `BILLING_ENCRYPTION_KEY` y los nombres `factus_number` / `factusNumber` / `sendToFactus` (hoy `legal_number` / `legalNumber` / `sendElectronicInvoice`). `store_billing_config` conserva el rango de numeración activo de cada entorno.
 
 ---
 
@@ -169,7 +169,6 @@ sus locales. Por eso las credenciales llegan al SUPER_ADMIN, no al local:
 - Cada llamada al proveedor usa exclusivamente la empresa (`company.id`) del local correspondiente.
 - **No existe fallback a la empresa de otro local.** Si el local no está `ACTIVE` o le falta el `company.id` del entorno, se lanza `BillingNotEnabledException` y no se hace ninguna llamada al proveedor.
 - El token de Alegra es de **plataforma** (una variable de entorno por entorno) y el aislamiento entre locales es por `company.id` + `TenantContext`, nunca por token; ver «Modelo de cuentas».
-- Las credenciales Factus que aún guarda `store_billing_config` son datos heredados sin uso.
 
 ### RN-BILL-006 — Ciclo de Habilitación por Local
 ```
@@ -187,21 +186,13 @@ NOT_REQUESTED → DOCUMENTS_SUBMITTED → AWAITING_PROVIDER → ACTIVE
 | `SUSPENDED` | SUPER_ADMIN | Facturación pausada (exige motivo). Reactivable |
 
 - No se puede saltar pasos: cada transición se valida contra `BillingActivationStatus.canTransitionTo(...)`.
-- Pasar a `ACTIVE` exige credenciales **completas** del entorno activo (client_id, client_secret, usuario y
-  contraseña). `REJECTED` y `SUSPENDED` exigen `reason`; al salir de esos estados el motivo se limpia.
+- Pasar a `ACTIVE` exige que la cuenta del entorno activo esté configurada (`isAccountConfigured`: token de plataforma del entorno y `company.id` del local). `REJECTED` y `SUSPENDED` exigen `reason`; al salir de esos estados el motivo se limpia.
 - Cada cambio hecho por el SUPER_ADMIN notifica al local (`BILLING_STATUS_CHANGED` vía `NotificationFacade`).
   La solicitud inicial, que origina el propio local, no se autonotifica.
 
-### RN-BILL-007 — Cifrado de Secretos en Reposo
-- `client_secret` y `password` se cifran con **AES-256-GCM** mediante `SecretCryptoConverter`
-  (`AttributeConverter` de JPA) antes de guardarse.
-- Formato almacenado: `v1:` + Base64(IV de 12 bytes ‖ texto cifrado ‖ etiqueta GCM). El prefijo permite rotar
-  algoritmo o clave más adelante.
-- La clave (32 bytes en Base64) viene de `billing.encryption-key` / `BILLING_ENCRYPTION_KEY` y **es el único
-  secreto de facturación que vive fuera de la base de datos**. Si se pierde o cambia, los secretos ya guardados
-  dejan de poder leerse.
-- Ningún DTO de salida expone secretos: `BillingActivationDto` solo informa si cada entorno está completo
-  (`sandboxConfigured` / `productionConfigured`).
+### RN-BILL-007 — (Retirada) Cifrado de Secretos en Reposo
+- Regla de las credenciales de Factus. `V36` las borró y se eliminaron `SecretCryptoConverter` y la clave `BILLING_ENCRYPTION_KEY`: con Alegra no hay secretos por local en la base.
+- Ningún DTO de salida expone el `company.id`: `BillingActivationDto` solo informa si cada entorno está configurado (`sandboxConfigured` / `productionConfigured`, `sandboxCompanyIdConfigured` / `productionCompanyIdConfigured`).
 
 ### RN-BILL-008 — Guardas de Rangos de Numeración
 Aplicados en `NumberingRangeServiceImpl` **antes** de llamar al proveedor:
@@ -244,7 +235,7 @@ El mensaje del proveedor se propaga al cliente (truncado a 500 caracteres) para 
 - Regla del adaptador de Factus (borrar el borrador pendiente y reintentar una vez). Se retiró junto con Factus y con los endpoints `DELETE …/reference/{referenceCode}` de notas; Alegra no tiene ese conflicto (la `Idempotency-Key` evita el duplicado).
 
 ### RN-BILL-012 — Emisión de Nota Crédito a partir de Venta
-- Para emitir nota crédito referenciando una venta (`createFromSale`), la venta debe tener factura electrónica `VALIDATED` **en el local actual**. La nota crédito referencia el número de factura legal (`factus_number`).
+- Para emitir nota crédito referenciando una venta (`createFromSale`), la venta debe tener factura electrónica `VALIDATED` **en el local actual**. La nota crédito referencia el número de factura legal (`legal_number`).
 - `reference_code` determinista: `NC-<número de factura de la venta>-C<concepto>`. Un doble clic o un reintento reutiliza la misma nota en vez de emitir otra ante la DIAN.
 - `sale_id` se persiste al crear la nota (antes se asignaba por reflexión y quedaba nulo).
 
@@ -271,7 +262,7 @@ El mensaje del proveedor se propaga al cliente (truncado a 500 caracteres) para 
 - Para el rol `SELLER`, `GET /billing/invoices` lista solo las facturas de las ventas que él registró (consulta nativa sobre `sales.user_id`, con orden fijo por `id` descendente; el parámetro `sort` se ignora). Consultar, descargar el PDF o XML y enviar por correo la factura de una venta ajena responde como inexistente. `ADMINISTRATOR` y `SUPERVISOR` ven todas las del local. Ver `sales/spec.md`, RN-SALE-005.
 
 ### RN-BILL-021 — Factura de una Venta a Fiado
-- La factura electrónica es opcional también en el fiado: solo se emite si quien vende lo pidió (`sendToFactus`), como en cualquier venta. Cuando la venta es `CREDIT`, `BillingCanonicalMapper` la arma a **crédito**: `payment_form = "2"`, `payment_method_code = "1"` (instrumento no definido) y `payment_due_date` con la fecha límite del fiado (`CreditFacade.findChargeDueDate(storeId, saleId)`, 30 días desde la venta si faltara). El resto de ventas siguen saliendo de contado (`payment_form = "1"`). Ver `credit/spec.md`, RN-CRE-005.
+- La factura electrónica es opcional también en el fiado: solo se emite si quien vende lo pidió (`sendElectronicInvoice`), como en cualquier venta. Cuando la venta es `CREDIT`, `BillingCanonicalMapper` la arma a **crédito**: `payment_form = "2"`, `payment_method_code = "1"` (instrumento no definido) y `payment_due_date` con la fecha límite del fiado (`CreditFacade.findChargeDueDate(storeId, saleId)`, 30 días desde la venta si faltara). El resto de ventas siguen saliendo de contado (`payment_form = "1"`). Ver `credit/spec.md`, RN-CRE-005.
 
 ### RN-BILL-013 — Notas Débito solo con Referencia a Factura
 - Solo se emiten notas débito con `customization_id=30` (con referencia a una factura electrónica). El tipo `32` (sin referencia) no está soportado y `electronic_debit_notes.bill_number` es `NOT NULL`, así que se rechaza con 400.
@@ -316,9 +307,6 @@ El mensaje del proveedor se propaga al cliente (truncado a 500 caracteres) para 
 ### 3. Habilitación — Back Office (`StoreBillingConfigController`, SUPER_ADMIN)
 - `GET /api/v1/backoffice/billing?status=DOCUMENTS_SUBMITTED` — cola de revisión por etapa.
 - `GET /api/v1/backoffice/stores/{storeId}/billing` — estado del local (sin secretos).
-- `PUT /api/v1/backoffice/stores/{storeId}/billing/credentials?environment=SANDBOX|PRODUCTION` — (heredado de Factus, en
-  retiro) cargar credenciales. Un `clientSecret`/`password` vacío **conserva** el valor guardado. El rango de numeración no se carga aquí:
-  lo elige el administrador del local (`set-default`).
 - `PUT /api/v1/backoffice/stores/{storeId}/billing/company-id?environment=SANDBOX|PRODUCTION` — (Alegra) guarda el
   `company.id` del local en ese entorno. Body `{ "companyId": "…" }` (máx. 64 caracteres). Idempotente; solo SUPER_ADMIN;
   la respuesta indica si está cargado, no su valor.
@@ -358,7 +346,7 @@ El mensaje del proveedor se propaga al cliente (truncado a 500 caracteres) para 
 | id | BIGSERIAL | PK, Auto-increment |
 | store_id | BIGINT | NOT NULL, FK → stores(id) (desde `V13`) |
 | sale_id | BIGINT | UNIQUE, NOT NULL, FK → sales(id) |
-| factus_number | VARCHAR(50) | NULLABLE |
+| legal_number | VARCHAR(50) | NULLABLE (antes `factus_number`, renombrada en `V36`) |
 | cufe | VARCHAR(255) | NULLABLE |
 | qr_code | TEXT | NULLABLE |
 | status | VARCHAR(20) | NOT NULL, DEFAULT 'PENDING' |
@@ -380,15 +368,7 @@ Una fila por local (relación 1 a 1 con `stores`).
 | status | VARCHAR(30) | NOT NULL, DEFAULT 'NOT_REQUESTED', CHECK (ver RN-BILL-006) |
 | status_reason | VARCHAR(500) | NULLABLE (motivo de rechazo/suspensión) |
 | environment | VARCHAR(12) | NOT NULL, DEFAULT 'SANDBOX', CHECK IN ('SANDBOX','PRODUCTION') |
-| sandbox_client_id | VARCHAR(255) | NULLABLE |
-| sandbox_client_secret | VARCHAR(1024) | NULLABLE, **cifrado AES-GCM** |
-| sandbox_username | VARCHAR(255) | NULLABLE |
-| sandbox_password | VARCHAR(1024) | NULLABLE, **cifrado AES-GCM** |
 | sandbox_numbering_range_id | INT | NULLABLE |
-| production_client_id | VARCHAR(255) | NULLABLE |
-| production_client_secret | VARCHAR(1024) | NULLABLE, **cifrado AES-GCM** |
-| production_username | VARCHAR(255) | NULLABLE |
-| production_password | VARCHAR(1024) | NULLABLE, **cifrado AES-GCM** |
 | production_numbering_range_id | INT | NULLABLE |
 | updated_by | VARCHAR(100) | NULLABLE (usuario que hizo el último cambio) |
 | created_at / updated_at | TIMESTAMP | NOT NULL |
@@ -504,6 +484,8 @@ Una fila por local (relación 1 a 1 con `stores`).
 
 ## Pendiente / no verificado
 
+- **Cambios de contrato de `V36` (nota de versión)**: la respuesta de las facturas devuelve `legalNumber` en lugar de `factusNumber` (sin alias de salida); la solicitud de venta acepta `sendElectronicInvoice` y sigue aceptando `sendToFactus` como alias; el endpoint `PUT …/billing/credentials` ya no existe. `V36` **borra** las credenciales cifradas de Factus: hacer copia de la base antes de aplicarla en producción (no hay vuelta atrás).
+
 - **Notas: fallo del paso de registro y borrado en curso** (advertencias de la revisión independiente): si `complete` falla después de llamar al proveedor (base caída), el resultado se pierde y, vencido el lease, un reintento vuelve a emitir (con Alegra la llave de idempotencia lo cubre; las facturas además concilian por id). El borrado de una nota sin validar no respeta el lease: si coincide con una emisión en curso, el emisor termina con error en `complete`. Mitigación pendiente: rechazar el borrado con reserva vigente y conciliar notas por `providerDocumentId`.
 - **Notas sin conciliación ni reintento automático**: un documento de nota que Alegra deja en espera (`WAITING_RESPONSE`) se registra como `ERROR`, guarda su `providerDocumentId` y se reintenta a mano con la misma referencia (la llave de idempotencia evita duplicarlo). Falta conciliarlo por id y un job de reintento como el de las facturas.
 - **Conciliación**: una factura `PENDING` se concilia cuando el job la toma o alguien la reintenta; no hay webhook de Alegra ni job de conciliación propio.
@@ -516,8 +498,6 @@ Una fila por local (relación 1 a 1 con `stores`).
 - **Códigos DIAN hardcodeados**: unidad `94`, tributo `01`, municipio `11001` por defecto y el mapeo de medios de pago
   (`TRANSFER→31`, `NEQUI→42`, `CARD→48`) están repetidos en `BillingCanonicalMapper`, `AlegraInvoiceMapper` y
   `CreditNoteServiceImpl`; hay que centralizarlos (el catálogo `PAYMENT_METHODS.extra_value` ya existe).
-- **Cifrado de secretos**: la clave se valida de forma perezosa (no al arrancar) y `v1:` no lleva `key id`, así que no hay
-  rotación real de `BILLING_ENCRYPTION_KEY`.
 
 - **Vigencia y agotamiento del rango**: con Alegra `AlegraNumberAllocator` valida que el rango esté activo, vigente y con cupo antes de gastar un número. Falta la alerta de «rango próximo a agotarse» (umbral, a quién notifica, si usa `notifications`).
 - **Frontend**: no hay pantallas para ninguno de estos flujos todavía.

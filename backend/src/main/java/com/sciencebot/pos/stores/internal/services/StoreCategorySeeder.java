@@ -32,7 +32,8 @@ public class StoreCategorySeeder implements CommandLineRunner {
             new CreateStoreCategoryCommand("Barbería", "Barberías con agenda de citas", "APPOINTMENTS", "BEAUTY"),
             new CreateStoreCategoryCommand("Peluquería", "Peluquerías y salones de belleza con agenda de citas", "APPOINTMENTS", "BEAUTY"),
             new CreateStoreCategoryCommand("Salón de uñas y pies", "Salones de manicure y pedicure con agenda de citas", "APPOINTMENTS", "BEAUTY"),
-            new CreateStoreCategoryCommand("Boutique", "Boutiques con agenda de citas", "APPOINTMENTS", "FASHION"),
+            new CreateStoreCategoryCommand("Boutique", "Boutiques con venta de ropa y agenda de citas", "APPOINTMENTS", "FASHION",
+                    List.of("RETAIL", "APPOINTMENTS")),
             new CreateStoreCategoryCommand("Otros", "Negocios que no encajan en las demás categorías", "RETAIL", "DEFAULT")
     );
 

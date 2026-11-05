@@ -10,11 +10,16 @@ import com.sciencebot.pos.stores.internal.entities.StoreDocumentEntity;
 import com.sciencebot.pos.stores.internal.entities.StoreEntity;
 import org.springframework.stereotype.Component;
 
+import java.util.Collection;
+import java.util.List;
+import java.util.Set;
+
 @Component
 public class StoreMapper {
 
     public StoreDto toDto(StoreEntity entity, StoreCategoryEntity category) {
         if (entity == null) return null;
+        Set<StoreTemplate> templates = StoreTemplate.effective(category == null ? null : category.getTemplates(), entity.getExtraTemplates());
         return new StoreDto(
                 entity.getId(),
                 entity.getName(),
@@ -30,8 +35,10 @@ public class StoreMapper {
                 entity.getRejectionReason(),
                 entity.getCreatedAt(),
                 entity.getPlanCode(),
-                (category == null ? StoreTemplate.RETAIL : category.getTemplate()).name(),
-                (category == null ? StoreTheme.DEFAULT : category.getTheme()).name()
+                StoreTemplate.primary(templates).name(),
+                (category == null ? StoreTheme.DEFAULT : category.getTheme()).name(),
+                names(templates),
+                names(entity.getExtraTemplates())
         );
     }
 
@@ -42,9 +49,15 @@ public class StoreMapper {
                 entity.getName(),
                 entity.getDescription(),
                 entity.isActive(),
-                entity.getTemplate().name(),
-                entity.getTheme().name()
+                StoreTemplate.primary(entity.getTemplates()).name(),
+                entity.getTheme().name(),
+                names(entity.getTemplates())
         );
+    }
+
+    /** Template keys in enum order (stable for the UI), without duplicates. */
+    private static List<String> names(Collection<StoreTemplate> templates) {
+        return templates == null ? List.of() : templates.stream().sorted().map(Enum::name).toList();
     }
 
     public StoreDocumentDto toDocumentDto(StoreDocumentEntity entity) {

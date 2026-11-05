@@ -15,6 +15,12 @@ public class StoreEntity {
     private String name;
     @Column(name = "store_category_id")
     private Long storeCategoryId;
+    /** Templates added to this store by the SUPER_ADMIN, on top of its category's ones (V36). */
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "store_templates", joinColumns = @JoinColumn(name = "store_id"))
+    @Column(name = "template", nullable = false, length = 30)
+    @Enumerated(EnumType.STRING)
+    private java.util.Set<com.sciencebot.pos.stores.StoreTemplate> extraTemplates = new java.util.LinkedHashSet<>();
     @Column(length = 20)
     private String phone;
     @Column(nullable = false, length = 100, unique = true)

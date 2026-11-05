@@ -17,9 +17,12 @@ public class StoreCategoryEntity {
     private String description;
     @Column(nullable = false)
     private boolean active = true;
+    /** Templates every store of this category runs with (V36). The V33 column `template` is no longer mapped. */
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "store_category_templates", joinColumns = @JoinColumn(name = "category_id"))
+    @Column(name = "template", nullable = false, length = 30)
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 30)
-    private com.sciencebot.pos.stores.StoreTemplate template = com.sciencebot.pos.stores.StoreTemplate.RETAIL;
+    private java.util.Set<com.sciencebot.pos.stores.StoreTemplate> templates = new java.util.LinkedHashSet<>();
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     private com.sciencebot.pos.stores.StoreTheme theme = com.sciencebot.pos.stores.StoreTheme.DEFAULT;

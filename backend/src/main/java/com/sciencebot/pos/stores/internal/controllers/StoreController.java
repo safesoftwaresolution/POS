@@ -93,6 +93,14 @@ public class StoreController {
         return ResponseEntity.ok(storeFacade.changePlan(id, body == null ? null : body.get("planCode")));
     }
 
+    @PutMapping("/api/v1/backoffice/stores/{id}/templates")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @Operation(summary = "Plantillas extra de un local",
+            description = "Reemplaza las plantillas extra del local (RETAIL, FOOD, APPOINTMENTS), que se suman a las de su categoria. Una lista vacia las quita.")
+    public ResponseEntity<StoreDto> updateExtraTemplates(@PathVariable Long id, @RequestBody UpdateStoreTemplatesCommand command) {
+        return ResponseEntity.ok(storeFacade.updateExtraTemplates(id, command));
+    }
+
     @PostMapping("/api/v1/backoffice/stores/{storeId}/assign-owner")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     @Operation(summary = "Asignar un ADMINISTRATOR sin local a un local sin administrador",

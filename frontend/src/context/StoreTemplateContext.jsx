@@ -7,14 +7,18 @@ import { DEFAULT_STORE_THEME, storeThemeFor } from '../constants/storeThemes';
 import { templateFeaturesFor } from '../utils/templateFeatures';
 
 /**
- * Plantilla y tema del local de la sesión. Los deriva el backend de la categoría del local; aquí solo se leen una vez
- * para todos los roles. Si la consulta falla se usan los predeterminados (RETAIL y el naranja de marca), así el POS
- * sigue viéndose y funcionando como siempre. El tema se aplica cambiando el acento (`--color-primary`); con el
- * predeterminado no se toca nada.
+ * Plantillas y tema del local de la sesión. Los deriva el backend (las plantillas de la categoría del local más sus
+ * extras, y el tema de la categoría); aquí solo se leen una vez para todos los roles. Si la consulta falla se usan los
+ * predeterminados (RETAIL y el naranja de marca), así el POS sigue viéndose y funcionando como siempre. El tema se
+ * aplica cambiando el acento (`--color-primary`); con el predeterminado no se toca nada.
  */
 export function StoreTemplateProvider({ children }) {
   const { data, loading } = useLoad(() => getOwnStoreTemplateApi().catch(() => null), [], { initial: null });
-  const template = data?.template ?? DEFAULT_STORE_TEMPLATE;
+  // El backend manda la lista (`templates`); una respuesta vieja solo trae la principal (`template`).
+  const templates = useMemo(
+    () => (data?.templates?.length ? data.templates : [data?.template ?? DEFAULT_STORE_TEMPLATE]),
+    [data],
+  );
   const theme = data?.theme ?? DEFAULT_STORE_THEME;
 
   useEffect(() => {
@@ -31,9 +35,9 @@ export function StoreTemplateProvider({ children }) {
     };
   }, [theme]);
 
-  const value = useMemo(
-    () => ({ template, theme, loading, features: templateFeaturesFor(template) }),
-    [template, theme, loading],
-  );
+  const value = useMemo(() => {
+    const features = templateFeaturesFor(templates);
+    return { template: features.template, templates: features.templates, theme, loading, features };
+  }, [templates, theme, loading]);
   return <StoreTemplateContext.Provider value={value}>{children}</StoreTemplateContext.Provider>;
 }

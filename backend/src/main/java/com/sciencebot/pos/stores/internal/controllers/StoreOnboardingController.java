@@ -48,14 +48,14 @@ public class StoreOnboardingController {
 
     @GetMapping("/me/template")
     @PreAuthorize("isAuthenticated()")
-    @Operation(summary = "Plantilla y tema de mi local", description = "Plantilla funcional (RETAIL, FOOD, APPOINTMENTS) y tema visual del local del usuario autenticado, para cualquier rol del local. Ambos se derivan de la categoria del local.")
+    @Operation(summary = "Plantilla y tema de mi local", description = "Plantillas funcionales (RETAIL, FOOD, APPOINTMENTS: las de la categoria del local mas sus extras) y tema visual del local del usuario autenticado, para cualquier rol del local. `template` es la principal.")
     public ResponseEntity<StoreTemplateDto> getOwnTemplate() {
         Long storeId = TenantContext.getStoreId();
         if (storeId == null) {
             throw new EntityNotFoundException("El usuario no pertenece a un local.");
         }
         StoreDto store = storeFacade.getById(storeId);
-        return ResponseEntity.ok(new StoreTemplateDto(store.template(), store.theme()));
+        return ResponseEntity.ok(new StoreTemplateDto(store.template(), store.theme(), store.templates()));
     }
 
     @PutMapping("/me")

@@ -27,13 +27,14 @@ class StoreCategorySeederTest {
         ArgumentCaptor<CreateStoreCategoryCommand> captor = ArgumentCaptor.forClass(CreateStoreCategoryCommand.class);
         verify(facade, atLeastOnce()).createCategory(captor.capture());
         Map<String, String> templates = captor.getAllValues().stream()
-                .collect(Collectors.toMap(CreateStoreCategoryCommand::name, CreateStoreCategoryCommand::template));
+                .collect(Collectors.toMap(CreateStoreCategoryCommand::name, c -> String.join("+", c.templateKeys())));
 
-        for (String name : List.of("Barbería", "Peluquería", "Salón de uñas y pies", "Boutique")) {
+        for (String name : List.of("Barbería", "Peluquería", "Salón de uñas y pies")) {
             assertEquals("APPOINTMENTS", templates.get(name), name);
         }
         assertEquals("FOOD", templates.get("Restaurante / Cafetería"));
         assertEquals("RETAIL", templates.get("Supermercado"));
+        assertEquals("RETAIL+APPOINTMENTS", templates.get("Boutique"));
     }
 
     @Test

@@ -17,5 +17,6 @@ public record StoreDto(
     String rejectionReason,
     LocalDateTime createdAt,
     String planCode,
-    String template
+    String template,
+    String theme
 ) {}

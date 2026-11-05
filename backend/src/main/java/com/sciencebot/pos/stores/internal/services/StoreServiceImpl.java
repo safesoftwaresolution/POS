@@ -549,6 +549,7 @@ public class StoreServiceImpl implements StoreFacade {
         entity.setName(command.name());
         entity.setDescription(command.description());
         entity.setTemplate(StoreTemplate.parse(command.template(), StoreTemplate.RETAIL));
+        entity.setTheme(StoreTheme.parse(command.theme(), StoreTheme.DEFAULT));
         entity.setActive(true);
         return storeMapper.toCategoryDto(categoryRepository.save(entity));
     }
@@ -561,6 +562,7 @@ public class StoreServiceImpl implements StoreFacade {
         entity.setName(command.name());
         entity.setDescription(command.description());
         entity.setTemplate(StoreTemplate.parse(command.template(), entity.getTemplate()));
+        entity.setTheme(StoreTheme.parse(command.theme(), entity.getTheme()));
         return storeMapper.toCategoryDto(categoryRepository.save(entity));
     }
 

@@ -1,4 +1,4 @@
-<!-- spec-version: 1.3 | last-updated: 2026-11-05 -->
+<!-- spec-version: 1.4 | last-updated: 2026-11-05 -->
 # Módulo: Stores (Locales / Comercios SaaS)
 
 ## Dependencias
@@ -18,6 +18,7 @@ Ciclo de vida de los comercios/locales de la plataforma SaaS: el **auto-registro
 - **RN-STORE-003 (Documentos KYC)**: tipos `RUT`, `COMMERCE_CHAMBER`, `ID_CARD`, `BANK_CERTIFICATE`, `OTHER`; estados de documento `PENDING`, `APPROVED`, `REJECTED`. La revisión exige motivo si se rechaza. Al revisar se notifica al local (`DOCUMENT_APPROVED` / `DOCUMENT_REJECTED`).
 - **RN-STORE-004 (Rechazo)**: `PATCH …/reject` exige motivo y deja el local en `REJECTED`. `PATCH …/status` acepta `REJECTED` sin motivo (inconsistencia conocida).
 - **RN-STORE-006 (Plantilla del local)**: cada categoría de local (`store_categories.template`, `V33`) lleva una plantilla funcional: `RETAIL` (por defecto), `FOOD` o `APPOINTMENTS` (citas: barbería, peluquería, salón de uñas y pies, boutique). La plantilla de un local **no se guarda**: se deriva de su categoría y, si no tiene categoría (el onboarding crea el local sin ella), es `RETAIL`. La plantilla `APPOINTMENTS` habilita el módulo de citas (ver `modules/appointments/spec.md`). El `SUPER_ADMIN` la edita en la categoría (`template` en `POST|PUT …/store-categories`; vacío = `RETAIL` al crear y se conserva al editar; un valor fuera del enum responde `400`). `StoreCategorySeeder` siembra las categorías de belleza con `APPOINTMENTS` y Restaurante / Cafetería con `FOOD`.
+- **RN-STORE-007 (Tema visual del local)**: cada categoría de local lleva también un tema visual (`store_categories.theme`, `V35`): `DEFAULT`, `GROCERY`, `PHARMACY`, `BAKERY`, `STATIONERY`, `HARDWARE`, `FOOD`, `LIQUOR`, `PETS`, `BEAUTY` o `FASHION`. Igual que la plantilla, el tema de un local **no se guarda**: se deriva de su categoría y, sin categoría, es `DEFAULT`. El `SUPER_ADMIN` lo edita en la categoría (`theme` en `POST|PUT …/store-categories`; vacío = `DEFAULT` al crear y se conserva al editar; un valor fuera del enum responde `400`). El seeder y la migración asignan el tema de cada categoría base; una categoría propia queda en `DEFAULT` hasta que se le elija uno. El backend solo guarda la clave: los colores e iconos viven en el frontend (ver `DESIGN.md` §2.1b).
 - **RN-STORE-005 (Onboarding)**: `POST /api/v1/stores` crea el local del administrador autenticado y se lo asigna (`users.store_id`). El token emitido antes de ese paso no lleva `storeId`; el frontend debe volver a iniciar sesión o refrescar. El frontend guía el alta en `/onboarding/store` y muestra la pantalla de revisión pendiente (`PendingStoreReviewBento`) mientras el `SUPER_ADMIN` decide.
 
 ## Endpoints
@@ -33,7 +34,7 @@ Ciclo de vida de los comercios/locales de la plataforma SaaS: el **auto-registro
 - `PATCH /api/v1/backoffice/stores/{id}/verify-email`: verificación de correo.
 - `GET /api/v1/backoffice/stores/{id}/documents`: listado de documentos KYC.
 - `PATCH /api/v1/backoffice/stores/{id}/documents/{docId}`: aprobación/rechazo de documento.
-- `GET /api/v1/stores/me/template`: plantilla (`{ "template": "APPOINTMENTS" }`) del local del usuario autenticado, para cualquier rol del local (`/stores/me` es solo `ADMINISTRATOR`). `StoreDto` y `StoreCategoryDto` también exponen `template`.
+- `GET /api/v1/stores/me/template`: plantilla y tema (`{ "template": "APPOINTMENTS", "theme": "BEAUTY" }`) del local del usuario autenticado, para cualquier rol del local (`/stores/me` es solo `ADMINISTRATOR`). `StoreDto` y `StoreCategoryDto` también exponen `template`.
 - `GET|POST /api/v1/backoffice/store-categories`, `PUT|DELETE /api/v1/backoffice/store-categories/{id}`: categorías de comercios (DELETE desactiva).
 - `GET /api/v1/backoffice/store-status-audit`: Historial de solo lectura de cambios de estado de locales (registro, aprobación, rechazo, suspensión…) con quién y cuándo. Filtros `status` (estado nuevo) y `q` (local, NIT, correo o responsable), paginado. Se alimenta de `store_status_audit` (V18), que solo se inserta; los locales anteriores a V18 tienen una fila de respaldo con `performed_by` nulo.
 - `GET /api/v1/backoffice/onboarding/verified-users`: Usuarios `ADMINISTRATOR` que ya verificaron su correo (contraparte de `pending-users`); indica si ya registraron local (`storeId`).
@@ -57,7 +58,7 @@ Ciclo de vida de los comercios/locales de la plataforma SaaS: el **auto-registro
 - `GET /api/v1/stores/me/documents`: documentos propios. `POST /api/v1/stores/me/documents` (multipart): subir un documento.
 
 ## Modelo de Datos
-Tablas `store_categories`, `stores` y `store_documents` (`V3`; `V7` añade `stores.rejection_reason`; `V33` añade `store_categories.template`). Ver `_database-schema.md`.
+Tablas `store_categories`, `stores` y `store_documents` (`V3`; `V7` añade `stores.rejection_reason`; `V33` añade `store_categories.template`; `V35` añade `store_categories.theme`). Ver `_database-schema.md`.
 
 ## Pendiente
 - Faltan enum de estados, validación de transiciones y un formato de spec completo (modelo de datos y RF numerados).

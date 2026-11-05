@@ -4,6 +4,7 @@ import com.sciencebot.pos.stores.StoreCategoryDto;
 import com.sciencebot.pos.stores.StoreDocumentDto;
 import com.sciencebot.pos.stores.StoreDto;
 import com.sciencebot.pos.stores.StoreTemplate;
+import com.sciencebot.pos.stores.StoreTheme;
 import com.sciencebot.pos.stores.internal.entities.StoreCategoryEntity;
 import com.sciencebot.pos.stores.internal.entities.StoreDocumentEntity;
 import com.sciencebot.pos.stores.internal.entities.StoreEntity;
@@ -29,7 +30,8 @@ public class StoreMapper {
                 entity.getRejectionReason(),
                 entity.getCreatedAt(),
                 entity.getPlanCode(),
-                (category == null ? StoreTemplate.RETAIL : category.getTemplate()).name()
+                (category == null ? StoreTemplate.RETAIL : category.getTemplate()).name(),
+                (category == null ? StoreTheme.DEFAULT : category.getTheme()).name()
         );
     }
 
@@ -40,7 +42,8 @@ public class StoreMapper {
                 entity.getName(),
                 entity.getDescription(),
                 entity.isActive(),
-                entity.getTemplate().name()
+                entity.getTemplate().name(),
+                entity.getTheme().name()
         );
     }
 

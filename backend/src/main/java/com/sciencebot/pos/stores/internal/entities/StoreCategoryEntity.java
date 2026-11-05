@@ -20,6 +20,9 @@ public class StoreCategoryEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     private com.sciencebot.pos.stores.StoreTemplate template = com.sciencebot.pos.stores.StoreTemplate.RETAIL;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 30)
+    private com.sciencebot.pos.stores.StoreTheme theme = com.sciencebot.pos.stores.StoreTheme.DEFAULT;
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
     @Column(name = "updated_at", nullable = false)

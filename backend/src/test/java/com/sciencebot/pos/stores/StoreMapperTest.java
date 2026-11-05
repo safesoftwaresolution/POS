@@ -13,10 +13,15 @@ class StoreMapperTest {
     private final StoreMapper mapper = new StoreMapper();
 
     private static StoreCategoryEntity category(String name, StoreTemplate template) {
+        return category(name, template, StoreTheme.DEFAULT);
+    }
+
+    private static StoreCategoryEntity category(String name, StoreTemplate template, StoreTheme theme) {
         StoreCategoryEntity c = new StoreCategoryEntity();
         c.setId(5L);
         c.setName(name);
         c.setTemplate(template);
+        c.setTheme(theme);
         return c;
     }
 
@@ -37,6 +42,16 @@ class StoreMapperTest {
 
         assertNull(dto.categoryName());
         assertEquals("RETAIL", dto.template());
+    }
+
+    @Test
+    void storeThemeIsDerivedFromItsCategoryAndDefaultsWithoutOne() {
+        StoreEntity store = new StoreEntity();
+        store.setStoreCategoryId(5L);
+
+        assertEquals("BEAUTY", mapper.toDto(store, category("Barbería", StoreTemplate.APPOINTMENTS, StoreTheme.BEAUTY)).theme());
+        assertEquals("DEFAULT", mapper.toDto(new StoreEntity(), null).theme());
+        assertEquals("FASHION", mapper.toCategoryDto(category("Boutique", StoreTemplate.APPOINTMENTS, StoreTheme.FASHION)).theme());
     }
 
     @Test

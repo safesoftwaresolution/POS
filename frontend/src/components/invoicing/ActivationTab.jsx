@@ -58,7 +58,12 @@ export default function ActivationTab({ role, activation, ranges, rangesLoading,
         document: createForm.document.trim(),
         prefix: createForm.prefix.trim(),
         resolutionNumber: createForm.resolutionNumber.trim(),
-        current: Number(createForm.current)
+        current: Number(createForm.current),
+        from: Number(createForm.from),
+        to: Number(createForm.to),
+        startDate: createForm.startDate,
+        endDate: createForm.endDate,
+        technicalKey: createForm.technicalKey.trim()
       });
       setShowCreateForm(false);
       setCreateForm(EMPTY_RANGE_FORM);
@@ -216,7 +221,12 @@ export default function ActivationTab({ role, activation, ranges, rangesLoading,
                 ['range-document', 'Código de documento:', 'document', 'text', '01'],
                 ['range-prefix', 'Prefijo:', 'prefix', 'text', 'SETP'],
                 ['range-resolution', 'Número de resolución:', 'resolutionNumber', 'text', ''],
-                ['range-current', 'Consecutivo actual:', 'current', 'number', '1']
+                ['range-current', 'Consecutivo actual:', 'current', 'number', '1'],
+                ['range-from', 'Consecutivo inicial de la resolución:', 'from', 'number', '1'],
+                ['range-to', 'Consecutivo final de la resolución:', 'to', 'number', '5000'],
+                ['range-start', 'Inicio de vigencia:', 'startDate', 'date', ''],
+                ['range-end', 'Fin de vigencia:', 'endDate', 'date', ''],
+                ['range-technical-key', 'Clave técnica:', 'technicalKey', 'text', '']
               ].map(([id, label, key, type, ph]) => (
                 <div key={id}>
                   <label htmlFor={id} className="font-bold text-gray-700 dark:text-gray-300 block mb-1">{label}</label>

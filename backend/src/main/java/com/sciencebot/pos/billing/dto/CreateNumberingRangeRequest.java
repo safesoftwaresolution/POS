@@ -7,8 +7,8 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 
 /**
- * Datos para registrar en el proveedor la resolución que la DIAN entregó al local. el proveedor completa
- * el rango (desde, hasta, fechas y clave técnica) a partir de la resolución, por eso no se piden aquí.
+ * Datos para registrar la resolución que la DIAN entregó al local. Con Alegra el sistema lleva la numeración, así que
+ * el rango completo es obligatorio: consecutivo inicial y final, vigencia y clave técnica.
  */
 public record CreateNumberingRangeRequest(
         @Schema(description = "Código del tipo de documento, según la tabla de referencia del proveedor")

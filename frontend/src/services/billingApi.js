@@ -24,10 +24,10 @@ export async function getNumberingRangeApi(id) {
   return await fetchApi(`/billing/numbering-ranges/${id}`);
 }
 
-export async function createNumberingRangeApi({ document, prefix, resolutionNumber, current }) {
+export async function createNumberingRangeApi({ document, prefix, resolutionNumber, current, from, to, startDate, endDate, technicalKey }) {
   return await fetchApi('/billing/numbering-ranges', {
     method: 'POST',
-    body: JSON.stringify({ document, prefix, resolution_number: resolutionNumber, current }),
+    body: JSON.stringify({ document, prefix, resolution_number: resolutionNumber, current, from, to, startDate, endDate, technicalKey }),
   });
 }
 

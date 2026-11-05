@@ -32,7 +32,9 @@ export const ACTIVATION_STYLES = {
   SUSPENDED: 'bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/20'
 };
 
-export const EMPTY_RANGE_FORM = { document: '', prefix: '', resolutionNumber: '', current: '' };
+export const EMPTY_RANGE_FORM = {
+  document: '', prefix: '', resolutionNumber: '', current: '', from: '', to: '', startDate: '', endDate: '', technicalKey: ''
+};
 
 export const FIELD_CLASS =
   'w-full p-2.5 bg-white dark:bg-[#0E0E12] border border-line rounded-xl text-xs font-semibold text-ink focus:outline-none focus:border-ink dark:focus:border-brand';

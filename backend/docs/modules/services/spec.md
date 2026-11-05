@@ -1,10 +1,10 @@
-<!-- spec-version: 1.0 | last-updated: 2026-10-28 -->
+<!-- spec-version: 1.1 | last-updated: 2026-11-05 -->
 # Módulo: Servicios (Services)
 
 Catálogo de servicios que un negocio cobra y factura sin inventario (spa, peluquería, consultoría, mantenimiento…). Un servicio se vende en el POS igual que un producto, pero **no tiene stock, lotes ni movimientos de inventario**.
 
 ## Dependencias
-- **Requiere**: categories (categoría global obligatoria, igual que products)
+- **Requiere**: `stores` (`StoreFacade`: categoría del local y categorías de local existentes). Los servicios usan su propio catálogo de categorías (`service_categories`), separado de las categorías de producto (`categories`).
 - **Requerido por**: sales (vende servicios vía `ServiceFacade`), billing (indirecto: lee la copia guardada en `sale_items`, no consulta el catálogo)
 
 ## Decisión de diseño
@@ -27,7 +27,13 @@ Se eligió un módulo propio (y no un `item_type` dentro de `products`) para que
 
 ### RN-SRV-005 — Baja Lógica
 - Eliminar un servicio lo deja inactivo (`active = false`); nunca se borra la fila, porque las ventas y devoluciones ya emitidas lo referencian. Un servicio inactivo no se puede vender.
-- No se puede eliminar una categoría global que tenga servicios activos (`CategoryDeleteValidator`).
+- Las categorías de producto ya no dependen de los servicios: borrar una categoría de producto solo se bloquea por productos activos.
+
+### RN-SRV-007 — Categorías de servicios por tipo de local
+- Las categorías de servicios son un catálogo **global** que solo escribe `SUPER_ADMIN` (`/api/v1/backoffice/service-categories`). Cada una se enlaza a cero o más categorías de local (Barbería, Peluquería, Boutique…): se ofrece solo a los locales de esas categorías. Sin enlaces, se ofrece a todos los locales (categoría general).
+- Un local lista sus categorías con `GET /api/v1/service-categories` (las de su categoría de local más las generales; un local sin categoría solo ve las generales). Al crear un servicio, o al cambiarle la categoría, esa categoría debe estar activa y ofrecida al local (`400` si no). Un servicio que conserva su categoría no se revalida.
+- Desactivar una categoría falla (`409`) si tiene servicios activos. El nombre es único sin distinguir mayúsculas.
+- `ServiceCategorySeeder` siembra Corte, Barba, Coloración y tratamientos, Peinado, Maquillaje, Manicure y pedicure, Arreglos de ropa, Asesoría de imagen y Otros servicios (general), de forma idempotente. La migración V37 copia las categorías que ya usaban los servicios existentes y las enlaza a la categoría de local de cada tienda que las usaba.
 
 ### RN-SRV-006 — Aislamiento por Tienda
 - Todo servicio pertenece a una tienda (`store_id`, vía `TenantContext`). Consultar o modificar el servicio de otra tienda responde como inexistente (404).
@@ -64,7 +70,7 @@ Se eligió un módulo propio (y no un `item_type` dentro de `products`) para que
   }
   ```
 - **Response 201**: `ServiceDto` (incluye `categoryName` y `active`).
-- **Errores**: 400 (código vacío o repetido en la tienda, nombre vacío o de más de 100 caracteres, categoría inexistente, precio ≤ 0, IVA fuera de 0–100, duración ≤ 0).
+- **Errores**: 400 (código vacío o repetido en la tienda, nombre vacío o de más de 100 caracteres, categoría inexistente o no ofrecida a este tipo de local, precio ≤ 0, IVA fuera de 0–100, duración ≤ 0).
 
 ### PUT /api/v1/services/{id}
 - **Permisos**: Admin, Supervisor
@@ -87,7 +93,7 @@ Se eligió un módulo propio (y no un `item_type` dentro de `products`) para que
 | code | VARCHAR(50) | NOT NULL |
 | name | VARCHAR(100) | NOT NULL |
 | description | VARCHAR(255) | NULLABLE |
-| category_id | BIGINT | FK → categories(id), NOT NULL |
+| category_id | BIGINT | FK → service_categories(id), NOT NULL |
 | price | DECIMAL(12,2) | NOT NULL (IVA incluido) |
 | tax_rate | DECIMAL(5,2) | NOT NULL, DEFAULT 0 |
 | unspsc_code | VARCHAR(50) | NULLABLE |
@@ -96,7 +102,7 @@ Se eligió un módulo propio (y no un `item_type` dentro de `products`) para que
 | active | BOOLEAN | NOT NULL, DEFAULT TRUE |
 | created_at / updated_at | TIMESTAMP | NOT NULL |
 
-**Constraints**: `UK_services_store_code` (`store_id`, `code`), `FK_services_store`, `FK_services_category`. **Índice**: `IDX_services_store_active` (`store_id`, `active`).
+**Constraints**: `UK_services_store_code` (`store_id`, `code`), `FK_services_store`, `FK_services_service_category`. **Índice**: `IDX_services_store_active` (`store_id`, `active`).
 
 ## Permisos
 | Operación | Admin | Supervisor | Vendedor |

@@ -26,6 +26,8 @@ public interface StoreFacade {
     StoreDocumentDto uploadOwnDocument(String ownerUsername, String documentType, MultipartFile file);
     /** Rechaza un local pendiente con un motivo obligatorio. */
     StoreDto rejectStore(Long id, String reason);
+    /** Reenvía a revisión el local rechazado del ADMINISTRATOR autenticado: vuelve a PENDING_VERIFICATION sin motivo. */
+    StoreDto resubmitOwnStore(String ownerUsername);
     /**
      * Elimina definitivamente un local con todos sus datos; sus administradores quedan sin local (no se borran).
      * Rechaza locales con facturas electrónicas validadas. Salvo un rechazado sin operación, exige el nombre exacto

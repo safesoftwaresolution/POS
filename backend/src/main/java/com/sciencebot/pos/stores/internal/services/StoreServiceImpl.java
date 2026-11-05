@@ -181,17 +181,32 @@ public class StoreServiceImpl implements StoreFacade {
      * transacción confirma, para no avisar de una aprobación que luego se revierte.
      */
     private void notifyStoreApproved(StoreEntity store) {
+        List<String> to = reviewRecipients(store);
+        if (to.isEmpty()) {
+            return;
+        }
+        String name = store.getName();
+        runAfterCommit(() -> approvalMailer.sendApproved(name, to));
+    }
+
+    /** Igual que {@link #notifyStoreApproved}, pero para el rechazo: lleva el motivo para que puedan corregirlo. */
+    private void notifyStoreRejected(StoreEntity store, String reason) {
+        List<String> to = reviewRecipients(store);
+        if (to.isEmpty()) {
+            return;
+        }
+        String name = store.getName();
+        runAfterCommit(() -> approvalMailer.sendRejected(name, reason, to));
+    }
+
+    /** Correos de los administradores activos del local o, si aún no tiene ninguno, el correo del propio local. */
+    private List<String> reviewRecipients(StoreEntity store) {
         List<String> recipients = userFacade.listActiveByStoreAndRoles(store.getId(), List.of("ADMINISTRATOR"))
                 .stream().map(UserDto::email).filter(e -> e != null && !e.isBlank()).distinct().toList();
         if (recipients.isEmpty() && store.getEmail() != null && !store.getEmail().isBlank()) {
-            recipients = List.of(store.getEmail());
+            return List.of(store.getEmail());
         }
-        if (recipients.isEmpty()) {
-            return;
-        }
-        List<String> to = recipients;
-        String name = store.getName();
-        runAfterCommit(() -> approvalMailer.sendApproved(name, to));
+        return recipients;
     }
 
     private void runAfterCommit(Runnable action) {
@@ -315,6 +330,23 @@ public class StoreServiceImpl implements StoreFacade {
         entity.setRejectionReason(reason);
         StoreEntity saved = storeRepository.save(entity);
         recordStatusChange(saved, previousStatus, "REJECTED", reason);
+        notifyStoreRejected(saved, reason);
+        return toStoreDto(saved);
+    }
+
+    @Override
+    @Transactional
+    public StoreDto resubmitOwnStore(String ownerUsername) {
+        Long storeId = requireOwnStoreId(ownerUsername);
+        StoreEntity entity = storeRepository.findById(storeId)
+                .orElseThrow(() -> new EntityNotFoundException("Local no encontrado con ID: " + storeId));
+        if (!"REJECTED".equals(entity.getStatus())) {
+            throw new IllegalArgumentException("Solo un local rechazado se puede reenviar a revisión.");
+        }
+        entity.setStatus("PENDING_VERIFICATION");
+        entity.setRejectionReason(null);
+        StoreEntity saved = storeRepository.save(entity);
+        recordStatusChange(saved, "REJECTED", "PENDING_VERIFICATION", "Reenviado a revisión por el administrador del local");
         return toStoreDto(saved);
     }
 

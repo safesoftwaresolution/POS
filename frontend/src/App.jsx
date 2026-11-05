@@ -1,6 +1,7 @@
-import React, { useState, useEffect, lazy, Suspense } from 'react';
+import React, { useState, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import useAutoRefresh from './hooks/useAutoRefresh';
+import useLoad from './hooks/useLoad';
 import { AuthProvider } from './context/AuthContext';
 import useAuth from './hooks/useAuth';
 import useStoreTemplate from './hooks/useStoreTemplate';
@@ -78,28 +79,24 @@ function RequireFeature({ feature, children }) {
 
 /** Mientras el ADMINISTRATOR no tenga un local ACTIVE, bloquea el POS y muestra el estado. */
 function RequireActiveStore({ children }) {
-  const [store, setStore] = useState(undefined); // undefined = cargando
+  const { data: store, loading, error, reload, setData } = useLoad(getOwnStoreApi, []);
 
-  useEffect(() => {
-    let cancelled = false;
-    getOwnStoreApi()
-      .then(data => { if (!cancelled) setStore(data); })
-      .catch(() => { if (!cancelled) setStore(null); });
-    return () => { cancelled = true; };
-  }, []);
-
-  // Mientras el local sigue en revisión, consulta su estado cada cierto tiempo: al aprobarse, el POS se
+  // Mientras el local no está activo, consulta su estado cada cierto tiempo: al aprobarse, el POS se
   // abre solo sin que la persona tenga que recargar.
-  useAutoRefresh(() => {
-    if (store && store.status === 'ACTIVE') return;
-    getOwnStoreApi().then(setStore).catch(() => {});
-  });
+  useAutoRefresh(reload, 15000, Boolean(error) || (Boolean(store) && store.status !== 'ACTIVE'));
 
-  if (store === undefined) {
+  if (loading) {
     return null;
   }
-  if (!store || store.status !== 'ACTIVE') {
-    return <PendingStoreReviewBento store={store} />;
+  if (error || !store || store.status !== 'ACTIVE') {
+    return (
+      <PendingStoreReviewBento
+        store={store}
+        loadError={Boolean(error) || !store}
+        onRetry={() => reload({ silent: false })}
+        onStoreChange={setData}
+      />
+    );
   }
   return children;
 }

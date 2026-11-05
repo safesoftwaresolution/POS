@@ -215,6 +215,46 @@ class StoreServiceImplTest {
         assertEquals("Documentos incompletos", result.rejectionReason());
     }
 
+    @Test
+    void rejectStore_EmailsItsAdministratorsWithTheReason() {
+        storeInStatus("PENDING_VERIFICATION");
+        when(userFacade.listActiveByStoreAndRoles(1L, List.of("ADMINISTRATOR"))).thenReturn(List.of(
+                new UserDto(7L, "Dueno", "dueno", "dueno@test.com", "ADMINISTRATOR", true, 1L, true)));
+
+        storeService.rejectStore(1L, "Falta el NIT");
+
+        verify(approvalMailer).sendRejected("Arqueo", "Falta el NIT", List.of("dueno@test.com"));
+    }
+
+    @Test
+    void resubmitOwnStore_RejectedStore_GoesBackToPendingClearsTheReasonAndAudits() {
+        StoreEntity store = storeInStatus("REJECTED");
+        store.setRejectionReason("Falta el NIT");
+        when(userFacade.findByUsername("dueno")).thenReturn(Optional.of(
+                new UserDto(7L, "Dueno", "dueno", "dueno@test.com", "ADMINISTRATOR", true, 1L, true)));
+
+        storeService.resubmitOwnStore("dueno");
+
+        assertEquals("PENDING_VERIFICATION", store.getStatus());
+        assertNull(store.getRejectionReason());
+        verify(storeRepository).save(store);
+        verify(statusAuditRepository).save(argThat(a -> "REJECTED".equals(a.getPreviousStatus())
+                && "PENDING_VERIFICATION".equals(a.getNewStatus())));
+    }
+
+    @Test
+    void resubmitOwnStore_StoreThatIsNotRejected_IsRefused() {
+        StoreEntity store = storeInStatus("PENDING_VERIFICATION");
+        when(userFacade.findByUsername("dueno")).thenReturn(Optional.of(
+                new UserDto(7L, "Dueno", "dueno", "dueno@test.com", "ADMINISTRATOR", true, 1L, true)));
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> storeService.resubmitOwnStore("dueno"));
+
+        assertEquals("Solo un local rechazado se puede reenviar a revisión.", ex.getMessage());
+        assertEquals("PENDING_VERIFICATION", store.getStatus());
+        verify(storeRepository, never()).save(any());
+    }
+
     private StoreEntity storeWithStatus(String status) {
         StoreEntity store = new StoreEntity();
         store.setId(5L);

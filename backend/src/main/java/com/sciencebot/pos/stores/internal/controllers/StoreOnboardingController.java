@@ -65,6 +65,13 @@ public class StoreOnboardingController {
         return ResponseEntity.ok(storeFacade.updateOwnStore(authentication.getName(), command));
     }
 
+    @PostMapping("/me/resubmit")
+    @PreAuthorize("hasRole('ADMINISTRATOR')")
+    @Operation(summary = "Reenviar mi local a revisión", description = "Pasa el local rechazado del ADMINISTRATOR autenticado de REJECTED a PENDING_VERIFICATION y borra el motivo del rechazo. Responde 400 si el local no está rechazado.")
+    public ResponseEntity<StoreDto> resubmitOwnStore(Authentication authentication) {
+        return ResponseEntity.ok(storeFacade.resubmitOwnStore(authentication.getName()));
+    }
+
     @GetMapping("/me/documents")
     @PreAuthorize("hasRole('ADMINISTRATOR')")
     @Operation(summary = "Listar mis documentos legales", description = "Documentos KYC subidos por el local del ADMINISTRATOR autenticado.")

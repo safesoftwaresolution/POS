@@ -30,7 +30,7 @@ Ciclo de vida de los comercios/locales de la plataforma SaaS: el **auto-registro
 - `POST /api/v1/backoffice/stores`: creación de local.
 - `PUT /api/v1/backoffice/stores/{id}`: actualización de datos.
 - `PATCH /api/v1/backoffice/stores/{id}/status`: cambio de estado. Al pasar de `PENDING_VERIFICATION` a `ACTIVE` (aprobación) se envía, tras confirmar la transacción y en segundo plano (`StoreApprovalMailer`, `@Async`), un correo con la marca PosBento a los administradores del local (o al correo del local si aún no tiene) avisando que fue aprobado, con un botón a `/login`. Reactivar un local suspendido no lo envía; un fallo de SMTP no revierte la aprobación. La pantalla "en revisión" del administrador consulta el estado cada 15 s y abre el POS sola al aprobarse.
-- `PATCH /api/v1/backoffice/stores/{id}/reject`: rechazo con motivo (`{ "reason": "..." }`).
+- `PATCH /api/v1/backoffice/stores/{id}/reject`: rechazo con motivo (`{ "reason": "..." }`). Tras confirmar la transacción se envía (`StoreApprovalMailer.sendRejected`, `@Async`) un correo a los mismos destinatarios que la aprobación con el motivo y un botón a `/login` para corregir el local.
 - `PATCH /api/v1/backoffice/stores/{id}/verify-email`: verificación de correo.
 - `GET /api/v1/backoffice/stores/{id}/documents`: listado de documentos KYC.
 - `PATCH /api/v1/backoffice/stores/{id}/documents/{docId}`: aprobación/rechazo de documento.
@@ -56,6 +56,7 @@ Ciclo de vida de los comercios/locales de la plataforma SaaS: el **auto-registro
 ### Auto-servicio del administrador (`/api/v1/stores`, rol `ADMINISTRATOR`)
 - `POST /api/v1/stores`: registrar el propio local (`CreateStoreCommand`).
 - `GET /api/v1/stores/me`: consultar el propio local. `PUT /api/v1/stores/me`: editarlo (`UpdateOwnStoreCommand`).
+- `POST /api/v1/stores/me/resubmit` (`ADMINISTRATOR`): reenvía a revisión el local rechazado: `REJECTED` → `PENDING_VERIFICATION`, borra `rejection_reason` y deja el cambio en `store_status_audit`. `400` si el local no está `REJECTED`. La pantalla de revisión (`PendingStoreReviewBento`) muestra un texto por estado (en revisión, rechazado, suspendido, inactivo, error de carga) y, si fue rechazado, el formulario del local (el mismo del alta, `components/store/StoreProfileFields`) con "Reenviar a revisión" (`PUT /stores/me` y luego `resubmit`).
 - `GET /api/v1/stores/me/documents`: documentos propios. `POST /api/v1/stores/me/documents` (multipart): subir un documento.
 
 ## Modelo de Datos

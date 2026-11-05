@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Store, Phone, Mail, MapPin, Globe, FileText, ArrowRight, AlertCircle } from 'lucide-react';
+import { Store, ArrowRight, AlertCircle } from 'lucide-react';
 import { registerOwnStoreApi } from '../../services/storesApi';
 import useAuth from '../../hooks/useAuth';
+import StoreProfileFields from '../../components/store/StoreProfileFields';
 
 const EMPTY_FORM = { name: '', phone: '', email: '', website: '', address: '', taxId: '' };
 
@@ -51,78 +52,7 @@ export default function StoreOnboardingBento() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-1">
-            <label className="text-xs font-bold text-ink-soft block">Nombre del local:</label>
-            <div className="relative">
-              <Store className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
-              <input
-                type="text" value={form.name} onChange={handleChange('name')}
-                placeholder="Mi Tienda" required
-                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-[#0E0E12] border border-line rounded-2xl text-xs font-semibold focus:outline-none focus:border-ink transition-all"
-              />
-            </div>
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-xs font-bold text-ink-soft block">Correo del local:</label>
-            <div className="relative">
-              <Mail className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
-              <input
-                type="email" value={form.email} onChange={handleChange('email')}
-                placeholder="contacto@mitienda.com" required
-                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-[#0E0E12] border border-line rounded-2xl text-xs font-semibold focus:outline-none focus:border-ink transition-all"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-ink-soft block">Teléfono:</label>
-              <div className="relative">
-                <Phone className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
-                <input
-                  type="text" value={form.phone} onChange={handleChange('phone')}
-                  placeholder="3001234567"
-                  className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-[#0E0E12] border border-line rounded-2xl text-xs font-semibold focus:outline-none focus:border-ink transition-all"
-                />
-              </div>
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-ink-soft block">NIT / Tax ID:</label>
-              <div className="relative">
-                <FileText className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
-                <input
-                  type="text" value={form.taxId} onChange={handleChange('taxId')}
-                  placeholder="900123456-7"
-                  className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-[#0E0E12] border border-line rounded-2xl text-xs font-semibold focus:outline-none focus:border-ink transition-all"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-xs font-bold text-ink-soft block">Dirección:</label>
-            <div className="relative">
-              <MapPin className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
-              <input
-                type="text" value={form.address} onChange={handleChange('address')}
-                placeholder="Calle 123 #45-67"
-                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-[#0E0E12] border border-line rounded-2xl text-xs font-semibold focus:outline-none focus:border-ink transition-all"
-              />
-            </div>
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-xs font-bold text-ink-soft block">Sitio web (opcional):</label>
-            <div className="relative">
-              <Globe className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
-              <input
-                type="text" value={form.website} onChange={handleChange('website')}
-                placeholder="https://mitienda.com"
-                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-[#0E0E12] border border-line rounded-2xl text-xs font-semibold focus:outline-none focus:border-ink transition-all"
-              />
-            </div>
-          </div>
+          <StoreProfileFields values={form} onChange={handleChange} includeEmail />
 
           <button
             type="submit"

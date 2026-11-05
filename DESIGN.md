@@ -53,6 +53,9 @@ Los valores de §2.2 y §2.3 viven como variables CSS en `frontend/src/index.css
 
 No escribir hex ni pares `bg-white dark:bg-[#17171B]` en componentes nuevos. Las pantallas de acceso (`/login`, `/register`, `/verify-email`, onboarding) son siempre oscuras por diseño y conservan sus colores fijos. Componentes base reutilizables: `frontend/src/components/ui/` (`Button`, `Badge`, `Card`, `Modal`, `Input`/`Select`, `EmptyState`, `PageHeader`).
 
+### 2.1a Animación de bienvenida (login)
+Tras iniciar sesión, `WelcomeSplash` (`components/brand/`) cubre la pantalla sobre `#0E0E12` unos 2,8 s: el cuadro del isotipo aparece con rebote, los cuatro bloques bento llegan volando desde las esquinas y se acomodan, el punto de marca salta con una onda, el logotipo "POS Bento" se revela de izquierda a derecha y sube el saludo "¡Hola, {primer nombre}!"; una barra naranja inferior marca el avance. Clic, Enter o Escape la saltan. Con `prefers-reduced-motion` no anima y dura 0,9 s. Los keyframes (`ws-*`) viven en `index.css`; usa el naranja de marca porque el tema del local aún no se ha cargado.
+
 ### 2.1b Temas por categoría de local
 **Logo por tipo de local.** El header del sidebar dibuja `StoreBrandLogo` (`components/brand/`): el mismo isotipo de PosBento (cuadro `#0A0A0A` de radio 32, punto de marca arriba a la derecha) pero con el pictograma del tipo de negocio en lugar del bento 2x2 (carrito, cruz y pastilla, gorro de panadero, lápiz, martillo, cloche, copa, huella, tijeras, bolsa), dibujado con el acento del tema y el gris `#DADADA`. "POS" toma el acento del tema, "Bento" el color del texto, y bajo el logo va la etiqueta del tipo de local; el fondo del header lleva un degradado del acento al 10 %. El menú colapsado muestra solo el isotipo. Sin tema reconocido cae al bento original. Las pantallas de acceso y las públicas conservan el logo estándar.
 

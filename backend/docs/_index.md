@@ -12,6 +12,7 @@
 | inventory | modules/inventory/spec.md | inventory_movements | /api/v1/inventory |
 | purchases | modules/purchases/spec.md | purchases, purchase_items | /api/v1/purchases |
 | services | modules/services/spec.md | services | /api/v1/services |
+| appointments | modules/appointments/spec.md | appointments | /api/v1/appointments |
 | sales | modules/sales/spec.md | sales, sale_items, sale_returns, sale_return_items | /api/v1/sales |
 | customers | modules/customers/spec.md | customers | /api/v1/customers |
 | credit | modules/credit/spec.md | credit_accounts, credit_movements | /api/v1/credit |

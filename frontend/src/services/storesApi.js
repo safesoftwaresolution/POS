@@ -13,6 +13,11 @@ export async function getOwnStoreApi() {
   return fetchApi('/stores/me');
 }
 
+// Plantilla del local (RETAIL, FOOD, APPOINTMENTS). A diferencia de /stores/me, la puede leer cualquier rol del local.
+export async function getOwnStoreTemplateApi() {
+  return fetchApi('/stores/me/template');
+}
+
 export async function updateOwnStoreApi(payload) {
   return fetchApi('/stores/me', {
     method: 'PUT',

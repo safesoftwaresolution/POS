@@ -21,9 +21,11 @@ import {
   Bell,
   Camera,
   Sparkles,
-  HandCoins
+  HandCoins,
+  CalendarDays
 } from 'lucide-react';
 import useAuth from '../../hooks/useAuth';
+import useStoreTemplate from '../../hooks/useStoreTemplate';
 import useTheme from '../../hooks/useTheme';
 import { getProductsApi } from '../../services/productsApi';
 import useLoad from '../../hooks/useLoad';
@@ -37,6 +39,7 @@ import useAvatarUpload from '../../hooks/useAvatarUpload';
 
 export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }) {
   const { logout, user } = useAuth();
+  const { features } = useStoreTemplate();
   const { darkMode, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [profileOpen, setProfileOpen] = useState(false);
@@ -68,6 +71,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
       title: 'Operación',
       items: [
         { path: '/pos', label: 'Punto de Venta', icon: ShoppingCart },
+        ...(features.appointments ? [{ path: '/appointments', label: 'Citas', icon: CalendarDays }] : []),
         { path: '/sales', label: 'Ventas', icon: Receipt },
         ...(user?.role === 'ADMINISTRATOR' ? [{ path: '/cash', label: 'Caja', icon: Wallet }] : []),
         { path: '/products', label: 'Productos', icon: Tag },

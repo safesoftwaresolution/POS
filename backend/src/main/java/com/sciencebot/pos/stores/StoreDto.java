@@ -16,5 +16,6 @@ public record StoreDto(
     boolean emailVerified,
     String rejectionReason,
     LocalDateTime createdAt,
-    String planCode
+    String planCode,
+    String template
 ) {}

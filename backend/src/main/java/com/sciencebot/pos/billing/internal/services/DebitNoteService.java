@@ -10,7 +10,7 @@ import java.util.Optional;
 public interface DebitNoteService {
 
     /**
-     * Crea y valida una nota débito electrónica ante Factus y la DIAN.
+     * Crea y valida una nota débito electrónica ante la DIAN.
      */
     DebitNoteDTO createAndValidateDebitNote(CreateDebitNoteRequest request);
 

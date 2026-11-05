@@ -114,7 +114,7 @@ public class ElectronicCreditNote {
             return; // Idempotencia ante reenvíos
         }
         if (creditNoteNumber == null || creditNoteNumber.isBlank()) {
-            throw new IllegalStateException("No se puede certificar una nota crédito sin número oficial asignado por la DIAN/Factus");
+            throw new IllegalStateException("No se puede certificar una nota crédito sin número oficial asignado por la DIAN");
         }
 
         this.creditNoteNumber = creditNoteNumber.trim();

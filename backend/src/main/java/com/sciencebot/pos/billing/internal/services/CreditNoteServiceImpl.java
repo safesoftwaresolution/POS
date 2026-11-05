@@ -260,7 +260,7 @@ public class CreditNoteServiceImpl implements CreditNoteService {
                 null,
                 obs,
                 payments,
-                null, // Factus tomará automáticamente los datos del cliente de la factura asociada
+                null, // el proveedor tomará automáticamente los datos del cliente de la factura asociada
                 items
         );
 

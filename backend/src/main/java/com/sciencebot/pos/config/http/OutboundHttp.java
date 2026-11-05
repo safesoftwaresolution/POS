@@ -8,7 +8,7 @@ import org.springframework.web.client.RestClient;
 import java.time.Duration;
 
 /**
- * Fabrica de {@link RestClient} para integraciones externas (Factus/DIAN). {@code RestClient.create()}
+ * Fabrica de {@link RestClient} para integraciones externas (DIAN). {@code RestClient.create()}
  * no fija timeouts: un proveedor lento dejaba hilos, conexiones del pool y filas bloqueadas esperando
  * indefinidamente. Aqui toda llamada saliente tiene limite de conexion y de lectura.
  */

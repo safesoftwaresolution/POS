@@ -14,7 +14,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 
-@Tag(name = "📄 Facturación Electrónica - Facturas", description = "Emisión, consulta y reintento de facturas electrónicas de venta ante la DIAN / Factus")
+@Tag(name = "📄 Facturación Electrónica - Facturas", description = "Emisión, consulta y reintento de facturas electrónicas de venta ante la DIAN")
 public interface BillingInvoiceApiDoc {
 
     @Operation(
@@ -34,7 +34,7 @@ public interface BillingInvoiceApiDoc {
                     **Campos clave:**
                     - `status`: `PENDING`, `VALIDATED`, `ERROR`
                     - `cufe`: Código Único de Factura Electrónica (DIAN)
-                    - `pdfUrl`: URL al PDF de la factura en Factus
+                    - `pdfUrl`: URL al PDF de la factura en el proveedor
                     - `qrCode`: Código QR para validación DIAN
                     - `errorMessage`: Detalle del error si el status es `ERROR`
                     """
@@ -52,10 +52,10 @@ public interface BillingInvoiceApiDoc {
     @Operation(
             summary = "Reintentar facturación electrónica",
             description = """
-                    Reintenta el envío de la factura electrónica a Factus para una venta que haya fallado (`status = ERROR`).
+                    Reintenta el envío de la factura electrónica al proveedor para una venta que haya fallado (`status = ERROR`).
                     
                     Útil cuando:
-                    - Hubo un error de conexión con Factus durante la venta
+                    - Hubo un error de conexión con el proveedor durante la venta
                     - La factura fue rechazada por errores de validación DIAN
                     
                     Requiere rol **ADMINISTRATOR** o **SUPERVISOR**.
@@ -91,7 +91,7 @@ public interface BillingInvoiceApiDoc {
 
     @Operation(
             summary = "Descargar PDF de la factura electrónica",
-            description = "Descarga el archivo PDF legal emitido por Factus / DIAN para la venta especificada."
+            description = "Descarga el archivo PDF legal emitido por la DIAN para la venta especificada."
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "PDF descargado exitosamente",

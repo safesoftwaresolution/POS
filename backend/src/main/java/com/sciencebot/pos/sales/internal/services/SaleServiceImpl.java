@@ -194,7 +194,7 @@ public class SaleServiceImpl implements SaleFacade {
 
         // saveAndFlush fuerza la validacion de la restriccion unica (idempotency_key) ANTES
         // de facturar: si otro reenvio concurrente gano la carrera, la violacion aborta esta
-        // transaccion (revirtiendo el descuento de inventario) antes de emitir a Factus.
+        // transaccion (revirtiendo el descuento de inventario) antes de emitir al proveedor.
         Sale saved = saleRepository.saveAndFlush(sale);
         if (onCredit) {
             // Si el fiado supera el cupo del cliente se lanza una excepción y toda la venta se revierte (incluido el stock).

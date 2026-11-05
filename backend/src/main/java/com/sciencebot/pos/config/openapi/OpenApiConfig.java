@@ -28,7 +28,7 @@ public class OpenApiConfig {
                         .description("""
                                 ## Sistema de Punto de Venta (POS)
                                 
-                                API REST completa para la gestión de un sistema de punto de venta con facturación electrónica a través de **Factus**.
+                                API REST completa para la gestión de un sistema de punto de venta con facturación electrónica a través de **Alegra**.
                                 
                                 ### Autenticación
                                 Esta API usa **JWT Bearer Token**. Para obtener un token:
@@ -94,7 +94,7 @@ public class OpenApiConfig {
                         new Tag().name("💰 Ventas")
                                 .description("Registro y consulta de transacciones de venta"),
                         new Tag().name("📄 Facturación Electrónica")
-                                .description("Integración con Factus para facturación electrónica DIAN"),
+                                .description("Integración con el proveedor para facturación electrónica DIAN"),
                         new Tag().name("📈 Reportes")
                                 .description("Reportes de ventas, stock, rentabilidad y compras (solo ADMINISTRATOR)"),
                         new Tag().name("⚙️ Configuración")

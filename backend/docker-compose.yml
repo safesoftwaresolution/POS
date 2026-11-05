@@ -24,7 +24,7 @@ services:
     ports:
       - "8080:8080"
       - "5005:5005"
-    # Trae el resto de variables (R2_*, JWT_SECRET, FACTUS_*, etc.) desde backend/.env; los
+    # Trae el resto de variables (R2_*, JWT_SECRET, etc.) desde backend/.env; los
     # valores explícitos en "environment" de abajo tienen prioridad sobre los de env_file.
     env_file:
       - .env

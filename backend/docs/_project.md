@@ -9,7 +9,7 @@ Plataforma multi-tenant de API REST para gestión de ventas, inventario y factur
 - **Frontend**: React 19, Vite 8, Tailwind CSS 4 (SPA sin lógica de negocio)
 - **Base de Datos**: PostgreSQL 16 (producción), H2 (desarrollo y tests)
 - **Autenticación**: JWT HMAC (access token 15 min + refresh token rotativo), cookies `HttpOnly`
-- **Facturación Electrónica**: Factus API (Estándar DIAN Colombia)
+- **Facturación Electrónica**: Alegra e-provider (Estándar DIAN Colombia)
 - **Almacenamiento de archivos**: Cloudflare R2 (API S3)
 - **Build**: Maven
 
@@ -24,7 +24,7 @@ Plataforma multi-tenant de API REST para gestión de ventas, inventario y factur
 ## Flujo del Negocio
 0. **Alta del local**: el dueño se auto-registra, verifica su correo, registra su local y sube documentos KYC; el `SUPER_ADMIN` lo aprueba y carga las credenciales de facturación electrónica del local.
 1. **Abastecimiento**: Supervisor registra compra a proveedor → stock sube automáticamente.
-2. **Venta**: Vendedor procesa venta en efectivo → stock baja automáticamente → ticket generado → emisión opcional a Factus (DIAN).
+2. **Venta**: Vendedor procesa venta en efectivo → stock baja automáticamente → ticket generado → emisión opcional al proveedor de facturación (DIAN).
 3. **Control**: Administrador consulta reportes de rentabilidad, stock y estado de facturación.
 
 ## Exclusiones Explícitas (Fuera de Alcance)

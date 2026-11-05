@@ -13,7 +13,7 @@ import java.util.List;
 public interface NumberingRangeProvider {
 
     /**
-     * Identificador del proveedor (ej. "factus", "mock").
+     * Identificador del proveedor (ej. "alegra", "mock").
      */
     String getProviderName();
 

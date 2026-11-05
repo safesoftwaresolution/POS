@@ -99,7 +99,7 @@ public class DebitNoteServiceImpl implements DebitNoteService {
                 request.numberingRangeId(),
                 request.observation(),
                 request.paymentDetails(),
-                request.customer(), // null = Factus toma los datos del cliente de la factura referenciada
+                request.customer(), // null = el proveedor toma los datos del cliente de la factura referenciada
                 request.items()
         );
         return emit(boundRequest, saleId);

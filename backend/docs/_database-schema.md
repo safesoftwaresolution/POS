@@ -160,7 +160,7 @@ Bitácora de cambios sobre rangos de numeración DIAN (`V15`, ampliada en `V17`)
 |---|---|---|
 | id | BIGSERIAL PK | |
 | store_id | BIGINT | `FK_numbering_range_audit_store` → `stores(id)` |
-| range_id | BIGINT | Id del rango en el proveedor (Factus), no es FK local |
+| range_id | BIGINT | Id del rango en el proveedor (heredado de Factus), no es FK local |
 | action | VARCHAR(20) | CHECK: `CREATE`, `DELETE`, `ACTIVATE`, `DEACTIVATE`, `UPDATE_CURRENT`, `SET_DEFAULT` (V17) |
 | previous_value / new_value | VARCHAR(50) | Valor antes y después del cambio |
 | performed_by | VARCHAR(100) | Usuario autenticado que ejecutó la acción |

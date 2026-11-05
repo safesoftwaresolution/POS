@@ -17,7 +17,7 @@ public interface BillingActivationApiDoc {
             description = """
                     Pasa el local a DOCUMENTS_SUBMITTED para que el back-office revise sus documentos
                     (RUT, cámara de comercio, etc., subidos desde el módulo de locales) y gestione las
-                    credenciales con Factus. Exige al menos un documento ya subido.
+                    credenciales con el proveedor. Exige al menos un documento ya subido.
                     """)
     ResponseEntity<BillingActivationDto> requestActivation(Authentication authentication);
 }

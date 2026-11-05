@@ -19,7 +19,7 @@ import java.util.List;
 
 /**
  * Habilitación de la facturación electrónica por local: credenciales, entorno y etapa del
- * proceso. Reservado al SUPER_ADMIN (la plataforma es quien recibe las credenciales de Factus
+ * proceso. Reservado al SUPER_ADMIN (la plataforma es quien recibe las credenciales del proveedor
  * y las reparte por local; ver {@code backend/docs/modules/billing/spec.md}).
  */
 @RestController

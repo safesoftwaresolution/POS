@@ -63,7 +63,7 @@ No escribir hex ni pares `bg-white dark:bg-[#17171B]` en componentes nuevos. Las
 - **Error / Peligro / Agotado**:
   - Claro: `text-red-600 bg-red-50 border-red-200`
   - Oscuro: `text-red-400 bg-red-500/20 border-red-500/20`
-- **Informativo / Proveedores / Factus**:
+- **Informativo / Proveedores / Alegra**:
   - Claro: `text-blue-700 bg-blue-50 border-blue-200`
   - Oscuro: `text-blue-400 bg-blue-500/20 border-blue-500/20`
 
@@ -142,8 +142,8 @@ No escribir hex ni pares `bg-white dark:bg-[#17171B]` en componentes nuevos. Las
 - **Ranking de Productos Top**: Lista bento con miniaturas, unidades vendidas e ingresos generados.
 
 ### 6.3 Facturación Electrónica DIAN (`InvoicingBento.jsx`)
-- **Integración con Proveedor Tecnológico (Factus)**:
-  - Monitor de habilitación del local (Sin Solicitar, Documentos Enviados, Esperando a Factus, Activa, Suspendida).
+- **Integración con Proveedor Tecnológico (Alegra)**:
+  - Monitor de habilitación del local (Sin Solicitar, Documentos Enviados, Esperando al proveedor, Activa, Suspendida).
   - Gestión de rangos de numeración autorizados por la DIAN (Prefijo, Número de Resolución, Vigencia Desde/Hasta, Contador Consecutivo, Rango por defecto).
 - **Listado de Facturas Electrónicas**:
   - Tabla bento con ID de venta, Cliente, Total, Fecha, y badge de estado: `PENDIENTE`, `VALIDADA`, `RECHAZADA`, `ERROR`.
@@ -155,7 +155,7 @@ No escribir hex ni pares `bg-white dark:bg-[#17171B]` en componentes nuevos. Las
 - **Kardex y Movimientos**: Entradas de compras, ajustes manuales, mermas y auditoría de stock.
 
 ### 6.5 Backoffice Suite (`backoffice/`)
-- Módulo para `SUPER_ADMIN` con panel de control de múltiples tiendas (onboarding, validación KYC de RUT y Cámara de Comercio, asignación de credenciales cifradas AES-256-GCM para Factus por tienda, catálogo global de categorías).
+- Módulo para `SUPER_ADMIN` con panel de control de múltiples tiendas (onboarding, validación KYC de RUT y Cámara de Comercio, asignación de el `company.id` del proveedor por tienda, catálogo global de categorías).
 
 ---
 

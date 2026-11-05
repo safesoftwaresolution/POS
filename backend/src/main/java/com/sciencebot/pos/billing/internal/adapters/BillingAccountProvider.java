@@ -26,6 +26,6 @@ public interface BillingAccountProvider {
     /** La configuración del local cambió: cualquier dato en caché de ese local queda obsoleto. */
     void onAccountChanged(Long storeId);
 
-    /** Nombre legible del proveedor para mensajes al usuario (ej. "Factus"). */
+    /** Nombre legible del proveedor para mensajes al usuario (ej. "Alegra"). */
     String displayName();
 }

@@ -9,7 +9,7 @@ import com.sciencebot.pos.billing.internal.adapters.dto.InvoiceResult;
 public interface InvoiceProvider {
 
     /**
-     * Identificador del proveedor (ej. "factus", "mock").
+     * Identificador del proveedor (ej. "alegra", "mock").
      */
     String getProviderName();
 

@@ -2,7 +2,7 @@
 # Módulo: Configuración (Settings)
 
 ## Dependencias
-- **Requiere**: storage (logo), billing (`CompanyLogoServiceImpl` usa `FactusTokenManager` de `billing.internal`: **violación de encapsulación** pendiente de exponer vía `BillingFacade`, ver `_roadmap.md`)
+- **Requiere**: storage (logo)
 - **Requerido por**: users (`DatabaseSeeder` siembra los ajustes del local de desarrollo), sales/billing (datos del negocio en facturas y tickets)
 
 ## Reglas de Negocio
@@ -34,7 +34,7 @@
 - `parameter_topics` / `parameter_values` (`V6`) guardan listas editables (`PAYMENT_METHODS` y otras). Los temas con `is_system = true` son los que el sistema usa por código (no se crean desde la API). Solo `SUPER_ADMIN` crea temas y valores; todos los roles los leen. Un valor se desactiva (`active = false`) en vez de borrarse.
 
 ### RN-SET-004 — Logo del Negocio
-- `POST /api/v1/settings/logo` (alias `/company/logo` y `/companies/logo`, solo `ADMINISTRATOR`): PNG/JPG de hasta 200 KB y 300×300 px. Se sube a `storage` (carpeta `logos`) y se sincroniza con Factus usando el token del local; si Factus no está habilitado para el local, el logo se guarda sin sincronizar.
+- `POST /api/v1/settings/logo` (alias `/company/logo` y `/companies/logo`, solo `ADMINISTRATOR`): PNG/JPG de hasta 200 KB y 300×300 px. Se sube a `storage` (carpeta `imagenes-logos/tienda-N`) y se guarda en `settings.logo_url`. Antes también se sincronizaba con Factus; ese paso se retiró junto con el proveedor y la respuesta ya no trae `factusSynced`.
 
 ## API Endpoints
 

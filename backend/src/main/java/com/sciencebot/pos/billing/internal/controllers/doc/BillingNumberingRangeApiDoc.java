@@ -10,7 +10,7 @@ import org.springframework.http.ResponseEntity;
 
 import java.util.List;
 
-@Tag(name = "📄 Facturación Electrónica - Rangos de Numeración", description = "Administración y sincronización de resoluciones y rangos DIAN en Factus")
+@Tag(name = "📄 Facturación Electrónica - Rangos de Numeración", description = "Administración y sincronización de resoluciones y rangos DIAN en el proveedor")
 public interface BillingNumberingRangeApiDoc {
 
     @Operation(
@@ -20,8 +20,8 @@ public interface BillingNumberingRangeApiDoc {
     ResponseEntity<List<NumberingRangeDto>> getDianNumberingRanges();
 
     @Operation(
-            summary = "Listar rangos de numeración registrados en Factus",
-            description = "Lista todos los rangos de numeración registrados y activos en Factus."
+            summary = "Listar rangos de numeración registrados en el proveedor",
+            description = "Lista todos los rangos de numeración registrados y activos en el proveedor."
     )
     ResponseEntity<List<NumberingRangeDto>> listNumberingRanges();
 
@@ -34,14 +34,14 @@ public interface BillingNumberingRangeApiDoc {
     );
 
     @Operation(
-            summary = "Registrar y activar un nuevo rango de numeración en Factus",
-            description = "Registra una resolución DIAN en Factus para habilitarla en la emisión de facturas."
+            summary = "Registrar y activar un nuevo rango de numeración en el proveedor",
+            description = "Registra una resolución DIAN en el proveedor para habilitarla en la emisión de facturas."
     )
     ResponseEntity<NumberingRangeDto> createNumberingRange(CreateNumberingRangeRequest request);
 
     @Operation(
-            summary = "Eliminar rango de numeración en Factus",
-            description = "Elimina un rango de numeración. Si ya tuvo facturas, Factus lo deja marcado como eliminado en lugar de borrarlo."
+            summary = "Eliminar rango de numeración en el proveedor",
+            description = "Elimina un rango de numeración. Si ya tuvo facturas, el proveedor lo deja marcado como eliminado en lugar de borrarlo."
     )
     ResponseEntity<Void> deleteNumberingRange(
             @Parameter(description = "ID del rango de numeración a eliminar", example = "14", required = true) Long id
@@ -49,7 +49,7 @@ public interface BillingNumberingRangeApiDoc {
 
     @Operation(
             summary = "Cambiar estado (activo/inactivo) de un rango de numeración",
-            description = "Alterna el estado de activación de un rango de numeración en Factus y devuelve el rango actualizado."
+            description = "Alterna el estado de activación de un rango de numeración en el proveedor y devuelve el rango actualizado."
     )
     ResponseEntity<NumberingRangeDto> toggleNumberingRangeStatus(
             @Parameter(description = "ID del rango de numeración", example = "14", required = true) Long id
@@ -67,7 +67,7 @@ public interface BillingNumberingRangeApiDoc {
     @Operation(
             summary = "Usar un rango de numeración para facturar",
             description = "Deja el rango como el rango activo del local en su entorno actual (sandbox o producción). "
-                    + "Las siguientes facturas se emiten con este rango. El rango debe existir en Factus y estar activo."
+                    + "Las siguientes facturas se emiten con este rango. El rango debe existir en el proveedor y estar activo."
     )
     ResponseEntity<NumberingRangeDto> setDefaultNumberingRange(
             @Parameter(description = "ID del rango de numeración", example = "14", required = true) Long id

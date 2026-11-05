@@ -31,20 +31,19 @@ Todas se leen con `${VAR:default}` desde `application*.properties`; en local se 
 | `EMAIL_FROM`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD` | Envío SMTP | |
 | `SWAGGER_ENABLED` | Enciende `/v3/api-docs` y Swagger UI en `prod` (apagado por defecto) | `false` |
 | `EMAIL_VERIFICATION_EXPIRATION_MS` | Vigencia del enlace de verificación | 86400000 (24 h) |
-| `BILLING_PROVIDER` | `alegra`, `factus` o `mock`. Un valor desconocido **falla** (sin respaldo a `mock`) | `alegra` |
+| `BILLING_PROVIDER` | `alegra` o `mock`. Un valor desconocido **falla** (sin respaldo a `mock`) | `alegra` |
 | `ALEGRA_API_TOKEN_SANDBOX` / `ALEGRA_API_TOKEN_PRODUCTION` | Token Bearer de **plataforma** de Alegra, uno por entorno. **Secreto**: solo en el entorno de despliegue, nunca en el repositorio | Sin valor; sin él la cuenta de Alegra figura como no configurada y la app arranca igual |
 | `ALEGRA_URL_SANDBOX` / `ALEGRA_URL_PRODUCTION` | URLs del e-provider de Alegra | `https://sandbox-api.alegra.com/e-provider/col/v1` / `https://api.alegra.com/e-provider/col/v1` |
 | `BILLING_EMISSION_LEASE` | Reserva de una emisión en curso (duración ISO-8601) | `PT5M` |
 | `BILLING_RETRY_ENABLED`, `BILLING_RETRY_INTERVAL_MS`, `BILLING_RETRY_BATCH_SIZE`, `BILLING_RETRY_MAX_ATTEMPTS` | Reintento automático de facturas pendientes o con error | `true`, `60000`, `20`, `8` |
-| `BILLING_ENCRYPTION_KEY` | Clave AES-256 (32 bytes en Base64) que cifra los secretos de facturación guardados en la base (Factus) | Sin valor por defecto; no perderla ni cambiarla |
-| `FACTUS_URL_SANDBOX` / `FACTUS_URL_PRODUCTION` | URLs públicas de Factus (solo si `BILLING_PROVIDER=factus`) | `https://api-sandbox.factus.com.co` / `https://api.factus.com.co` |
+| `BILLING_ENCRYPTION_KEY` | Clave AES-256 (32 bytes en Base64) que cifra las credenciales heredadas de Factus que aún guarda la base | Sin valor por defecto; no perderla ni cambiarla |
 | `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, `R2_PUBLIC_URL` | Cloudflare R2 (módulo `storage`) | |
 | `SEED_SUPERADMIN_PASSWORD` | Contraseña del `SUPER_ADMIN` inicial. Sin ella no se siembra | solo `dev` tiene valor por defecto |
 | `SPRING_FLYWAY_ENABLED`, `SPRING_JPA_HIBERNATE_DDL_AUTO`, `SPRING_H2_CONSOLE_ENABLED` | Overrides de infraestructura | Flyway activo; `validate`; consola H2 solo en `dev` |
 
 **Alegra**: el token es de plataforma; el `company.id` de cada local lo carga el `SUPER_ADMIN` desde `PUT /api/v1/backoffice/stores/{storeId}/billing/company-id` (ver `modules/billing/spec.md`, «Alta de una empresa en Alegra»). **Pendiente de confirmar con Alegra:** cómo se obtiene el token de producción.
 
-No existen variables `FACTUS_CLIENT_ID/SECRET/USERNAME/PASSWORD` (las credenciales de Factus son por local y viven cifradas en la BD), ni `PORT`, `DB_HOST`, `DB_PORT`, `DB_USERNAME` ni `UPLOAD_DIR` (los archivos van a R2).
+Ya no existen variables de Factus (`FACTUS_*`: el proveedor fue retirado), ni `PORT`, `DB_HOST`, `DB_PORT`, `DB_USERNAME` ni `UPLOAD_DIR` (los archivos van a R2).
 
 > `docker-compose.prod.yml` reenvía todas estas variables. Son **obligatorias** `DB_PASSWORD`, `JWT_SECRET` y `APP_FRONTEND_URL`; `JWT_COOKIE_SECURE` es `true` y `EMAIL_PROVIDER` es `smtp` por defecto (ponlos a `false`/`log` solo para probar sin HTTPS ni SMTP). Docker Compose lee además `backend/.env`: si ese archivo define `JWT_COOKIE_SECURE=false` (como `.env.example`), gana sobre el valor por defecto.
 

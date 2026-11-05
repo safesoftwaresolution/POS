@@ -30,7 +30,7 @@ El sistema es un **Monolito Modular** con **división vertical**: un único proc
 1. **API Pública del Módulo**: raíz del paquete del módulo (ej. `com.sciencebot.pos.sales.*`). Contiene la interfaz `Facade`, los DTOs/Commands de entrada y salida y los eventos de dominio que expone a otros módulos. **Excepción**: `billing` agrupa su API pública en subpaquetes `billing/api` (`BillingFacade`), `billing/dto` y `billing/exception` por tamaño. Es la única; está pendiente decidir si se generaliza o se devuelve a la raíz (`_roadmap.md`).
 2. **Lógica Interna**: subpaquete `internal/` (`controllers/`, `services/`, `repositories/`, `entities/`, `mappers/` y, según el módulo, `adapters/`, `listeners/`, `config/`). Ningún otro módulo debe importarla.
 
-> **Estado de la regla**: hoy no hay ArchUnit ni Spring Modulith en el proyecto que la haga cumplir, y casi todas las clases de `internal/` son `public`. La regla se respeta por convención y revisión. Violación conocida: `settings` importa `billing.internal.adapters.factus.FactusTokenManager`.
+> **Estado de la regla**: hoy no hay ArchUnit ni Spring Modulith en el proyecto que la haga cumplir, y casi todas las clases de `internal/` son `public`. La regla se respeta por convención y revisión.
 
 ### Excepciones declaradas al aislamiento de datos
 - `reports` usa SQL de solo lectura (`JdbcClient`, parámetros nombrados) sobre tablas de otros módulos (CQRS).
@@ -61,6 +61,6 @@ Se usan para desacoplar flujos secundarios que no deben afectar la transacción 
 - **Consistencia transaccional**: una transacción de negocio síncrona ocurre dentro de un módulo; los flujos que cruzan módulos y toleran consistencia eventual usan eventos.
 - **Stock atómico**: `ProductFacade.adjustStock` ejecuta un solo `UPDATE … SET quantity_available = quantity_available + :delta WHERE … AND quantity_available + :delta >= 0` (`ProductRepository.adjustStockInStore`); la fila queda bloqueada hasta el commit, así que ventas, compras y ajustes concurrentes del mismo producto se serializan y nunca queda negativo. **No** vale un `SELECT … FOR UPDATE` seguido de modificar la entidad: dentro de la venta el producto ya está cargado y Hibernate devuelve la instancia vieja, perdiendo actualizaciones (`StockConcurrencyTest` lo cubre). El kardex toma el stock resultante de la BD, no de la lectura inicial. Hay bloqueo pesimista de lectura en `refresh_tokens` y en las tablas de documentos electrónicos (por `reference_code` / venta), donde la fila no estaba cargada antes.
 - **Idempotencia**: `Idempotency-Key` en ventas y compras (`UNIQUE` en BD), `reference_code` determinista en documentos electrónicos. Ver la memoria del proyecto.
-- **Llamadas externas**: toda llamada saliente (Factus) usa `OutboundHttp.restClient()` con timeouts de conexión (5 s) y lectura (45 s).
+- **Llamadas externas**: toda llamada saliente (Alegra) usa `OutboundHttp.restClient()` con timeouts de conexión (5 s) y lectura (45 s).
 - **Zona horaria**: el código usa `LocalDateTime.now()` (zona de la JVM) con columnas `TIMESTAMP` sin zona; los contenedores están en UTC. Pendiente fijar `America/Bogota` (`_roadmap.md`).
 - **Aislamiento de datos**: un esquema SQL único; cada módulo es dueño exclusivo de sus tablas y no hace `JOIN` con las de otro bounded context (salvo las excepciones declaradas).

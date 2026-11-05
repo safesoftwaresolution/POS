@@ -49,8 +49,8 @@ public interface StoreBillingConfigService {
     BillingActivationDto switchEnvironment(Long storeId, BillingEnvironment environment, String actor);
 
     /**
-     * Pide un token a Factus con las credenciales guardadas de un entorno, sin activar nada.
-     * Nunca lanza excepción por un rechazo de Factus: el resultado dice si funcionó o no.
+     * Pide un token al proveedor con las credenciales guardadas de un entorno, sin activar nada.
+     * Nunca lanza excepción por un rechazo del proveedor: el resultado dice si funcionó o no.
      */
     BillingConnectionTestResult testConnection(Long storeId, BillingEnvironment environment);
 }

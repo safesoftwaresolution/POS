@@ -14,7 +14,7 @@ public record InvoiceResult(
         String providerDocumentId
 ) {
 
-    /** Forma sin el id del documento en el proveedor (la de Factus y el mock). */
+    /** Forma sin el id del documento en el proveedor (la del proveedor y el mock). */
     public InvoiceResult(boolean isSuccess, String legalInvoiceNumber, String cufe, String qrCode, String pdfUrl,
                          String status, String errorMessage, LocalDateTime validatedAt) {
         this(isSuccess, legalInvoiceNumber, cufe, qrCode, pdfUrl, status, errorMessage, validatedAt, null);

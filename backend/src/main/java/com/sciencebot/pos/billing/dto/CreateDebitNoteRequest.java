@@ -8,7 +8,7 @@ import jakarta.validation.constraints.NotEmpty;
 
 import java.util.List;
 
-@Schema(description = "Solicitud para crear y validar una Nota Débito ante Factus y la DIAN")
+@Schema(description = "Solicitud para crear y validar una Nota Débito ante la DIAN")
 public record CreateDebitNoteRequest(
         @Schema(description = "Código único de referencia de la nota débito para garantizar idempotencia", example = "ND-2026-0001")
         @NotBlank(message = "El reference_code es obligatorio")
@@ -28,7 +28,7 @@ public record CreateDebitNoteRequest(
         @JsonProperty("bill_number")
         String billNumber,
 
-        @Schema(description = "ID del rango de numeración en Factus (opcional si solo hay un rango activo)", example = "1776")
+        @Schema(description = "ID del rango de numeración en el proveedor (opcional si solo hay un rango activo)", example = "1776")
         @JsonProperty("numbering_range_id")
         Integer numberingRangeId,
 

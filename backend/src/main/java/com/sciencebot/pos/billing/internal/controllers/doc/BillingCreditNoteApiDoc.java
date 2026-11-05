@@ -14,16 +14,16 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 
-@Tag(name = "📄 Facturación Electrónica - Notas Crédito", description = "Emisión, validación y gestión de Notas Crédito electrónicas ante Factus API v2 y la DIAN")
+@Tag(name = "📄 Facturación Electrónica - Notas Crédito", description = "Emisión, validación y gestión de Notas Crédito electrónicas ante el proveedor v2 y la DIAN")
 public interface BillingCreditNoteApiDoc {
 
     @Operation(
             summary = "Crear y validar nota crédito",
             description = """
-                    Crea y valida una nota crédito electrónica ante Factus y la DIAN.
+                    Crea y valida una nota crédito electrónica ante la DIAN.
                     
                     **Comportamiento:**
-                    - Envía la solicitud al endpoint `/v2/credit-notes/validate` de Factus.
+                    - Envía la solicitud al endpoint `/v2/credit-notes/validate` del proveedor.
                     - Si la referencia ya fue procesada y validada previamente, retorna los datos de la nota existente (**idempotencia**).
                     - En caso de conflicto `409` (documento pendiente en DIAN), se gestiona la limpieza de notas no validadas.
                     """
@@ -76,7 +76,7 @@ public interface BillingCreditNoteApiDoc {
 
     @Operation(
             summary = "Descargar PDF de la nota crédito",
-            description = "Descarga el archivo PDF oficial emitido por Factus / DIAN para la nota crédito indicada."
+            description = "Descarga el archivo PDF oficial emitido por la DIAN para la nota crédito indicada."
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "PDF descargado exitosamente",

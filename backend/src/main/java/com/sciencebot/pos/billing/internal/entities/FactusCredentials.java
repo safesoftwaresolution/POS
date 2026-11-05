@@ -7,7 +7,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 /**
- * Credenciales de un entorno (sandbox o producción) entregadas por Factus a un local.
+ * Credenciales de un entorno (sandbox o producción) entregadas por el proveedor a un local.
  * Se usa dos veces dentro de {@link StoreBillingConfig}.
  */
 @Embeddable

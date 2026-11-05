@@ -11,7 +11,7 @@ public record CreateSaleCommand(
         Long customerId,
         @Schema(description = "Efectivo recibido del cliente (se ignora si el pago es CREDIT)", example = "50000.00", requiredMode = Schema.RequiredMode.REQUIRED)
         BigDecimal cashReceived,
-        @Schema(description = "Emitir automáticamente a Factus/DIAN (opcional — false para solo guardar en POS y emitir manualmente después)", example = "false")
+        @Schema(description = "Emitir automáticamente a DIAN (opcional — false para solo guardar en POS y emitir manualmente después)", example = "false")
         Boolean sendToFactus,
         @jakarta.validation.constraints.NotEmpty @jakarta.validation.Valid
         @Schema(description = "Lista de productos a vender", requiredMode = Schema.RequiredMode.REQUIRED)

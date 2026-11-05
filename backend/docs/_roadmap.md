@@ -20,7 +20,7 @@ Este documento complementa los `spec.md` de cada módulo (que describen el compo
 | audit | Bitácora genérica de cambios por entidad (V30), consulta de historial solo para el administrador. Hoy audita clientes | — | Consulta global y exportación; retención de registros |
 | suppliers | CRUD por local | — | — |
 | reports | CQRS con `JdbcClient`; incluye cierre de caja (`/cash-closing`), mapa de calor de ventas por día y hora (`/sales-heatmap`, RF-REP-008) y lotes vencidos / próximos a vencer (`/expiring`, RF-REP-007, una fila por lote) | No descuenta devoluciones; rentabilidad usa precios actuales; sin índices (ver abajo) | Rentabilidad por categoría |
-| settings | Datos del negocio + catálogos de parámetros + logo | Importa `billing.internal` (`FactusTokenManager`); creación de la fila por defecto a verificar | Impuesto configurable (hoy 19% fijo en frontend) |
+| settings | Datos del negocio + catálogos de parámetros + logo | Sin dependencias de `billing.internal`; creación de la fila por defecto a verificar | Impuesto configurable (hoy 19% fijo en frontend) |
 | billing | Facturas, notas crédito (V23) y débito (V24), habilitación por local (V14), eventos de dominio, timeouts, referencias deterministas | Alegra es el proveedor por defecto (facturas, notas, PDF, XML, correo; verificado en sandbox); facturas en tres pasos con reintento automático y conciliación (FEAT-018, 025). Notas crédito/débito en tres pasos como las facturas (`V35`). Falta: conciliación por webhook; token de producción de Alegra por confirmar; nombres heredados de Factus (`factus_number`, `sendToFactus`, `reference_code`); códigos DIAN hardcodeados; cifrado sin rotación; frontend parcial (`InvoicingBento`: activación y facturas del local; `BillingBento` en back office); sin verificación contra el sandbox real | Alertas de rango por agotarse |
 | stores | Onboarding del dueño, KYC, back office, auditoría de estados (V18/V20) y de asignación de dueños (V21), planes por local (V22); spec actualizado | Estados como `String`; documentos KYC con URL pública; `StoreFacade` expone `MultipartFile` | — |
 | legal | Documentos legales de plataforma | Spec sin `spec-version` | — |
@@ -63,10 +63,10 @@ Una revisión del arnés, los specs y el código encontró desajustes. **Ya corr
 11. Descontar devoluciones en reportes; guardar el costo en `sale_items` para la rentabilidad.
 
 **Facturación** (ver `modules/billing/spec.md`, "Pendiente")
-12. Facturas: **hecho** (reserva con lease, llamada sin transacción, reintento automático, conciliación por `providerDocumentId`). Notas crédito y débito: **hecho** igual (`V35`). Pendiente: retirar Factus y renombrar `factus_number`/`factusNumber`/`sendToFactus` a nombres neutros; centralizar mapeo DIAN; rotación de claves de cifrado; validar vigencia y agotamiento del rango antes de emitir; frontend de habilitación, rangos y notas.
+12. Facturas: **hecho** (reserva con lease, llamada sin transacción, reintento automático, conciliación por `providerDocumentId`). Notas crédito y débito: **hecho** igual (`V35`). Factus ya fue retirado del código; pendiente retirar sus credenciales del esquema y renombrar `factus_number`/`factusNumber`/`sendToFactus` a nombres neutros; centralizar mapeo DIAN; rotación de claves de cifrado; validar vigencia y agotamiento del rango antes de emitir; frontend de habilitación, rangos y notas.
 
 **Arquitectura**
-13. Sacar `FactusTokenManager` de `settings` vía `BillingFacade`; añadir ArchUnit para que la regla de encapsulación se verifique.
+13. ~~Sacar `FactusTokenManager` de `settings`~~ — resuelto al retirar Factus (el logo ya no se sincroniza con el proveedor). Añadir ArchUnit para que la regla de encapsulación se verifique.
 14. Decidir la ubicación de la API pública de `billing` (`api/`, `dto/`, `exception/` frente a la raíz) y unificar `CreditNoteDTO` / `Dto`.
 15. Mover a mappers: `BackofficeStaffServiceImpl.toStaffDto` y el armado de la solicitud en `CreditNoteServiceImpl.createFromSale`.
 

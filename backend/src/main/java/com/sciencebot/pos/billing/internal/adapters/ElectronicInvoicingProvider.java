@@ -9,7 +9,7 @@ public interface ElectronicInvoicingProvider
         extends InvoiceProvider, NumberingRangeProvider, CreditNoteProvider, DebitNoteProvider, BillingAccountProvider {
 
     /**
-     * Identificador único de la estrategia (ej. "factus", "mock", "siigo").
+     * Identificador único de la estrategia (ej. "alegra", "mock").
      */
     @Override
     String getProviderName();

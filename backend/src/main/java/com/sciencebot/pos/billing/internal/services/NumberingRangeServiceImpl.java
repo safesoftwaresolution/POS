@@ -27,7 +27,7 @@ import java.util.stream.Collectors;
 /**
  * Implementación del servicio de administración de Rangos de Numeración.
  *
- * <p>Además de delegar en el proveedor activo (Factus, mock...), aplica reglas propias del
+ * <p>Además de delegar en el proveedor activo (Alegra, mock...), aplica reglas propias del
  * sistema que protegen la numeración legal de un local:
  * <ul>
  *   <li>no se puede desactivar ni eliminar el rango que el local tiene configurado como su

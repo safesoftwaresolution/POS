@@ -10,7 +10,7 @@ import java.util.Optional;
 public interface CreditNoteService {
 
     /**
-     * Crea y valida una nota crédito electrónica ante Factus y la DIAN.
+     * Crea y valida una nota crédito electrónica ante la DIAN.
      */
     CreditNoteDTO createAndValidateCreditNote(CreateCreditNoteRequest request);
 

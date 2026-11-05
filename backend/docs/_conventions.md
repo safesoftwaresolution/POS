@@ -86,7 +86,7 @@ src/main/java/com/sciencebot/pos/
 ## Tests
 
 - Directorio: `src/test/java/com/sciencebot/pos/`.
-- Framework: JUnit 5 + Mockito + Spring Boot Test (`MockMvc`, `MockRestServiceServer` para los clientes Factus). **No hay ArchUnit ni Modulith ni Testcontainers**; todo corre sobre H2.
+- Framework: JUnit 5 + Mockito + Spring Boot Test (`MockMvc`, `MockRestServiceServer` para los clientes de Alegra). **No hay ArchUnit ni Modulith ni Testcontainers**; todo corre sobre H2.
 - Perfil `test`: `src/test/resources/application.properties` **reemplaza por completo** al de `main` (mismo nombre en el classpath). El `DatabaseSeeder` solo siembra datos de desarrollo en el perfil `dev`, así que un test que necesite un usuario debe crearlo.
 - Migraciones: `V*MigrationSqlTest` ejecutan Flyway a mano contra su propia H2 en memoria.
 - Los tests de seguridad por rol (`@PreAuthorize`) con `MockMvc` son escasos; los controllers se prueban casi siempre como POJOs. Al añadir un endpoint con permisos, cubrir al menos el 403.

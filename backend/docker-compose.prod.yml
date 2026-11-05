@@ -66,9 +66,6 @@ services:
       ALEGRA_API_TOKEN_SANDBOX: ${ALEGRA_API_TOKEN_SANDBOX:-}
       ALEGRA_URL_PRODUCTION: ${ALEGRA_URL_PRODUCTION:-https://api.alegra.com/e-provider/col/v1}
       ALEGRA_API_TOKEN_PRODUCTION: ${ALEGRA_API_TOKEN_PRODUCTION:-}
-      # Factus (solo si BILLING_PROVIDER=factus)
-      FACTUS_URL_SANDBOX: ${FACTUS_URL_SANDBOX:-https://api-sandbox.factus.com.co}
-      FACTUS_URL_PRODUCTION: ${FACTUS_URL_PRODUCTION:-https://api.factus.com.co}
       # --- Documentacion OpenAPI (apagada en prod salvo true) ---
       SWAGGER_ENABLED: ${SWAGGER_ENABLED:-false}
       R2_ACCOUNT_ID: ${R2_ACCOUNT_ID:-}

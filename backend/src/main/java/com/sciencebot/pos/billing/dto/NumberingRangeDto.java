@@ -5,7 +5,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record NumberingRangeDto(
-        @Schema(description = "ID del rango de numeración en Factus", example = "14")
+        @Schema(description = "ID del rango de numeración en el proveedor", example = "14")
         Long id,
 
         @Schema(description = "Código de documento", example = "01")
@@ -35,7 +35,7 @@ public record NumberingRangeDto(
         @Schema(description = "Clave técnica DIAN", example = "fc8eac422eba16e22ffd8c6f94b3f40a6e381edf")
         String technicalKey,
 
-        @Schema(description = "Indica si el rango está activo en Factus", example = "true")
+        @Schema(description = "Indica si el rango está activo en el proveedor", example = "true")
         Boolean isActive,
 
         @Schema(description = "Nombre del tipo de documento", example = "Factura de Venta")

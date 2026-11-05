@@ -46,7 +46,7 @@ public class SaleController {
                     1. Valida stock disponible para cada ítem
                     2. Descuenta inventario automáticamente
                     3. Genera número de factura interno
-                    4. Dispara el proceso de facturación electrónica con Factus (asíncrono)
+                    4. Dispara el proceso de facturación electrónica con el proveedor (asíncrono)
                     
                     El `customerId` es opcional — si no se envía, la venta se registra como venta a consumidor final.
 

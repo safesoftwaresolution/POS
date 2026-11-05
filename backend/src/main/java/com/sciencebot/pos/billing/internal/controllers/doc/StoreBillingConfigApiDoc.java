@@ -27,7 +27,7 @@ public interface StoreBillingConfigApiDoc {
             description = "Nunca incluye secretos: solo indica si cada entorno tiene credenciales completas.")
     ResponseEntity<BillingActivationDto> get(Long storeId);
 
-    @Operation(summary = "Cargar las credenciales que Factus entregó para un local",
+    @Operation(summary = "Cargar las credenciales heredadas de Factus de un local (en retiro)",
             description = "Un client_secret o password vacío conserva el valor ya guardado para ese entorno. "
                     + "El rango de numeración lo elige el administrador del local; numberingRangeId es opcional.")
     ResponseEntity<BillingActivationDto> updateCredentials(
@@ -47,8 +47,8 @@ public interface StoreBillingConfigApiDoc {
             Authentication authentication
     );
 
-    @Operation(summary = "Probar las credenciales guardadas de un entorno contra Factus",
-            description = "Pide un token real. No activa el local; el resultado dice si Factus aceptó las credenciales.")
+    @Operation(summary = "Probar las credenciales guardadas de un entorno contra el proveedor",
+            description = "Pide un token real. No activa el local; el resultado dice si el proveedor aceptó las credenciales.")
     ResponseEntity<BillingConnectionTestResult> testConnection(
             Long storeId,
             BillingEnvironment environment

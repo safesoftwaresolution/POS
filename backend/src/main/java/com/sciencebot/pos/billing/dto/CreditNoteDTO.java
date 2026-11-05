@@ -3,7 +3,7 @@ package com.sciencebot.pos.billing.dto;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDateTime;
 
-@Schema(description = "Datos de la Nota Crédito electrónica generada y validada por Factus y la DIAN")
+@Schema(description = "Datos de la Nota Crédito electrónica generada y validada por la DIAN")
 public record CreditNoteDTO(
         @Schema(description = "Identificador interno de la nota crédito", example = "1")
         Long id,
@@ -20,7 +20,7 @@ public record CreditNoteDTO(
         @Schema(description = "Número legal de la factura electrónica asociada", example = "SETP990002519")
         String billNumber,
 
-        @Schema(description = "Número legal oficial asignado por Factus/DIAN a la nota crédito", example = "NC990000001")
+        @Schema(description = "Número legal oficial asignado por la DIAN a la nota crédito", example = "NC990000001")
         String creditNoteNumber,
 
         @Schema(description = "Código de concepto de corrección", example = "2")
@@ -42,8 +42,8 @@ public record CreditNoteDTO(
         @Schema(description = "Detalle del error técnico o motivo de rechazo DIAN", example = "null")
         String errorMessage,
 
-        @Schema(description = "Enlace público al PDF oficial de la nota crédito en Factus",
-                example = "https://api.factus.com.co/v1/bills/download-pdf/NC990000001")
+        @Schema(description = "Enlace público al PDF oficial de la nota crédito en el proveedor",
+                example = "https://example.com/documents/NC990000001.pdf")
         String pdfUrl,
 
         @Schema(description = "Fecha y hora de certificación y validación por la DIAN", example = "2026-09-24T16:00:00")

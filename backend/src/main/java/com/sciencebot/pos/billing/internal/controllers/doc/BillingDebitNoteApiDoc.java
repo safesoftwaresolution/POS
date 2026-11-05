@@ -14,17 +14,17 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 
-@Tag(name = "📄 Facturación Electrónica - Notas Débito", description = "Emisión, validación y gestión de Notas Débito electrónicas ante Factus API v2 y la DIAN")
+@Tag(name = "📄 Facturación Electrónica - Notas Débito", description = "Emisión, validación y gestión de Notas Débito electrónicas ante el proveedor v2 y la DIAN")
 public interface BillingDebitNoteApiDoc {
 
     @Operation(
             summary = "Crear y validar nota débito",
             description = """
-                    Crea y valida una nota débito electrónica ante Factus y la DIAN sobre una factura electrónica existente
+                    Crea y valida una nota débito electrónica ante la DIAN sobre una factura electrónica existente
                     (`customization_id=30`). Se usa para cobrar intereses, gastos adicionales o ajustar al alza el valor facturado.
 
                     **Comportamiento:**
-                    - Envía la solicitud al endpoint `/v2/debit-notes/validate` de Factus.
+                    - Envía la solicitud al endpoint `/v2/debit-notes/validate` del proveedor.
                     - Si la referencia ya fue procesada y validada previamente, retorna los datos de la nota existente (**idempotencia**).
                     - En caso de conflicto `409` (documento pendiente en DIAN), elimina el borrador no validado y reintenta una vez.
                     - Si la DIAN rechaza la nota, se retorna con estado `REJECTED` y el motivo en `errorMessage`.
@@ -78,12 +78,12 @@ public interface BillingDebitNoteApiDoc {
 
     @Operation(
             summary = "Descargar PDF de la nota débito",
-            description = "Descarga el archivo PDF oficial emitido por Factus / DIAN para la nota débito indicada."
+            description = "Descarga el archivo PDF oficial emitido por la DIAN para la nota débito indicada."
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "PDF descargado exitosamente",
                     content = @Content(mediaType = MediaType.APPLICATION_PDF_VALUE)),
-            @ApiResponse(responseCode = "404", description = "Nota débito no encontrada o PDF no disponible en Factus"),
+            @ApiResponse(responseCode = "404", description = "Nota débito no encontrada o PDF no disponible en el proveedor"),
             @ApiResponse(responseCode = "409", description = "La nota débito no ha sido validada")
     })
     ResponseEntity<byte[]> downloadPdf(
@@ -97,7 +97,7 @@ public interface BillingDebitNoteApiDoc {
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "XML descargado exitosamente",
                     content = @Content(mediaType = MediaType.APPLICATION_XML_VALUE)),
-            @ApiResponse(responseCode = "404", description = "Nota débito no encontrada o XML no disponible en Factus"),
+            @ApiResponse(responseCode = "404", description = "Nota débito no encontrada o XML no disponible en el proveedor"),
             @ApiResponse(responseCode = "409", description = "La nota débito no ha sido validada")
     })
     ResponseEntity<byte[]> downloadXml(
@@ -109,7 +109,7 @@ public interface BillingDebitNoteApiDoc {
             description = """
                     Emite una nota débito sobre la factura electrónica VALIDATED de una venta (ej. intereses o cobros adicionales).
                     El `bill_number` se toma de la factura de la venta (si se envía, debe coincidir) y la nota queda vinculada a la venta.
-                    Si no se envía `customer`, Factus toma los datos del cliente de la factura referenciada.
+                    Si no se envía `customer`, el proveedor toma los datos del cliente de la factura referenciada.
                     """
     )
     @ApiResponses({

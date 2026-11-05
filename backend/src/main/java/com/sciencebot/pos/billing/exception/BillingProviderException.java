@@ -1,7 +1,7 @@
 package com.sciencebot.pos.billing.exception;
 
 /**
- * Un proveedor de facturación electrónica (Factus, Alegra, ...) rechazó una llamada o no se pudo
+ * Un proveedor de facturación electrónica (Alegra, ...) rechazó una llamada o no se pudo
  * llegar a él. Lleva el mensaje del proveedor para que el usuario sepa qué pasó (credenciales
  * inválidas, resolución inexistente, servicio caído...).
  * <p>

@@ -23,7 +23,7 @@ Se eligió un módulo propio (y no un `item_type` dentro de `products`) para que
 - No existe precio de compra ni margen: no hay costo de inventario.
 
 ### RN-SRV-004 — Datos DIAN
-- `unspsc_code` (opcional) y `unit_measure_code` (por defecto `94`, unidad) viajan a la factura electrónica. Sin UNSPSC se factura con el código genérico `999`. Los códigos de unidad para servicios por hora u otras medidas deben validarse contra el catálogo de Factus.
+- `unspsc_code` (opcional) y `unit_measure_code` (por defecto `94`, unidad) viajan a la factura electrónica. Sin UNSPSC se factura con el código genérico `999`. Los códigos de unidad para servicios por hora u otras medidas deben validarse contra el catálogo del proveedor.
 
 ### RN-SRV-005 — Baja Lógica
 - Eliminar un servicio lo deja inactivo (`active = false`); nunca se borra la fila, porque las ventas y devoluciones ya emitidas lo referencian. Un servicio inactivo no se puede vender.

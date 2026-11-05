@@ -15,7 +15,7 @@ public record DebitNoteResult(
     String providerDocumentId
 ) {
 
-    /** Forma sin el id del documento en el proveedor (la de Factus y el mock). */
+    /** Forma sin el id del documento en el proveedor (la del proveedor y el mock). */
     public DebitNoteResult(boolean success, String debitNoteNumber, String cude, String qrCode, String pdfUrl,
                            String status, LocalDateTime validatedAt, String errorMessage) {
         this(success, debitNoteNumber, cude, qrCode, pdfUrl, status, validatedAt, errorMessage, null);

@@ -118,8 +118,8 @@ public class AlegraClientHelper {
 
     /**
      * Convierte un fallo HTTP de Alegra en un {@link AlegraApiException} con el mensaje del proveedor. Un 409 se
-     * describe como "conflicto" en lugar de escribir el número: los servicios de notas leen el texto "409" como el
-     * conflicto de documentos pendientes de Factus y borrarían el documento.
+     * describe como "conflicto" en lugar de escribir el número (convención heredada de Factus, cuando los servicios
+     * de notas leían el texto "409"; ya no hay lógica que dependa de él).
      */
     public RuntimeException translate(String action, Exception ex) {
         if (ex instanceof AlegraApiException || ex instanceof BillingNotEnabledException) {

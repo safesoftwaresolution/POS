@@ -53,6 +53,23 @@ Los valores de §2.2 y §2.3 viven como variables CSS en `frontend/src/index.css
 
 No escribir hex ni pares `bg-white dark:bg-[#17171B]` en componentes nuevos. Las pantallas de acceso (`/login`, `/register`, `/verify-email`, onboarding) son siempre oscuras por diseño y conservan sus colores fijos. Componentes base reutilizables: `frontend/src/components/ui/` (`Button`, `Badge`, `Card`, `Modal`, `Input`/`Select`, `EmptyState`, `PageHeader`).
 
+### 2.1b Temas por categoría de local
+El acento de marca puede cambiar según la categoría del local (el backend deriva el tema de la categoría; ver `RN-STORE-007`). Solo se sustituyen `--color-primary` y `--color-primary-hover`; neutros, formas, tipografía y modo claro/oscuro no cambian. Sin categoría, "Otros" y el tema `DEFAULT` conservan el naranja `#FF5520`. Los valores viven en `frontend/src/constants/storeThemes.js` y cada acento debe contrastar al menos como el naranja (texto blanco >= 3,2:1) y llegar a 4,5:1 sobre la tarjeta oscura; `storeThemes.test.js` lo comprueba.
+
+| Tema | Acento | Hover | Categorías |
+|------|--------|-------|-----------|
+| `DEFAULT` | `#FF5520` | `#E64712` | Otros, sin categoría |
+| `GROCERY` | `#23964D` | `#1F8444` | Minimercado, Supermercado |
+| `PHARMACY` | `#1A9386` | `#178176` | Droguería / Farmacia |
+| `BAKERY` | `#C66B1C` | `#AE5E19` | Panadería |
+| `STATIONERY` | `#3A80EF` | `#3371D2` | Papelería |
+| `HARDWARE` | `#A47D09` | `#906E08` | Ferretería |
+| `FOOD` | `#E84B45` | `#CC423D` | Restaurante / Cafetería |
+| `LIQUOR` | `#9E69DC` | `#8B5CC2` | Licorera |
+| `PETS` | `#E14694` | `#C63E82` | Tienda de mascotas |
+| `BEAUTY` | `#C551D6` | `#AD47BC` | Barbería, Peluquería, Salón de uñas y pies |
+| `FASHION` | `#EA436D` | `#CE3B60` | Boutique |
+
 ### 2.4 Estados y Semántica Funcional
 - **Éxito (Validado / En Stock / Activo)**:
   - Claro: `text-emerald-600 bg-emerald-50 border-emerald-200`

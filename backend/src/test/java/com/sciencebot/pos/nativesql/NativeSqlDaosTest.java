@@ -240,16 +240,29 @@ class NativeSqlDaosTest {
                     + "CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)").param("s", storeId).param("i", "appt-c-" + storeId).update();
         }
 
+        // Fiado y auditoría del local: tienen FK a stores (y a customers / credit_accounts) y también deben purgarse.
+        for (long storeId : new long[]{keep, victim}) {
+            jdbc.sql("INSERT INTO credit_accounts (store_id, customer_id, balance, created_at, updated_at) VALUES (:s, "
+                    + "(SELECT id FROM customers WHERE identification = :i), 5, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+                    .param("s", storeId).param("i", "appt-c-" + storeId).update();
+            jdbc.sql("INSERT INTO credit_movements (store_id, account_id, customer_id, type, amount, balance_after, created_at) "
+                    + "VALUES (:s, (SELECT id FROM credit_accounts WHERE store_id = :s), "
+                    + "(SELECT id FROM customers WHERE identification = :i), 'CHARGE', 5, 5, CURRENT_TIMESTAMP)")
+                    .param("s", storeId).param("i", "appt-c-" + storeId).update();
+            jdbc.sql("INSERT INTO audit_log (store_id, entity_type, entity_id, action, created_at) "
+                    + "VALUES (:s, 'CUSTOMER', 1, 'CREATE', CURRENT_TIMESTAMP)").param("s", storeId).update();
+        }
+
         StorePurgeDao dao = new StorePurgeDao(jdbc);
-        assertTrue(dao.findBusinessData(victim).containsAll(List.of("customers", "services", "appointments")));
+        assertTrue(dao.findBusinessData(victim).containsAll(List.of("customers", "services", "appointments", "credit_accounts", "audit_log")));
 
         dao.purge(victim);
 
-        for (String table : List.of("appointments", "services", "customers", "store_templates")) {
+        for (String table : List.of("appointments", "services", "customers", "store_templates", "credit_movements", "credit_accounts", "audit_log")) {
             assertEquals(0L, count("SELECT COUNT(*) FROM " + table + " WHERE store_id = " + victim), table);
         }
         assertEquals(0L, count("SELECT COUNT(*) FROM stores WHERE id = " + victim));
-        for (String table : List.of("appointments", "services", "customers", "store_templates")) {
+        for (String table : List.of("appointments", "services", "customers", "store_templates", "credit_movements", "credit_accounts", "audit_log")) {
             assertEquals(1L, count("SELECT COUNT(*) FROM " + table + " WHERE store_id = " + keep), table + " del otro local");
         }
     }

@@ -14,6 +14,8 @@
   editables, en vez de responder 404. **A verificar**: `getSettings` es `readOnly` y la creación se invoca por auto-invocación, así que
   el `@Transactional` interno no se aplica y la fila podría no persistirse hasta el primer `PUT`.
 
+- Al registrar su local (`StoreFacade.registerOwnStore`), la fila se siembra con los datos del local (nombre, dirección, teléfono, NIT, correo) vía `SettingsFacade.seedSettings(storeId, defaults)`, que recibe el local explícito porque el token del dueño aún no lo trae. Nunca sobrescribe una fila existente; dirección o teléfono vacíos quedan "Por definir". El Dashboard (`GettingStarted`) pide al `ADMINISTRATOR` completar estos datos mientras sigan en los valores por defecto, y ofrece activar la facturación electrónica como paso opcional (`/invoicing?tab=activation`).
+
 ### RN-SET-002 — Sin Credenciales de Facturación
 - Este módulo **no guarda credenciales de Factus**. Las columnas `factus_*` que existieron aquí se
   eliminaron en `V16__Drop_Settings_Factus_Columns.sql`; la habilitación y las credenciales por local viven

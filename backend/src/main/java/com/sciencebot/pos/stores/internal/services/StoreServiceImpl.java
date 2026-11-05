@@ -18,6 +18,8 @@ import com.sciencebot.pos.stores.internal.repositories.StoreStatusAuditRepositor
 import com.sciencebot.pos.stores.internal.repositories.StoreUserAuditRepository;
 import com.sciencebot.pos.notifications.CreateNotificationCommand;
 import com.sciencebot.pos.notifications.NotificationFacade;
+import com.sciencebot.pos.settings.SettingsDto;
+import com.sciencebot.pos.settings.SettingsFacade;
 import com.sciencebot.pos.storage.StorageFacade;
 import com.sciencebot.pos.storage.StorageUploadResult;
 import com.sciencebot.pos.users.UserDto;
@@ -61,6 +63,7 @@ public class StoreServiceImpl implements StoreFacade {
     private final StoreUserAuditRepository storeUserAuditRepository;
     private final PlanRepository planRepository;
     private final StoreApprovalMailer approvalMailer;
+    private final SettingsFacade settingsFacade;
 
     public StoreServiceImpl(StoreRepository storeRepository,
                             StoreCategoryRepository categoryRepository,
@@ -74,7 +77,8 @@ public class StoreServiceImpl implements StoreFacade {
                             StorePurgeDao storePurgeDao,
                             StoreUserAuditRepository storeUserAuditRepository,
                             PlanRepository planRepository,
-                            StoreApprovalMailer approvalMailer) {
+                            StoreApprovalMailer approvalMailer,
+                            SettingsFacade settingsFacade) {
         this.storeRepository = storeRepository;
         this.categoryRepository = categoryRepository;
         this.documentRepository = documentRepository;
@@ -88,6 +92,7 @@ public class StoreServiceImpl implements StoreFacade {
         this.storeUserAuditRepository = storeUserAuditRepository;
         this.planRepository = planRepository;
         this.approvalMailer = approvalMailer;
+        this.settingsFacade = settingsFacade;
     }
 
     @Override
@@ -250,6 +255,9 @@ public class StoreServiceImpl implements StoreFacade {
 
         StoreDto created = createStore(command);
         userFacade.assignStore(owner.id(), created.id());
+        // La configuración del negocio (recibos, facturas) arranca con los datos del local: no hay que volver a escribirlos.
+        settingsFacade.seedSettings(created.id(), new SettingsDto(
+                command.name(), command.address(), command.phone(), command.taxId(), command.email(), null));
         return created;
     }
 

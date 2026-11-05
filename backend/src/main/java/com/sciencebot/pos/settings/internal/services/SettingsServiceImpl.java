@@ -81,18 +81,31 @@ public class SettingsServiceImpl implements SettingsFacade {
     @Override
     @Transactional
     public void seedSettings(SettingsDto defaultSettings) {
-        Long storeId = requireCurrentStoreId();
-        if (!settingsRepository.existsById(storeId)) {
-            Setting setting = new Setting();
-            setting.setId(storeId);
-            setting.setBusinessName(defaultSettings.businessName());
-            setting.setAddress(defaultSettings.address());
-            setting.setPhone(defaultSettings.phone());
-            setting.setTaxId(defaultSettings.taxId());
-            setting.setEmail(defaultSettings.email());
-            setting.setLogoUrl(defaultSettings.logoUrl());
-            settingsRepository.save(setting);
+        seedSettings(requireCurrentStoreId(), defaultSettings);
+    }
+
+    @Override
+    @Transactional
+    public void seedSettings(Long storeId, SettingsDto defaultSettings) {
+        if (storeId == null) {
+            throw new IllegalArgumentException("El local es obligatorio para sembrar su configuración.");
         }
+        if (settingsRepository.existsById(storeId)) {
+            return;
+        }
+        Setting setting = new Setting();
+        setting.setId(storeId);
+        setting.setBusinessName(defaultSettings.businessName());
+        setting.setAddress(orDefault(defaultSettings.address(), DEFAULT_ADDRESS));
+        setting.setPhone(orDefault(defaultSettings.phone(), DEFAULT_PHONE));
+        setting.setTaxId(defaultSettings.taxId());
+        setting.setEmail(defaultSettings.email());
+        setting.setLogoUrl(defaultSettings.logoUrl());
+        settingsRepository.save(setting);
+    }
+
+    private static String orDefault(String value, String fallback) {
+        return value == null || value.isBlank() ? fallback : value.trim();
     }
 
     // --- Catálogos dinámicos: delegación al servicio de parámetros del módulo ---

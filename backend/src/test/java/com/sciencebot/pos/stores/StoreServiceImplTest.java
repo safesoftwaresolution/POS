@@ -44,6 +44,7 @@ class StoreServiceImplTest {
     @Mock private com.sciencebot.pos.stores.internal.repositories.StoreUserAuditRepository storeUserAuditRepository;
     @Mock private com.sciencebot.pos.stores.internal.repositories.PlanRepository planRepository;
     @Mock private com.sciencebot.pos.stores.internal.services.StoreApprovalMailer approvalMailer;
+    @Mock private com.sciencebot.pos.settings.SettingsFacade settingsFacade;
     @InjectMocks private StoreServiceImpl storeService;
 
     @BeforeEach
@@ -176,6 +177,8 @@ class StoreServiceImplTest {
         assertNotNull(result);
         assertEquals(9L, result.id());
         verify(userFacade, times(1)).assignStore(5L, 9L);
+        verify(settingsFacade).seedSettings(9L, new com.sciencebot.pos.settings.SettingsDto(
+                "Tienda 1", "Calle 1", "3001234567", "900123", "tienda1@test.com", null));
     }
 
     @Test

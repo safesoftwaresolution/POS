@@ -199,7 +199,7 @@ export default function DashboardBento() {
       </div>
 
       {!loading && hasAnySale !== null && (!canSeeStock || hasProducts !== null) && (
-        <GettingStarted hasProducts={Boolean(hasProducts)} hasSales={hasAnySale} canCreateProducts={canSeeStock} />
+        <GettingStarted hasProducts={Boolean(hasProducts)} hasSales={hasAnySale} canCreateProducts={canSeeStock} isAdmin={isAdmin} />
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">

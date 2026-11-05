@@ -58,7 +58,7 @@ class InvoiceServiceImplTest {
         TenantContext.setStoreId(1L);
         mockAdapter = new MockBillingAdapter();
 
-        when(customProvider.getProviderName()).thenReturn("factus");
+        when(customProvider.getProviderName()).thenReturn("alegra");
 
         invoiceService = new InvoiceServiceImpl(
                 repository,
@@ -258,7 +258,7 @@ class InvoiceServiceImplTest {
 
     @Test
     void downloadInvoicePDF_UsesTheProviderDocumentIdWhenTheInvoiceHasOne() {
-        ReflectionTestUtils.setField(invoiceService, "activeProviderName", "factus");
+        ReflectionTestUtils.setField(invoiceService, "activeProviderName", "alegra");
         ElectronicInvoice validated = ElectronicInvoice.initialize(1L, 1L);
         validated.markAsValidated("SETP-1", "cufe", "qr", null, LocalDateTime.now());
         validated.trackProviderDocument("doc-1");
@@ -272,7 +272,7 @@ class InvoiceServiceImplTest {
 
     @Test
     void downloadInvoicePDF_FallsBackToTheLegalNumberWhenThereIsNoProviderDocumentId() {
-        ReflectionTestUtils.setField(invoiceService, "activeProviderName", "factus");
+        ReflectionTestUtils.setField(invoiceService, "activeProviderName", "alegra");
         ElectronicInvoice validated = ElectronicInvoice.initialize(1L, 1L);
         validated.markAsValidated("SETP-1", "cufe", "qr", null, LocalDateTime.now());
         when(repository.findBySaleIdAndStoreId(1L, 1L)).thenReturn(Optional.of(validated));
@@ -285,7 +285,7 @@ class InvoiceServiceImplTest {
 
     @Test
     void sendInvoiceEmailAndDownloadXml_UseTheProviderDocumentIdWhenThereIsOne() {
-        ReflectionTestUtils.setField(invoiceService, "activeProviderName", "factus");
+        ReflectionTestUtils.setField(invoiceService, "activeProviderName", "alegra");
         ElectronicInvoice validated = ElectronicInvoice.initialize(1L, 1L);
         validated.markAsValidated("SETP-1", "cufe", "qr", null, LocalDateTime.now());
         validated.trackProviderDocument("doc-1");
@@ -302,7 +302,7 @@ class InvoiceServiceImplTest {
 
     @Test
     void sendInvoiceEmailAndDownloadXml_KeepUsingTheLegalNumberWithoutAProviderId() {
-        ReflectionTestUtils.setField(invoiceService, "activeProviderName", "factus");
+        ReflectionTestUtils.setField(invoiceService, "activeProviderName", "alegra");
         ElectronicInvoice validated = ElectronicInvoice.initialize(1L, 1L);
         validated.markAsValidated("SETP-1", "cufe", "qr", null, LocalDateTime.now());
         when(repository.findBySaleIdAndStoreId(1L, 1L)).thenReturn(Optional.of(validated));

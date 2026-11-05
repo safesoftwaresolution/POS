@@ -40,11 +40,6 @@ public interface CreditNoteService {
     byte[] downloadCreditNoteXML(Long id);
 
     /**
-     * Elimina una nota crédito no validada en Factus (para resolver conflictos 409).
-     */
-    boolean deleteUnvalidatedCreditNote(String referenceCode);
-
-    /**
      * Genera automáticamente una nota crédito para una venta específica (ej. anulación o devolución).
      */
     CreditNoteDTO createFromSale(Long saleId, String conceptCode, String observation);

@@ -6,7 +6,6 @@ import com.sciencebot.pos.billing.dto.CreateNumberingRangeRequest;
 import com.sciencebot.pos.billing.dto.NumberingRangeDto;
 import com.sciencebot.pos.billing.exception.BillingNotEnabledException;
 import com.sciencebot.pos.billing.internal.adapters.NumberingRangeProvider;
-import com.sciencebot.pos.billing.internal.adapters.factus.FactusCredentialsResolver;
 import com.sciencebot.pos.billing.internal.adapters.mock.MockBillingAdapter;
 import com.sciencebot.pos.billing.internal.entities.StoreBillingConfig;
 import com.sciencebot.pos.billing.internal.repositories.NumberingRangeAuditRepository;
@@ -50,7 +49,7 @@ class NumberingRangeServiceImplTest {
         MockitoAnnotations.openMocks(this);
         mockAdapter = new MockBillingAdapter();
 
-        when(customProvider.getProviderName()).thenReturn("factus");
+        when(customProvider.getProviderName()).thenReturn("alegra");
         when(billingConfigRepository.findById(any())).thenReturn(Optional.empty());
 
         service = new NumberingRangeServiceImpl(List.of(mockAdapter, customProvider), billingConfigRepository, auditRepository);
@@ -63,7 +62,7 @@ class NumberingRangeServiceImplTest {
     }
 
     private void useCustomProvider() {
-        ReflectionTestUtils.setField(service, "activeProviderName", "factus");
+        ReflectionTestUtils.setField(service, "activeProviderName", "alegra");
     }
 
     private static StoreBillingConfig configWithActiveRange(int rangeId) {
@@ -347,20 +346,17 @@ class NumberingRangeServiceImplTest {
 
     @Test
     void setDefault_NextInvoiceResolvesTheNewlyAssignedRange() {
-        // El flujo de venta obtiene el rango a través de FactusCredentialsResolver, que lee la misma
-        // configuración que acaba de actualizar el administrador.
+        // El flujo de venta lee el rango de la misma configuración que acaba de actualizar el administrador.
         TenantContext.setStoreId(STORE);
         StoreBillingConfig config = activeConfigWithCredentials();
         config.getSandbox().setNumberingRangeId(14);
         when(billingConfigRepository.findById(STORE)).thenReturn(Optional.of(config));
         useCustomProvider();
         when(customProvider.getNumberingRange(20L)).thenReturn(range(20L, true));
-        FactusCredentialsResolver resolver =
-                new FactusCredentialsResolver(billingConfigRepository, "https://sandbox", "https://prod");
 
-        assertEquals(14, resolver.resolve(STORE).numberingRangeId());
+        assertEquals(14, config.getSandbox().getNumberingRangeId());
         service.setDefaultNumberingRange(20L);
-        assertEquals(20, resolver.resolve(STORE).numberingRangeId());
+        assertEquals(20, config.getSandbox().getNumberingRangeId());
     }
 
     @Test

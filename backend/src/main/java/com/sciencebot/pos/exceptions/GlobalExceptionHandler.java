@@ -1,7 +1,6 @@
 package com.sciencebot.pos.exceptions;
 
 import com.sciencebot.pos.billing.exception.BillingProviderException;
-import com.sciencebot.pos.billing.exception.FactusApiException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -60,16 +59,6 @@ public class GlobalExceptionHandler {
         response.put("error", "Forbidden");
         response.put("message", "No tiene permisos para realizar esta acción");
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
-    }
-
-    /**
-     * Factus rechazó la llamada o no respondió. Se devuelve el motivo real: 422 si Factus objetó
-     * los datos enviados y 502 si rechazó las credenciales del local o no hay conexión.
-     * Mismo mapeo que {@link #handleBillingProvider(BillingProviderException)}.
-     */
-    @ExceptionHandler(FactusApiException.class)
-    public ResponseEntity<Map<String, String>> handleFactusApi(FactusApiException ex) {
-        return handleBillingProvider(ex);
     }
 
     /**

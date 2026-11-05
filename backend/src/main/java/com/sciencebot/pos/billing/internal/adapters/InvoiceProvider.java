@@ -58,13 +58,6 @@ public interface InvoiceProvider {
     }
 
     /**
-     * Elimina una factura que no ha sido validada ante la DIAN.
-     */
-    default boolean deleteUnvalidatedInvoice(String legalNumber) {
-        throw new UnsupportedOperationException("deleteUnvalidatedInvoice no soportado por " + getProviderName());
-    }
-
-    /**
      * Envía la factura electrónica por correo electrónico (ZIP con PDF y XML).
      */
     default boolean sendInvoiceEmail(String legalNumber, String email) {

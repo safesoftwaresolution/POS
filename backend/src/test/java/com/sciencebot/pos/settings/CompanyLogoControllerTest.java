@@ -34,7 +34,6 @@ class CompanyLogoControllerTest {
                 250,
                 250,
                 3L,
-                true,
                 "OK"
         );
 
@@ -57,7 +56,6 @@ class CompanyLogoControllerTest {
                 300,
                 300,
                 3L,
-                true,
                 "OK"
         );
 

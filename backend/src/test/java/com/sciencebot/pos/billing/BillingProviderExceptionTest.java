@@ -1,7 +1,7 @@
 package com.sciencebot.pos.billing;
 
 import com.sciencebot.pos.billing.exception.BillingProviderException;
-import com.sciencebot.pos.billing.exception.FactusApiException;
+import com.sciencebot.pos.billing.exception.AlegraApiException;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -44,14 +44,14 @@ class BillingProviderExceptionTest {
     }
 
     @Test
-    void factusExceptionIsAProviderExceptionWithTheSameBehavior() {
-        FactusApiException factus = new FactusApiException(503, "Factus caído", null);
+    void alegraExceptionIsAProviderExceptionWithTheSameBehavior() {
+        AlegraApiException alegra = new AlegraApiException(503, "Alegra caído", null);
 
-        assertInstanceOf(BillingProviderException.class, factus);
-        assertEquals(503, factus.getUpstreamStatus());
-        assertEquals("Factus caído", factus.getMessage());
-        assertTrue(factus.isTemporary());
-        assertFalse(factus.isAuthenticationError());
-        assertTrue(new FactusApiException(401, "x", null).isAuthenticationError());
+        assertInstanceOf(BillingProviderException.class, alegra);
+        assertEquals(503, alegra.getUpstreamStatus());
+        assertEquals("Alegra caído", alegra.getMessage());
+        assertTrue(alegra.isTemporary());
+        assertFalse(alegra.isAuthenticationError());
+        assertTrue(new AlegraApiException(401, "x", null).isAuthenticationError());
     }
 }

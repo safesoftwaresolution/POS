@@ -17,8 +17,4 @@
         default byte[] downloadCreditNoteXML(String creditNoteNumber, Long storeId) {
             throw new UnsupportedOperationException("downloadCreditNoteXML no soportado por " + getProviderName());
         }
-
-        default boolean deleteUnvalidatedCreditNote(String referenceCode, Long storeId) {
-            throw new UnsupportedOperationException("deleteUnvalidatedCreditNote no soportado por " + getProviderName());
-        }
     }

@@ -20,7 +20,7 @@ import java.util.TreeSet;
 @Component
 public class ActiveBillingProvider {
 
-    private static final String DEFAULT_PROVIDER = "factus";
+    private static final String DEFAULT_PROVIDER = "alegra";
 
     private final Map<String, ElectronicInvoicingProvider> providersByName = new TreeMap<>();
     private final String configuredName;

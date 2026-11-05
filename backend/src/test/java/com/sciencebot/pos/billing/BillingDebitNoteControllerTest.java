@@ -144,21 +144,6 @@ class BillingDebitNoteControllerTest {
     }
 
     @Test
-    void deleteUnvalidatedDebitNote_Success_Returns204() {
-        when(debitNoteService.deleteUnvalidatedDebitNote("ND-01")).thenReturn(true);
-
-        assertEquals(HttpStatus.NO_CONTENT, controller.deleteUnvalidatedDebitNote("ND-01").getStatusCode());
-        verify(debitNoteService).deleteUnvalidatedDebitNote("ND-01");
-    }
-
-    @Test
-    void deleteUnvalidatedDebitNote_Failure_Returns400() {
-        when(debitNoteService.deleteUnvalidatedDebitNote("ND-01")).thenReturn(false);
-
-        assertEquals(HttpStatus.BAD_REQUEST, controller.deleteUnvalidatedDebitNote("ND-01").getStatusCode());
-    }
-
-    @Test
     void createForSale_Returns200WithDto() {
         CreateDebitNoteRequest request = sampleRequest();
         when(debitNoteService.createForSale(10L, request)).thenReturn(sampleDTO());

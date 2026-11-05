@@ -48,7 +48,7 @@ class DebitNoteServiceImplTest {
         MockitoAnnotations.openMocks(this);
         TenantContext.setStoreId(1L);
 
-        when(factusProvider.getProviderName()).thenReturn("factus");
+        when(factusProvider.getProviderName()).thenReturn("alegra");
 
         ElectronicDebitNoteMapper mapper = new ElectronicDebitNoteMapper();
         service = new DebitNoteServiceImpl(
@@ -156,23 +156,6 @@ class DebitNoteServiceImplTest {
         assertEquals("VALIDATED", result.status());
         assertNull(result.errorMessage());
         verify(repository, never()).saveAndFlush(any());
-    }
-
-    @Test
-    void createAndValidateDebitNote_WhenConflict409_AttemptsDeleteAndRetries() {
-        CreateDebitNoteRequest request = createSampleRequest();
-        stubNewNotePersistence();
-        when(factusProvider.emitDebitNote(eq(request), eq(1L)))
-                .thenReturn(DebitNoteResult.error("Conflicto DIAN/Factus (HTTP 409): documento pendiente"))
-                .thenReturn(DebitNoteResult.success("ND990000002", "cude-retry", "qr", "pdf"));
-        when(factusProvider.deleteUnvalidatedDebitNote(request.referenceCode(), 1L)).thenReturn(true);
-
-        DebitNoteDTO result = service.createAndValidateDebitNote(request);
-
-        assertEquals("ND990000002", result.debitNoteNumber());
-        assertEquals("VALIDATED", result.status());
-        verify(factusProvider).deleteUnvalidatedDebitNote(request.referenceCode(), 1L);
-        verify(factusProvider, times(2)).emitDebitNote(eq(request), eq(1L));
     }
 
     @Test
@@ -364,33 +347,4 @@ class DebitNoteServiceImplTest {
 
     // --- Eliminación de borradores ---
 
-    @Test
-    void deleteUnvalidatedDebitNote_WhenValidated_ThrowsIllegalState() {
-        when(repository.findByReferenceCodeAndStoreId("ND-001", 1L)).thenReturn(Optional.of(validatedNote(1L, "ND-001")));
-
-        assertThrows(IllegalStateException.class, () -> service.deleteUnvalidatedDebitNote("ND-001"));
-        verify(factusProvider, never()).deleteUnvalidatedDebitNote(any(), any());
-    }
-
-    @Test
-    void deleteUnvalidatedDebitNote_WhenNotValidated_DeletesFromProviderAndRepo() {
-        ElectronicDebitNote unvalidated = ElectronicDebitNote.initialize(1L, null, "ND-001", "SETP-01", "1", "30");
-        unvalidated.markAsError("Error DIAN");
-        when(repository.findByReferenceCodeAndStoreId("ND-001", 1L)).thenReturn(Optional.of(unvalidated));
-        when(factusProvider.deleteUnvalidatedDebitNote("ND-001", 1L)).thenReturn(true);
-
-        assertTrue(service.deleteUnvalidatedDebitNote("ND-001"));
-        verify(repository).delete(unvalidated);
-    }
-
-    @Test
-    void deleteUnvalidatedDebitNote_WhenProviderFails_KeepsLocalRecord() {
-        ElectronicDebitNote unvalidated = ElectronicDebitNote.initialize(1L, null, "ND-001", "SETP-01", "1", "30");
-        unvalidated.markAsError("Error DIAN");
-        when(repository.findByReferenceCodeAndStoreId("ND-001", 1L)).thenReturn(Optional.of(unvalidated));
-        when(factusProvider.deleteUnvalidatedDebitNote("ND-001", 1L)).thenReturn(false);
-
-        assertFalse(service.deleteUnvalidatedDebitNote("ND-001"));
-        verify(repository, never()).delete(any());
-    }
 }

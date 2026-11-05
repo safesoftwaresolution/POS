@@ -1,6 +1,5 @@
 package com.sciencebot.pos.settings;
 
-import com.sciencebot.pos.billing.internal.adapters.factus.FactusTokenManager;
 import com.sciencebot.pos.config.tenant.TenantContext;
 import com.sciencebot.pos.settings.internal.entities.Setting;
 import com.sciencebot.pos.settings.internal.repositories.SettingsRepository;
@@ -12,11 +11,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
-import org.springframework.test.web.client.MockRestServiceServer;
-import org.springframework.web.client.RestClient;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
@@ -30,25 +25,17 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
-import static org.springframework.test.web.client.match.MockRestRequestMatchers.*;
-import static org.springframework.test.web.client.response.MockRestResponseCreators.*;
 
 class CompanyLogoServiceTest {
 
     private static final Long STORE_ID = 10L;
-    private static final String MOCK_TOKEN = "mocked-jwt-token-12345";
-    private static final String FACTUS_URL = "https://api-sandbox.factus.com.co";
 
     @Mock
     private SettingsRepository settingsRepository;
 
     @Mock
-    private FactusTokenManager factusTokenManager;
-
-    @Mock
     private StorageFacade storageFacade;
 
-    private MockRestServiceServer mockServer;
     private CompanyLogoServiceImpl companyLogoService;
     private Setting mockSetting;
 
@@ -57,25 +44,13 @@ class CompanyLogoServiceTest {
         MockitoAnnotations.openMocks(this);
         TenantContext.setStoreId(STORE_ID);
 
-        when(factusTokenManager.getAccessToken()).thenReturn(MOCK_TOKEN);
-
         mockSetting = new Setting();
         mockSetting.setId(STORE_ID);
         mockSetting.setBusinessName("Mi Tienda POS");
         when(settingsRepository.findById(STORE_ID)).thenReturn(Optional.of(mockSetting));
         when(settingsRepository.save(any(Setting.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        RestClient.Builder restClientBuilder = RestClient.builder();
-        mockServer = MockRestServiceServer.bindTo(restClientBuilder).build();
-        RestClient restClient = restClientBuilder.build();
-
-        companyLogoService = new CompanyLogoServiceImpl(
-                settingsRepository,
-                factusTokenManager,
-                storageFacade,
-                restClient,
-                FACTUS_URL
-        );
+        companyLogoService = new CompanyLogoServiceImpl(settingsRepository, storageFacade);
     }
 
     @AfterEach
@@ -84,43 +59,26 @@ class CompanyLogoServiceTest {
     }
 
     @Test
-    void updateLogo_succeeds_withValidPngAndSyncsFactus() throws Exception {
+    void updateLogo_succeeds_withValidPng() throws Exception {
         byte[] pngBytes = createImageBytes(200, 200, "png");
-        MockMultipartFile file = new MockMultipartFile(
-                "file",
-                "mi_empresa_logo.png",
-                "image/png",
-                pngBytes
-        );
-
+        MockMultipartFile file = new MockMultipartFile("file", "mi_empresa_logo.png", "image/png", pngBytes);
         when(storageFacade.uploadFile(eq(file), eq("imagenes-logos/tienda-" + STORE_ID))).thenReturn(
                 new StorageUploadResult("logos/logo123.png", "https://pub.r2.dev/logos/logo123.png", "mi_empresa_logo.png", file.getSize(), "image/png")
         );
 
-        mockServer.expect(requestTo(FACTUS_URL + "/v2/companies/logo"))
-                .andExpect(method(HttpMethod.POST))
-                .andExpect(header("Authorization", "Bearer " + MOCK_TOKEN))
-                .andExpect(header("Accept", MediaType.APPLICATION_JSON_VALUE))
-                .andRespond(withSuccess("{\"status\":\"success\",\"message\":\"Logo updated\"}", MediaType.APPLICATION_JSON));
-
         CompanyLogoResponseDto response = companyLogoService.updateLogo(file);
 
         assertNotNull(response);
-        assertTrue(response.factusSynced());
         assertEquals("https://pub.r2.dev/logos/logo123.png", response.logoUrl());
         assertEquals("mi_empresa_logo.png", response.originalFilename());
         assertEquals(200, response.width());
         assertEquals(200, response.height());
         assertEquals("https://pub.r2.dev/logos/logo123.png", mockSetting.getLogoUrl());
-
         verify(settingsRepository, times(1)).save(mockSetting);
-        mockServer.verify();
     }
 
     @Test
     void updateLogo_deletesThePreviousLogoFromStorage() throws Exception {
-        when(factusTokenManager.getAccessToken())
-                .thenThrow(new com.sciencebot.pos.billing.exception.BillingNotEnabledException("no activo"));
         mockSetting.setLogoUrl("https://pub.r2.dev/imagenes-logos/tienda-10/viejo.png");
         MockMultipartFile file = new MockMultipartFile("file", "logo.png", "image/png", createImageBytes(100, 100, "png"));
         when(storageFacade.uploadFile(eq(file), eq("imagenes-logos/tienda-" + STORE_ID))).thenReturn(
@@ -144,94 +102,18 @@ class CompanyLogoServiceTest {
     }
 
     @Test
-    void updateLogo_savesLocallyWithoutCallingFactus_whenStoreBillingIsNotActive() throws Exception {
-        when(factusTokenManager.getAccessToken())
-                .thenThrow(new com.sciencebot.pos.billing.exception.BillingNotEnabledException("no activo"));
-        MockMultipartFile file = new MockMultipartFile("file", "logo.png", "image/png", createImageBytes(100, 100, "png"));
-        when(storageFacade.uploadFile(eq(file), eq("imagenes-logos/tienda-" + STORE_ID))).thenReturn(
-                new StorageUploadResult("logos/l.png", "https://pub.r2.dev/logos/l.png", "logo.png", file.getSize(), "image/png"));
-
-        CompanyLogoResponseDto response = companyLogoService.updateLogo(file);
-
-        assertFalse(response.factusSynced());
-        assertTrue(response.message().contains("no está activa"));
-        assertEquals("https://pub.r2.dev/logos/l.png", mockSetting.getLogoUrl());
-        mockServer.verify(); // sin expectativas: falla si se llamó a Factus
-    }
-
-    @Test
-    void updateLogo_doesNotSyncWithFactus_whenTheConfiguredProviderIsNotFactus() throws Exception {
-        org.springframework.test.util.ReflectionTestUtils.setField(companyLogoService, "billingProvider", "mock");
-        MockMultipartFile file = new MockMultipartFile("file", "logo.png", "image/png", createImageBytes(100, 100, "png"));
-        when(storageFacade.uploadFile(eq(file), eq("imagenes-logos/tienda-" + STORE_ID))).thenReturn(
-                new StorageUploadResult("logos/l.png", "https://pub.r2.dev/logos/l.png", "logo.png", file.getSize(), "image/png"));
-
-        CompanyLogoResponseDto response = companyLogoService.updateLogo(file);
-
-        assertFalse(response.factusSynced());
-        assertTrue(response.message().contains("proveedor de facturación configurado no es Factus"));
-        assertEquals("https://pub.r2.dev/logos/l.png", mockSetting.getLogoUrl(), "el logo se guarda igual en local");
-        verify(settingsRepository).save(mockSetting);
-        verify(factusTokenManager, never()).getAccessToken();
-        verify(factusTokenManager, never()).getBaseUrl();
-        mockServer.verify(); // sin expectativas: falla si se llamó a Factus
-    }
-
-    @Test
-    void updateLogo_syncsWithFactus_whenTheConfiguredProviderIsFactusIgnoringCaseAndSpaces() throws Exception {
-        org.springframework.test.util.ReflectionTestUtils.setField(companyLogoService, "billingProvider", " Factus ");
-        MockMultipartFile file = new MockMultipartFile("file", "logo.png", "image/png", createImageBytes(100, 100, "png"));
-        when(storageFacade.uploadFile(eq(file), eq("imagenes-logos/tienda-" + STORE_ID))).thenReturn(
-                new StorageUploadResult("logos/l.png", "https://pub.r2.dev/logos/l.png", "logo.png", file.getSize(), "image/png"));
-        mockServer.expect(requestTo(FACTUS_URL + "/v2/companies/logo"))
-                .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
-
-        CompanyLogoResponseDto response = companyLogoService.updateLogo(file);
-
-        assertTrue(response.factusSynced());
-        mockServer.verify();
-    }
-
-    @Test
-    void updateLogo_usesTheFactusUrlOfTheStoreEnvironment() throws Exception {
-        when(factusTokenManager.getBaseUrl()).thenReturn("https://api.factus.com.co/");
-        MockMultipartFile file = new MockMultipartFile("file", "logo.png", "image/png", createImageBytes(100, 100, "png"));
-        when(storageFacade.uploadFile(eq(file), eq("imagenes-logos/tienda-" + STORE_ID))).thenReturn(
-                new StorageUploadResult("logos/l.png", "https://pub.r2.dev/logos/l.png", "logo.png", file.getSize(), "image/png"));
-        mockServer.expect(requestTo("https://api.factus.com.co/v2/companies/logo"))
-                .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
-
-        CompanyLogoResponseDto response = companyLogoService.updateLogo(file);
-
-        assertTrue(response.factusSynced());
-        mockServer.verify();
-    }
-
-    @Test
     void updateLogo_succeeds_withValidJpgMaxDimensions300x300() throws Exception {
         byte[] jpgBytes = createImageBytes(300, 300, "jpg");
-        MockMultipartFile file = new MockMultipartFile(
-                "file",
-                "logo_tienda.jpg",
-                "image/jpeg",
-                jpgBytes
-        );
+        MockMultipartFile file = new MockMultipartFile("file", "logo_tienda.jpg", "image/jpeg", jpgBytes);
         when(storageFacade.uploadFile(eq(file), any())).thenReturn(
                 new StorageUploadResult("k", "https://pub.r2.dev/imagenes-logos/tienda-10/l.png", "logo", 1L, "image/png"));
-
-        mockServer.expect(requestTo(FACTUS_URL + "/v2/companies/logo"))
-                .andExpect(method(HttpMethod.POST))
-                .andExpect(header("Authorization", "Bearer " + MOCK_TOKEN))
-                .andRespond(withSuccess("{\"status\":\"success\"}", MediaType.APPLICATION_JSON));
 
         CompanyLogoResponseDto response = companyLogoService.updateLogo(file);
 
         assertNotNull(response);
-        assertTrue(response.factusSynced());
         assertEquals(300, response.width());
         assertEquals(300, response.height());
         assertNotNull(mockSetting.getLogoUrl());
-        mockServer.verify();
     }
 
     @Test
@@ -327,24 +209,6 @@ class CompanyLogoServiceTest {
         assertTrue(ex.getMessage().contains("no es una imagen válida o está corrupto"));
     }
 
-    @Test
-    void updateLogo_fails_whenFactusReturnsServerError() throws Exception {
-        byte[] pngBytes = createImageBytes(150, 150, "png");
-        MockMultipartFile file = new MockMultipartFile("file", "logo.png", "image/png", pngBytes);
-        when(storageFacade.uploadFile(eq(file), any())).thenReturn(
-                new StorageUploadResult("k", "https://pub.r2.dev/imagenes-logos/tienda-10/l.png", "logo", 1L, "image/png"));
-
-        mockServer.expect(requestTo(FACTUS_URL + "/v2/companies/logo"))
-                .andExpect(method(HttpMethod.POST))
-                .andRespond(withServerError().body("{\"error\":\"Internal Server Error in Factus\"}"));
-
-        IllegalStateException ex = assertThrows(
-                IllegalStateException.class,
-                () -> companyLogoService.updateLogo(file)
-        );
-        assertTrue(ex.getMessage().contains("Factus API rechazó el logo"));
-        mockServer.verify();
-    }
 
     private byte[] createImageBytes(int width, int height, String format) throws IOException {
         BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);

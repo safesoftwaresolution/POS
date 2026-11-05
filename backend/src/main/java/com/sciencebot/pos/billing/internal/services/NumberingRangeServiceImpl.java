@@ -266,7 +266,7 @@ public class NumberingRangeServiceImpl implements NumberingRangeService {
     }
 
     private NumberingRangeProvider resolveProvider() {
-        String key = (activeProviderName != null) ? activeProviderName.trim().toLowerCase() : "factus";
+        String key = (activeProviderName != null) ? activeProviderName.trim().toLowerCase() : "alegra";
         NumberingRangeProvider provider = providersMap.get(key);
         if (provider == null) {
             // Sin respaldo silencioso a 'mock': un BILLING_PROVIDER mal escrito emitiria facturas falsas.

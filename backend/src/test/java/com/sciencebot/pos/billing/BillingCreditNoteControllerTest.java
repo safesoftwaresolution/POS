@@ -140,25 +140,6 @@ class BillingCreditNoteControllerTest {
     }
 
     @Test
-    void deleteUnvalidatedCreditNote_Success_Returns204() {
-        when(creditNoteService.deleteUnvalidatedCreditNote("NOTA-01")).thenReturn(true);
-
-        ResponseEntity<Void> response = controller.deleteUnvalidatedCreditNote("NOTA-01");
-
-        assertEquals(HttpStatus.NO_CONTENT, response.getStatusCode());
-        verify(creditNoteService).deleteUnvalidatedCreditNote("NOTA-01");
-    }
-
-    @Test
-    void deleteUnvalidatedCreditNote_Failure_Returns400() {
-        when(creditNoteService.deleteUnvalidatedCreditNote("NOTA-01")).thenReturn(false);
-
-        ResponseEntity<Void> response = controller.deleteUnvalidatedCreditNote("NOTA-01");
-
-        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
-    }
-
-    @Test
     void createFromSale_Returns200WithDto() {
         when(creditNoteService.createFromSale(10L, "2", "anulación")).thenReturn(sampleDTO());
 

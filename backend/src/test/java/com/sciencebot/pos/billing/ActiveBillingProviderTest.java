@@ -40,10 +40,10 @@ class ActiveBillingProviderTest {
     }
 
     @Test
-    void aNullConfiguredNameDefaultsToFactus() {
-        ElectronicInvoicingProvider factus = provider("factus");
+    void aNullConfiguredNameDefaultsToAlegra() {
+        ElectronicInvoicingProvider alegra = provider("alegra");
 
-        assertSame(factus, new ActiveBillingProvider(List.of(factus), null).get());
+        assertSame(alegra, new ActiveBillingProvider(List.of(alegra), null).get());
     }
 
     @Test

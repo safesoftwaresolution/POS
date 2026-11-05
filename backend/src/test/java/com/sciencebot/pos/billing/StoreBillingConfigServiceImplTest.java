@@ -7,7 +7,7 @@ import com.sciencebot.pos.billing.dto.BillingEnvironment;
 import com.sciencebot.pos.billing.dto.UpdateBillingCredentialsCommand;
 import com.sciencebot.pos.billing.exception.BillingNotEnabledException;
 import com.sciencebot.pos.billing.exception.BillingProviderException;
-import com.sciencebot.pos.billing.exception.FactusApiException;
+import com.sciencebot.pos.billing.exception.AlegraApiException;
 import com.sciencebot.pos.billing.internal.adapters.ActiveBillingProvider;
 import com.sciencebot.pos.billing.internal.adapters.ElectronicInvoicingProvider;
 import com.sciencebot.pos.billing.internal.entities.StoreBillingConfig;
@@ -345,7 +345,7 @@ class StoreBillingConfigServiceImplTest {
 
     @Test
     void testConnectionReturnsFailureInsteadOfThrowingWhenFactusRejects() {
-        doThrow(new FactusApiException(401, "credenciales inválidas", null))
+        doThrow(new AlegraApiException(401, "credenciales inválidas", null))
                 .when(provider).verifyConnection(STORE, BillingEnvironment.PRODUCTION);
 
         BillingConnectionTestResult result = service.testConnection(STORE, BillingEnvironment.PRODUCTION);

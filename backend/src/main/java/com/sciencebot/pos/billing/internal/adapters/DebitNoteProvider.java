@@ -16,8 +16,4 @@ public interface DebitNoteProvider {
     default byte[] downloadDebitNoteXML(String debitNoteNumber, Long storeId) {
         throw new UnsupportedOperationException("downloadDebitNoteXML no soportado por " + getProviderName());
     }
-
-    default boolean deleteUnvalidatedDebitNote(String referenceCode, Long storeId) {
-        throw new UnsupportedOperationException("deleteUnvalidatedDebitNote no soportado por " + getProviderName());
-    }
 }

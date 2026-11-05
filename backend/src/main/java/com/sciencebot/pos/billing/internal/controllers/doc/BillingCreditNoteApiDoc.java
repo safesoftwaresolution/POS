@@ -103,18 +103,6 @@ public interface BillingCreditNoteApiDoc {
     );
 
     @Operation(
-            summary = "Eliminar nota crédito no validada",
-            description = "Elimina de Factus una nota crédito que quedó en conflicto o con errores y no fue validada ante la DIAN."
-    )
-    @ApiResponses({
-            @ApiResponse(responseCode = "204", description = "Nota crédito no validada eliminada exitosamente"),
-            @ApiResponse(responseCode = "400", description = "La nota crédito ya está validada o no se pudo eliminar")
-    })
-    ResponseEntity<Void> deleteUnvalidatedCreditNote(
-            @Parameter(description = "Código de referencia único de la nota crédito a eliminar", example = "NOTA-2026-0015", required = true) String referenceCode
-    );
-
-    @Operation(
             summary = "Crear nota crédito a partir de una venta",
             description = """
                     Genera y valida automáticamente una nota crédito para una venta con factura electrónica previa VALIDATED.

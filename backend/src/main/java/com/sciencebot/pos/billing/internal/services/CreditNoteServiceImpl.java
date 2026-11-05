@@ -96,15 +96,6 @@ public class CreditNoteServiceImpl implements CreditNoteService {
         CreditNoteResult result;
         try {
             result = provider.emitCreditNote(request, storeId);
-
-            // Manejo automático de recuperación ante conflicto 409 (documento pendiente no validado en Factus)
-            if (!result.isSuccess() && result.errorMessage() != null && result.errorMessage().contains("409")) {
-                log.warn("Detectado conflicto 409 en Factus para referencia {}. Intentando eliminación previa y reintento...", request.referenceCode());
-                boolean deleted = provider.deleteUnvalidatedCreditNote(request.referenceCode(), storeId);
-                if (deleted) {
-                    result = provider.emitCreditNote(request, storeId);
-                }
-            }
         } catch (Exception ex) {
             log.error("Error al procesar emisión de nota crédito con proveedor {}: {}", provider.getProviderName(), ex.getMessage(), ex);
             result = CreditNoteResult.error("Error en proveedor " + provider.getProviderName() + ": " + ex.getMessage());
@@ -197,25 +188,6 @@ public class CreditNoteServiceImpl implements CreditNoteService {
     }
 
     @Override
-    public boolean deleteUnvalidatedCreditNote(String referenceCode) {
-        if (referenceCode == null || referenceCode.isBlank()) {
-            throw new IllegalArgumentException("El reference_code es obligatorio");
-        }
-        Long storeId = requireStoreId();
-        Optional<ElectronicCreditNote> noteOpt = repository.findByReferenceCodeAndStoreId(referenceCode.trim(), storeId);
-        if (noteOpt.isPresent() && noteOpt.get().isValidated()) {
-            throw new IllegalStateException("Una nota crédito VALIDATED por la DIAN no puede eliminarse");
-        }
-
-        CreditNoteProvider provider = resolveProvider();
-        boolean deleted = provider.deleteUnvalidatedCreditNote(referenceCode.trim(), storeId);
-        if (deleted && noteOpt.isPresent()) {
-            repository.delete(noteOpt.get());
-        }
-        return deleted;
-    }
-
-    @Override
     public CreditNoteDTO createFromSale(Long saleId, String conceptCode, String observation) {
         Objects.requireNonNull(saleId, "El saleId es obligatorio");
 
@@ -302,7 +274,7 @@ public class CreditNoteServiceImpl implements CreditNoteService {
     }
 
     private CreditNoteProvider resolveProvider() {
-        String key = (activeProviderName != null) ? activeProviderName.trim().toLowerCase() : "factus";
+        String key = (activeProviderName != null) ? activeProviderName.trim().toLowerCase() : "alegra";
         CreditNoteProvider provider = providersMap.get(key);
         if (provider == null) {
             // Sin respaldo silencioso a 'mock': un BILLING_PROVIDER mal escrito emitiria facturas falsas.

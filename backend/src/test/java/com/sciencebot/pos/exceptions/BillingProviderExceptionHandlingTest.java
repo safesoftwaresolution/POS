@@ -2,7 +2,7 @@ package com.sciencebot.pos.exceptions;
 
 import com.sciencebot.pos.billing.exception.BillingNotEnabledException;
 import com.sciencebot.pos.billing.exception.BillingProviderException;
-import com.sciencebot.pos.billing.exception.FactusApiException;
+import com.sciencebot.pos.billing.exception.AlegraApiException;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -12,31 +12,9 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class FactusExceptionHandlingTest {
+class BillingProviderExceptionHandlingTest {
 
     private final GlobalExceptionHandler handler = new GlobalExceptionHandler();
-
-    private ResponseEntity<Map<String, String>> handle(int upstreamStatus) {
-        return handler.handleFactusApi(new FactusApiException(upstreamStatus, "motivo de Factus", null));
-    }
-
-    @Test
-    void factusRejectingTheDataIsUnprocessableEntityWithItsMessage() {
-        ResponseEntity<Map<String, String>> response = handle(422);
-
-        assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, response.getStatusCode());
-        assertEquals("motivo de Factus", response.getBody().get("message"));
-        assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, handle(404).getStatusCode());
-        assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, handle(400).getStatusCode());
-    }
-
-    @Test
-    void rejectedCredentialsAndUnavailableFactusAreBadGateway() {
-        assertEquals(HttpStatus.BAD_GATEWAY, handle(401).getStatusCode());
-        assertEquals(HttpStatus.BAD_GATEWAY, handle(403).getStatusCode());
-        assertEquals(HttpStatus.BAD_GATEWAY, handle(500).getStatusCode());
-        assertEquals(HttpStatus.BAD_GATEWAY, handle(0).getStatusCode());
-    }
 
     // --- La base BillingProviderException (cualquier proveedor) tiene el mismo mapeo ---
 
@@ -62,14 +40,13 @@ class FactusExceptionHandlingTest {
     }
 
     @Test
-    void factusAndBaseHandlersGiveTheSameResponse() {
+    void alegraAndBaseHandlersGiveTheSameResponse() {
         for (int status : new int[]{0, 400, 401, 403, 404, 422, 500}) {
-            ResponseEntity<Map<String, String>> factus = handle(status);
-            ResponseEntity<Map<String, String>> base =
-                    handler.handleBillingProvider(new FactusApiException(status, "motivo de Factus", null));
-
-            assertEquals(factus.getStatusCode(), base.getStatusCode());
-            assertEquals(factus.getBody(), base.getBody());
+            ResponseEntity<Map<String, String>> base = handleProvider(status);
+            ResponseEntity<Map<String, String>> alegra =
+                    handler.handleBillingProvider(new AlegraApiException(status, "motivo del proveedor", null));
+            assertEquals(alegra.getStatusCode(), base.getStatusCode());
+            assertEquals(alegra.getBody(), base.getBody());
         }
     }
 

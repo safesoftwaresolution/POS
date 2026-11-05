@@ -12,8 +12,8 @@ export async function updateSettingsApi(settingsData) {
 }
 
 // Sube el logo del negocio (solo ADMINISTRATOR). El backend valida PNG/JPG, <= 200 KB y <= 300x300 px,
-// lo guarda y, si la facturación electrónica del local está activa, lo sincroniza con Factus.
-// Devuelve { logoUrl, factusSynced, message, ... }.
+// lo guarda en el almacenamiento del local.
+// Devuelve { logoUrl, message, ... }.
 export async function uploadCompanyLogoApi(file) {
   const formData = new FormData();
   formData.append('file', file);

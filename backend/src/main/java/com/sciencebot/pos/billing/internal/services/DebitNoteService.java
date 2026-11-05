@@ -40,11 +40,6 @@ public interface DebitNoteService {
     byte[] downloadDebitNoteXML(Long id);
 
     /**
-     * Elimina una nota débito no validada en Factus (para resolver conflictos 409).
-     */
-    boolean deleteUnvalidatedDebitNote(String referenceCode);
-
-    /**
      * Emite una nota débito sobre la factura electrónica VALIDATED de una venta (ej. intereses o
      * cobros adicionales). El {@code bill_number} se toma de la factura de la venta y la nota queda
      * vinculada a ella para trazabilidad.

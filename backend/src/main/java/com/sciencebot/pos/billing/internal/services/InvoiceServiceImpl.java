@@ -296,7 +296,7 @@ public class InvoiceServiceImpl implements InvoiceService {
     }
 
     private InvoiceProvider resolveProvider() {
-        String key = (activeProviderName != null) ? activeProviderName.trim().toLowerCase() : "factus";
+        String key = (activeProviderName != null) ? activeProviderName.trim().toLowerCase() : "alegra";
         InvoiceProvider provider = providersMap.get(key);
         if (provider == null) {
             // Sin respaldo silencioso a 'mock': un BILLING_PROVIDER mal escrito emitiria facturas falsas.

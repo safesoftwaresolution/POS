@@ -88,18 +88,6 @@ public class BillingCreditNoteController implements BillingCreditNoteApiDoc {
     }
 
     @Override
-    @DeleteMapping("/reference/{referenceCode}")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'SUPERVISOR')")
-    public ResponseEntity<Void> deleteUnvalidatedCreditNote(@PathVariable String referenceCode) {
-        boolean deleted = creditNoteService.deleteUnvalidatedCreditNote(referenceCode);
-        if (deleted) {
-            return ResponseEntity.noContent().build();
-        } else {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
-        }
-    }
-
-    @Override
     @PostMapping("/sales/{saleId}")
     @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'SUPERVISOR')")
     public ResponseEntity<CreditNoteDTO> createFromSale(

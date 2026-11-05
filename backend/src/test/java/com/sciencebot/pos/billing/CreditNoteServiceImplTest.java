@@ -52,7 +52,7 @@ class CreditNoteServiceImplTest {
         MockitoAnnotations.openMocks(this);
         TenantContext.setStoreId(1L);
 
-        when(factusProvider.getProviderName()).thenReturn("factus");
+        when(factusProvider.getProviderName()).thenReturn("alegra");
 
         ElectronicCreditNoteMapper mapper = new ElectronicCreditNoteMapper();
         service = new CreditNoteServiceImpl(
@@ -136,32 +136,6 @@ class CreditNoteServiceImplTest {
     }
 
     @Test
-    void createAndValidateCreditNote_WhenConflict409_AttemptsDeleteAndRetries() {
-        CreateCreditNoteRequest request = createSampleRequest();
-
-        givenTheNoteIsStoredOnceCreated();
-
-        ElectronicCreditNote initialNote = ElectronicCreditNote.initialize(1L, null, request.referenceCode(), request.billNumber(), "2", "20");
-        when(repository.save(any(ElectronicCreditNote.class))).thenAnswer(invocation -> invocation.getArgument(0));
-
-        CreditNoteResult conflictResult = CreditNoteResult.error("Error 409 Conflict: documento pendiente");
-        CreditNoteResult retrySuccess = CreditNoteResult.success("NC990000002", "cude-retry", "qr", "pdf");
-
-        when(factusProvider.emitCreditNote(eq(request), eq(1L)))
-                .thenReturn(conflictResult)
-                .thenReturn(retrySuccess);
-        when(factusProvider.deleteUnvalidatedCreditNote(eq(request.referenceCode()), eq(1L))).thenReturn(true);
-
-        CreditNoteDTO result = service.createAndValidateCreditNote(request);
-
-        assertNotNull(result);
-        assertEquals("NC990000002", result.creditNoteNumber());
-        assertEquals("VALIDATED", result.status());
-        verify(factusProvider).deleteUnvalidatedCreditNote(eq(request.referenceCode()), eq(1L));
-        verify(factusProvider, times(2)).emitCreditNote(eq(request), eq(1L));
-    }
-
-    @Test
     void createFromSale_WhenInvoiceNotValidated_ThrowsIllegalStateException() {
         ElectronicInvoice pendingInvoice = ElectronicInvoice.initialize(10L, 1L);
         when(invoiceRepository.findBySaleIdAndStoreId(10L, 1L)).thenReturn(Optional.of(pendingInvoice));
@@ -189,31 +163,6 @@ class CreditNoteServiceImplTest {
         assertNotNull(result);
         assertEquals("NC-888", result.creditNoteNumber());
         assertEquals("VALIDATED", result.status());
-    }
-
-    @Test
-    void deleteUnvalidatedCreditNote_WhenValidated_ThrowsIllegalStateException() {
-        ElectronicCreditNote validated = ElectronicCreditNote.initialize(1L, null, "NOTA-001", "SETP-01", "2", "20");
-        validated.markAsValidated("NC-01", "cude", "qr", "pdf", LocalDateTime.now());
-
-        when(repository.findByReferenceCodeAndStoreId("NOTA-001", 1L)).thenReturn(Optional.of(validated));
-
-        assertThrows(IllegalStateException.class, () -> service.deleteUnvalidatedCreditNote("NOTA-001"));
-    }
-
-    @Test
-    void deleteUnvalidatedCreditNote_WhenNotValidated_DeletesFromProviderAndRepo() {
-        ElectronicCreditNote unvalidated = ElectronicCreditNote.initialize(1L, null, "NOTA-001", "SETP-01", "2", "20");
-        unvalidated.markAsError("Error DIAN");
-
-        when(repository.findByReferenceCodeAndStoreId("NOTA-001", 1L)).thenReturn(Optional.of(unvalidated));
-        when(factusProvider.deleteUnvalidatedCreditNote("NOTA-001", 1L)).thenReturn(true);
-
-        boolean deleted = service.deleteUnvalidatedCreditNote("NOTA-001");
-
-        assertTrue(deleted);
-        verify(factusProvider).deleteUnvalidatedCreditNote("NOTA-001", 1L);
-        verify(repository).delete(unvalidated);
     }
 
     @Test
@@ -264,6 +213,5 @@ class CreditNoteServiceImplTest {
 
         assertTrue(service.getById(1L).isEmpty());
         assertThrows(IllegalStateException.class, () -> service.downloadCreditNotePDF(1L));
-        assertThrows(IllegalStateException.class, () -> service.deleteUnvalidatedCreditNote("NOTA-001"));
     }
 }

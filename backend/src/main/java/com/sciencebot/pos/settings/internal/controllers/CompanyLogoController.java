@@ -17,7 +17,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping({"/api/v1/settings/logo", "/api/v1/company/logo", "/api/v1/companies/logo"})
-@Tag(name = "⚙️ Configuración / Empresa", description = "Gestión y sincronización del logo de la empresa con Factus")
+@Tag(name = "⚙️ Configuración / Empresa", description = "Gestión del logo de la empresa")
 public class CompanyLogoController {
 
     private final CompanyLogoService companyLogoService;
@@ -29,7 +29,7 @@ public class CompanyLogoController {
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('ADMINISTRATOR')")
     @Operation(
-            summary = "Actualizar logo de la empresa y sincronizar con Factus",
+            summary = "Actualizar logo de la empresa",
             description = """
                     Recibe un archivo de imagen en formato PNG, JPG o JPEG.
                     
@@ -40,7 +40,6 @@ public class CompanyLogoController {
                     
                     **Efectos:**
                     - Actualiza la propiedad `logoUrl` del negocio en la base de datos local.
-                    - Envía la imagen mediante multipart/form-data a la API de Factus (`/v2/companies/logo`).
                     
                     Requiere rol **ADMINISTRATOR**.
                     """
@@ -48,19 +47,18 @@ public class CompanyLogoController {
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
-                    description = "Logo actualizado y sincronizado exitosamente",
+                    description = "Logo actualizado",
                     content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
                             schema = @Schema(implementation = CompanyLogoResponseDto.class))
             ),
             @ApiResponse(responseCode = "400", description = "Archivo inválido (peso, formato o dimensiones incorrectas)", content = @Content),
             @ApiResponse(responseCode = "401", description = "No autenticado", content = @Content),
             @ApiResponse(responseCode = "403", description = "Sin permisos de ADMINISTRATOR", content = @Content),
-            @ApiResponse(responseCode = "409", description = "Error de sincronización con Factus API", content = @Content)
     })
     public ResponseEntity<CompanyLogoResponseDto> updateLogo(
             @Parameter(description = "Archivo de imagen del logo (PNG, JPG o JPEG, < 200 KB, <= 300x300 px)")
             @RequestParam(value = "file", required = false) MultipartFile fileParam,
-            @Parameter(description = "Alias opcional del parámetro de imagen (compatible con Factus)")
+            @Parameter(description = "Alias opcional del parámetro de imagen")
             @RequestParam(value = "image", required = false) MultipartFile imageParam
     ) {
         MultipartFile file = (fileParam != null && !fileParam.isEmpty()) ? fileParam : imageParam;

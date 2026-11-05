@@ -105,19 +105,6 @@ public interface BillingDebitNoteApiDoc {
     );
 
     @Operation(
-            summary = "Eliminar nota débito no validada",
-            description = "Elimina de Factus una nota débito que quedó en conflicto o con errores y no fue validada ante la DIAN."
-    )
-    @ApiResponses({
-            @ApiResponse(responseCode = "204", description = "Nota débito no validada eliminada exitosamente"),
-            @ApiResponse(responseCode = "400", description = "Factus no pudo eliminar la nota débito"),
-            @ApiResponse(responseCode = "409", description = "La nota débito ya está validada por la DIAN")
-    })
-    ResponseEntity<Void> deleteUnvalidatedDebitNote(
-            @Parameter(description = "Código de referencia único de la nota débito a eliminar", example = "ND-2026-0001", required = true) String referenceCode
-    );
-
-    @Operation(
             summary = "Crear nota débito sobre la factura de una venta",
             description = """
                     Emite una nota débito sobre la factura electrónica VALIDATED de una venta (ej. intereses o cobros adicionales).

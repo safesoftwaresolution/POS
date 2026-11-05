@@ -80,11 +80,6 @@ public class MockBillingAdapter implements ElectronicInvoicingProvider {
     }
 
     @Override
-    public boolean deleteUnvalidatedInvoice(String legalNumber) {
-        return true;
-    }
-
-    @Override
     public boolean sendInvoiceEmail(String legalNumber, String email) {
         return true;
     }
@@ -181,11 +176,6 @@ public class MockBillingAdapter implements ElectronicInvoicingProvider {
         return ("<CreditNote><LegalNumber>" + creditNoteNumber + "</LegalNumber></CreditNote>").getBytes();
     }
 
-    @Override
-    public boolean deleteUnvalidatedCreditNote(String referenceCode, Long storeId) {
-        return true;
-    }
-
     // --- Notas Débito Mock ---
 
     @Override
@@ -210,10 +200,5 @@ public class MockBillingAdapter implements ElectronicInvoicingProvider {
     @Override
     public byte[] downloadDebitNoteXML(String debitNoteNumber, Long storeId) {
         return ("<DebitNote><LegalNumber>" + debitNoteNumber + "</LegalNumber></DebitNote>").getBytes();
-    }
-
-    @Override
-    public boolean deleteUnvalidatedDebitNote(String referenceCode, Long storeId) {
-        return true;
     }
 }

@@ -87,16 +87,6 @@ public class BillingDebitNoteController implements BillingDebitNoteApiDoc {
     }
 
     @Override
-    @DeleteMapping("/reference/{referenceCode}")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'SUPERVISOR')")
-    public ResponseEntity<Void> deleteUnvalidatedDebitNote(@PathVariable String referenceCode) {
-        if (debitNoteService.deleteUnvalidatedDebitNote(referenceCode)) {
-            return ResponseEntity.noContent().build();
-        }
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
-    }
-
-    @Override
     @PostMapping("/sales/{saleId}")
     @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'SUPERVISOR')")
     public ResponseEntity<DebitNoteDTO> createForSale(

@@ -162,22 +162,6 @@ public class DebitNoteServiceImpl implements DebitNoteService {
         return resolveProvider().downloadDebitNoteXML(note.getDebitNoteNumber(), storeId);
     }
 
-    @Override
-    public boolean deleteUnvalidatedDebitNote(String referenceCode) {
-        String reference = Preconditions.requireNotBlank(referenceCode, "El reference_code es obligatorio");
-        Long storeId = requireStoreId();
-
-        Optional<ElectronicDebitNote> noteOpt = repository.findByReferenceCodeAndStoreId(reference, storeId);
-        noteOpt.ifPresent(n -> Preconditions.checkState(!n.isValidated(),
-                "Una nota débito VALIDATED por la DIAN no puede eliminarse"));
-
-        boolean deleted = resolveProvider().deleteUnvalidatedDebitNote(reference, storeId);
-        if (deleted) {
-            noteOpt.ifPresent(repository::delete);
-        }
-        return deleted;
-    }
-
     private DebitNoteDTO emit(CreateDebitNoteRequest request, Long saleId) {
         Preconditions.requireNotNull(request, "La solicitud de nota débito no puede ser nula");
         String referenceCode = Preconditions.requireNotBlank(request.referenceCode(), "El reference_code es obligatorio para la nota débito");
@@ -204,15 +188,6 @@ public class DebitNoteServiceImpl implements DebitNoteService {
         DebitNoteResult result;
         try {
             result = provider.emitDebitNote(request, storeId);
-
-            // Recuperación automática ante conflicto 409 (documento pendiente no validado en Factus)
-            if (!result.isSuccess() && result.errorMessage() != null && result.errorMessage().contains("409")) {
-                log.warn("Detectado conflicto 409 en Factus para nota débito {}. Intentando eliminación previa y reintento...", referenceCode);
-                boolean deleted = provider.deleteUnvalidatedDebitNote(referenceCode, storeId);
-                if (deleted) {
-                    result = provider.emitDebitNote(request, storeId);
-                }
-            }
         } catch (Exception ex) {
             log.error("Error al procesar emisión de nota débito con proveedor {}: {}", provider.getProviderName(), ex.getMessage(), ex);
             result = DebitNoteResult.error("Error en proveedor " + provider.getProviderName() + ": " + ex.getMessage());
@@ -247,7 +222,7 @@ public class DebitNoteServiceImpl implements DebitNoteService {
     }
 
     private DebitNoteProvider resolveProvider() {
-        String key = (activeProviderName != null) ? activeProviderName.trim().toLowerCase() : "factus";
+        String key = (activeProviderName != null) ? activeProviderName.trim().toLowerCase() : "alegra";
         DebitNoteProvider provider = providersMap.get(key);
         if (provider == null) {
             // Sin respaldo silencioso a 'mock': un BILLING_PROVIDER mal escrito emitiria facturas falsas.

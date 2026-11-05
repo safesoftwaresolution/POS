@@ -1,16 +1,16 @@
-<!-- spec-version: 1.0 | last-updated: 2026-11-05 -->
+<!-- spec-version: 1.1 | last-updated: 2026-11-05 -->
 # Módulo: Citas (Appointments)
 
-Calendario y agendamiento de citas para los locales con plantilla `APPOINTMENTS` (barbería, peluquería, salón de uñas y pies, boutique; ver RN-STORE-006 en el módulo stores). Versión mínima: agendar, ver por día o semana, mover y cancelar.
+Calendario y agendamiento de citas para los locales que tienen la plantilla `APPOINTMENTS` (barbería, peluquería, salón de uñas y pies, boutique, o cualquier local al que el `SUPER_ADMIN` se la sume como extra; ver RN-STORE-006 en el módulo stores). Versión mínima: agendar, ver por día o semana, mover y cancelar.
 
 ## Dependencias
-- **Requiere**: stores (`StoreFacade.getTemplateForStore`, para exigir la plantilla), customers (`CustomerFacade.getById`), services (`ServiceFacade.getById`, de donde sale la duración).
+- **Requiere**: stores (`StoreFacade.getTemplatesForStore`, para exigir la plantilla), customers (`CustomerFacade.getById`), services (`ServiceFacade.getById`, de donde sale la duración).
 - **Requerido por**: nadie por ahora.
 
 ## Reglas de Negocio
 
 ### RN-APPT-001 — Solo plantilla de citas
-- Todas las operaciones exigen un local en el contexto y que su plantilla sea `APPOINTMENTS`; si no, `403`. El backend decide: ocultar el menú en el frontend es solo comodidad.
+- Todas las operaciones exigen un local en el contexto y que entre sus plantillas esté `APPOINTMENTS` (la de su categoría o un extra del local; ver RN-STORE-006); si no, `403`. El backend decide: ocultar el menú en el frontend es solo comodidad.
 
 ### RN-APPT-002 — Duración
 - El fin de la cita es el inicio más `services.duration_minutes`; si el servicio no tiene duración, 30 minutos. Mover una cita conserva su duración.

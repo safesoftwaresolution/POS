@@ -72,7 +72,7 @@ erDiagram
 | sales | `sale_returns`, `sale_return_items` | V10, V29 (`service_id`; `product_id` opcional) | Cada ítem apunta al `sale_item` exacto |
 | settings | `settings` | V1, V3, V16 (se quitan columnas Factus) | PK = id del local |
 | settings | `parameter_topics`, `parameter_values` | V6 | Catálogos dinámicos (`PAYMENT_METHODS`, …) |
-| stores | `store_categories`, `stores`, `store_documents` | V3, V7 (`rejection_reason`, estado `REJECTED`), V33 (`store_categories.template`), V35 (`store_categories.theme`) | Onboarding y KYC |
+| stores | `store_categories`, `store_category_templates`, `store_templates`, `stores`, `store_documents` | V3, V7 (`rejection_reason`, estado `REJECTED`), V33 (`store_categories.template`), V35 (`store_categories.theme`), V36 (`store_category_templates`: plantillas de la categoría; `store_templates`: extras por local; ambas PK compuesta) | Onboarding y KYC |
 | legal | `legal_documents` | V3 | `slug` único |
 | support | `support_tickets` | V3 | `ticket_number` único |
 | notifications | `notifications` | V11 | Por local; `read` |

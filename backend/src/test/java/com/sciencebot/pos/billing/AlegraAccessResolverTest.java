@@ -97,7 +97,7 @@ class AlegraAccessResolverTest {
 
     @Test
     void aStoreWithoutBillingActiveCannotResolveButCanBeTestedIgnoringStatus() {
-        config(5L, BillingActivationStatus.DOCUMENTS_SUBMITTED, "company-5", null);
+        config(5L, BillingActivationStatus.IN_SETUP, "company-5", null);
 
         assertThrows(BillingNotEnabledException.class, () -> resolver.resolve(5L));
         assertEquals("company-5", resolver.resolveIgnoringStatus(5L, BillingEnvironment.SANDBOX).companyId());
@@ -111,6 +111,47 @@ class AlegraAccessResolverTest {
         AlegraAccessResolver withoutToken = new AlegraAccessResolver(repository, SANDBOX_URL, PRODUCTION_URL, "", "");
         config(6L, BillingActivationStatus.ACTIVE, "company-6", null);
         assertThrows(BillingNotEnabledException.class, () -> withoutToken.resolve(6L));
+    }
+
+    @Test
+    void theMessageSaysWhetherTheServerTokenOrTheStoreCompanyIsMissing() {
+        config(5L, BillingActivationStatus.ACTIVE, null, null);
+        String noCompany = assertThrows(BillingNotEnabledException.class, () -> resolver.resolve(5L)).getMessage();
+        assertTrue(noCompany.contains("empresa"), noCompany);
+        assertTrue(noCompany.contains("pruebas"), noCompany);
+        assertFalse(noCompany.contains("token"), noCompany);
+
+        AlegraAccessResolver withoutToken = new AlegraAccessResolver(repository, SANDBOX_URL, PRODUCTION_URL, "", "");
+        config(6L, BillingActivationStatus.ACTIVE, "company-6", null);
+        String noToken = assertThrows(BillingNotEnabledException.class, () -> withoutToken.resolve(6L)).getMessage();
+        assertTrue(noToken.contains("token"), noToken);
+        assertTrue(noToken.contains("servidor"), noToken);
+
+        for (String message : new String[]{noCompany, noToken}) {
+            assertFalse(message.contains("credenciales"), message);
+            assertFalse(message.contains("SANDBOX"), message);
+        }
+    }
+
+    @Test
+    void anInactiveStoreIsDescribedWithASpanishLabelNotTheEnumName() {
+        config(5L, BillingActivationStatus.NOT_REQUESTED, "company-5", null);
+
+        String message = assertThrows(BillingNotEnabledException.class, () -> resolver.resolve(5L)).getMessage();
+
+        assertFalse(message.contains("NOT_REQUESTED"), message);
+        assertTrue(message.contains("no solicitada"), message);
+    }
+
+    @Test
+    void platformAccessWithoutTokenNamesTheEnvironmentInSpanish() {
+        AlegraAccessResolver withoutToken = new AlegraAccessResolver(repository, SANDBOX_URL, PRODUCTION_URL, "", "");
+
+        String message = assertThrows(BillingNotEnabledException.class,
+                () -> withoutToken.platformAccess(BillingEnvironment.PRODUCTION)).getMessage();
+
+        assertTrue(message.contains("producción"), message);
+        assertFalse(message.contains("PRODUCTION"), message);
     }
 
     @Test

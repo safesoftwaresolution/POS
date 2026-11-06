@@ -6,6 +6,7 @@ import com.sciencebot.pos.billing.internal.entities.DocumentNumberAllocation;
 import com.sciencebot.pos.billing.internal.entities.NumberingRange;
 import com.sciencebot.pos.billing.internal.repositories.DocumentNumberAllocationRepository;
 import com.sciencebot.pos.billing.internal.repositories.NumberingRangeRepository;
+import com.sciencebot.pos.billing.internal.repositories.StoreBillingConfigRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
@@ -15,6 +16,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Clock;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -26,6 +28,10 @@ import java.util.UUID;
  * pesimista de la fila del rango activo, así que dos emisiones simultáneas nunca reciben el mismo número ni
  * dejan huecos. Es idempotente por {@code (local, entorno, documento, referencia)}: reintentar una emisión
  * devuelve el mismo número y no consume otro.
+ * <p>
+ * Entre los rangos activos del documento usa primero el que el local eligió como su rango del entorno
+ * ({@code store_billing_config.sandbox/production_numbering_range_id}) si está vigente y con cupo; si no, el primero
+ * utilizable. El lock se toma sobre todos los rangos activos del documento, así que el elegido también queda bloqueado.
  */
 @Component
 @ConditionalOnProperty(name = "billing.provider", havingValue = "alegra")
@@ -38,21 +44,25 @@ public class AlegraNumberAllocator {
 
     private final NumberingRangeRepository rangeRepository;
     private final DocumentNumberAllocationRepository allocationRepository;
+    private final StoreBillingConfigRepository configRepository;
     private final TransactionTemplate requiresNew;
     private final Clock clock;
 
     @Autowired
     public AlegraNumberAllocator(NumberingRangeRepository rangeRepository,
                                  DocumentNumberAllocationRepository allocationRepository,
+                                 StoreBillingConfigRepository configRepository,
                                  PlatformTransactionManager transactionManager) {
-        this(rangeRepository, allocationRepository, transactionManager, Clock.systemDefaultZone());
+        this(rangeRepository, allocationRepository, configRepository, transactionManager, Clock.systemDefaultZone());
     }
 
     AlegraNumberAllocator(NumberingRangeRepository rangeRepository,
                           DocumentNumberAllocationRepository allocationRepository,
+                          StoreBillingConfigRepository configRepository,
                           PlatformTransactionManager transactionManager, Clock clock) {
         this.rangeRepository = rangeRepository;
         this.allocationRepository = allocationRepository;
+        this.configRepository = configRepository;
         this.requiresNew = new TransactionTemplate(transactionManager);
         this.requiresNew.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
         this.clock = clock;
@@ -106,13 +116,38 @@ public class AlegraNumberAllocator {
             return toAllocation(existing.get());
         }
 
-        NumberingRange range = usableRange(ranges, environment, document);
+        NumberingRange range = usableRange(defaultFirst(ranges, storeId, environment), environment, document);
         long number = range.takeNextNumber();
         rangeRepository.save(range);
         DocumentNumberAllocation saved = allocationRepository.save(new DocumentNumberAllocation(
                 storeId, environment, document, reference, range.getId(), range.getPrefix(), number,
                 UUID.randomUUID().toString()));
         return toAllocation(saved, range);
+    }
+
+    /**
+     * Los rangos ya bloqueados, con el rango elegido por el local primero si está entre ellos y se puede usar hoy;
+     * si no se puede usar, queda en su lugar y {@link #usableRange} sigue con los demás como antes.
+     */
+    private List<NumberingRange> defaultFirst(List<NumberingRange> ranges, Long storeId, BillingEnvironment environment) {
+        Integer defaultId = configRepository.findById(storeId)
+                .map(config -> config.numberingRangeIdFor(environment))
+                .orElse(null);
+        if (defaultId == null) {
+            return ranges;
+        }
+        LocalDate today = LocalDate.now(clock);
+        Optional<NumberingRange> chosen = ranges.stream()
+                .filter(range -> range.getId() != null && range.getId().longValue() == defaultId.longValue())
+                .filter(range -> range.isUsableOn(today))
+                .findFirst();
+        if (chosen.isEmpty()) {
+            return ranges;
+        }
+        List<NumberingRange> ordered = new ArrayList<>(ranges.size());
+        ordered.add(chosen.get());
+        ranges.stream().filter(range -> range != chosen.get()).forEach(ordered::add);
+        return ordered;
     }
 
     private NumberingRange usableRange(List<NumberingRange> ranges, BillingEnvironment environment, String document) {

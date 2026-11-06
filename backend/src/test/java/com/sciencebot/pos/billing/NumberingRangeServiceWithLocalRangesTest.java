@@ -49,7 +49,10 @@ class NumberingRangeServiceWithLocalRangesTest {
     @BeforeEach
     void setUp() {
         AlegraNumberingRangeClient client = new AlegraNumberingRangeClient(
-                rangeRepository, allocationRepository, configRepository, transactionManager);
+                rangeRepository, allocationRepository, configRepository,
+                org.mockito.Mockito.mock(com.sciencebot.pos.billing.internal.repositories.BillingCompanyProfileRepository.class),
+                org.mockito.Mockito.mock(com.sciencebot.pos.billing.internal.adapters.BillingOnboardingProvider.class),
+                transactionManager);
         service = new NumberingRangeServiceImpl(List.of(asProvider(client)), configRepository, auditRepository);
         ReflectionTestUtils.setField(service, "activeProviderName", "alegra");
 

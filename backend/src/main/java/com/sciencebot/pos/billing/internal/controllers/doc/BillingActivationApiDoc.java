@@ -19,11 +19,11 @@ public interface BillingActivationApiDoc {
                     + "En SANDBOX las facturas son de prueba y no tienen validez legal.")
     ResponseEntity<BillingActivationSummaryDto> getSummary();
 
-    @Operation(summary = "Solicitar la activación de la facturación electrónica",
+    @Operation(summary = "Empezar la habilitación de la facturación electrónica",
             description = """
-                    Pasa el local a DOCUMENTS_SUBMITTED para que el back-office revise sus documentos
-                    (RUT, cámara de comercio, etc., subidos desde el módulo de locales) y gestione las
-                    credenciales con el proveedor. Exige al menos un documento ya subido.
+                    Pasa el local de NOT_REQUESTED a IN_SETUP para que configure su facturación (datos
+                    fiscales, habilitación ante la DIAN y numeración). No pide documentos. Repetirlo
+                    estando en IN_SETUP no cambia nada; un local ACTIVE o SUSPENDED recibe un error.
                     """)
     ResponseEntity<BillingActivationDto> requestActivation(Authentication authentication);
 }

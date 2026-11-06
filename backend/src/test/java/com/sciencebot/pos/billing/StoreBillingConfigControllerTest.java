@@ -44,14 +44,14 @@ class StoreBillingConfigControllerTest {
 
     @Test
     void listByStatus_DelegatesToService() {
-        when(service.listByStatus(BillingActivationStatus.DOCUMENTS_SUBMITTED))
-                .thenReturn(List.of(dto(BillingActivationStatus.DOCUMENTS_SUBMITTED)));
+        when(service.listByStatus(BillingActivationStatus.IN_SETUP))
+                .thenReturn(List.of(dto(BillingActivationStatus.IN_SETUP)));
 
         ResponseEntity<List<BillingActivationDto>> response =
-                controller.listByStatus(BillingActivationStatus.DOCUMENTS_SUBMITTED);
+                controller.listByStatus(BillingActivationStatus.IN_SETUP);
 
         assertEquals(1, response.getBody().size());
-        verify(service).listByStatus(BillingActivationStatus.DOCUMENTS_SUBMITTED);
+        verify(service).listByStatus(BillingActivationStatus.IN_SETUP);
     }
 
     @Test
@@ -86,13 +86,13 @@ class StoreBillingConfigControllerTest {
 
     @Test
     void transition_PassesStatusReasonAndActor() {
-        TransitionBillingStatusRequest request = new TransitionBillingStatusRequest(BillingActivationStatus.REJECTED, "RUT ilegible");
-        when(service.transition(STORE, BillingActivationStatus.REJECTED, "RUT ilegible", "super@platform.co"))
-                .thenReturn(dto(BillingActivationStatus.REJECTED));
+        TransitionBillingStatusRequest request = new TransitionBillingStatusRequest(BillingActivationStatus.SUSPENDED, "RUT ilegible");
+        when(service.transition(STORE, BillingActivationStatus.SUSPENDED, "RUT ilegible", "super@platform.co"))
+                .thenReturn(dto(BillingActivationStatus.SUSPENDED));
 
         ResponseEntity<BillingActivationDto> response = controller.transition(STORE, request, authentication);
 
-        assertEquals(BillingActivationStatus.REJECTED, response.getBody().status());
-        verify(service).transition(STORE, BillingActivationStatus.REJECTED, "RUT ilegible", "super@platform.co");
+        assertEquals(BillingActivationStatus.SUSPENDED, response.getBody().status());
+        verify(service).transition(STORE, BillingActivationStatus.SUSPENDED, "RUT ilegible", "super@platform.co");
     }
 }

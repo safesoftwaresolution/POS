@@ -112,6 +112,14 @@ public class NumberingRange {
         this.nextNumber = next;
     }
 
+    /** Se puede facturar con él ese día: activo, no eliminado, vigente y con números disponibles. */
+    public boolean isUsableOn(LocalDate day) {
+        return active && !deleted
+                && (startDate == null || !day.isBefore(startDate))
+                && (endDate == null || !day.isAfter(endDate))
+                && nextNumber <= maxNumber;
+    }
+
     /** Toma el siguiente número del rango y avanza el consecutivo. Falla si el rango ya se agotó. */
     public long takeNextNumber() {
         if (nextNumber > maxNumber) {

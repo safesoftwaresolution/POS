@@ -16,19 +16,15 @@ export const INVOICE_STATUS_STYLES = {
 
 export const ACTIVATION_LABELS = {
   NOT_REQUESTED: 'Sin solicitar',
-  DOCUMENTS_SUBMITTED: 'Documentos enviados',
-  AWAITING_PROVIDER: 'Esperando al proveedor',
+  IN_SETUP: 'En configuración',
   ACTIVE: 'Activa',
-  REJECTED: 'Rechazada',
   SUSPENDED: 'Suspendida'
 };
 
 export const ACTIVATION_STYLES = {
   NOT_REQUESTED: 'bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300',
-  DOCUMENTS_SUBMITTED: 'bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/20',
-  AWAITING_PROVIDER: 'bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-400 border border-blue-500/20',
+  IN_SETUP: 'bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/20',
   ACTIVE: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20',
-  REJECTED: 'bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/20',
   SUSPENDED: 'bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/20'
 };
 

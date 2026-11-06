@@ -24,7 +24,8 @@ public class ElectronicInvoiceMapper {
                 status,
                 entity.getErrorMessage(),
                 entity.getPdfUrl(),
-                entity.getValidatedAt()
+                entity.getValidatedAt(),
+                entity.getEnvironment()
         );
     }
 }

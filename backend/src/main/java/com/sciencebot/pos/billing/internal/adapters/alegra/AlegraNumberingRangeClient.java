@@ -4,8 +4,12 @@ import com.sciencebot.pos.billing.dto.BillingEnvironment;
 import com.sciencebot.pos.billing.dto.CreateNumberingRangeRequest;
 import com.sciencebot.pos.billing.dto.NumberingRangeDto;
 import com.sciencebot.pos.billing.exception.BillingNotEnabledException;
+import com.sciencebot.pos.billing.internal.adapters.BillingOnboardingProvider;
+import com.sciencebot.pos.billing.internal.entities.BillingCompanyProfile;
 import com.sciencebot.pos.billing.internal.entities.NumberingRange;
 import com.sciencebot.pos.billing.internal.entities.StoreBillingConfig;
+import com.sciencebot.pos.billing.internal.mappers.DianResolutionMapper;
+import com.sciencebot.pos.billing.internal.repositories.BillingCompanyProfileRepository;
 import com.sciencebot.pos.billing.internal.repositories.DocumentNumberAllocationRepository;
 import com.sciencebot.pos.billing.internal.repositories.NumberingRangeRepository;
 import com.sciencebot.pos.billing.internal.repositories.StoreBillingConfigRepository;
@@ -40,6 +44,9 @@ public class AlegraNumberingRangeClient {
     private final NumberingRangeRepository rangeRepository;
     private final DocumentNumberAllocationRepository allocationRepository;
     private final StoreBillingConfigRepository configRepository;
+    private final BillingCompanyProfileRepository profileRepository;
+    private final BillingOnboardingProvider onboardingProvider;
+    private final DianResolutionMapper resolutionMapper = new DianResolutionMapper();
     private final TransactionTemplate transaction;
     private final Clock clock;
 
@@ -47,17 +54,24 @@ public class AlegraNumberingRangeClient {
     public AlegraNumberingRangeClient(NumberingRangeRepository rangeRepository,
                                       DocumentNumberAllocationRepository allocationRepository,
                                       StoreBillingConfigRepository configRepository,
+                                      BillingCompanyProfileRepository profileRepository,
+                                      BillingOnboardingProvider onboardingProvider,
                                       PlatformTransactionManager transactionManager) {
-        this(rangeRepository, allocationRepository, configRepository, transactionManager, Clock.systemDefaultZone());
+        this(rangeRepository, allocationRepository, configRepository, profileRepository, onboardingProvider,
+                transactionManager, Clock.systemDefaultZone());
     }
 
     AlegraNumberingRangeClient(NumberingRangeRepository rangeRepository,
                                DocumentNumberAllocationRepository allocationRepository,
                                StoreBillingConfigRepository configRepository,
+                               BillingCompanyProfileRepository profileRepository,
+                               BillingOnboardingProvider onboardingProvider,
                                PlatformTransactionManager transactionManager, Clock clock) {
         this.rangeRepository = rangeRepository;
         this.allocationRepository = allocationRepository;
         this.configRepository = configRepository;
+        this.profileRepository = profileRepository;
+        this.onboardingProvider = onboardingProvider;
         this.transaction = new TransactionTemplate(transactionManager);
         this.clock = clock;
     }
@@ -65,9 +79,49 @@ public class AlegraNumberingRangeClient {
     /** Local y entorno sobre los que opera la solicitud en curso. */
     private record Scope(Long storeId, BillingEnvironment environment) {}
 
+    /**
+     * Resoluciones de facturación que la DIAN tiene para el NIT del local en contexto ({@code GET /resolutions/{nit}}).
+     * Solo existen en producción: en el entorno de pruebas la respuesta es una lista vacía. La consulta al proveedor
+     * se hace fuera de la transacción.
+     */
     public List<NumberingRangeDto> queryDianNumberingRanges() {
-        throw new UnsupportedOperationException(
-                "La consulta de resoluciones ante la DIAN (GET /resolutions) todavía no está disponible para Alegra");
+        Scope scope = transaction.execute(status -> scope());
+        if (scope.environment() != BillingEnvironment.PRODUCTION) {
+            return List.of();
+        }
+        String nit = profileRepository.findById(scope.storeId())
+                .map(BillingCompanyProfile::getNit)
+                .orElseThrow(() -> new IllegalStateException("Registra primero los datos fiscales de tu empresa: "
+                        + "con su NIT se consultan las resoluciones ante la DIAN"));
+        LocalDate today = LocalDate.now(clock);
+        return onboardingProvider.listResolutions(BillingEnvironment.PRODUCTION, nit).stream()
+                .map(resolution -> resolutionMapper.toDto(resolution, today))
+                .toList();
+    }
+
+    /** El local tiene un rango de facturas activo, vigente hoy y con números disponibles en ese entorno. */
+    public boolean hasUsableInvoiceRange(Long storeId, BillingEnvironment environment) {
+        if (storeId == null || environment == null) {
+            return false;
+        }
+        LocalDate today = LocalDate.now(clock);
+        return Boolean.TRUE.equals(transaction.execute(status -> invoiceRanges(storeId, environment).stream()
+                .anyMatch(range -> range.isUsableOn(today))));
+    }
+
+    /** Rangos de facturas (no eliminados) del local en ese entorno. */
+    public int countInvoiceRanges(Long storeId, BillingEnvironment environment) {
+        if (storeId == null || environment == null) {
+            return 0;
+        }
+        Integer count = transaction.execute(status -> invoiceRanges(storeId, environment).size());
+        return count != null ? count : 0;
+    }
+
+    private List<NumberingRange> invoiceRanges(Long storeId, BillingEnvironment environment) {
+        return rangeRepository.findByStoreIdAndEnvironmentAndDeletedFalseOrderByIdAsc(storeId, environment).stream()
+                .filter(range -> DianResolutionMapper.INVOICE_DOCUMENT.equals(range.getDocument()))
+                .toList();
     }
 
     public List<NumberingRangeDto> listNumberingRanges() {

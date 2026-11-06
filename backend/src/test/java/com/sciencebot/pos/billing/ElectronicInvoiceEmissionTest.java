@@ -1,15 +1,24 @@
 package com.sciencebot.pos.billing;
 
+import com.sciencebot.pos.billing.dto.BillingEnvironment;
 import com.sciencebot.pos.billing.dto.ElectronicInvoiceStatus;
 import com.sciencebot.pos.billing.internal.entities.ElectronicInvoice;
 import com.sciencebot.pos.billing.internal.entities.ElectronicInvoice.ReserveOutcome;
+import com.sciencebot.pos.billing.internal.entities.StoreBillingConfig;
+import com.sciencebot.pos.billing.internal.mappers.ElectronicInvoiceMapper;
+import com.sciencebot.pos.billing.internal.repositories.ElectronicInvoiceRepository;
+import com.sciencebot.pos.billing.internal.repositories.StoreBillingConfigRepository;
 import com.sciencebot.pos.billing.internal.services.EmissionRetryPolicy;
+import com.sciencebot.pos.billing.internal.services.InvoiceEmissionTransactions;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 
 /** Reserva (lease) de una emisión y reintento con espera creciente: reglas del dominio de la factura. */
 class ElectronicInvoiceEmissionTest {
@@ -134,5 +143,78 @@ class ElectronicInvoiceEmissionTest {
             assertFalse(next.isBefore(NOW.plusMinutes(8)));
             assertFalse(next.isAfter(NOW.plusMinutes(8).plusSeconds(49)), next.toString());
         }
+    }
+
+    // --- entorno con el que se emite la factura ---
+
+    @Test
+    void environment_IsAssignedOnceAndNeverOverwritten() {
+        ElectronicInvoice invoice = newInvoice();
+        assertNull(invoice.getEnvironment());
+
+        invoice.assignEnvironmentIfMissing(null);
+        assertNull(invoice.getEnvironment());
+
+        invoice.assignEnvironmentIfMissing(BillingEnvironment.PRODUCTION);
+        invoice.assignEnvironmentIfMissing(BillingEnvironment.SANDBOX);
+
+        assertEquals(BillingEnvironment.PRODUCTION, invoice.getEnvironment());
+    }
+
+    @Test
+    void reserve_StampsTheEnvironmentOfTheStoreOnANewInvoice() {
+        ElectronicInvoiceRepository invoices = invoicesWith(null);
+        StoreBillingConfigRepository configs = mock(StoreBillingConfigRepository.class);
+        when(configs.findById(1L)).thenReturn(Optional.of(configIn(BillingEnvironment.PRODUCTION)));
+
+        InvoiceEmissionTransactions.Reservation reservation =
+                new InvoiceEmissionTransactions(invoices, new ElectronicInvoiceMapper(), configs, LEASE).reserve(10L, 1L);
+
+        assertEquals(ReserveOutcome.RESERVED, reservation.outcome());
+        assertEquals(BillingEnvironment.PRODUCTION, reservation.invoice().environment());
+    }
+
+    @Test
+    void reserve_KeepsTheEnvironmentTheInvoiceAlreadyHas() {
+        ElectronicInvoice existing = ElectronicInvoice.initialize(10L, 1L);
+        existing.assignEnvironmentIfMissing(BillingEnvironment.SANDBOX);
+        ElectronicInvoiceRepository invoices = invoicesWith(existing);
+        StoreBillingConfigRepository configs = mock(StoreBillingConfigRepository.class);
+        when(configs.findById(1L)).thenReturn(Optional.of(configIn(BillingEnvironment.PRODUCTION)));
+
+        InvoiceEmissionTransactions.Reservation reservation =
+                new InvoiceEmissionTransactions(invoices, new ElectronicInvoiceMapper(), configs, LEASE).reserve(10L, 1L);
+
+        assertEquals(BillingEnvironment.SANDBOX, reservation.invoice().environment());
+        verify(configs, never()).findById(any());
+    }
+
+    @Test
+    void reserve_LeavesTheEnvironmentEmptyWhenTheStoreHasNoBillingConfig() {
+        ElectronicInvoiceRepository invoices = invoicesWith(null);
+        StoreBillingConfigRepository configs = mock(StoreBillingConfigRepository.class);
+        when(configs.findById(1L)).thenReturn(Optional.empty());
+
+        InvoiceEmissionTransactions.Reservation reservation =
+                new InvoiceEmissionTransactions(invoices, new ElectronicInvoiceMapper(), configs, LEASE).reserve(10L, 1L);
+
+        assertEquals(ReserveOutcome.RESERVED, reservation.outcome());
+        assertNull(reservation.invoice().environment());
+    }
+
+    /** Repositorio simulado: devuelve {@code existing} al bloquear la fila o, si es null, la factura recién creada. */
+    private static ElectronicInvoiceRepository invoicesWith(ElectronicInvoice existing) {
+        ElectronicInvoiceRepository repository = mock(ElectronicInvoiceRepository.class);
+        when(repository.findBySaleIdForUpdate(10L)).thenReturn(Optional.ofNullable(existing));
+        when(repository.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        return repository;
+    }
+
+    private static StoreBillingConfig configIn(BillingEnvironment environment) {
+        StoreBillingConfig config = new StoreBillingConfig();
+        config.setStoreId(1L);
+        config.setEnvironment(environment);
+        return config;
     }
 }

@@ -26,10 +26,20 @@ public record ElectronicInvoiceDto(
                 example = "https://example.com/invoices/SETP990000001.pdf")
         String pdfUrl,
         @Schema(description = "Fecha y hora de validación por la DIAN", example = "2025-03-15T10:35:00")
-        LocalDateTime validatedAt
+        LocalDateTime validatedAt,
+        @Schema(description = "Entorno con el que se emitió. SANDBOX = factura de prueba, sin validez legal. "
+                + "null si no se conoce", example = "PRODUCTION", nullable = true)
+        BillingEnvironment environment
 ) {
+    /** Sin entorno conocido. */
+    public ElectronicInvoiceDto(Long id, Long storeId, Long saleId, String legalNumber, String cufe, String qrCode,
+                                String status, String errorMessage, String pdfUrl, LocalDateTime validatedAt) {
+        this(id, storeId, saleId, legalNumber, cufe, qrCode, status, errorMessage, pdfUrl, validatedAt, null);
+    }
+
+    /** Sin local ni entorno conocidos. */
     public ElectronicInvoiceDto(Long id, Long saleId, String legalNumber, String cufe, String qrCode,
                                 String status, String errorMessage, String pdfUrl, LocalDateTime validatedAt) {
-        this(id, null, saleId, legalNumber, cufe, qrCode, status, errorMessage, pdfUrl, validatedAt);
+        this(id, null, saleId, legalNumber, cufe, qrCode, status, errorMessage, pdfUrl, validatedAt, null);
     }
 }

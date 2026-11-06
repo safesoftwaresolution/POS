@@ -20,16 +20,26 @@ public interface StoreBillingConfigService {
 
     /**
      * Cambia la etapa del proceso. Solo se permiten las transiciones definidas en
-     * {@link BillingActivationStatus}; pasar a {@code ACTIVE} exige credenciales completas
-     * del entorno activo, y {@code REJECTED} o {@code SUSPENDED} exigen un motivo.
-     * Notifica al local del cambio, salvo cuando el propio local lo origina (solicitud inicial).
+     * {@link BillingActivationStatus}; {@code SUSPENDED} exige un motivo. Pasar a {@code ACTIVE} (también desde
+     * {@code SUSPENDED}) exige, en el entorno del local: la cuenta del proveedor configurada (empresa del local y
+     * acceso de la plataforma), la habilitación de la DIAN en {@code AUTHORIZED} y un rango de facturas utilizable;
+     * cada pieza que falta tiene su propio mensaje. La habilitación se consulta al proveedor antes de abrir la
+     * transacción (no llamar a este método dentro de otra transacción).
+     * Notifica al local cuando queda {@code ACTIVE} o {@code SUSPENDED}; pasar a {@code IN_SETUP} no notifica.
      */
     BillingActivationDto transition(Long storeId, BillingActivationStatus target, String reason, String actor);
 
     /**
-     * El ADMINISTRATOR del local pide la activación: pasa de {@code NOT_REQUESTED} o
-     * {@code REJECTED} a {@code DOCUMENTS_SUBMITTED}. Exige que el local ya tenga al menos un
-     * documento subido (RUT, cámara de comercio, etc., ya gestionados por el módulo de locales).
+     * El asistente de autoservicio empieza (o retoma) la configuración: crea la fila del local si no existe, pasa
+     * de {@code NOT_REQUESTED} a {@code IN_SETUP} como {@link #requestActivation} y, mientras el local no esté
+     * {@code ACTIVE}, deja su entorno en {@code PRODUCTION} (los locales no usan el sandbox). No notifica.
+     */
+    BillingActivationDto startSelfServiceSetup(Long storeId, String actor);
+
+    /**
+     * El ADMINISTRATOR del local empieza la habilitación: pasa de {@code NOT_REQUESTED} a {@code IN_SETUP}.
+     * No pide documentos (Alegra no los necesita). Idempotente si el local ya está en {@code IN_SETUP};
+     * un local {@code ACTIVE} o {@code SUSPENDED} no puede volver a configuración por esta vía.
      */
     BillingActivationDto requestActivation(Long storeId, String actor);
 
@@ -40,7 +50,10 @@ public interface StoreBillingConfigService {
     BillingActivationDto updateProviderCompanyId(Long storeId, BillingEnvironment environment,
                                                  String companyId, String actor);
 
-    /** Cambia el entorno con el que factura el local (sandbox o producción). */
+    /**
+     * Cambia el entorno con el que factura el local (sandbox o producción). En cualquier estado, el entorno destino
+     * necesita la empresa del local y un rango de facturas utilizable. Si cambia, avisa al local cuál quedó activo.
+     */
     BillingActivationDto switchEnvironment(Long storeId, BillingEnvironment environment, String actor);
 
     /**

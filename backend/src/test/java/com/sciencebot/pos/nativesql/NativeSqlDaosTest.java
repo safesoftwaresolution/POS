@@ -185,6 +185,25 @@ class NativeSqlDaosTest {
     }
 
     @Test
+    void storePurge_alsoRemovesTheFiscalProfileOfTheStore() {
+        long keep = store("Profile Keep", "profile-keep@test.com", "ACTIVE");
+        long victim = store("Profile Victim", "profile-victim@test.com", "REJECTED");
+        for (long s : new long[]{keep, victim}) {
+            jdbc.sql("INSERT INTO billing_company_profile (store_id, legal_name, nit, dv, identification_type, "
+                    + "organization_type, regime_code, email, address, city_code, department_code, created_at, updated_at) "
+                    + "VALUES (:s, 'Tienda SAS', '900123456', '1', '31', 1, 'R-99-PN', 'f@t.co', 'Calle 1', '11001', '11', "
+                    + "CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+                    .param("s", s).update();
+        }
+
+        new StorePurgeDao(jdbc).purge(victim);
+
+        assertEquals(0L, count("SELECT COUNT(*) FROM stores WHERE id = " + victim));
+        assertEquals(0L, count("SELECT COUNT(*) FROM billing_company_profile WHERE store_id = " + victim));
+        assertEquals(1L, count("SELECT COUNT(*) FROM billing_company_profile WHERE store_id = " + keep));
+    }
+
+    @Test
     void storePurge_alsoRemovesTheOperationOfAStoreThatSold_andCountsValidatedInvoices() {
         long keep = store("Op Keep", "op-keep@test.com", "ACTIVE");
         long victim = store("Op Victim", "op-victim@test.com", "ACTIVE");

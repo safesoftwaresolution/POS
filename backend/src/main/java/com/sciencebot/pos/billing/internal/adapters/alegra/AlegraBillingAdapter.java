@@ -126,6 +126,16 @@ public class AlegraBillingAdapter implements ElectronicInvoicingProvider {
     }
 
     @Override
+    public boolean hasUsableInvoiceRange(Long storeId, BillingEnvironment environment) {
+        return rangeClient.hasUsableInvoiceRange(storeId, environment);
+    }
+
+    @Override
+    public int countInvoiceRanges(Long storeId, BillingEnvironment environment) {
+        return rangeClient.countInvoiceRanges(storeId, environment);
+    }
+
+    @Override
     public List<NumberingRangeDto> listNumberingRanges() {
         return rangeClient.listNumberingRanges();
     }

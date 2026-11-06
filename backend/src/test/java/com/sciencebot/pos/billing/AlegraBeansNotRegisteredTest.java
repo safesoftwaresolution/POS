@@ -6,6 +6,7 @@ import com.sciencebot.pos.billing.internal.adapters.alegra.AlegraClientHelper;
 import com.sciencebot.pos.billing.internal.adapters.alegra.AlegraCompanyProvider;
 import com.sciencebot.pos.billing.internal.adapters.alegra.AlegraNumberAllocator;
 import com.sciencebot.pos.billing.internal.adapters.alegra.AlegraNumberingRangeClient;
+import com.sciencebot.pos.billing.internal.adapters.alegra.AlegraOnboardingClient;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -23,7 +24,8 @@ class AlegraBeansNotRegisteredTest {
     @Test
     void noAlegraBeanIsRegisteredWhenTheProviderIsNotAlegra() {
         for (Class<?> type : new Class<?>[]{AlegraBillingAdapter.class, AlegraAccessResolver.class, AlegraClientHelper.class,
-                AlegraCompanyProvider.class, AlegraNumberAllocator.class, AlegraNumberingRangeClient.class}) {
+                AlegraCompanyProvider.class, AlegraNumberAllocator.class, AlegraNumberingRangeClient.class,
+                AlegraOnboardingClient.class}) {
             assertEquals(0, context.getBeanNamesForType(type).length, type.getSimpleName());
         }
     }

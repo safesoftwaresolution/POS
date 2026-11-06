@@ -9,7 +9,8 @@ import com.sciencebot.pos.billing.internal.mappers.BillingActivationMapper;
 import com.sciencebot.pos.billing.internal.repositories.StoreBillingConfigRepository;
 import com.sciencebot.pos.billing.internal.services.StoreBillingConfigServiceImpl;
 import com.sciencebot.pos.notifications.NotificationFacade;
-import com.sciencebot.pos.stores.StoreFacade;
+import com.sciencebot.pos.billing.internal.adapters.BillingOnboardingProvider;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -45,7 +46,8 @@ class StoreBillingConfigCompanyIdServiceTest {
         when(provider.displayName()).thenReturn("Alegra");
         ActiveBillingProvider active = new ActiveBillingProvider(List.of(provider), "alegra");
         service = new StoreBillingConfigServiceImpl(repository, new BillingActivationMapper(active), active,
-                mock(NotificationFacade.class), mock(StoreFacade.class));
+                mock(NotificationFacade.class), mock(BillingOnboardingProvider.class),
+                mock(PlatformTransactionManager.class));
     }
 
     @Test

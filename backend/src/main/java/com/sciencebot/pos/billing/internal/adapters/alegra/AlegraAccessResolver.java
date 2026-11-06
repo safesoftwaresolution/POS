@@ -61,6 +61,29 @@ public class AlegraAccessResolver {
                 .orElse(false);
     }
 
+    /**
+     * Acceso de plataforma a un entorno, sin local ni company.id: sirve para dar de alta empresas y consultar la
+     * DIAN antes de que el local tenga empresa en Alegra. Sin token del entorno, la plataforma no está lista.
+     */
+    public AlegraAccess platformAccess(BillingEnvironment environment) {
+        Objects.requireNonNull(environment, "El entorno es obligatorio");
+        String token = tokenFor(environment);
+        if (isBlank(token)) {
+            throw new BillingNotEnabledException("La facturación electrónica aún no está disponible en la plataforma "
+                    + "(falta el token de Alegra del entorno de " + environment.label() + ")");
+        }
+        return new AlegraAccess(null, environment, urlFor(environment), token.trim(), null);
+    }
+
+    /** Hay token de plataforma para el entorno. */
+    public boolean hasPlatformToken(BillingEnvironment environment) {
+        return environment != null && !isBlank(tokenFor(environment));
+    }
+
+    private String urlFor(BillingEnvironment environment) {
+        return environment == BillingEnvironment.PRODUCTION ? productionUrl : sandboxUrl;
+    }
+
     private AlegraAccess resolve(Long storeId, BillingEnvironment forcedEnvironment, boolean requireActive) {
         Long effectiveStoreId = storeId != null ? storeId : TenantContext.getStoreId();
         if (effectiveStoreId == null) {
@@ -73,19 +96,20 @@ public class AlegraAccessResolver {
 
         if (requireActive && config.getStatus() != BillingActivationStatus.ACTIVE) {
             throw new BillingNotEnabledException(
-                    "La facturación electrónica del local no está activa (estado: " + config.getStatus() + ")");
+                    "La facturación electrónica del local no está activa (" + config.getStatus().label() + ")");
         }
 
         BillingEnvironment environment = forcedEnvironment != null ? forcedEnvironment : config.getEnvironment();
         String token = tokenFor(environment);
         if (isBlank(token)) {
             throw new BillingNotEnabledException(
-                    "Falta el token de Alegra del entorno " + environment + " en la configuración del servidor");
+                    "Falta el token de Alegra del entorno de " + environment.label() + " en la configuración del servidor");
         }
         String companyId = config.companyIdFor(environment);
         if (companyId == null) {
             throw new BillingNotEnabledException(
-                    "Falta el company.id de Alegra del entorno " + environment + " para este local");
+                    "El local aún no tiene su empresa registrada en Alegra para el entorno de " + environment.label()
+                            + " (falta su company.id)");
         }
 
         return new AlegraAccess(effectiveStoreId, environment,

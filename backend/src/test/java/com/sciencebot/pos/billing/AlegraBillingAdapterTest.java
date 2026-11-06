@@ -131,8 +131,13 @@ class AlegraBillingAdapterTest {
         when(rangeClient.createNumberingRange(request)).thenReturn(dto);
         when(rangeClient.toggleNumberingRangeStatus(1L)).thenReturn(dto);
         when(rangeClient.updateNumberingRangeCurrent(1L, 5L)).thenReturn(dto);
-        when(rangeClient.queryDianNumberingRanges()).thenThrow(new UnsupportedOperationException("pendiente"));
+        when(rangeClient.queryDianNumberingRanges()).thenReturn(List.of(dto));
+        when(rangeClient.hasUsableInvoiceRange(5L, BillingEnvironment.PRODUCTION)).thenReturn(true);
+        when(rangeClient.countInvoiceRanges(5L, BillingEnvironment.PRODUCTION)).thenReturn(3);
 
+        assertEquals(List.of(dto), adapter.queryDianNumberingRanges());
+        assertTrue(adapter.hasUsableInvoiceRange(5L, BillingEnvironment.PRODUCTION));
+        assertEquals(3, adapter.countInvoiceRanges(5L, BillingEnvironment.PRODUCTION));
         assertEquals(List.of(dto), adapter.listNumberingRanges());
         assertEquals(dto, adapter.getNumberingRange(1L));
         assertEquals(dto, adapter.createNumberingRange(request));
@@ -140,7 +145,6 @@ class AlegraBillingAdapterTest {
         assertEquals(dto, adapter.updateNumberingRangeCurrent(1L, 5L));
         adapter.deleteNumberingRange(1L);
         verify(rangeClient).deleteNumberingRange(1L);
-        assertThrows(UnsupportedOperationException.class, () -> adapter.queryDianNumberingRanges());
     }
 
     @Test

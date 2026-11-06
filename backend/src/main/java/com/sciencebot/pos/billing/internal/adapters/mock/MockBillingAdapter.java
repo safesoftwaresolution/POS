@@ -94,6 +94,17 @@ public class MockBillingAdapter implements ElectronicInvoicingProvider {
         );
     }
 
+    /** El mock siempre lista un rango de facturas activo y vigente (ver {@link #listNumberingRanges()}). */
+    @Override
+    public boolean hasUsableInvoiceRange(Long storeId, BillingEnvironment environment) {
+        return true;
+    }
+
+    @Override
+    public int countInvoiceRanges(Long storeId, BillingEnvironment environment) {
+        return listNumberingRanges().size();
+    }
+
     @Override
     public java.util.List<com.sciencebot.pos.billing.dto.NumberingRangeDto> listNumberingRanges() {
         return java.util.List.of(

@@ -93,11 +93,11 @@ class BillingActivationControllerTest {
         TenantContext.setStoreId(STORE);
         when(authentication.getName()).thenReturn("admin@local.co");
         when(service.requestActivation(STORE, "admin@local.co"))
-                .thenReturn(dto(BillingActivationStatus.DOCUMENTS_SUBMITTED));
+                .thenReturn(dto(BillingActivationStatus.IN_SETUP));
 
         ResponseEntity<BillingActivationDto> response = controller.requestActivation(authentication);
 
-        assertEquals(BillingActivationStatus.DOCUMENTS_SUBMITTED, response.getBody().status());
+        assertEquals(BillingActivationStatus.IN_SETUP, response.getBody().status());
         verify(service).requestActivation(STORE, "admin@local.co");
     }
 
@@ -105,7 +105,7 @@ class BillingActivationControllerTest {
     void requestActivation_UsesTheStoreOfTheSessionAndTheAuthenticatedUser() {
         TenantContext.setStoreId(STORE);
         when(authentication.getName()).thenReturn("admin@local.co");
-        when(service.requestActivation(any(), any())).thenReturn(dto(BillingActivationStatus.DOCUMENTS_SUBMITTED));
+        when(service.requestActivation(any(), any())).thenReturn(dto(BillingActivationStatus.IN_SETUP));
 
         controller.requestActivation(authentication);
 

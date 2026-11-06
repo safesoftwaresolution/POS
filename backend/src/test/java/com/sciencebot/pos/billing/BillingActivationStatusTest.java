@@ -12,26 +12,35 @@ import static org.junit.jupiter.api.Assertions.*;
 class BillingActivationStatusTest {
 
     @Test
+    void theOnlyStatesAreNotRequestedInSetupActiveAndSuspended() {
+        assertEquals(Set.of(NOT_REQUESTED, IN_SETUP, ACTIVE, SUSPENDED), EnumSet.allOf(BillingActivationStatus.class));
+    }
+
+    @Test
     void happyPathGoesStepByStep() {
-        assertTrue(NOT_REQUESTED.canTransitionTo(DOCUMENTS_SUBMITTED));
-        assertTrue(DOCUMENTS_SUBMITTED.canTransitionTo(AWAITING_PROVIDER));
-        assertTrue(AWAITING_PROVIDER.canTransitionTo(ACTIVE));
+        assertTrue(NOT_REQUESTED.canTransitionTo(IN_SETUP));
+        assertTrue(IN_SETUP.canTransitionTo(ACTIVE));
     }
 
     @Test
-    void cannotSkipSteps() {
+    void cannotSkipTheSetup() {
         assertFalse(NOT_REQUESTED.canTransitionTo(ACTIVE));
-        assertFalse(NOT_REQUESTED.canTransitionTo(AWAITING_PROVIDER));
-        assertFalse(DOCUMENTS_SUBMITTED.canTransitionTo(ACTIVE));
+        assertFalse(NOT_REQUESTED.canTransitionTo(SUSPENDED));
     }
 
     @Test
-    void rejectedCanBeResubmittedAndSuspendedCanBeReactivated() {
-        assertTrue(DOCUMENTS_SUBMITTED.canTransitionTo(REJECTED));
-        assertTrue(AWAITING_PROVIDER.canTransitionTo(REJECTED));
-        assertTrue(REJECTED.canTransitionTo(DOCUMENTS_SUBMITTED));
+    void setupCanBeSuspendedAndActiveAndSuspendedAlternate() {
+        assertTrue(IN_SETUP.canTransitionTo(SUSPENDED));
         assertTrue(ACTIVE.canTransitionTo(SUSPENDED));
         assertTrue(SUSPENDED.canTransitionTo(ACTIVE));
+    }
+
+    @Test
+    void transitionTableIsExactlyTheDocumentedOne() {
+        assertEquals(Set.of(IN_SETUP), allowedFrom(NOT_REQUESTED));
+        assertEquals(Set.of(ACTIVE, SUSPENDED), allowedFrom(IN_SETUP));
+        assertEquals(Set.of(SUSPENDED), allowedFrom(ACTIVE));
+        assertEquals(Set.of(ACTIVE), allowedFrom(SUSPENDED));
     }
 
     @Test
@@ -42,20 +51,19 @@ class BillingActivationStatusTest {
     }
 
     @Test
-    void activeCanOnlyBeSuspended() {
+    void onlySuspendedRequiresReason() {
+        for (BillingActivationStatus status : values()) {
+            assertEquals(status == SUSPENDED, status.requiresReason(), status.name());
+        }
+    }
+
+    private static Set<BillingActivationStatus> allowedFrom(BillingActivationStatus from) {
         Set<BillingActivationStatus> allowed = EnumSet.noneOf(BillingActivationStatus.class);
         for (BillingActivationStatus target : values()) {
-            if (ACTIVE.canTransitionTo(target)) {
+            if (from.canTransitionTo(target)) {
                 allowed.add(target);
             }
         }
-        assertEquals(Set.of(SUSPENDED), allowed);
-    }
-
-    @Test
-    void onlyRejectedAndSuspendedRequireReason() {
-        for (BillingActivationStatus status : values()) {
-            assertEquals(status == REJECTED || status == SUSPENDED, status.requiresReason(), status.name());
-        }
+        return allowed;
     }
 }

@@ -54,6 +54,13 @@ public class AlegraClientHelper {
                 .header("Accept", "application/json");
     }
 
+    /** Actualización parcial ({@code PATCH}); mismos encabezados y misma regla de URL que las demás llamadas. */
+    public RestClient.RequestBodySpec authorizedPatch(String path, AlegraAccess access) {
+        return restClient.patch().uri(access.baseUrl() + path)
+                .header("Authorization", bearer(access))
+                .header("Accept", "application/json");
+    }
+
     private static final int MAX_REDIRECTS = 3;
 
     /** Resultado de pedir un enlace: los bytes, o la siguiente URL si Alegra respondió con una redirección. */

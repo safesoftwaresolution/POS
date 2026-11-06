@@ -7,6 +7,8 @@ import com.sciencebot.pos.billing.internal.adapters.alegra.AlegraNumberAllocator
 import com.sciencebot.pos.billing.internal.entities.NumberingRange;
 import com.sciencebot.pos.billing.internal.repositories.DocumentNumberAllocationRepository;
 import com.sciencebot.pos.billing.internal.repositories.NumberingRangeRepository;
+import com.sciencebot.pos.billing.internal.repositories.StoreBillingConfigRepository;
+import com.sciencebot.pos.billing.internal.entities.StoreBillingConfig;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -42,6 +44,8 @@ class AlegraNumberAllocatorTest {
     @Autowired
     private DocumentNumberAllocationRepository allocationRepository;
     @Autowired
+    private StoreBillingConfigRepository configRepository;
+    @Autowired
     private PlatformTransactionManager transactionManager;
 
     private AlegraNumberAllocator allocator;
@@ -49,7 +53,7 @@ class AlegraNumberAllocatorTest {
 
     @BeforeEach
     void setUp() {
-        allocator = new AlegraNumberAllocator(rangeRepository, allocationRepository, transactionManager);
+        allocator = new AlegraNumberAllocator(rangeRepository, allocationRepository, configRepository, transactionManager);
         // Un local distinto por test: los hilos de un test nunca tocan los datos de otro.
         storeId = 100_000L + (System.nanoTime() % 1_000_000L);
     }
@@ -58,6 +62,7 @@ class AlegraNumberAllocatorTest {
     void cleanUp() {
         allocationRepository.deleteAll(allocationRepository.findAll().stream()
                 .filter(a -> a.getStoreId().equals(storeId)).toList());
+        configRepository.findById(storeId).ifPresent(configRepository::delete);
         rangeRepository.deleteAll(rangeRepository.findAll().stream()
                 .filter(r -> r.getStoreId().equals(storeId)).toList());
     }
@@ -143,6 +148,76 @@ class AlegraNumberAllocatorTest {
         BillingNotEnabledException error = assertThrows(BillingNotEnabledException.class,
                 () -> allocator.allocate(storeId, ENV, INVOICE, "SALE-1"));
         assertTrue(error.getMessage().toLowerCase().contains("rango"), error.getMessage());
+    }
+
+    private void chooseDefault(NumberingRange range) {
+        StoreBillingConfig config = new StoreBillingConfig();
+        config.setStoreId(storeId);
+        config.setEnvironment(ENV);
+        config.assignNumberingRangeId(ENV, Math.toIntExact(range.getId()));
+        configRepository.save(config);
+    }
+
+    private NumberingRange createRange(String prefix, String resolution, long min, long max, LocalDate start,
+                                       LocalDate end) {
+        return rangeRepository.save(new NumberingRange(storeId, ENV, INVOICE, prefix, resolution, min, max,
+                start, end, "technical-key"));
+    }
+
+    @Test
+    void theStoreDefaultRangeIsPreferredWhenItIsUsable() {
+        createRange("OLD", "1", 1L, 100L, null, null);
+        NumberingRange chosen = createRange("NEW", "2", 1000L, 2000L, null, null);
+        chooseDefault(chosen);
+
+        Allocation allocation = allocator.allocate(storeId, ENV, INVOICE, "SALE-1");
+
+        assertEquals(chosen.getId(), allocation.rangeId());
+        assertEquals("NEW", allocation.prefix());
+        assertEquals(1000L, allocation.number());
+    }
+
+    @Test
+    void anExpiredOrExhaustedDefaultFallsBackToTheFirstUsableRange() {
+        NumberingRange first = createRange("FE", "1", 1L, 100L, null, null);
+        NumberingRange expired = createRange("EXP", "2", 1L, 100L, LocalDate.now().minusYears(2),
+                LocalDate.now().minusDays(1));
+        chooseDefault(expired);
+
+        assertEquals(first.getId(), allocator.allocate(storeId, ENV, INVOICE, "SALE-1").rangeId());
+
+        NumberingRange exhausted = createRange("AGO", "3", 1L, 1L, null, null);
+        exhausted.takeNextNumber();
+        rangeRepository.save(exhausted);
+        chooseDefault(exhausted);
+
+        assertEquals(first.getId(), allocator.allocate(storeId, ENV, INVOICE, "SALE-2").rangeId());
+    }
+
+    @Test
+    void theDefaultRangeOfAnotherDocumentDoesNotChangeTheInvoiceRange() {
+        NumberingRange invoices = createRange("FE", "1", 1L, 100L, null, null);
+        NumberingRange notes = rangeRepository.save(new NumberingRange(storeId, ENV, "91", "NC", "SIN-RESOLUCION",
+                1L, 100L, null, null, null));
+        chooseDefault(notes);
+
+        assertEquals(invoices.getId(), allocator.allocate(storeId, ENV, INVOICE, "SALE-1").rangeId());
+    }
+
+    @Test
+    void parallelEmissionsOnTheDefaultRangeStayUniqueAndWithoutGaps() throws Exception {
+        createRange("OLD", "1", 1L, 100L, null, null);
+        NumberingRange chosen = createRange("NEW", "2", 5000L, 6000L, null, null);
+        chooseDefault(chosen);
+
+        List<Allocation> results = runParallel(12, i -> "SALE-" + i);
+
+        TreeSet<Long> numbers = new TreeSet<>();
+        results.forEach(a -> numbers.add(a.number()));
+        assertEquals(12, numbers.size());
+        assertEquals(5000L, numbers.first());
+        assertEquals(5011L, numbers.last());
+        assertTrue(results.stream().allMatch(a -> a.rangeId().equals(chosen.getId())));
     }
 
     @Test

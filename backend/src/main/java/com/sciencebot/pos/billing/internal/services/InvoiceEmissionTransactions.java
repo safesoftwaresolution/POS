@@ -6,6 +6,8 @@ import com.sciencebot.pos.billing.internal.entities.ElectronicInvoice;
 import com.sciencebot.pos.billing.internal.entities.ElectronicInvoice.ReserveOutcome;
 import com.sciencebot.pos.billing.internal.mappers.ElectronicInvoiceMapper;
 import com.sciencebot.pos.billing.internal.repositories.ElectronicInvoiceRepository;
+import com.sciencebot.pos.billing.internal.repositories.StoreBillingConfigRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,12 +28,17 @@ public class InvoiceEmissionTransactions {
 
     private final ElectronicInvoiceRepository repository;
     private final ElectronicInvoiceMapper mapper;
+    /** De aquí sale el entorno del local que se anota en la factura al reservar su emisión. */
+    private final StoreBillingConfigRepository configRepository;
     private final Duration lease;
 
+    @Autowired
     public InvoiceEmissionTransactions(ElectronicInvoiceRepository repository, ElectronicInvoiceMapper mapper,
+                                       StoreBillingConfigRepository configRepository,
                                        @Value("${billing.emission.lease:PT5M}") Duration lease) {
         this.repository = repository;
         this.mapper = mapper;
+        this.configRepository = configRepository;
         this.lease = lease;
     }
 
@@ -44,6 +51,9 @@ public class InvoiceEmissionTransactions {
         // Si el proveedor ya recibió el documento, quien emite lo concilia por su id en vez de emitirlo otra vez.
         String reconcile = invoice.awaitsProviderResponse() ? invoice.getProviderDocumentId() : null;
         ReserveOutcome outcome = invoice.reserveForEmission(LocalDateTime.now(), lease);
+        if (outcome == ReserveOutcome.RESERVED) {
+            assignStoreEnvironment(invoice);
+        }
         repository.save(invoice);
         return new Reservation(outcome, mapper.toDto(invoice), reconcile);
     }
@@ -80,6 +90,15 @@ public class InvoiceEmissionTransactions {
             invoice.prepareForRetry();
             repository.save(invoice);
         });
+    }
+
+    /** La factura que se va a emitir toma el entorno actual de su local, si aún no tiene uno. */
+    private void assignStoreEnvironment(ElectronicInvoice invoice) {
+        if (invoice.getEnvironment() != null || invoice.getStoreId() == null) {
+            return;
+        }
+        configRepository.findById(invoice.getStoreId())
+                .ifPresent(config -> invoice.assignEnvironmentIfMissing(config.getEnvironment()));
     }
 
     /** Aplica el resultado y devuelve cuándo reintentar (null si no debe reintentarse sola). */

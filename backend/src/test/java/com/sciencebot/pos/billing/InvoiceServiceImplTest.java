@@ -11,6 +11,7 @@ import com.sciencebot.pos.billing.internal.entities.ElectronicInvoice;
 import com.sciencebot.pos.billing.internal.mappers.BillingCanonicalMapper;
 import com.sciencebot.pos.billing.internal.mappers.ElectronicInvoiceMapper;
 import com.sciencebot.pos.billing.internal.repositories.ElectronicInvoiceRepository;
+import com.sciencebot.pos.billing.internal.repositories.StoreBillingConfigRepository;
 import com.sciencebot.pos.billing.internal.services.InvoiceEmissionTransactions;
 import com.sciencebot.pos.billing.internal.services.InvoiceServiceImpl;
 import com.sciencebot.pos.config.tenant.TenantContext;
@@ -50,6 +51,9 @@ class InvoiceServiceImplTest {
     @Mock
     private InvoiceProvider customProvider;
 
+    @Mock
+    private StoreBillingConfigRepository configRepository;
+
     private MockBillingAdapter mockAdapter;
     private InvoiceServiceImpl invoiceService;
 
@@ -66,7 +70,7 @@ class InvoiceServiceImplTest {
                 canonicalMapper,
                 invoiceMapper,
                 saleFacade,
-                new InvoiceEmissionTransactions(repository, invoiceMapper, Duration.ofMinutes(5)),
+                new InvoiceEmissionTransactions(repository, invoiceMapper, configRepository, Duration.ofMinutes(5)),
                 List.of(mockAdapter, customProvider)
         );
     }
@@ -357,6 +361,27 @@ class InvoiceServiceImplTest {
 
         assertEquals(com.sciencebot.pos.billing.dto.ElectronicInvoiceStatus.ERROR, invoice.getStatus());
         assertNotNull(invoice.getNextRetryAt());
+        assertEquals("No se pudo emitir la factura: timeout", invoice.getErrorMessage());
+    }
+
+    @Test
+    void processElectronicInvoice_AnnotatesTheEnvironmentOfTheStoreWithTheRealConstructor() {
+        ReflectionTestUtils.setField(invoiceService, "activeProviderName", "alegra");
+        SaleDto saleDto = new SaleDto(1L, "FACT-000001", null, "Cliente General", BigDecimal.TEN, BigDecimal.TEN, BigDecimal.ZERO, "admin", List.of(), "CASH");
+        ElectronicInvoice invoice = ElectronicInvoice.initialize(1L, 1L);
+        com.sciencebot.pos.billing.internal.entities.StoreBillingConfig config =
+                new com.sciencebot.pos.billing.internal.entities.StoreBillingConfig();
+        config.setStoreId(1L);
+        config.setEnvironment(com.sciencebot.pos.billing.dto.BillingEnvironment.PRODUCTION);
+        when(configRepository.findById(1L)).thenReturn(Optional.of(config));
+        when(repository.findBySaleIdForUpdate(1L)).thenReturn(Optional.of(invoice));
+        when(repository.save(any(ElectronicInvoice.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(canonicalMapper.toInvoiceRequest(saleDto)).thenReturn(mock(InvoiceRequest.class));
+        when(customProvider.emitInvoice(any())).thenThrow(new IllegalStateException("timeout"));
+
+        invoiceService.processElectronicInvoice(saleDto);
+
+        assertEquals(com.sciencebot.pos.billing.dto.BillingEnvironment.PRODUCTION, invoice.getEnvironment());
     }
 
     @Test

@@ -1,5 +1,6 @@
 package com.sciencebot.pos.billing.internal.adapters;
 
+import com.sciencebot.pos.billing.dto.BillingEnvironment;
 import com.sciencebot.pos.billing.dto.CreateNumberingRangeRequest;
 import com.sciencebot.pos.billing.dto.NumberingRangeDto;
 
@@ -22,6 +23,20 @@ public interface NumberingRangeProvider {
      */
     default List<NumberingRangeDto> queryDianNumberingRanges() {
         throw new UnsupportedOperationException("queryDianNumberingRanges no soportado por " + getProviderName());
+    }
+
+    /**
+     * El local tiene, en ese entorno, un rango de facturas (documento {@code 01}) activo, vigente hoy y con números
+     * disponibles. Recibe el local explícito (no depende del local en contexto) porque lo consultan el back office y
+     * la guarda de activación. No hace llamadas de red.
+     */
+    default boolean hasUsableInvoiceRange(Long storeId, BillingEnvironment environment) {
+        throw new UnsupportedOperationException("hasUsableInvoiceRange no soportado por " + getProviderName());
+    }
+
+    /** Cuántos rangos de facturas (documento {@code 01}, no eliminados) tiene el local en ese entorno. */
+    default int countInvoiceRanges(Long storeId, BillingEnvironment environment) {
+        throw new UnsupportedOperationException("countInvoiceRanges no soportado por " + getProviderName());
     }
 
     /**

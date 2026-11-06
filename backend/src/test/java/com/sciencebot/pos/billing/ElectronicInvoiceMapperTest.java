@@ -1,5 +1,6 @@
 package com.sciencebot.pos.billing;
 
+import com.sciencebot.pos.billing.dto.BillingEnvironment;
 import com.sciencebot.pos.billing.dto.ElectronicInvoiceDto;
 import com.sciencebot.pos.billing.internal.entities.ElectronicInvoice;
 import com.sciencebot.pos.billing.internal.mappers.ElectronicInvoiceMapper;
@@ -47,5 +48,27 @@ class ElectronicInvoiceMapperTest {
         assertNull(dto.errorMessage());
         assertEquals("https://factus.com.co/inv.pdf", dto.pdfUrl());
         assertEquals(now, dto.validatedAt());
+    }
+
+    @Test
+    void toDto_MapsTheEnvironmentTheInvoiceWasEmittedIn() {
+        ElectronicInvoice invoice = ElectronicInvoice.initialize(10L, 1L);
+        assertNull(mapper.toDto(invoice).environment(), "una factura sin entorno conocido no inventa uno");
+
+        invoice.assignEnvironmentIfMissing(BillingEnvironment.SANDBOX);
+
+        assertEquals(BillingEnvironment.SANDBOX, mapper.toDto(invoice).environment());
+    }
+
+    @Test
+    void legacyConstructorsLeaveTheEnvironmentEmpty() {
+        LocalDateTime now = LocalDateTime.now();
+        ElectronicInvoiceDto nine = new ElectronicInvoiceDto(1L, 5L, "SETP-1", "cufe", "qr", "VALIDATED", null, "pdf", now);
+        ElectronicInvoiceDto ten = new ElectronicInvoiceDto(1L, 2L, 5L, "SETP-1", "cufe", "qr", "VALIDATED", null, "pdf", now);
+
+        assertNull(nine.environment());
+        assertNull(nine.storeId());
+        assertNull(ten.environment());
+        assertEquals(2L, ten.storeId());
     }
 }

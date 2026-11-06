@@ -7,6 +7,10 @@ import com.sciencebot.pos.billing.exception.BillingNotEnabledException;
 import com.sciencebot.pos.billing.internal.adapters.alegra.AlegraNumberAllocator;
 import com.sciencebot.pos.billing.internal.adapters.alegra.AlegraNumberingRangeClient;
 import com.sciencebot.pos.billing.internal.entities.StoreBillingConfig;
+import com.sciencebot.pos.billing.internal.adapters.BillingOnboardingProvider;
+import com.sciencebot.pos.billing.internal.adapters.dto.DianResolutionData;
+import com.sciencebot.pos.billing.internal.entities.BillingCompanyProfile;
+import com.sciencebot.pos.billing.internal.repositories.BillingCompanyProfileRepository;
 import com.sciencebot.pos.billing.internal.repositories.DocumentNumberAllocationRepository;
 import com.sciencebot.pos.billing.internal.repositories.NumberingRangeRepository;
 import com.sciencebot.pos.billing.internal.repositories.StoreBillingConfigRepository;
@@ -20,8 +24,11 @@ import org.springframework.transaction.PlatformTransactionManager;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 
 /** Rangos de numeración locales (Alegra): misma semántica que el puerto, sobre las tablas propias y por local. */
 @SpringBootTest
@@ -36,12 +43,17 @@ class AlegraNumberingRangeClientTest {
     @Autowired
     private PlatformTransactionManager transactionManager;
 
+    private BillingCompanyProfileRepository profileRepository;
+    private BillingOnboardingProvider onboarding;
     private AlegraNumberingRangeClient client;
     private Long storeId;
 
     @BeforeEach
     void setUp() {
-        client = new AlegraNumberingRangeClient(rangeRepository, allocationRepository, configRepository, transactionManager);
+        profileRepository = mock(BillingCompanyProfileRepository.class);
+        onboarding = mock(BillingOnboardingProvider.class);
+        client = new AlegraNumberingRangeClient(rangeRepository, allocationRepository, configRepository,
+                profileRepository, onboarding, transactionManager);
         storeId = 200_000L + (System.nanoTime() % 1_000_000L);
         StoreBillingConfig config = new StoreBillingConfig();
         config.setStoreId(storeId);
@@ -135,7 +147,7 @@ class AlegraNumberingRangeClientTest {
     @Test
     void updateCurrent_MovesForwardAndNeverBelowAnAssignedNumber() {
         NumberingRangeDto created = client.createNumberingRange(request("01", "SETP", "1876", 1L, 100L, 1L));
-        AlegraNumberAllocator allocator = new AlegraNumberAllocator(rangeRepository, allocationRepository, transactionManager);
+        AlegraNumberAllocator allocator = new AlegraNumberAllocator(rangeRepository, allocationRepository, configRepository, transactionManager);
         allocator.allocate(storeId, BillingEnvironment.SANDBOX, "01", "SALE-1");
         allocator.allocate(storeId, BillingEnvironment.SANDBOX, "01", "SALE-2");
 
@@ -151,7 +163,7 @@ class AlegraNumberingRangeClientTest {
     void delete_RemovesAnUnusedRangeAndOnlyMarksAUsedOneAsDeleted() {
         NumberingRangeDto unused = client.createNumberingRange(request("01", "AAAA", "1", 1L, 10L, 1L));
         NumberingRangeDto used = client.createNumberingRange(request("91", "BBBB", "2", 1L, 10L, 1L));
-        new AlegraNumberAllocator(rangeRepository, allocationRepository, transactionManager)
+        new AlegraNumberAllocator(rangeRepository, allocationRepository, configRepository, transactionManager)
                 .allocate(storeId, BillingEnvironment.SANDBOX, "91", "NC-1");
 
         client.deleteNumberingRange(unused.id());
@@ -174,9 +186,96 @@ class AlegraNumberingRangeClientTest {
         assertThrows(BillingNotEnabledException.class, () -> client.listNumberingRanges());
     }
 
+    // --- resoluciones de la DIAN del NIT del local (GET /resolutions/{nit}) ---
+
+    private void inProductionWithNit(String nit) {
+        StoreBillingConfig config = configRepository.findById(storeId).orElseThrow();
+        config.setEnvironment(BillingEnvironment.PRODUCTION);
+        configRepository.save(config);
+        if (nit != null) {
+            BillingCompanyProfile profile = new BillingCompanyProfile();
+            profile.setStoreId(storeId);
+            profile.setNit(nit);
+            when(profileRepository.findById(storeId)).thenReturn(Optional.of(profile));
+        }
+    }
+
     @Test
-    void queryDianNumberingRanges_IsNotAvailableYet() {
-        assertThrows(UnsupportedOperationException.class, () -> client.queryDianNumberingRanges());
+    void queryDianNumberingRanges_InSandboxIsEmptyWithoutAskingTheProvider() {
+        assertEquals(List.of(), client.queryDianNumberingRanges());
+        verifyNoInteractions(onboarding);
+    }
+
+    @Test
+    void queryDianNumberingRanges_InProductionListsTheResolutionsOfTheStoreNit() {
+        inProductionWithNit("900123456");
+        LocalDate start = LocalDate.now().minusMonths(1);
+        LocalDate end = LocalDate.now().plusYears(1);
+        when(onboarding.listResolutions(BillingEnvironment.PRODUCTION, "900123456")).thenReturn(List.of(
+                new DianResolutionData("18764000000001", "FE", 1L, 5000L, start, end, "tk")));
+
+        List<NumberingRangeDto> resolutions = client.queryDianNumberingRanges();
+
+        assertEquals(1, resolutions.size());
+        NumberingRangeDto dto = resolutions.get(0);
+        assertNull(dto.id(), "todavía no es un rango registrado");
+        assertEquals("01", dto.document());
+        assertEquals("FE", dto.prefix());
+        assertEquals("18764000000001", dto.resolutionNumber());
+        assertEquals(1L, dto.from());
+        assertEquals(5000L, dto.to());
+        assertEquals(start.toString(), dto.startDate());
+        assertEquals(end.toString(), dto.endDate());
+        assertEquals("tk", dto.technicalKey());
+        assertEquals("Factura de Venta", dto.documentName());
+        assertEquals(Boolean.FALSE, dto.isExpired());
+    }
+
+    @Test
+    void queryDianNumberingRanges_InProductionNeedsTheFiscalDataFirst() {
+        inProductionWithNit(null);
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class, () -> client.queryDianNumberingRanges());
+
+        assertTrue(ex.getMessage().contains("datos fiscales"), ex.getMessage());
+        verify(onboarding, never()).listResolutions(any(), any());
+    }
+
+    // --- numeración de facturas utilizable (la usan la guarda de ACTIVE, el cambio de entorno y el asistente) ---
+
+    @Test
+    void usableInvoiceRange_IsAnActiveCurrentNotExhaustedInvoiceRangeOfThatEnvironment() {
+        assertFalse(client.hasUsableInvoiceRange(storeId, BillingEnvironment.SANDBOX));
+        assertEquals(0, client.countInvoiceRanges(storeId, BillingEnvironment.SANDBOX));
+
+        client.createNumberingRange(new CreateNumberingRangeRequest("91", "NC", "SIN-RESOLUCION", 1L, 1L, 10L,
+                null, null, null));
+        client.createNumberingRange(new CreateNumberingRangeRequest("01", "OLD", "9", 1L, 1L, 10L,
+                LocalDate.now().minusYears(3).toString(), LocalDate.now().minusDays(1).toString(), "k"));
+        assertFalse(client.hasUsableInvoiceRange(storeId, BillingEnvironment.SANDBOX), "nota crédito y rango vencido");
+        assertEquals(1, client.countInvoiceRanges(storeId, BillingEnvironment.SANDBOX));
+
+        NumberingRangeDto current = client.createNumberingRange(new CreateNumberingRangeRequest("01", "FE", "10",
+                1L, 1L, 10L, LocalDate.now().minusDays(1).toString(), LocalDate.now().plusYears(1).toString(), "k"));
+        assertTrue(client.hasUsableInvoiceRange(storeId, BillingEnvironment.SANDBOX));
+        assertFalse(client.hasUsableInvoiceRange(storeId, BillingEnvironment.PRODUCTION), "otro entorno");
+        assertFalse(client.hasUsableInvoiceRange(storeId + 1, BillingEnvironment.SANDBOX), "otro local");
+        assertEquals(2, client.countInvoiceRanges(storeId, BillingEnvironment.SANDBOX));
+
+        client.toggleNumberingRangeStatus(current.id());
+        assertFalse(client.hasUsableInvoiceRange(storeId, BillingEnvironment.SANDBOX), "inactivo");
+    }
+
+    @Test
+    void usableInvoiceRange_AnExhaustedRangeIsNotUsable() {
+        client.createNumberingRange(new CreateNumberingRangeRequest("01", "FE", "10", 10L, 1L, 10L,
+                null, null, null));
+        assertTrue(client.hasUsableInvoiceRange(storeId, BillingEnvironment.SANDBOX));
+
+        new AlegraNumberAllocator(rangeRepository, allocationRepository, configRepository, transactionManager)
+                .allocate(storeId, BillingEnvironment.SANDBOX, "01", "SALE-1");
+
+        assertFalse(client.hasUsableInvoiceRange(storeId, BillingEnvironment.SANDBOX));
     }
 
     @Test

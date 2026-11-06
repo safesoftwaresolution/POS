@@ -1,5 +1,6 @@
 package com.sciencebot.pos.billing.internal.entities;
 
+import com.sciencebot.pos.billing.dto.BillingEnvironment;
 import com.sciencebot.pos.billing.dto.ElectronicInvoiceStatus;
 import jakarta.persistence.*;
 import java.time.Duration;
@@ -50,6 +51,11 @@ public class ElectronicInvoice {
 
     @Column(name = "validated_at")
     private LocalDateTime validatedAt;
+
+    /** Entorno del local con el que se emitió (SANDBOX = de prueba, sin validez legal); null si no se conoce. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "environment", length = 12)
+    private BillingEnvironment environment;
 
     /** Intentos de emisión desde el último reinicio manual. */
     @Column(name = "attempts", nullable = false)
@@ -218,6 +224,13 @@ public class ElectronicInvoice {
         }
     }
 
+    /** Anota el entorno con el que se emite: solo la primera vez; un valor ya anotado no cambia. */
+    public void assignEnvironmentIfMissing(BillingEnvironment environment) {
+        if (this.environment == null && environment != null) {
+            this.environment = environment;
+        }
+    }
+
     private void assertNotTerminal() {
         if (this.status == ElectronicInvoiceStatus.VALIDATED) {
             throw new IllegalStateException("Una factura en estado VALIDATED es fiscalmente inmutable y no puede modificarse");
@@ -285,6 +298,7 @@ public class ElectronicInvoice {
     public String getErrorMessage() { return errorMessage; }
     public String getPdfUrl() { return pdfUrl; }
     public LocalDateTime getValidatedAt() { return validatedAt; }
+    public BillingEnvironment getEnvironment() { return environment; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
 

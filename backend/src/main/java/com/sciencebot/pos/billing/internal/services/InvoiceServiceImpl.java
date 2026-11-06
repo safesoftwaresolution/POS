@@ -115,7 +115,7 @@ public class InvoiceServiceImpl implements InvoiceService {
         } catch (Exception ex) {
             String providerName = provider != null ? provider.getProviderName() : activeProviderName;
             log.error("Error al ejecutar emision con proveedor {}: {}", providerName, ex.getMessage());
-            result = InvoiceResult.error("Error en proveedor " + providerName + ": " + ex.getMessage());
+            result = InvoiceResult.error("No se pudo emitir la factura: " + ex.getMessage());
         }
 
         // Paso C: registrar el resultado.

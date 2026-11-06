@@ -44,9 +44,10 @@ Los servicios dependen de los puertos (`InvoiceProvider`, `CreditNoteProvider`, 
 
 ### Modelo de cuentas
 - **Un token de plataforma por entorno** (`ALEGRA_API_TOKEN_SANDBOX` / `ALEGRA_API_TOKEN_PRODUCTION`), enviado como `Authorization: Bearer`. Vive solo en el entorno de despliegue: nunca en la base, en el repositorio ni en los logs.
-- **Cada local es una empresa asociada** en Alegra con su propio `company.id` (ULID), guardado por local y entorno en `store_billing_config.sandbox_company_id` / `production_company_id`. El SUPER_ADMIN lo carga con `PUT /api/v1/backoffice/stores/{storeId}/billing/company-id?environment=` (body `{ "companyId": "…" }`). Las respuestas solo dicen si está cargado (`sandboxCompanyIdConfigured` / `productionCompanyIdConfigured`), nunca su valor.
-- **El aislamiento entre locales es por `company.id` + `TenantContext`**, no por token: `AlegraAccessResolver` resuelve el acceso del local en contexto y nunca recurre al `company.id` de otro. Con el token de plataforma, un `company.id` equivocado sería facturar como otra empresa; por eso solo lo escribe el SUPER_ADMIN.
+- **Cada local es una empresa asociada** en Alegra con su propio `company.id` (ULID), guardado por local y entorno en `store_billing_config.sandbox_company_id` / `production_company_id`. El de producción lo guarda el asistente de autoservicio al crear la empresa (ver «Asistente de habilitación»); el SUPER_ADMIN también puede cargarlo con `PUT /api/v1/backoffice/stores/{storeId}/billing/company-id?environment=` (body `{ "companyId": "…" }`). Las respuestas solo dicen si está cargado (`sandboxCompanyIdConfigured` / `productionCompanyIdConfigured`), nunca su valor.
+- **El aislamiento entre locales es por `company.id` + `TenantContext`**, no por token: `AlegraAccessResolver` resuelve el acceso del local en contexto y nunca recurre al `company.id` de otro. Con el token de plataforma, un `company.id` equivocado sería facturar como otra empresa; por eso nadie lo escribe a mano salvo el SUPER_ADMIN, y el asistente solo guarda el que Alegra devolvió al crear la empresa del local en contexto.
 - `isAccountConfigured` = hay token del entorno **y** el local tiene `company.id`. Con `billing.provider=alegra` y sin tokens la aplicación arranca y la cuenta figura como no configurada.
+- Los mensajes de `AlegraAccessResolver` dicen por separado si falta el token del servidor o la empresa (`company.id`) del local, con el entorno y el estado en español («entorno de producción», «no solicitada»), nunca el nombre del enum.
 
 ### Alta de una empresa en Alegra (guía operativa)
 1. **Crear la empresa** (`POST /companies`): nombre, NIT (`identification`), DV y `useAlegraCertificate`. Queda como empresa `associated`.
@@ -59,10 +60,37 @@ Los servicios dependen de los puertos (`InvoiceProvider`, `CreditNoteProvider`, 
 
 > Producción: cómo obtiene la plataforma su token de producción de Alegra y si cambia por entorno **no está documentado** y debe confirmarse con Alegra antes del despliegue.
 
+### Alta en autoservicio (`BillingOnboardingProvider`)
+Puerto en `billing/internal/adapters/` que da de alta la empresa del local ante el proveedor con el acceso de plataforma del entorno (sin `company.id` previo, `AlegraAccessResolver.platformAccess`):
+- `createCompany` (`POST /companies`, con `useAlegraCertificate=true`: el dueño no sube certificado ni documentos) y `updateCompany` (`PATCH /companies/{id}`).
+- `startDianEnablement` (`POST /test-sets`, `type=invoices`, con el TestSetId que la DIAN le dio al dueño) y `readEnablement` (`governmentStatus.invoices` de `GET /companies/{id}`; `AUTHORIZED` = habilitada).
+- `listResolutions` (`GET /resolutions/{nit}`, solo producción; `AEP9009` = la DIAN aún no habilita a la empresa, `AEP9008` = el NIT no es de una empresa de la plataforma).
+- `isPlatformReady`: existe el token de plataforma del entorno.
+
+La implementación la elige `billing.provider`: `AlegraOnboardingClient` o `MockOnboardingProvider` (empresa `mock-company-<nit>` ya habilitada y una resolución SETP de prueba). Los locales se habilitan directo en **producción**: el sandbox de Alegra solo factura con el NIT de prueba 900559088 (resolución SETP 18760000001), así que queda para las pruebas de la plataforma.
+
+### Asistente de habilitación (`BillingSetupService`, `/api/v1/billing/setup`)
+El administrador del local habilita su facturación solo, en producción, en cuatro pasos. `GET /api/v1/billing/setup` devuelve `status`, `environment`, `platformReady` (hay token de producción), `steps`, `profile` e `invoiceRangesCount` (rangos de facturas en producción). Cada paso es `{ key, state, message }` con `state` `DONE`, `CURRENT` (el paso en que va), `PENDING` (falta uno anterior) o `ERROR` (el mensaje dice qué falló, sin trazas ni «Error en proveedor»):
+
+| Paso | Hecho cuando |
+|---|---|
+| `FISCAL_DATA` | Hay perfil fiscal guardado **y** el local tiene `company.id` de producción |
+| `DIAN_ENABLEMENT` | `readEnablement` responde `AUTHORIZED` (un local `ACTIVE`/`SUSPENDED` con datos fiscales cuenta como hecho) |
+| `NUMBERING` | Hay un rango de facturas (`01`) utilizable en producción: activo, vigente hoy y con cupo |
+| `READY` | El local está `ACTIVE` (`SUSPENDED` sale en `ERROR` con el motivo) |
+
+- **La DIAN solo se consulta** (`readEnablement`) si el local está `IN_SETUP` y ya tiene su empresa: a un local `ACTIVE` no se le consulta Alegra en cada carga.
+- `profile`: los datos guardados (`saved: true`) o una sugerencia con el nombre, NIT (separando o calculando el DV), correo, teléfono y dirección del local (`StoreFacade`).
+- **`PUT …/fiscal-profile`** (ADMINISTRATOR, `FiscalProfileRequest` con Bean Validation: razón social 5–450, NIT solo dígitos 3–15, DV de un dígito igual al módulo 11 de la DIAN (`DianCheckDigit`, mismo cálculo que el frontend), tipo de organización 1 o 2, responsabilidades `R-99-PN`/`O-13`/`O-15`/`O-23`/`O-47` separadas por `;`, CIIU opcional de 4 dígitos, correo, teléfono opcional, dirección, municipio DANE de 5 dígitos y departamento igual a sus dos primeros dígitos). En tres pasos: (1) transacción corta que guarda el perfil, crea la fila del local si no existe, pasa `NOT_REQUESTED` → `IN_SETUP` y deja el entorno en `PRODUCTION` mientras no esté `ACTIVE` (`startSelfServiceSetup`); (2) sin transacción, `createCompany` o `updateCompany` si ya tiene empresa; (3) transacción corta que guarda el `company.id` (`updateProviderCompanyId`, que también invalida la caché). Sin token de producción responde 200 con `FISCAL_DATA` en `ERROR`: «La facturación electrónica aún no está disponible en la plataforma. Guardamos tus datos y te avisaremos.» Un rechazo del proveedor también vuelve como `ERROR` del paso (los datos quedan guardados).
+- **`POST …/dian-enablement`** (ADMINISTRATOR, `{ "testSetId": "<uuid>" }`; formato inválido → 400 «El código del set de pruebas no tiene el formato correcto»). Exige `FISCAL_DATA` hecho (si no, 409). Llama a `startDianEnablement(PRODUCTION, companyId, testSetId)` y devuelve el asistente con lo que responde la DIAN.
+- **`POST …/numbering/import`** (ADMINISTRATOR). Exige la habilitación de la DIAN, el entorno `PRODUCTION` y que el local sea el de la solicitud (409 si no). Pide `listResolutions(PRODUCTION, nit)` y registra cada resolución vigente que aún no esté registrada como rango `01` por el camino normal (`NumberingRangeService.createNumberingRange`: mismas validaciones, guardas RN-BILL-008 y regla de «el primer rango queda elegido»). Las vigentes hoy y que vencen más tarde van primero; las vencidas y las que rechazan las guardas (por ejemplo, ya hay un rango de facturas activo) se informan en `skipped`. Con un rango de facturas activo, crea los rangos de notas que falten: `91` prefijo `NC` y `92` prefijo `ND`, del 1 al 99.999.999, resolución `SIN-RESOLUCION`, vigentes desde hoy por 10 años (las notas no llevan resolución). Responde `{ importedCount, noteRangesCreated, skipped, setup }`.
+- **Activación automática**: tras cada una de las tres escrituras y en cada `GET`, si el local está `IN_SETUP`, la DIAN lo habilitó y tiene numeración de facturas utilizable, pasa a `ACTIVE` con actor `system` por la transición normal (que vuelve a aplicar la guarda de RN-BILL-006 y notifica al local). Si la guarda lo rechaza, `READY` sale en `ERROR` con el motivo.
+
 ### Numeración local
 Alegra no asigna el consecutivo: el sistema envía el `number` y la `resolution` completa en cada factura.
 - Tablas `billing_numbering_range` (rangos por local, entorno y documento `01`/`91`/`92`) y `billing_document_number` (libro de números asignados, único por referencia y por `(range_id, number)`).
 - `AlegraNumberAllocator.allocate(store, env, documento, referencia)` corre en su propia transacción y toma el lock pesimista de la fila del rango activo: emisiones simultáneas reciben números únicos y consecutivos, sin huecos. Es **idempotente por referencia**: reintentar devuelve el mismo número y la misma llave de idempotencia.
+- Entre los rangos activos del documento usa primero el **rango elegido por el local** para ese entorno (`store_billing_config.sandbox_numbering_range_id` / `production_numbering_range_id`) si está vigente y con cupo; si no, el primero utilizable como antes. El lock se toma sobre todos los rangos activos del documento, así que el elegido también queda bloqueado.
 - Falla con mensaje accionable si no hay rango activo, está vencido, aún no es vigente o está agotado.
 - `AlegraNumberingRangeClient` implementa la administración de rangos sobre esas tablas con la misma semántica que el puerto (el servicio de rangos y sus guardas RN-BILL-008 no cambian). Un cambio de consecutivo nunca baja de un número ya asignado.
 - Llamar a `allocate` **fuera de cualquier transacción abierta**: usa una conexión propia y desde dentro de otra puede agotar el pool o bloquearse a sí mismo.
@@ -119,22 +147,24 @@ Una reserva abandonada (el proceso murió entre los pasos) la retoma la siguient
 
 ## Flujo de habilitación (negocio)
 
-> Con Alegra el alta se hace como se describe en «Alta de una empresa en Alegra»; el ciclo de estados de RN-BILL-006 es el mismo.
+> Con Alegra el alta se hace como se describe en «Alta de una empresa en Alegra»; los estados son los de RN-BILL-006.
+> **Alegra no pide documentos** (RUT, cámara de comercio): la habilitación no depende de los documentos del local.
 
 El proveedor habilita a la **plataforma**, que compra una bolsa de documentos y la reparte entre
-sus locales. Por eso las credenciales llegan al SUPER_ADMIN, no al local:
+sus locales. Cada local es una empresa asociada bajo el token de plataforma:
 
 1. El administrador crea su cuenta, verifica el correo y registra su local. Desde ese momento **puede vender
    sin facturación electrónica**.
-2. Si quiere facturar, sube sus documentos (RUT, cámara de comercio, etc., gestionados por el módulo `stores`)
-   y solicita la activación.
-3. El SUPER_ADMIN revisa los documentos y los tramita ante el proveedor.
-4. El proveedor asocia la empresa del local (pruebas y producción). El SUPER_ADMIN carga su `company.id` **por local** (`PUT …/billing/company-id`).
-5. El administrador del local hace su trámite de resolución ante la DIAN, registra su rango de numeración
-   desde el sistema y **elige cuál usa para facturar** (`POST /api/v1/billing/numbering-ranges/{id}/set-default`).
-   El primer rango que registra un local sin rango configurado queda elegido automáticamente. El SUPER_ADMIN
-   no necesita conocer el rango: solo lo ve (`sandboxNumberingRangeId` / `productionNumberingRangeId`).
-6. Con la empresa asociada activa + rango válido, el local emite facturas electrónicas.
+2. Si quiere facturar, usa el asistente (`/api/v1/billing/setup`, ver «Asistente de habilitación»): al guardar sus
+   datos fiscales el local pasa a `IN_SETUP` en producción sin subir documentos y el sistema crea su empresa en el
+   proveedor (`POST /api/v1/billing/activation/request` sigue existiendo y solo lo deja en `IN_SETUP`).
+3. El dueño asocia a Alegra como proveedor tecnológico en el portal de la DIAN y escribe en el asistente el
+   TestSetId que le entrega la DIAN; el sistema lo envía y consulta la habilitación.
+4. Con la DIAN en `AUTHORIZED`, el asistente importa sus resoluciones de numeración y crea los rangos de notas.
+   El primer rango que registra un local sin rango configurado queda elegido; el administrador puede elegir otro
+   (`POST /api/v1/billing/numbering-ranges/{id}/set-default`) y la siguiente factura ya lo usa.
+5. Con la habilitación de la DIAN y una numeración de facturas utilizable el local pasa solo a `ACTIVE` (actor
+   `system`) y emite facturas electrónicas. El SUPER_ADMIN ya no carga nada: monitorea, suspende y reactiva.
 
 ---
 
@@ -172,23 +202,34 @@ sus locales. Por eso las credenciales llegan al SUPER_ADMIN, no al local:
 
 ### RN-BILL-006 — Ciclo de Habilitación por Local
 ```
-NOT_REQUESTED → DOCUMENTS_SUBMITTED → AWAITING_PROVIDER → ACTIVE
-      ↑                  │                    │             │
-      └─── REJECTED ←────┴────────────────────┘   SUSPENDED ←┘
+NOT_REQUESTED → IN_SETUP → ACTIVE ⇄ SUSPENDED
+                    │                  ↑
+                    └──────────────────┘
 ```
 | Estado | Quién lo produce | Significado |
 |---|---|---|
 | `NOT_REQUESTED` | (por defecto, sin fila en BD) | El local vende sin facturación electrónica |
-| `DOCUMENTS_SUBMITTED` | ADMINISTRATOR del local | Documentos enviados, esperando revisión del back office |
-| `AWAITING_PROVIDER` | SUPER_ADMIN | Documentos aprobados y tramitados; se espera la asociación de la empresa en el proveedor |
-| `ACTIVE` | SUPER_ADMIN | Credenciales cargadas y verificadas; el local ya puede facturar |
-| `REJECTED` | SUPER_ADMIN | Solicitud rechazada (exige motivo). El local puede corregir y reenviar |
-| `SUSPENDED` | SUPER_ADMIN | Facturación pausada (exige motivo). Reactivable |
+| `IN_SETUP` | ADMINISTRATOR del local | Habilitación en curso: datos fiscales, habilitación ante la DIAN y numeración. No pide documentos |
+| `ACTIVE` | El asistente (actor `system`) o el SUPER_ADMIN | Empresa del local configurada en el proveedor, habilitada por la DIAN y con numeración de facturas; el local ya puede facturar |
+| `SUSPENDED` | SUPER_ADMIN | Facturación pausada (exige motivo), desde `IN_SETUP` o `ACTIVE`. Reactivable a `ACTIVE` |
 
 - No se puede saltar pasos: cada transición se valida contra `BillingActivationStatus.canTransitionTo(...)`.
-- Pasar a `ACTIVE` exige que la cuenta del entorno activo esté configurada (`isAccountConfigured`: token de plataforma del entorno y `company.id` del local). `REJECTED` y `SUSPENDED` exigen `reason`; al salir de esos estados el motivo se limpia.
-- Cada cambio hecho por el SUPER_ADMIN notifica al local (`BILLING_STATUS_CHANGED` vía `NotificationFacade`).
-  La solicitud inicial, que origina el propio local, no se autonotifica.
+  Los estados se validan solo en Java: `V37` retiró el `CHECK` de `store_billing_config.status` y llevó a
+  `IN_SETUP` los locales que estaban en los estados retirados (`DOCUMENTS_SUBMITTED`, `AWAITING_PROVIDER`, `REJECTED`).
+- Pasar a `ACTIVE` (desde `IN_SETUP` o al reactivar desde `SUSPENDED`) exige, en el entorno del local: (1) la cuenta
+  configurada (`isAccountConfigured`: token de plataforma del entorno y `company.id` del local; el mensaje dice cuál
+  falta), (2) la habilitación de la DIAN en `AUTHORIZED` (`readEnablement`; mensaje distinto si no se inició, si
+  está pendiente o si la DIAN respondió otra cosa) y (3) un rango de facturas utilizable (`hasUsableInvoiceRange`:
+  activo, vigente y con cupo). La habilitación se consulta al proveedor **antes** de abrir la transacción corta que
+  valida y guarda el cambio (`transition` no es transaccional; nunca llamarlo dentro de otra transacción).
+  `SUSPENDED` exige `reason`; al salir de ese estado el motivo se limpia.
+- **Cambio de entorno** (`switchEnvironment`): en cualquier estado, el entorno destino necesita la cuenta configurada
+  y un rango de facturas utilizable. Si el entorno cambia se notifica al local (`BILLING_STATUS_CHANGED`, enlace
+  `/invoicing?tab=activation`) diciendo cuál quedó activo; en `SANDBOX` las facturas son de prueba.
+- `requestActivation` (ADMINISTRATOR): `NOT_REQUESTED` → `IN_SETUP`; repetirla en `IN_SETUP` no cambia nada; desde
+  `ACTIVE` o `SUSPENDED` responde error.
+- Pasar a `ACTIVE` o `SUSPENDED` notifica al local (`BILLING_STATUS_CHANGED` vía `NotificationFacade`, enlace
+  `/invoicing?tab=activation`). Pasar a `IN_SETUP` no notifica.
 
 ### RN-BILL-007 — (Retirada) Cifrado de Secretos en Reposo
 - Regla de las credenciales de Factus. `V36` las borró y se eliminaron `SecretCryptoConverter` y la clave `BILLING_ENCRYPTION_KEY`: con Alegra no hay secretos por local en la base.
@@ -290,9 +331,11 @@ El mensaje del proveedor se propaga al cliente (truncado a 500 caracteres) para 
 - `GET /api/v1/billing/invoices` — historial paginado de facturas del local, filtrable por estado.
 
 ### 2. Rangos de Numeración DIAN (`BillingNumberingRangeController`)
-> Con Alegra estos endpoints trabajan sobre los rangos locales (ver «Numeración local»); `GET …/dian` todavía no está disponible con Alegra (501).
+> Con Alegra estos endpoints trabajan sobre los rangos locales (ver «Numeración local»).
 
-- `GET /api/v1/billing/numbering-ranges/dian` — resoluciones asociadas al software ante la DIAN.
+- `GET /api/v1/billing/numbering-ranges/dian` — resoluciones que la DIAN tiene para el NIT del local (con Alegra,
+  `listResolutions` con el NIT de sus datos fiscales; sin `id` porque aún no son rangos registrados). En el entorno de
+  pruebas responde una lista vacía; en producción sin datos fiscales responde 409.
 - `GET /api/v1/billing/numbering-ranges` — rangos registrados para el local.
 - `GET /api/v1/billing/numbering-ranges/{id}` — detalle de un rango (`null` → 404 si no existe).
 - `POST /api/v1/billing/numbering-ranges` — registrar una resolución DIAN. Body: `document`, `prefix`,
@@ -305,19 +348,27 @@ El mensaje del proveedor se propaga al cliente (truncado a 500 caracteres) para 
   del local. Devuelve el rango. 404 si no existe en la cuenta del local, 409 si está inactivo o vencido.
 
 ### 3. Habilitación — Back Office (`StoreBillingConfigController`, SUPER_ADMIN)
-- `GET /api/v1/backoffice/billing?status=DOCUMENTS_SUBMITTED` — cola de revisión por etapa.
+- `GET /api/v1/backoffice/billing?status=IN_SETUP` — locales en una etapa (seguimiento).
 - `GET /api/v1/backoffice/stores/{storeId}/billing` — estado del local (sin secretos).
 - `PUT /api/v1/backoffice/stores/{storeId}/billing/company-id?environment=SANDBOX|PRODUCTION` — (Alegra) guarda el
   `company.id` del local en ese entorno. Body `{ "companyId": "…" }` (máx. 64 caracteres). Idempotente; solo SUPER_ADMIN;
   la respuesta indica si está cargado, no su valor.
 - `POST /api/v1/backoffice/stores/{storeId}/billing/test-connection?environment=…` — lee la empresa del local en Alegra. No activa nada. Nunca lanza error por rechazo: devuelve `{success, environment, message}`.
-- `PATCH /api/v1/backoffice/stores/{storeId}/billing/environment?environment=…` — cambiar entorno activo.
+- `PATCH /api/v1/backoffice/stores/{storeId}/billing/environment?environment=…` — cambiar entorno activo. En cualquier
+  estado exige la cuenta y un rango de facturas utilizable en el destino; notifica al local (RN-BILL-006).
 - `POST /api/v1/backoffice/stores/{storeId}/billing/transition` — cambiar etapa. Body: `{status, reason}`.
 
 ### 4. Habilitación — Local (`BillingActivationController`)
 - `GET /api/v1/billing/activation/status` — estado de facturación del local autenticado (sin credenciales).
 - `GET /api/v1/billing/activation/summary` — para el POS, cualquier rol del local (también `SELLER`): `{ active, environment }`. El cobro solo ofrece la factura electrónica si `active` y marca «Modo prueba» en `SANDBOX`.
-- `POST /api/v1/billing/activation/request` — solicitar activación. Exige al menos un documento ya subido.
+- `POST /api/v1/billing/activation/request` — empezar la habilitación (ADMINISTRATOR): `NOT_REQUESTED` → `IN_SETUP`. No pide documentos; idempotente en `IN_SETUP` (RN-BILL-006).
+
+### 4b. Asistente de habilitación (`BillingSetupController`)
+Detalle en «Asistente de habilitación». El local sale siempre de la solicitud (`TenantContext`); sin local, 409.
+- `GET /api/v1/billing/setup` — avance paso a paso (ADMINISTRATOR, SUPERVISOR). Puede activar el local si ya cumple todo.
+- `PUT /api/v1/billing/setup/fiscal-profile` — guardar los datos del RUT y registrar la empresa en producción (ADMINISTRATOR).
+- `POST /api/v1/billing/setup/dian-enablement` — enviar el TestSetId de la DIAN (ADMINISTRATOR).
+- `POST /api/v1/billing/setup/numbering/import` — importar las resoluciones de la DIAN y crear los rangos de notas (ADMINISTRATOR).
 
 ### 5. Notas Crédito Electrónicas (`BillingCreditNoteController`)
 - `POST /api/v1/billing/credit-notes/validate` — crear y validar nota crédito ante Alegra y la DIAN.
@@ -358,6 +409,7 @@ El mensaje del proveedor se propaga al cliente (truncado a 500 caracteres) para 
 | attempts | INT | NOT NULL, DEFAULT 0 (`V34`): intentos desde el último reinicio manual |
 | processing_started_at | TIMESTAMP | NULLABLE (`V34`): reserva (lease) de la emisión en curso |
 | next_retry_at | TIMESTAMP | NULLABLE (`V34`): cuándo puede reintentarla el job; índice `(status, next_retry_at)` |
+| environment | VARCHAR(12) | NULLABLE (`V37`): entorno con el que se emitió (`SANDBOX` = de prueba). Se anota al reservar la emisión con el entorno del local, solo si aún no tiene; las anteriores a `V37` tomaron el entorno actual de su local |
 | created_at / updated_at | TIMESTAMP | NOT NULL |
 
 ### Tabla: `store_billing_config` (`V14__Store_Billing_Config.sql`)
@@ -366,8 +418,8 @@ Una fila por local (relación 1 a 1 con `stores`).
 | Campo | Tipo | Restricciones |
 |---|---|---|
 | store_id | BIGINT | PK, FK → stores(id) |
-| status | VARCHAR(30) | NOT NULL, DEFAULT 'NOT_REQUESTED', CHECK (ver RN-BILL-006) |
-| status_reason | VARCHAR(500) | NULLABLE (motivo de rechazo/suspensión) |
+| status | VARCHAR(30) | NOT NULL, DEFAULT 'NOT_REQUESTED'. Sin CHECK desde `V37`: se valida en Java (RN-BILL-006) |
+| status_reason | VARCHAR(500) | NULLABLE (motivo de la suspensión) |
 | environment | VARCHAR(12) | NOT NULL, DEFAULT 'SANDBOX', CHECK IN ('SANDBOX','PRODUCTION') |
 | sandbox_numbering_range_id | INT | NULLABLE |
 | production_numbering_range_id | INT | NULLABLE |
@@ -375,6 +427,27 @@ Una fila por local (relación 1 a 1 con `stores`).
 | created_at / updated_at | TIMESTAMP | NOT NULL |
 
 Índice: `IDX_store_billing_config_status` (cola de revisión del back office).
+
+### Tabla: `billing_company_profile` (`V37__Billing_Self_Service.sql`)
+Datos fiscales del local (los de su RUT) con los que se crea y actualiza su empresa en el proveedor. Una fila por local.
+
+| Campo | Tipo | Restricciones |
+|---|---|---|
+| store_id | BIGINT | PK, FK → stores(id) |
+| legal_name | VARCHAR(450) | NOT NULL (razón social) |
+| trade_name | VARCHAR(450) | NULLABLE (nombre comercial) |
+| nit | VARCHAR(30) | NOT NULL |
+| dv | VARCHAR(1) | NOT NULL (dígito de verificación) |
+| identification_type | VARCHAR(2) | NOT NULL, DEFAULT '31' (NIT) |
+| organization_type | INT | NOT NULL (1 jurídica, 2 natural) |
+| regime_code | VARCHAR(200) | NOT NULL |
+| economic_activity | VARCHAR(4) | NULLABLE (código CIIU) |
+| email | VARCHAR(255) | NOT NULL |
+| phone | VARCHAR(30) | NULLABLE |
+| address | VARCHAR(255) | NOT NULL |
+| city_code | VARCHAR(5) | NOT NULL (código DANE del municipio) |
+| department_code | VARCHAR(2) | NOT NULL (código DANE del departamento) |
+| created_at / updated_at | TIMESTAMP | NOT NULL |
 
 ### Tabla: `numbering_range_audit` (`V15__Numbering_Range_Audit.sql`, `V17__Numbering_Range_Audit_Set_Default.sql`)
 | Campo | Tipo | Restricciones |
@@ -473,6 +546,8 @@ Una fila por local (relación 1 a 1 con `stores`).
 |---|---|---|---|
 | Ver estado de facturación del propio local | - | ✓ | ✓ |
 | Solicitar activación | - | ✓ | - |
+| Ver el avance del asistente | - | ✓ | ✓ |
+| Datos fiscales, set de pruebas DIAN, importar numeración (asistente) | - | ✓ | - |
 | Ver cola de revisión / estado de cualquier local | ✓ | - | - |
 | Cargar credenciales / probar conexión | ✓ | - | - |
 | Cargar el `company.id` del proveedor (Alegra) | ✓ | - | - |
@@ -502,3 +577,9 @@ Una fila por local (relación 1 a 1 con `stores`).
 
 - **Vigencia y agotamiento del rango**: con Alegra `AlegraNumberAllocator` valida que el rango esté activo, vigente y con cupo antes de gastar un número. Falta la alerta de «rango próximo a agotarse» (umbral, a quién notifica, si usa `notifications`).
 - **Frontend**: no hay pantallas para ninguno de estos flujos todavía.
+- **Asistente**: (1) la importación deja activa una sola resolución de facturas (RN-BILL-008); las demás vigentes
+  salen en `skipped` y no se registran como inactivas. (2) Si Alegra crea la empresa y falla el guardado del
+  `company.id` (paso 3), la empresa queda sin asociar; al reintentar se crea otra o Alegra la rechaza por NIT
+  repetido, y hay que cargar su `company.id` a mano. (3) Sin verificar contra la producción real de Alegra (token
+  de producción pendiente). (4) Las notas crédito y débito aún guardan «Error en proveedor <nombre>: » en su mensaje
+  de error (las facturas ya dicen «No se pudo emitir la factura: »).

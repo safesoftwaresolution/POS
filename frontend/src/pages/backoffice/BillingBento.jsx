@@ -10,8 +10,7 @@ import {
   AlertCircle,
   X,
   RefreshCw,
-  ArrowLeftRight,
-  Ban
+  ArrowLeftRight
 } from 'lucide-react';
 import {
   listBackofficeBillingByStatusApi,
@@ -26,42 +25,36 @@ import useModal from '../../hooks/useModal';
 import useLoad from '../../hooks/useLoad';
 import asList from '../../utils/asList';
 
-const STATUSES = ['DOCUMENTS_SUBMITTED', 'AWAITING_PROVIDER', 'ACTIVE', 'REJECTED', 'SUSPENDED', 'NOT_REQUESTED'];
+const STATUSES = ['IN_SETUP', 'ACTIVE', 'SUSPENDED', 'NOT_REQUESTED'];
 
 const STATUS_LABELS = {
-  NOT_REQUESTED: 'Sin Solicitar',
-  DOCUMENTS_SUBMITTED: 'Docs. Enviados',
-  AWAITING_PROVIDER: 'Esperando al proveedor',
+  NOT_REQUESTED: 'Sin solicitar',
+  IN_SETUP: 'En configuración',
   ACTIVE: 'Activo',
-  REJECTED: 'Rechazado',
   SUSPENDED: 'Suspendido'
 };
 
 const STATUS_STYLES = {
   NOT_REQUESTED: 'bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300',
-  DOCUMENTS_SUBMITTED: 'bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/20',
-  AWAITING_PROVIDER: 'bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-400 border border-blue-500/20',
+  IN_SETUP: 'bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/20',
   ACTIVE: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20',
-  REJECTED: 'bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/20',
   SUSPENDED: 'bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/20'
 };
 
 // Espejo de BillingActivationStatus#canTransitionTo (backend/src/main/java/.../billing/dto/BillingActivationStatus.java).
 // El backend es quien valida de verdad; esto solo evita ofrecer botones que sabemos que van a fallar.
 const TRANSITIONS = {
-  NOT_REQUESTED: ['DOCUMENTS_SUBMITTED'],
-  DOCUMENTS_SUBMITTED: ['AWAITING_PROVIDER', 'REJECTED'],
-  AWAITING_PROVIDER: ['ACTIVE', 'REJECTED'],
+  NOT_REQUESTED: ['IN_SETUP'],
+  IN_SETUP: ['ACTIVE', 'SUSPENDED'],
   ACTIVE: ['SUSPENDED'],
-  REJECTED: ['DOCUMENTS_SUBMITTED'],
   SUSPENDED: ['ACTIVE']
 };
 
-const REASON_REQUIRED = new Set(['REJECTED', 'SUSPENDED']);
+const REASON_REQUIRED = new Set(['SUSPENDED']);
 
 export default function BillingBento() {
   const { notify, confirm } = useModal();
-  const [statusFilter, setStatusFilter] = useState('DOCUMENTS_SUBMITTED');
+  const [statusFilter, setStatusFilter] = useState('IN_SETUP');
   const { data: rows, loading, error: errorMsg, reload: reloadRows } = useLoad(
     () => asList(listBackofficeBillingByStatusApi(statusFilter)),
     [statusFilter],
@@ -184,7 +177,7 @@ export default function BillingBento() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-[#17171B] dark:text-white">Facturación Electrónica</h1>
-          <p className="text-xs text-ink-soft font-medium">Habilitación DIAN por local: revisión, empresa en el proveedor y etapa del proceso</p>
+          <p className="text-xs text-ink-soft font-medium">Habilitación DIAN por local: seguimiento, empresa en el proveedor y etapa del proceso</p>
         </div>
       </div>
 
@@ -337,12 +330,11 @@ export default function BillingBento() {
                           disabled={transitioning}
                           onClick={() => handleTransition(target)}
                           className={`px-3 py-1.5 rounded-xl text-[11px] font-extrabold cursor-pointer disabled:opacity-50 flex items-center gap-1.5 ${
-                            target === 'REJECTED' || target === 'SUSPENDED'
+                            target === 'SUSPENDED'
                               ? 'bg-white dark:bg-line border border-red-200 dark:border-red-800/40 text-red-600 dark:text-red-400'
                               : 'bg-solid hover:bg-solid-hover text-solid-ink shadow-sm shadow-[#0A0A0A]/10'
                           }`}
                         >
-                          {target === 'REJECTED' && <Ban size={14} />}
                           {target === 'SUSPENDED' && <PauseCircle className="w-3.5 h-3.5" />}
                           {target === 'ACTIVE' && <CheckCircle2 className="w-3.5 h-3.5" />}
                           {STATUS_LABELS[target]}

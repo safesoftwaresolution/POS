@@ -25,6 +25,12 @@ class MockBillingAdapterAccountTest {
     }
 
     @Test
+    void theMockAlwaysHasTheInvoiceRangeItLists() {
+        assertTrue(adapter.hasUsableInvoiceRange(1L, BillingEnvironment.PRODUCTION));
+        assertEquals(adapter.listNumberingRanges().size(), adapter.countInvoiceRanges(1L, BillingEnvironment.SANDBOX));
+    }
+
+    @Test
     void displayNameIsMock() {
         assertEquals("Mock", adapter.displayName());
     }

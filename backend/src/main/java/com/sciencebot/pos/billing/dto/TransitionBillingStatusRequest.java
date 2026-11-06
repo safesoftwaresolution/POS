@@ -9,6 +9,6 @@ public record TransitionBillingStatusRequest(
         @NotNull(message = "El estado destino es obligatorio")
         BillingActivationStatus status,
 
-        @Schema(description = "Motivo. Obligatorio para REJECTED y SUSPENDED", example = "El RUT no coincide con el nombre del local")
+        @Schema(description = "Motivo. Obligatorio para SUSPENDED", example = "Uso indebido de la facturación")
         String reason
 ) {}

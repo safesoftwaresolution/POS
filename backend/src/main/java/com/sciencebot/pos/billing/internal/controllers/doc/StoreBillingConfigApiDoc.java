@@ -19,7 +19,7 @@ import java.util.List;
 public interface StoreBillingConfigApiDoc {
 
     @Operation(summary = "Locales en una etapa del proceso de habilitación",
-            description = "Cola de revisión: por ejemplo, ?status=DOCUMENTS_SUBMITTED para ver quién espera aprobación.")
+            description = "Seguimiento: por ejemplo, ?status=IN_SETUP para ver qué locales están configurando su facturación.")
     ResponseEntity<List<BillingActivationDto>> listByStatus(BillingActivationStatus status);
 
     @Operation(summary = "Estado de facturación electrónica de un local",
@@ -44,7 +44,8 @@ public interface StoreBillingConfigApiDoc {
     );
 
     @Operation(summary = "Cambiar el entorno con el que factura el local",
-            description = "Exige credenciales completas del entorno destino cuando el local ya está ACTIVE.")
+            description = "En cualquier estado, el entorno destino necesita la empresa del local y una numeración de facturas "
+                    + "vigente. Si cambia, avisa al local qué entorno quedó activo (en SANDBOX las facturas son de prueba).")
     ResponseEntity<BillingActivationDto> switchEnvironment(
             Long storeId,
             BillingEnvironment environment,
@@ -53,10 +54,11 @@ public interface StoreBillingConfigApiDoc {
 
     @Operation(summary = "Cambiar la etapa del proceso de habilitación",
             description = """
-                    Solo se permiten los pasos definidos: DOCUMENTS_SUBMITTED → AWAITING_PROVIDER → ACTIVE,
-                    con REJECTED (desde DOCUMENTS_SUBMITTED o AWAITING_PROVIDER) y SUSPENDED (desde ACTIVE)
-                    como salidas. REJECTED y SUSPENDED exigen 'reason'. Pasar a ACTIVE exige credenciales
-                    completas del entorno activo del local. Notifica al local del cambio.
+                    Solo se permiten los pasos definidos: NOT_REQUESTED → IN_SETUP → ACTIVE ⇄ SUSPENDED,
+                    y SUSPENDED también desde IN_SETUP. SUSPENDED exige 'reason'. Pasar a ACTIVE (también desde
+                    SUSPENDED) exige, en el entorno del local, su empresa en el proveedor, la habilitación de la
+                    DIAN en AUTHORIZED y una numeración de facturas vigente (409 con el motivo). Notifica al local
+                    cuando queda ACTIVE o SUSPENDED.
                     """)
     ResponseEntity<BillingActivationDto> transition(
             Long storeId,

@@ -24,7 +24,7 @@ export default function ActivationTab({ role, activation, ranges, rangesLoading,
   const [editingCurrent, setEditingCurrent] = useState(null);
   const [currentValue, setCurrentValue] = useState('');
 
-  const canRequest = isAdmin && (activation?.status === 'NOT_REQUESTED' || activation?.status === 'REJECTED');
+  const canRequest = isAdmin && activation?.status === 'NOT_REQUESTED';
 
   const handleRequestActivation = async () => {
     setRequesting(true);
@@ -32,7 +32,7 @@ export default function ActivationTab({ role, activation, ranges, rangesLoading,
       await requestBillingActivationApi();
       await onReload();
     } catch (err) {
-      notify('Error solicitando la activación: ' + err.message);
+      notify('Error empezando la habilitación: ' + err.message);
     } finally {
       setRequesting(false);
     }
@@ -164,19 +164,14 @@ export default function ActivationTab({ role, activation, ranges, rangesLoading,
         )}
 
         {canRequest && (
-          <div className="space-y-2">
-            <button
-              type="button"
-              onClick={handleRequestActivation}
-              disabled={requesting}
-              className="px-4 py-2.5 bg-solid hover:bg-solid-hover disabled:opacity-50 text-solid-ink rounded-2xl text-xs font-bold cursor-pointer"
-            >
-              {requesting ? 'Enviando...' : 'Solicitar activación'}
-            </button>
-            <p className="text-[11px] text-ink-muted">
-              Necesitas al menos un documento (RUT, cámara de comercio, etc.) cargado en <a href="/documents" className="text-brand underline">Documentos</a> antes de solicitar.
-            </p>
-          </div>
+          <button
+            type="button"
+            onClick={handleRequestActivation}
+            disabled={requesting}
+            className="px-4 py-2.5 bg-solid hover:bg-solid-hover disabled:opacity-50 text-solid-ink rounded-2xl text-xs font-bold cursor-pointer"
+          >
+            {requesting ? 'Empezando...' : 'Empezar la habilitación'}
+          </button>
         )}
       </div>
 

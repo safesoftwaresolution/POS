@@ -34,16 +34,50 @@ class UserServiceImplTest {
     @Mock private com.sciencebot.pos.users.internal.repositories.UserDeletionAuditRepository deletionAuditRepository;
     @Mock private org.springframework.context.ApplicationEventPublisher eventPublisher;
     @Mock private com.sciencebot.pos.storage.StorageFacade storageFacade;
+    @Mock private org.springframework.beans.factory.ObjectProvider<com.sciencebot.pos.stores.StoreFacade> storeFacadeProvider;
+    @Mock private com.sciencebot.pos.stores.StoreFacade storeFacade;
     @InjectMocks private UserServiceImpl userService;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
+        when(storeFacadeProvider.getIfAvailable()).thenReturn(storeFacade);
     }
 
     @AfterEach
     void tearDown() {
         TenantContext.clear();
+    }
+
+    private User storeUser(Long storeId) {
+        User user = new User();
+        user.setUsername("seller01");
+        user.setPassword("encoded");
+        user.setRole("SELLER");
+        user.setStoreId(storeId);
+        when(userRepository.findByUsername("seller01")).thenReturn(Optional.of(user));
+        return user;
+    }
+
+    @Test
+    void loadUserByUsername_StoreUser_CarriesTheStatusOfItsStore() {
+        storeUser(9L);
+        when(storeFacade.getStoreStatus(9L)).thenReturn("SUSPENDED");
+
+        var details = (com.sciencebot.pos.config.security.PosUserDetails) userService.loadUserByUsername("seller01");
+
+        assertEquals(9L, details.getStoreId());
+        assertEquals("SUSPENDED", details.getStoreStatus());
+    }
+
+    @Test
+    void loadUserByUsername_UserWithoutStore_HasNoStoreStatusAndSkipsTheLookup() {
+        storeUser(null);
+
+        var details = (com.sciencebot.pos.config.security.PosUserDetails) userService.loadUserByUsername("seller01");
+
+        assertNull(details.getStoreStatus());
+        verifyNoInteractions(storeFacade);
     }
 
     @Test
@@ -455,7 +489,7 @@ class UserServiceImplTest {
         when(userRepository.existsByUsername("carlos.m")).thenReturn(true);
 
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> userService.registerPendingAdmin(command));
-        assertTrue(ex.getMessage().contains("usuario ya esta registrado"));
+        assertTrue(ex.getMessage().contains("usuario ya está registrado"));
     }
 
     @Test

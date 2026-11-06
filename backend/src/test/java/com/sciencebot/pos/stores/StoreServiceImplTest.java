@@ -44,6 +44,7 @@ class StoreServiceImplTest {
     @Mock private com.sciencebot.pos.stores.internal.repositories.StoreUserAuditRepository storeUserAuditRepository;
     @Mock private com.sciencebot.pos.stores.internal.repositories.PlanRepository planRepository;
     @Mock private com.sciencebot.pos.stores.internal.services.StoreApprovalMailer approvalMailer;
+    @Mock private com.sciencebot.pos.settings.SettingsFacade settingsFacade;
     @InjectMocks private StoreServiceImpl storeService;
 
     @BeforeEach
@@ -176,6 +177,8 @@ class StoreServiceImplTest {
         assertNotNull(result);
         assertEquals(9L, result.id());
         verify(userFacade, times(1)).assignStore(5L, 9L);
+        verify(settingsFacade).seedSettings(9L, new com.sciencebot.pos.settings.SettingsDto(
+                "Tienda 1", "Calle 1", "3001234567", "900123", "tienda1@test.com", null));
     }
 
     @Test
@@ -213,6 +216,46 @@ class StoreServiceImplTest {
         assertNotNull(result);
         assertEquals("REJECTED", result.status());
         assertEquals("Documentos incompletos", result.rejectionReason());
+    }
+
+    @Test
+    void rejectStore_EmailsItsAdministratorsWithTheReason() {
+        storeInStatus("PENDING_VERIFICATION");
+        when(userFacade.listActiveByStoreAndRoles(1L, List.of("ADMINISTRATOR"))).thenReturn(List.of(
+                new UserDto(7L, "Dueno", "dueno", "dueno@test.com", "ADMINISTRATOR", true, 1L, true)));
+
+        storeService.rejectStore(1L, "Falta el NIT");
+
+        verify(approvalMailer).sendRejected("Arqueo", "Falta el NIT", List.of("dueno@test.com"));
+    }
+
+    @Test
+    void resubmitOwnStore_RejectedStore_GoesBackToPendingClearsTheReasonAndAudits() {
+        StoreEntity store = storeInStatus("REJECTED");
+        store.setRejectionReason("Falta el NIT");
+        when(userFacade.findByUsername("dueno")).thenReturn(Optional.of(
+                new UserDto(7L, "Dueno", "dueno", "dueno@test.com", "ADMINISTRATOR", true, 1L, true)));
+
+        storeService.resubmitOwnStore("dueno");
+
+        assertEquals("PENDING_VERIFICATION", store.getStatus());
+        assertNull(store.getRejectionReason());
+        verify(storeRepository).save(store);
+        verify(statusAuditRepository).save(argThat(a -> "REJECTED".equals(a.getPreviousStatus())
+                && "PENDING_VERIFICATION".equals(a.getNewStatus())));
+    }
+
+    @Test
+    void resubmitOwnStore_StoreThatIsNotRejected_IsRefused() {
+        StoreEntity store = storeInStatus("PENDING_VERIFICATION");
+        when(userFacade.findByUsername("dueno")).thenReturn(Optional.of(
+                new UserDto(7L, "Dueno", "dueno", "dueno@test.com", "ADMINISTRATOR", true, 1L, true)));
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> storeService.resubmitOwnStore("dueno"));
+
+        assertEquals("Solo un local rechazado se puede reenviar a revisión.", ex.getMessage());
+        assertEquals("PENDING_VERIFICATION", store.getStatus());
+        verify(storeRepository, never()).save(any());
     }
 
     private StoreEntity storeWithStatus(String status) {

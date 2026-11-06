@@ -14,6 +14,8 @@ public interface StoreFacade {
     StoreDto changeStatus(Long id, String newStatus);
     StoreDto verifyEmail(Long id);
     StoreDto getById(Long id);
+    /** Estado del local (ACTIVE, PENDING_VERIFICATION...) o null si no existe; consulta liviana para el filtro JWT. */
+    String getStoreStatus(Long storeId);
     /** Auto-registro self-service: crea el local del ADMINISTRATOR autenticado (que aun no tiene uno). */
     StoreDto registerOwnStore(String ownerUsername, CreateStoreCommand command);
     /** Local del ADMINISTRATOR autenticado. */
@@ -26,6 +28,8 @@ public interface StoreFacade {
     StoreDocumentDto uploadOwnDocument(String ownerUsername, String documentType, MultipartFile file);
     /** Rechaza un local pendiente con un motivo obligatorio. */
     StoreDto rejectStore(Long id, String reason);
+    /** Reenvía a revisión el local rechazado del ADMINISTRATOR autenticado: vuelve a PENDING_VERIFICATION sin motivo. */
+    StoreDto resubmitOwnStore(String ownerUsername);
     /**
      * Elimina definitivamente un local con todos sus datos; sus administradores quedan sin local (no se borran).
      * Rechaza locales con facturas electrónicas validadas. Salvo un rechazado sin operación, exige el nombre exacto

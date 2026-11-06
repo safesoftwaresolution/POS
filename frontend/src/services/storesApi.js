@@ -35,3 +35,13 @@ export async function uploadOwnStoreDocumentApi(documentType, file) {
   formData.append('file', file);
   return uploadFileApi('/stores/me/documents', formData);
 }
+
+// Reenvía a revisión un local rechazado (REJECTED → PENDING_VERIFICATION). Devuelve el local actualizado.
+export async function resubmitOwnStoreApi() {
+  return fetchApi('/stores/me/resubmit', { method: 'POST' });
+}
+
+// Estado del local (`{ status }`) para cualquier rol del local; responde aunque el local no esté activo.
+export async function getOwnStoreStatusApi() {
+  return fetchApi('/stores/me/status');
+}

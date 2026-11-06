@@ -22,11 +22,12 @@
 
 ### RN-AUTH-004 — Verificación de Correo en el Auto-registro
 - `POST /auth/register` crea un `ADMINISTRATOR` **sin local** (`store_id = null`) y con `email_verified = false`, y envía un enlace con un token de un solo uso (hash SHA-256 en `email_verification_tokens`, vigencia `EMAIL_VERIFICATION_EXPIRATION_MS`, 24 h por defecto).
-- Mientras el correo no está verificado, el login responde `403` ("verifica tu correo").
+- Mientras el correo no está verificado, el login responde `403 {"error":"EmailNotVerified","message":"..."}` (`EmailNotVerifiedException`); el frontend usa el código, no el texto, para ofrecer reenviar el enlace.
 - `GET /auth/verify-email?token=` consume el token, marca `email_verified = true` y **autologuea** (setea ambas cookies).
 
 ### RN-AUTH-005 — Administrador sin local
 - Un `ADMINISTRATOR` con `storeId = null` solo puede usar `/api/v1/auth/**` y registrar su local (`POST /api/v1/stores`, `GET/PUT /api/v1/stores/me*`). Cualquier otra ruta responde `403 StoreOnboardingRequired` desde `JwtAuthenticationFilter`.
+- **Local no activo**: cualquier rol del local (`ADMINISTRATOR`, `SUPERVISOR`, `SELLER`) de un local que no está `ACTIVE` (`PENDING_VERIFICATION`, `REJECTED`, `SUSPENDED`, `INACTIVE` o desconocido) recibe `403 {"error":"StoreNotActive","status":"...","message":"..."}` desde `JwtAuthenticationFilter`, salvo en `/api/v1/auth/**`, las rutas de onboarding, `GET/PUT /api/v1/stores/me`, `GET /api/v1/stores/me/status`, `GET/POST /api/v1/stores/me/documents`, `POST /api/v1/stores/me/resubmit`, `/api/v1/legal/**` y `/api/v1/support/**`. El estado lo carga `UserServiceImpl.loadUserByUsername` vía `StoreFacade.getStoreStatus` (una consulta liviana por petición) en `PosUserDetails.storeStatus`; el bloqueo aplica en la siguiente petición tras cambiar el estado, sin esperar a que venza el token. El frontend (`RequireActiveStore`) muestra la pantalla de estado a todos los roles y `services/http.js` emite `store:not-active` al recibir ese 403.
 
 ## Requerimientos Funcionales
 
@@ -69,7 +70,7 @@
 
 ### GET /api/v1/auth/verify-email?token=
 - **Permisos**: Público
-- **Response 200**: igual que login (autologuea). **Errores**: 400/401 si el token es inválido, usado o expirado.
+- **Response 200**: igual que login (autologuea). **Errores**: `400 {"error":"InvalidVerificationToken","message":"..."}` (`InvalidVerificationTokenException`) con un mensaje distinto si el enlace falta, no existe (o fue reemplazado), ya se usó o venció. La pantalla `/verify-email` muestra ese mensaje, ofrece pedir un enlace nuevo y, si la cuenta ya tiene local, entra al POS en vez de al alta del local.
 
 ### POST /api/v1/auth/resend-verification
 - **Permisos**: Público
@@ -82,6 +83,10 @@ Todos los correos (verificación, recuperación de contraseña y aprobación de 
 ### POST /api/v1/backoffice/onboarding/pending-users/{userId}/resend-verification
 - **Permisos**: `SUPER_ADMIN` (controlador en el módulo `backoffice`, que llega a `auth` solo por `AuthFacade.resendVerificationToUser`).
 - **Response**: `204 No Content`. A diferencia del reenvío público, informa de los problemas: `400` si la cuenta ya está verificada o se envió otro correo hace menos de un minuto (el enfriamiento se comparte con el reenvío público), `409` si el proveedor de correo falla (un fallo no inicia el enfriamiento, así que se puede reintentar).
+
+### POST /api/v1/backoffice/onboarding/pending-users/{userId}/verify
+- **Permisos**: `SUPER_ADMIN` (vía `AuthFacade.verifyAccountManually`).
+- **Response**: `204 No Content`. Marca el correo como verificado sin el enlace (cuando no le llega) e invalida los enlaces pendientes; la persona ya puede iniciar sesión y registrar su local. `400` si ya estaba verificada, `404` si no existe. `GET /api/v1/backoffice/onboarding/stats` incluye `emailProvider` (`smtp` o `log`) y el backoffice advierte cuando es `log`.
 
 ### POST /api/v1/auth/forgot-password
 - **Permisos**: Público

@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { Clock, Users, Store, Check, X, AlertCircle, Mail, CheckCircle2, Send, UserCheck, Trash2 } from 'lucide-react';
 import useLoad from '../../hooks/useLoad';
+import useModal from '../../hooks/useModal';
 import {
   getPendingUsersApi,
   getVerifiedUsersApi,
   getOnboardingStatsApi,
   resendUserVerificationApi,
   deletePendingUserApi,
+  verifyPendingUserApi,
 } from '../../services/backoffice/onboardingApi';
 import {
   getBackofficeStoresApi,
@@ -56,6 +58,8 @@ export default function OnboardingBento() {
   const [errorMsg, setErrorMsg] = useState('');
   const [infoMsg, setInfoMsg] = useState('');
   const [resendingId, setResendingId] = useState(null);
+  const [verifyingId, setVerifyingId] = useState(null);
+  const { confirm } = useModal();
   const [rejectingStore, setRejectingStore] = useState(null);
   const [rejectionReason, setRejectionReason] = useState('');
 
@@ -70,6 +74,27 @@ export default function OnboardingBento() {
       setErrorMsg(err.message || 'No se pudo reenviar el correo.');
     } finally {
       setResendingId(null);
+    }
+  };
+
+  const handleVerify = async (user) => {
+    const ok = await confirm(`${user.email} podrá iniciar sesión y registrar su local sin abrir el enlace del correo.`, {
+      title: '¿Marcar el correo como verificado?',
+      confirmText: 'Marcar verificado',
+      danger: false,
+    });
+    if (!ok) return;
+    setErrorMsg('');
+    setInfoMsg('');
+    setVerifyingId(user.id);
+    try {
+      await verifyPendingUserApi(user.id);
+      setInfoMsg(`Correo de ${user.username} marcado como verificado.`);
+      reload();
+    } catch (err) {
+      setErrorMsg(err.message || 'No se pudo marcar el correo como verificado.');
+    } finally {
+      setVerifyingId(null);
     }
   };
 
@@ -140,6 +165,16 @@ export default function OnboardingBento() {
         </div>
       )}
 
+      {stats && stats.emailProvider !== 'smtp' && (
+        <div className="p-3 bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800/40 rounded-xl text-xs font-bold flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          <span>
+            El envío de correos está desactivado (EMAIL_PROVIDER={stats.emailProvider || 'log'}): los enlaces de verificación y los avisos
+            de aprobación solo quedan en el log del servidor. Configura SMTP o marca a los usuarios como verificados a mano.
+          </span>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <MetricCard label="Usuarios sin verificar" value={stats?.pendingUsers ?? '—'} icon={Users} accent="bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400" />
         <MetricCard label="Locales pendientes" value={stats?.pendingStores ?? '—'} icon={Clock} accent="bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400" />
@@ -184,6 +219,13 @@ export default function OnboardingBento() {
                         className="px-3 py-1.5 bg-solid hover:bg-solid-hover disabled:opacity-50 text-solid-ink rounded-xl text-[11px] font-bold inline-flex items-center gap-1 cursor-pointer"
                       >
                         <Send className="w-3.5 h-3.5" /> {resendingId === u.id ? 'Enviando...' : 'Reenviar correo'}
+                      </button>
+                      <button
+                        onClick={() => handleVerify(u)}
+                        disabled={verifyingId === u.id}
+                        className="ml-2 px-3 py-1.5 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 disabled:opacity-50 rounded-xl text-[11px] font-bold inline-flex items-center gap-1 cursor-pointer"
+                      >
+                        <UserCheck className="w-3.5 h-3.5" /> {verifyingId === u.id ? 'Verificando...' : 'Marcar verificado'}
                       </button>
                       <button
                         onClick={() => setDeleting({ kind: 'user', item: u })}

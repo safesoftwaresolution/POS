@@ -18,6 +18,8 @@ import com.sciencebot.pos.stores.internal.repositories.StoreStatusAuditRepositor
 import com.sciencebot.pos.stores.internal.repositories.StoreUserAuditRepository;
 import com.sciencebot.pos.notifications.CreateNotificationCommand;
 import com.sciencebot.pos.notifications.NotificationFacade;
+import com.sciencebot.pos.settings.SettingsDto;
+import com.sciencebot.pos.settings.SettingsFacade;
 import com.sciencebot.pos.storage.StorageFacade;
 import com.sciencebot.pos.storage.StorageUploadResult;
 import com.sciencebot.pos.users.UserDto;
@@ -61,6 +63,7 @@ public class StoreServiceImpl implements StoreFacade {
     private final StoreUserAuditRepository storeUserAuditRepository;
     private final PlanRepository planRepository;
     private final StoreApprovalMailer approvalMailer;
+    private final SettingsFacade settingsFacade;
 
     public StoreServiceImpl(StoreRepository storeRepository,
                             StoreCategoryRepository categoryRepository,
@@ -74,7 +77,8 @@ public class StoreServiceImpl implements StoreFacade {
                             StorePurgeDao storePurgeDao,
                             StoreUserAuditRepository storeUserAuditRepository,
                             PlanRepository planRepository,
-                            StoreApprovalMailer approvalMailer) {
+                            StoreApprovalMailer approvalMailer,
+                            SettingsFacade settingsFacade) {
         this.storeRepository = storeRepository;
         this.categoryRepository = categoryRepository;
         this.documentRepository = documentRepository;
@@ -88,6 +92,7 @@ public class StoreServiceImpl implements StoreFacade {
         this.storeUserAuditRepository = storeUserAuditRepository;
         this.planRepository = planRepository;
         this.approvalMailer = approvalMailer;
+        this.settingsFacade = settingsFacade;
     }
 
     @Override
@@ -117,10 +122,15 @@ public class StoreServiceImpl implements StoreFacade {
     }
 
     @Override
+    public String getStoreStatus(Long storeId) {
+        return storeId == null ? null : storeRepository.findStatusById(storeId).orElse(null);
+    }
+
+    @Override
     @Transactional
     public StoreDto createStore(CreateStoreCommand command) {
         if (storeRepository.existsByEmail(command.email())) {
-            throw new IllegalArgumentException("El correo ya esta registrado para otro local.");
+            throw new IllegalArgumentException("El correo ya está registrado para otro local.");
         }
         StoreEntity entity = new StoreEntity();
         entity.setName(command.name());
@@ -149,7 +159,7 @@ public class StoreServiceImpl implements StoreFacade {
         entity.setAddress(command.address());
         entity.setTaxId(command.taxId());
         if (!entity.getEmail().equalsIgnoreCase(command.email()) && storeRepository.existsByEmail(command.email())) {
-            throw new IllegalArgumentException("El correo ya esta registrado para otro local.");
+            throw new IllegalArgumentException("El correo ya está registrado para otro local.");
         }
         entity.setEmail(command.email());
         return toStoreDto(storeRepository.save(entity));
@@ -181,17 +191,32 @@ public class StoreServiceImpl implements StoreFacade {
      * transacción confirma, para no avisar de una aprobación que luego se revierte.
      */
     private void notifyStoreApproved(StoreEntity store) {
+        List<String> to = reviewRecipients(store);
+        if (to.isEmpty()) {
+            return;
+        }
+        String name = store.getName();
+        runAfterCommit(() -> approvalMailer.sendApproved(name, to));
+    }
+
+    /** Igual que {@link #notifyStoreApproved}, pero para el rechazo: lleva el motivo para que puedan corregirlo. */
+    private void notifyStoreRejected(StoreEntity store, String reason) {
+        List<String> to = reviewRecipients(store);
+        if (to.isEmpty()) {
+            return;
+        }
+        String name = store.getName();
+        runAfterCommit(() -> approvalMailer.sendRejected(name, reason, to));
+    }
+
+    /** Correos de los administradores activos del local o, si aún no tiene ninguno, el correo del propio local. */
+    private List<String> reviewRecipients(StoreEntity store) {
         List<String> recipients = userFacade.listActiveByStoreAndRoles(store.getId(), List.of("ADMINISTRATOR"))
                 .stream().map(UserDto::email).filter(e -> e != null && !e.isBlank()).distinct().toList();
         if (recipients.isEmpty() && store.getEmail() != null && !store.getEmail().isBlank()) {
-            recipients = List.of(store.getEmail());
+            return List.of(store.getEmail());
         }
-        if (recipients.isEmpty()) {
-            return;
-        }
-        List<String> to = recipients;
-        String name = store.getName();
-        runAfterCommit(() -> approvalMailer.sendApproved(name, to));
+        return recipients;
     }
 
     private void runAfterCommit(Runnable action) {
@@ -230,6 +255,9 @@ public class StoreServiceImpl implements StoreFacade {
 
         StoreDto created = createStore(command);
         userFacade.assignStore(owner.id(), created.id());
+        // La configuración del negocio (recibos, facturas) arranca con los datos del local: no hay que volver a escribirlos.
+        settingsFacade.seedSettings(created.id(), new SettingsDto(
+                command.name(), command.address(), command.phone(), command.taxId(), command.email(), null));
         return created;
     }
 
@@ -238,7 +266,7 @@ public class StoreServiceImpl implements StoreFacade {
         UserDto owner = userFacade.findByUsername(ownerUsername)
                 .orElseThrow(() -> new EntityNotFoundException("Usuario no encontrado: " + ownerUsername));
         if (owner.storeId() == null) {
-            throw new EntityNotFoundException("Aun no has registrado un local.");
+            throw new EntityNotFoundException("Aún no has registrado un local.");
         }
         return getById(owner.storeId());
     }
@@ -297,7 +325,7 @@ public class StoreServiceImpl implements StoreFacade {
         UserDto owner = userFacade.findByUsername(ownerUsername)
                 .orElseThrow(() -> new EntityNotFoundException("Usuario no encontrado: " + ownerUsername));
         if (owner.storeId() == null) {
-            throw new EntityNotFoundException("Aun no has registrado un local.");
+            throw new EntityNotFoundException("Aún no has registrado un local.");
         }
         return owner.storeId();
     }
@@ -315,6 +343,23 @@ public class StoreServiceImpl implements StoreFacade {
         entity.setRejectionReason(reason);
         StoreEntity saved = storeRepository.save(entity);
         recordStatusChange(saved, previousStatus, "REJECTED", reason);
+        notifyStoreRejected(saved, reason);
+        return toStoreDto(saved);
+    }
+
+    @Override
+    @Transactional
+    public StoreDto resubmitOwnStore(String ownerUsername) {
+        Long storeId = requireOwnStoreId(ownerUsername);
+        StoreEntity entity = storeRepository.findById(storeId)
+                .orElseThrow(() -> new EntityNotFoundException("Local no encontrado con ID: " + storeId));
+        if (!"REJECTED".equals(entity.getStatus())) {
+            throw new IllegalArgumentException("Solo un local rechazado se puede reenviar a revisión.");
+        }
+        entity.setStatus("PENDING_VERIFICATION");
+        entity.setRejectionReason(null);
+        StoreEntity saved = storeRepository.save(entity);
+        recordStatusChange(saved, "REJECTED", "PENDING_VERIFICATION", "Reenviado a revisión por el administrador del local");
         return toStoreDto(saved);
     }
 

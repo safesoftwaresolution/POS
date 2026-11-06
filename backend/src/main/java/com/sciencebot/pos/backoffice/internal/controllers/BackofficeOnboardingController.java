@@ -55,6 +55,15 @@ public class BackofficeOnboardingController {
         return ResponseEntity.noContent().build();
     }
 
+    @PostMapping("/pending-users/{userId}/verify")
+    @Operation(summary = "Marcar como verificado el correo de un usuario pendiente",
+            description = "Para cuando el correo de verificación no llega. Invalida los enlaces pendientes; el usuario ya puede "
+                    + "iniciar sesión y registrar su local. Responde 400 si la cuenta ya está verificada y 404 si no existe.")
+    public ResponseEntity<Void> verifyPendingUser(@PathVariable Long userId) {
+        authFacade.verifyAccountManually(userId);
+        return ResponseEntity.noContent().build();
+    }
+
     @DeleteMapping("/pending-users/{userId}")
     @Operation(summary = "Eliminar definitivamente a un usuario pendiente",
             description = "Solo ADMINISTRATOR sin correo verificado y sin local. Borra la cuenta y sus tokens; no se puede deshacer.")

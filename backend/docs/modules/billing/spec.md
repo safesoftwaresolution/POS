@@ -73,7 +73,7 @@ Alegra no asigna el consecutivo: el sistema envía el `number` y la `resolution`
 2. **Llamar al proveedor sin transacción ni lock**. Dos emisiones simultáneas de la misma venta llaman al proveedor una sola vez; la segunda recibe la factura en curso.
 3. **Registrar el resultado** (`complete`, transacción corta): libera la reserva y programa `next_retry_at`.
 
-Reintento automático (`InvoiceRetryJob`, `billing.retry.enabled`, apagado en el perfil de test): cada `billing.retry.interval` ms (60 000) toma hasta `billing.retry.batch-size` (20) facturas `ERROR`/`PENDING` con el reintento vencido o la reserva caducada y menos de `billing.retry.max-attempts` (8) intentos. Espera `min(2^intentos minutos, 60)` más hasta 10 % de variación. Nunca reintenta `REJECTED` ni `VALIDATED`; omite locales sin facturación `ACTIVE`; un fallo no detiene el lote. El reintento manual (`retry`) reinicia el conteo sin pisar una reserva vigente.
+Reintento automático (`InvoiceRetryJob`, `billing.retry.enabled`, apagado en el perfil de test): cada `billing.retry.interval` ms (60 000) toma hasta `billing.retry.batch-size` (20) facturas `ERROR`/`PENDING` con el reintento vencido o la reserva caducada y menos de `billing.retry.max-attempts` (8) intentos. Espera `min(2^intentos minutos, 60)` más hasta 10 % de variación. Nunca reintenta `REJECTED` ni `VALIDATED`; los locales sin facturación `ACTIVE` se excluyen en la consulta misma (si se omitieran después, sus facturas llenarían el lote y las de los demás locales no se reintentarían nunca); un fallo no detiene el lote. Una factura que no se pudo emitir porque el local no puede facturar (`BillingNotEnabledException`: facturación no activa, sin empresa o sin rango usable) queda en `ERROR` **sin reintento programado**: reintentarla sola no lo arregla y emitirla cuando el local se active saldría con fecha atrasada; se puede reintentar a mano. El reintento manual (`retry`) reinicia el conteo sin pisar una reserva vigente.
 
 ### Decisión del resultado (nunca por el código HTTP)
 Un `201` solo dice que Alegra recibió el documento; un rechazo de la DIAN también llega como `201`.
@@ -282,7 +282,7 @@ El mensaje del proveedor se propaga al cliente (truncado a 500 caracteres) para 
 ## API Endpoints
 
 ### 1. Facturas Electrónicas de Ventas (`BillingInvoiceController`)
-- `GET /api/v1/billing/sales/{saleId}` — consultar estado y datos de la factura de una venta.
+- `GET /api/v1/billing/sales/{saleId}` — consultar estado y datos de la factura de una venta. Solo lee: responde 404 si la emisión todavía no creó la factura (el POS la muestra como «En proceso»).
 - `POST /api/v1/billing/sales/{saleId}/retry` — reintentar facturación fallida (`ERROR` o `PENDING`).
 - `POST /api/v1/billing/sales/{saleId}/send-email` — enviar ZIP con PDF y XML legal al email indicado. Con Alegra lo envía Alegra y adjunta el XML (no el PDF).
 - `GET /api/v1/billing/sales/{saleId}/pdf` — descargar el PDF legal de la factura.
@@ -316,6 +316,7 @@ El mensaje del proveedor se propaga al cliente (truncado a 500 caracteres) para 
 
 ### 4. Habilitación — Local (`BillingActivationController`)
 - `GET /api/v1/billing/activation/status` — estado de facturación del local autenticado (sin credenciales).
+- `GET /api/v1/billing/activation/summary` — para el POS, cualquier rol del local (también `SELLER`): `{ active, environment }`. El cobro solo ofrece la factura electrónica si `active` y marca «Modo prueba» en `SANDBOX`.
 - `POST /api/v1/billing/activation/request` — solicitar activación. Exige al menos un documento ya subido.
 
 ### 5. Notas Crédito Electrónicas (`BillingCreditNoteController`)

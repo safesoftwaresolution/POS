@@ -1,6 +1,7 @@
 package com.sciencebot.pos.billing.internal.controllers.doc;
 
 import com.sciencebot.pos.billing.dto.BillingActivationDto;
+import com.sciencebot.pos.billing.dto.BillingActivationSummaryDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
@@ -12,6 +13,11 @@ public interface BillingActivationApiDoc {
     @Operation(summary = "Estado de la facturación electrónica de mi local",
             description = "NOT_REQUESTED si nunca se pidió. Nunca incluye credenciales.")
     ResponseEntity<BillingActivationDto> getStatus();
+
+    @Operation(summary = "¿Mi local puede facturar ahora?",
+            description = "Para el POS (cualquier rol del local): si la facturación está activa y en qué entorno. "
+                    + "En SANDBOX las facturas son de prueba y no tienen validez legal.")
+    ResponseEntity<BillingActivationSummaryDto> getSummary();
 
     @Operation(summary = "Solicitar la activación de la facturación electrónica",
             description = """

@@ -4,7 +4,7 @@ import { getProductsApi } from '../services/productsApi';
 import { getServicesApi } from '../services/servicesApi';
 import { getCustomersApi } from '../services/customersApi';
 import { createSaleApi } from '../services/salesApi';
-import { getSaleInvoiceApi } from '../services/billingApi';
+import { getBillingSummaryApi, getSaleInvoiceApi } from '../services/billingApi';
 import CheckoutModal, { SaleResultModal } from '../components/pos/CheckoutModal';
 import ScanToasts from '../components/pos/ScanToasts';
 import ProductCatalog from '../components/pos/ProductCatalog';
@@ -54,6 +54,13 @@ export default function POSBento() {
     { initial: { categories: ['Todos'], paymentMethods: [] } },
   );
   const { categories: categoriesList, paymentMethods } = catalog;
+  // Si no se puede saber, se asume que el local no factura: mejor no ofrecer una factura que no saldría.
+  const { data: billing } = useLoad(
+    () => getBillingSummaryApi().catch(() => null),
+    [],
+    { initial: null },
+  );
+  const dianAvailable = Boolean(billing?.active);
   const loading = productsLoading || customersLoading || catalogLoading;
   const [selectedCategory, setSelectedCategory] = useState('Todos');
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('CASH');
@@ -219,7 +226,7 @@ export default function POSBento() {
       items: cart.map(toSaleLine),
       cashReceived: paymentIsCredit ? 0 : cashNumber,
       totalAmount: total,
-      sendElectronicInvoice: issueDian,
+      sendElectronicInvoice: issueDian && dianAvailable,
       paymentMethod: selectedPaymentMethod,
       ...(paymentIsCredit && { creditDueDate })
     };
@@ -245,7 +252,7 @@ export default function POSBento() {
     // La emisión a la DIAN es asíncrona: si la factura aún no existe, el resultado lo indica
     // y el cajero puede actualizar el estado sin bloquear la venta.
     let invoice = null;
-    if (issueDian && result?.id) {
+    if (issueDian && dianAvailable && result?.id) {
       try {
         invoice = await getSaleInvoiceApi(result.id);
       } catch {
@@ -261,7 +268,7 @@ export default function POSBento() {
       onCredit: paymentIsCredit,
       customerName: selectedCustomer?.fullName || selectedCustomer?.name || 'Consumidor final',
       customerEmail: selectedCustomer?.email || '',
-      dianRequested: issueDian,
+      dianRequested: issueDian && dianAvailable,
       invoice
     });
     setShowCheckoutModal(false);
@@ -369,7 +376,8 @@ export default function POSBento() {
             setSelectedPaymentMethod(code);
             setCashTendered(code === 'CASH' ? '' : total.toString());
           }}
-          issueDian={issueDian}
+          billing={billing}
+          issueDian={issueDian && dianAvailable}
           onToggleDian={setIssueDian}
           cashTendered={cashTendered}
           onCashTenderedChange={setCashTendered}

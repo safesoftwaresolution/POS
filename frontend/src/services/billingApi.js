@@ -6,6 +6,11 @@ export async function getBillingActivationStatusApi() {
   return await fetchApi('/billing/activation/status');
 }
 
+/** Para el POS (cualquier rol): `{ active, environment }`. En SANDBOX las facturas son de prueba. */
+export async function getBillingSummaryApi() {
+  return await fetchApi('/billing/activation/summary');
+}
+
 export async function requestBillingActivationApi() {
   return await fetchApi('/billing/activation/request', { method: 'POST' });
 }

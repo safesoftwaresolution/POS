@@ -34,6 +34,8 @@ import {
 import { deliverBlob } from '../../utils/downloadBlob';
 import useModal from '../../hooks/useModal';
 import useLoad from '../../hooks/useLoad';
+import usePermissions from '../../hooks/usePermissions';
+import { Link } from 'react-router-dom';
 import CreditPanel from './CreditPanel';
 import { getCreditAccountApi } from '../../services/creditApi';
 import { creditBlockReason, isGeneralCustomer } from '../../utils/credit';
@@ -64,6 +66,7 @@ export default function CheckoutModal({
   paymentMethods,
   selectedPaymentMethod,
   onSelectPaymentMethod,
+  billing,
   issueDian,
   onToggleDian,
   cashTendered,
@@ -118,7 +121,10 @@ export default function CheckoutModal({
               </span>
             </div>
 
-            {/* Factura electrónica DIAN */}
+            {/* Factura electrónica DIAN: solo se ofrece si el local puede facturar ahora */}
+            {!billing?.active ? (
+              <DianUnavailableNote />
+            ) : (
             <div className={`p-4 rounded-2xl border transition-colors ${
               issueDian
                 ? 'bg-brand/5 dark:bg-brand/10 border-brand/25'
@@ -132,8 +138,17 @@ export default function CheckoutModal({
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="text-xs font-extrabold text-ink">Emitir factura electrónica DIAN</span>
+                      {billing.environment === 'SANDBOX' && (
+                        <span className="text-[9px] px-2 py-0.5 rounded-full font-extrabold uppercase tracking-wider bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/20">
+                          Modo prueba
+                        </span>
+                      )}
                     </div>
-                    <p className="text-[11px] text-ink-soft">Se envía a la DIAN a través de Alegra, nuestro proveedor autorizado (incluye CUFE, QR y XML)</p>
+                    <p className="text-[11px] text-ink-soft">
+                      {billing.environment === 'SANDBOX'
+                        ? 'Factura de prueba: no tiene validez ante la DIAN.'
+                        : 'Se envía a la DIAN a través de Alegra, nuestro proveedor autorizado (incluye CUFE, QR y XML)'}
+                    </p>
                   </div>
                 </div>
 
@@ -200,6 +215,7 @@ export default function CheckoutModal({
                 </div>
               )}
             </div>
+            )}
 
             {/* Método de pago */}
             {paymentMethods.length > 0 && (
@@ -337,6 +353,30 @@ export default function CheckoutModal({
         />
       )}
     </>
+  );
+}
+
+/** El local aún no factura electrónicamente: se dice por qué y, al administrador, dónde activarla. */
+function DianUnavailableNote() {
+  const { isAdmin } = usePermissions();
+  return (
+    <div className="p-4 rounded-2xl border bg-gray-50 dark:bg-white/5 border-line flex items-start gap-3">
+      <div className="w-9 h-9 rounded-xl bg-solid text-ink-muted flex items-center justify-center shrink-0">
+        <FileText className="w-4 h-4" />
+      </div>
+      <div className="min-w-0 space-y-0.5">
+        <span className="text-xs font-extrabold text-ink block">Factura electrónica no disponible</span>
+        <p className="text-[11px] text-ink-soft">
+          Este local todavía no tiene activa la facturación electrónica. La venta se registra con su comprobante normal.
+          {isAdmin && (
+            <>
+              {' '}
+              <Link to="/invoicing?tab=activation" className="font-extrabold text-brand hover:underline">Actívala aquí</Link>
+            </>
+          )}
+        </p>
+      </div>
+    </div>
   );
 }
 

@@ -2,6 +2,7 @@ package com.sciencebot.pos.billing;
 
 import com.sciencebot.pos.billing.dto.BillingActivationDto;
 import com.sciencebot.pos.billing.dto.BillingActivationStatus;
+import com.sciencebot.pos.billing.dto.BillingActivationSummaryDto;
 import com.sciencebot.pos.billing.dto.BillingEnvironment;
 import com.sciencebot.pos.billing.internal.controllers.BillingActivationController;
 import com.sciencebot.pos.billing.internal.services.StoreBillingConfigService;
@@ -53,6 +54,33 @@ class BillingActivationControllerTest {
         ResponseEntity<BillingActivationDto> response = controller.getStatus();
 
         assertEquals(BillingActivationStatus.NOT_REQUESTED, response.getBody().status());
+    }
+
+    @Test
+    void getSummary_ActiveBillingCanInvoiceAndSaysTheEnvironment() {
+        TenantContext.setStoreId(STORE);
+        when(service.get(STORE)).thenReturn(dto(BillingActivationStatus.ACTIVE));
+
+        BillingActivationSummaryDto summary = controller.getSummary().getBody();
+
+        assertTrue(summary.active());
+        assertEquals(BillingEnvironment.SANDBOX, summary.environment());
+    }
+
+    @Test
+    void getSummary_AnyOtherStatusCannotInvoice() {
+        TenantContext.setStoreId(STORE);
+        when(service.get(STORE)).thenReturn(dto(BillingActivationStatus.SUSPENDED));
+
+        assertFalse(controller.getSummary().getBody().active());
+    }
+
+    @Test
+    void getSummary_IsOpenToEveryStoreRoleIncludingSellers() throws NoSuchMethodException {
+        var preAuthorize = BillingActivationController.class.getMethod("getSummary")
+                .getAnnotation(org.springframework.security.access.prepost.PreAuthorize.class);
+
+        assertEquals("hasAnyRole('ADMINISTRATOR', 'SUPERVISOR', 'SELLER')", preAuthorize.value());
     }
 
     @Test

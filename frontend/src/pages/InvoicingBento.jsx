@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { FileText, RefreshCw, ShieldCheck, ShieldAlert, Hash, CheckCircle2, AlertTriangle, Building2 } from 'lucide-react';
 import {
   listInvoicesApi,
@@ -17,7 +18,9 @@ export default function InvoicingBento() {
   const { user } = useAuth();
   const role = user?.role;
   const canSeeActivation = role === 'ADMINISTRATOR' || role === 'SUPERVISOR';
-  const [tab, setTab] = useState('invoices');
+  // `/invoicing?tab=activation` (enlaces del POS y de las notificaciones) abre directo la habilitación.
+  const [searchParams] = useSearchParams();
+  const [tab, setTab] = useState(searchParams.get('tab') === 'activation' ? 'activation' : 'invoices');
   const [refreshKey, setRefreshKey] = useState(0);
 
   // Cuántas facturas hay en cada estado; si un estado no se puede consultar queda en null (se muestra "—").

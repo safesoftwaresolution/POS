@@ -1,6 +1,7 @@
 package com.sciencebot.pos.billing.internal.controllers;
 
 import com.sciencebot.pos.billing.dto.BillingActivationDto;
+import com.sciencebot.pos.billing.dto.BillingActivationSummaryDto;
 import com.sciencebot.pos.billing.internal.controllers.doc.BillingActivationApiDoc;
 import com.sciencebot.pos.billing.internal.services.StoreBillingConfigService;
 import com.sciencebot.pos.config.tenant.TenantContext;
@@ -29,6 +30,13 @@ public class BillingActivationController implements BillingActivationApiDoc {
     @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'SUPERVISOR')")
     public ResponseEntity<BillingActivationDto> getStatus() {
         return ResponseEntity.ok(service.get(requireStoreId()));
+    }
+
+    @Override
+    @GetMapping("/summary")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'SUPERVISOR', 'SELLER')")
+    public ResponseEntity<BillingActivationSummaryDto> getSummary() {
+        return ResponseEntity.ok(BillingActivationSummaryDto.of(service.get(requireStoreId())));
     }
 
     @Override

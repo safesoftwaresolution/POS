@@ -1,6 +1,7 @@
 package com.sciencebot.pos.billing;
 
 import com.sciencebot.pos.billing.dto.ElectronicInvoiceDto;
+import com.sciencebot.pos.billing.exception.BillingNotEnabledException;
 import com.sciencebot.pos.billing.internal.adapters.InvoiceProvider;
 import com.sciencebot.pos.billing.internal.adapters.dto.CustomerBillingData;
 import com.sciencebot.pos.billing.internal.adapters.dto.InvoiceItemData;
@@ -298,6 +299,64 @@ class InvoiceServiceImplTest {
 
         verify(customProvider, never()).sendInvoiceEmail(any(), any());
         verify(customProvider, never()).downloadInvoiceXML(any());
+    }
+
+    @Test
+    void processElectronicInvoice_StoreWithoutActiveBilling_EndsInErrorWithoutAutomaticRetry() {
+        ReflectionTestUtils.setField(invoiceService, "activeProviderName", "alegra");
+        SaleDto saleDto = new SaleDto(1L, "FACT-000001", null, "Cliente General", BigDecimal.TEN, BigDecimal.TEN, BigDecimal.ZERO, "admin", List.of(), "CASH");
+        ElectronicInvoice invoice = ElectronicInvoice.initialize(1L, 1L);
+        when(repository.findBySaleIdForUpdate(1L)).thenReturn(Optional.of(invoice));
+        when(repository.save(any(ElectronicInvoice.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(canonicalMapper.toInvoiceRequest(saleDto)).thenReturn(mock(InvoiceRequest.class));
+        when(customProvider.emitInvoice(any()))
+                .thenThrow(new BillingNotEnabledException("La facturación electrónica del local no está activa"));
+
+        invoiceService.processElectronicInvoice(saleDto);
+
+        assertEquals(com.sciencebot.pos.billing.dto.ElectronicInvoiceStatus.ERROR, invoice.getStatus());
+        assertNull(invoice.getNextRetryAt(), "sin facturación activa no se reintenta sola");
+        assertEquals("No se emitió la factura electrónica: La facturación electrónica del local no está activa",
+                invoice.getErrorMessage());
+    }
+
+    @Test
+    void getBySaleId_WithoutInvoice_ReturnsEmptyAndCreatesNothing() {
+        SaleDto saleDto = new SaleDto(1L, "FACT-000001", null, "Cliente General", BigDecimal.TEN, BigDecimal.TEN, BigDecimal.ZERO, "admin", List.of(), "CASH");
+        when(saleFacade.getById(1L)).thenReturn(Optional.of(saleDto));
+        when(repository.findBySaleIdAndStoreId(1L, 1L)).thenReturn(Optional.empty());
+
+        assertTrue(invoiceService.getBySaleId(1L).isEmpty());
+
+        verify(repository, never()).save(any(ElectronicInvoice.class));
+    }
+
+    @Test
+    void getBySaleId_WithInvoice_ReturnsIt() {
+        SaleDto saleDto = new SaleDto(1L, "FACT-000001", null, "Cliente General", BigDecimal.TEN, BigDecimal.TEN, BigDecimal.ZERO, "admin", List.of(), "CASH");
+        ElectronicInvoice existing = ElectronicInvoice.initialize(1L, 1L);
+        ElectronicInvoiceDto dto = new ElectronicInvoiceDto(10L, 1L, null, null, null, "PENDING", null, null, null);
+        when(saleFacade.getById(1L)).thenReturn(Optional.of(saleDto));
+        when(repository.findBySaleIdAndStoreId(1L, 1L)).thenReturn(Optional.of(existing));
+        when(invoiceMapper.toDto(existing)).thenReturn(dto);
+
+        assertEquals(Optional.of(dto), invoiceService.getBySaleId(1L));
+    }
+
+    @Test
+    void processElectronicInvoice_ProviderFailure_StillSchedulesARetry() {
+        ReflectionTestUtils.setField(invoiceService, "activeProviderName", "alegra");
+        SaleDto saleDto = new SaleDto(1L, "FACT-000001", null, "Cliente General", BigDecimal.TEN, BigDecimal.TEN, BigDecimal.ZERO, "admin", List.of(), "CASH");
+        ElectronicInvoice invoice = ElectronicInvoice.initialize(1L, 1L);
+        when(repository.findBySaleIdForUpdate(1L)).thenReturn(Optional.of(invoice));
+        when(repository.save(any(ElectronicInvoice.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(canonicalMapper.toInvoiceRequest(saleDto)).thenReturn(mock(InvoiceRequest.class));
+        when(customProvider.emitInvoice(any())).thenThrow(new IllegalStateException("timeout"));
+
+        invoiceService.processElectronicInvoice(saleDto);
+
+        assertEquals(com.sciencebot.pos.billing.dto.ElectronicInvoiceStatus.ERROR, invoice.getStatus());
+        assertNotNull(invoice.getNextRetryAt());
     }
 
     @Test

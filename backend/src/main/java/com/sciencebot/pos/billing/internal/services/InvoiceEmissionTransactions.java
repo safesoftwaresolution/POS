@@ -97,6 +97,10 @@ public class InvoiceEmissionTransactions {
             invoice.markAsRejected(result.errorMessage());
             return null; // un rechazo exige corregir datos: no se reintenta solo
         }
+        if (InvoiceResult.NOT_ENABLED.equals(result.status())) {
+            invoice.markAsError(result.errorMessage());
+            return null; // el local no puede facturar: reintentar sola no lo arregla
+        }
         if ("PENDING".equalsIgnoreCase(result.status())) {
             invoice.markAsPending(result.errorMessage());
         } else {

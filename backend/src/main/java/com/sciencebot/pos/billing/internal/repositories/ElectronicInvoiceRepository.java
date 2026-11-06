@@ -62,9 +62,13 @@ public interface ElectronicInvoiceRepository extends JpaRepository<ElectronicInv
     /**
      * Facturas que el reintento automático puede emitir de nuevo, de cualquier local (es un job de plataforma; el
      * job fija el local de cada factura antes de emitir): ERROR o PENDING con el reintento vencido, o PENDING cuya
-     * reserva caducó (el hilo que emitía se cayó). Una factura REJECTED o VALIDATED nunca aparece aquí.
+     * reserva caducó (el hilo que emitía se cayó). Una factura REJECTED o VALIDATED nunca aparece aquí, y tampoco
+     * la de un local sin facturación activa: si el filtro se hiciera después, esas filas llenarían el lote para siempre
+     * y las de los demás locales nunca se reintentarían.
      */
-    @Query("SELECT e FROM ElectronicInvoice e WHERE e.attempts < :maxAttempts AND ("
+    @Query("SELECT e FROM ElectronicInvoice e WHERE e.attempts < :maxAttempts "
+            + "AND EXISTS (SELECT c FROM StoreBillingConfig c WHERE c.storeId = e.storeId "
+            + "AND c.status = com.sciencebot.pos.billing.dto.BillingActivationStatus.ACTIVE) AND ("
             + "(e.status IN (com.sciencebot.pos.billing.dto.ElectronicInvoiceStatus.ERROR, "
             + "com.sciencebot.pos.billing.dto.ElectronicInvoiceStatus.PENDING) "
             + "AND e.processingStartedAt IS NULL AND e.nextRetryAt <= :now) "

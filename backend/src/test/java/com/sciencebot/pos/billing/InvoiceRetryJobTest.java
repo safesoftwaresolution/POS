@@ -170,6 +170,24 @@ class InvoiceRetryJobTest {
     }
 
     @Test
+    void invoicesOfStoresWithoutActiveBillingNeverFillTheBatch() {
+        Long inactiveStore = storeId + 1;
+        saveStoreConfig(inactiveStore, BillingActivationStatus.SUSPENDED);
+        for (int n = 0; n < 2; n++) {
+            ElectronicInvoice blocked = ElectronicInvoice.initialize(800_000L + (System.nanoTime() % 1_000_000L), inactiveStore);
+            failedAttempt(blocked, now.minusMinutes(30), now.minusMinutes(1));
+            repository.save(blocked);
+            createdSales.add(blocked.getSaleId());
+        }
+        Long active = invoice(i -> failedAttempt(i, now.minusMinutes(30), now.minusMinutes(1)));
+        InvoiceRetryJob small = new InvoiceRetryJob(repository, configRepository, saleFacade, invoiceService, 2, 8, LEASE);
+
+        assertEquals(1, small.retryDue(now));
+
+        assertEquals(ElectronicInvoiceStatus.VALIDATED, stored(active).getStatus());
+    }
+
+    @Test
     void oneFailingInvoiceDoesNotStopTheBatchAndTheTenantIsRestored() {
         Long broken = invoice(i -> failedAttempt(i, now.minusMinutes(30), now.minusMinutes(1)));
         Long healthy = invoice(i -> failedAttempt(i, now.minusMinutes(30), now.minusMinutes(1)));

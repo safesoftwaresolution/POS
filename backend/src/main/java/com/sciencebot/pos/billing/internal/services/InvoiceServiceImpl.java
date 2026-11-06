@@ -2,6 +2,7 @@ package com.sciencebot.pos.billing.internal.services;
 
 import com.sciencebot.pos.billing.dto.ElectronicInvoiceDto;
 import com.sciencebot.pos.billing.dto.ElectronicInvoiceStatus;
+import com.sciencebot.pos.billing.exception.BillingNotEnabledException;
 import com.sciencebot.pos.billing.internal.adapters.InvoiceProvider;
 import com.sciencebot.pos.billing.internal.adapters.dto.InvoiceRequest;
 import com.sciencebot.pos.billing.internal.adapters.dto.InvoiceResult;
@@ -108,6 +109,9 @@ public class InvoiceServiceImpl implements InvoiceService {
                 InvoiceRequest request = canonicalMapper.toInvoiceRequest(sale);
                 result = provider.emitInvoice(request);
             }
+        } catch (BillingNotEnabledException notEnabled) {
+            log.warn("La venta ID {} no se facturó: {}", sale.id(), notEnabled.getMessage());
+            result = InvoiceResult.notEnabled("No se emitió la factura electrónica: " + notEnabled.getMessage());
         } catch (Exception ex) {
             String providerName = provider != null ? provider.getProviderName() : activeProviderName;
             log.error("Error al ejecutar emision con proveedor {}: {}", providerName, ex.getMessage());
@@ -154,11 +158,10 @@ public class InvoiceServiceImpl implements InvoiceService {
         }
     }
 
-    // No es readOnly: si la venta aún no tiene registro de factura, se crea en PENDING. Antes la
-    // lectura era readOnly y el INSERT interno (REQUIRES_NEW por auto-invocación, que nunca aplicó)
-    // podía fallar en PostgreSQL con "cannot execute INSERT in a read-only transaction".
+    // Solo lee: consultar una factura no la crea. Antes creaba una fila PENDING sin reintento programado que ningún
+    // job tomaba; si la emisión asíncrona aún no empezó, el cliente recibe 404 y la muestra como "en proceso".
     @Override
-    @Transactional
+    @Transactional(readOnly = true)
     public Optional<ElectronicInvoiceDto> getBySaleId(Long saleId) {
         Long storeId = TenantContext.getStoreId();
         if (saleId == null || storeId == null) {
@@ -167,8 +170,7 @@ public class InvoiceServiceImpl implements InvoiceService {
         if (saleFacade.getById(saleId).isEmpty()) {
             return Optional.empty();
         }
-        ElectronicInvoice einvoice = getOrCreateInitialInvoice(saleId, storeId);
-        return Optional.ofNullable(invoiceMapper.toDto(einvoice));
+        return repository.findBySaleIdAndStoreId(saleId, storeId).map(invoiceMapper::toDto);
     }
 
     /** El reintento manual reinicia la factura en una transacción corta y emite fuera de cualquier transacción. */
@@ -280,11 +282,6 @@ public class InvoiceServiceImpl implements InvoiceService {
         if (saleFacade.restrictedSellerId().isPresent() && saleFacade.getById(saleId).isEmpty()) {
             throw new IllegalArgumentException("Factura no encontrada para la venta: " + saleId);
         }
-    }
-
-    private ElectronicInvoice getOrCreateInitialInvoice(Long saleId, Long storeId) {
-        return repository.findBySaleIdAndStoreId(saleId, storeId)
-                .orElseGet(() -> repository.save(ElectronicInvoice.initialize(saleId, storeId)));
     }
 
     private Long requireStoreId() {

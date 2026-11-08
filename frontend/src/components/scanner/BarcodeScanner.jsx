@@ -72,7 +72,7 @@ export default function BarcodeScanner({ onDetect, onClose, inline = false }) {
   }, []);
 
   useEffect(() => {
-    let cancelled = false;
+    const run = { cancelled: false };
 
     const start = async () => {
       if (!navigator.mediaDevices?.getUserMedia) {
@@ -86,30 +86,30 @@ export default function BarcodeScanner({ onDetect, onClose, inline = false }) {
           audio: false,
         });
       } catch (err) {
-        if (!cancelled) setError(cameraErrorMessage(err));
+        if (!run.cancelled) setError(cameraErrorMessage(err));
         return;
       }
-      if (cancelled) { stream.getTracks().forEach(t => t.stop()); return; }
+      if (run.cancelled) { stream.getTracks().forEach(t => t.stop()); return; }
 
       streamRef.current = stream;
       const video = videoRef.current;
       video.srcObject = stream;
       await video.play().catch(() => {});
-      if (cancelled) return;
+      if (run.cancelled) return;
       setReady(true);
       setTorchSupported(!!stream.getVideoTracks()[0]?.getCapabilities?.().torch);
 
       if ('BarcodeDetector' in window) {
         const detector = new window.BarcodeDetector({ formats: NATIVE_FORMATS });
-        let busy = false;
+        const scan = { busy: false };
         const id = setInterval(async () => {
-          if (busy || video.readyState < 2) return;
-          busy = true;
+          if (scan.busy || video.readyState < 2) return;
+          scan.busy = true;
           try {
             const found = await detector.detect(video);
             if (found[0]) handleCode(found[0].rawValue);
           } catch { /* frame no decodificable: se reintenta en el siguiente */ }
-          busy = false;
+          scan.busy = false;
         }, NATIVE_SCAN_INTERVAL_MS);
         stopRef.current = () => clearInterval(id);
       } else {
@@ -118,7 +118,7 @@ export default function BarcodeScanner({ onDetect, onClose, inline = false }) {
             import('@zxing/browser'),
             import('@zxing/library'),
           ]);
-          if (cancelled) return;
+          if (run.cancelled) return;
           const hints = new Map([
             [DecodeHintType.POSSIBLE_FORMATS, [
               BarcodeFormat.EAN_13, BarcodeFormat.EAN_8, BarcodeFormat.UPC_A, BarcodeFormat.UPC_E,
@@ -130,17 +130,17 @@ export default function BarcodeScanner({ onDetect, onClose, inline = false }) {
           const controls = await reader.decodeFromStream(stream, video, (result) => {
             if (result) handleCode(result.getText());
           });
-          if (cancelled) controls.stop();
+          if (run.cancelled) controls.stop();
           else stopRef.current = () => controls.stop();
         } catch {
-          if (!cancelled) setError('No se pudo cargar el lector de códigos en este navegador.');
+          if (!run.cancelled) setError('No se pudo cargar el lector de códigos en este navegador.');
         }
       }
     };
 
     start();
     return () => {
-      cancelled = true;
+      run.cancelled = true;
       stopRef.current();
       clearTimeout(feedbackTimerRef.current);
       streamRef.current?.getTracks().forEach(t => t.stop());

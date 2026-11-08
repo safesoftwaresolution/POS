@@ -12,16 +12,16 @@ export default function useCountUp(target, duration = 800) {
     if (reduced) return undefined;
     const begin = from.current;
     const startedAt = performance.now();
-    let raf = 0;
+    const frame = { id: 0 };
     const tick = (now) => {
       const t = Math.min((now - startedAt) / duration, 1);
       const eased = 1 - (1 - t) ** 3;
       from.current = begin + (target - begin) * eased;
       setValue(from.current);
-      if (t < 1) raf = requestAnimationFrame(tick);
+      if (t < 1) frame.id = requestAnimationFrame(tick);
     };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
+    frame.id = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame.id);
   }, [target, duration, reduced]);
 
   return reduced ? target : value;

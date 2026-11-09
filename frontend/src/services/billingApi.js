@@ -115,7 +115,7 @@ export async function sendInvoiceEmailApi(saleId, email) {
 
 // Descarga binaria (PDF/XML): fetchApi asume JSON, así que estas van directo contra fetch
 // para poder adjuntar el Bearer token y devolver un Blob que el navegador pueda abrir/guardar.
-async function downloadBinary(endpoint) {
+export async function downloadBillingBinary(endpoint) {
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     headers: { Authorization: `Bearer ${getAuthToken()}` },
     credentials: 'include',
@@ -127,9 +127,9 @@ async function downloadBinary(endpoint) {
 }
 
 export async function downloadInvoicePdfApi(saleId) {
-  return await downloadBinary(`/billing/sales/${saleId}/pdf`);
+  return await downloadBillingBinary(`/billing/sales/${saleId}/pdf`);
 }
 
 export async function downloadInvoiceXmlApi(saleId) {
-  return await downloadBinary(`/billing/sales/${saleId}/xml`);
+  return await downloadBillingBinary(`/billing/sales/${saleId}/xml`);
 }

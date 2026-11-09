@@ -12,6 +12,7 @@ import { TabButton, KpiCard } from '../components/invoicing/parts';
 import { ENVIRONMENT_LABELS } from '../components/invoicing/setupSteps';
 
 import InvoicesTab from '../components/invoicing/InvoicesTab';
+import NotesTab from '../components/invoicing/NotesTab';
 import ActivationTab from '../components/invoicing/ActivationTab';
 import useLoad from '../hooks/useLoad';
 
@@ -21,7 +22,8 @@ export default function InvoicingBento() {
   const canSeeActivation = role === 'ADMINISTRATOR' || role === 'SUPERVISOR';
   // `/invoicing?tab=activation` (enlaces del POS y de las notificaciones) abre directo la habilitación.
   const [searchParams] = useSearchParams();
-  const [tab, setTab] = useState(searchParams.get('tab') === 'activation' ? 'activation' : 'invoices');
+  const [tab, setTab] = useState(searchParams.get('tab') === 'notes' ? 'notes'
+    : searchParams.get('tab') === 'activation' && canSeeActivation ? 'activation' : 'invoices');
   const [refreshKey, setRefreshKey] = useState(0);
 
   // Cuántas facturas hay en cada estado; si un estado no se puede consultar queda en null (se muestra "—").
@@ -123,14 +125,13 @@ export default function InvoicingBento() {
         )}
       </div>
 
-      {canSeeActivation && (
-        <div className="border-b border-line flex flex-wrap items-center gap-x-4 sm:gap-x-6">
+      <div className="border-b border-line flex flex-wrap items-center gap-x-4 sm:gap-x-6">
           <TabButton active={tab === 'invoices'} onClick={() => setTab('invoices')} icon={FileText} label="Facturas emitidas" count={totalsLoaded ? totalInvoices : null} />
-          <TabButton active={tab === 'activation'} onClick={() => setTab('activation')} icon={Building2} label="Habilitación y rangos" count={ranges.length || null} />
-        </div>
-      )}
+          <TabButton active={tab === 'notes'} onClick={() => setTab('notes')} icon={FileText} label="Notas crédito y débito" />
+          {canSeeActivation && <TabButton active={tab === 'activation'} onClick={() => setTab('activation')} icon={Building2} label="Habilitación y rangos" count={ranges.length || null} />}
+      </div>
 
-      {tab === 'invoices' || !canSeeActivation ? (
+      {tab === 'notes' ? <NotesTab role={role} refreshKey={refreshKey} onChanged={() => reloadTotals()} /> : tab === 'invoices' || !canSeeActivation ? (
         <InvoicesTab role={role} refreshKey={refreshKey} onChanged={() => reloadTotals()} />
       ) : (
         <ActivationTab

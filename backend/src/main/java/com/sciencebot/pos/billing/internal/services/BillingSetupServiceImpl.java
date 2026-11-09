@@ -49,7 +49,7 @@ import java.util.Objects;
  * Asistente de habilitación en autoservicio. Cada escritura sigue los tres pasos de la facturación: guardar en una
  * transacción corta, llamar al proveedor sin transacción y registrar el resultado en otra transacción corta (los
  * métodos de {@link StoreBillingConfigService} y {@link NumberingRangeService} abren la suya). Los locales se
- * habilitan en producción: el sandbox de Alegra solo factura con el NIT de prueba de la guía.
+ * habilitan en producción; el sandbox es un recorrido QA separado.
  */
 @Service
 public class BillingSetupServiceImpl implements BillingSetupService {
@@ -84,6 +84,7 @@ public class BillingSetupServiceImpl implements BillingSetupService {
     private final DianResolutionMapper resolutionMapper;
     private final TransactionTemplate transaction;
     private final Clock clock;
+    private final BillingCompanyRegistrationTransactions registrations;
 
     @Autowired
     public BillingSetupServiceImpl(StoreBillingConfigService configService,
@@ -95,10 +96,11 @@ public class BillingSetupServiceImpl implements BillingSetupService {
                                    @Lazy StoreFacade storeFacade,
                                    BillingSetupMapper mapper,
                                    DianResolutionMapper resolutionMapper,
-                                   PlatformTransactionManager transactionManager) {
+                                   PlatformTransactionManager transactionManager,
+                                   BillingCompanyRegistrationTransactions registrations) {
         this(configService, configRepository, profileRepository, onboardingProvider, activeBillingProvider,
                 numberingRangeService, storeFacade, mapper, resolutionMapper, transactionManager,
-                Clock.systemDefaultZone());
+                Clock.systemDefaultZone(), registrations);
     }
 
     BillingSetupServiceImpl(StoreBillingConfigService configService,
@@ -111,7 +113,8 @@ public class BillingSetupServiceImpl implements BillingSetupService {
                             BillingSetupMapper mapper,
                             DianResolutionMapper resolutionMapper,
                             PlatformTransactionManager transactionManager,
-                            Clock clock) {
+                            Clock clock,
+                            BillingCompanyRegistrationTransactions registrations) {
         this.configService = configService;
         this.configRepository = configRepository;
         this.profileRepository = profileRepository;
@@ -123,6 +126,7 @@ public class BillingSetupServiceImpl implements BillingSetupService {
         this.resolutionMapper = resolutionMapper;
         this.transaction = new TransactionTemplate(transactionManager);
         this.clock = clock;
+        this.registrations = registrations;
     }
 
     /** Lo guardado del local: su fila de facturación (puede no existir) y sus datos fiscales (pueden no existir). */
@@ -184,10 +188,9 @@ public class BillingSetupServiceImpl implements BillingSetupService {
         // 2. Sin transacción: crear o actualizar la empresa en el proveedor.
         Snapshot snapshot = snapshot(storeId);
         CompanyProfileData data = mapper.toCompanyData(snapshot.profile());
-        String createdCompanyId = null;
         try {
             if (snapshot.companyId() == null) {
-                createdCompanyId = onboardingProvider.createCompany(PRODUCTION, data);
+                registerCompany(storeId, data, actor);
             } else {
                 onboardingProvider.updateCompany(PRODUCTION, snapshot.companyId(), data);
             }
@@ -197,11 +200,31 @@ public class BillingSetupServiceImpl implements BillingSetupService {
                     "No pudimos registrar tu empresa ante el proveedor de facturación. Intenta de nuevo en unos minutos.")));
         }
 
-        // 3. Transacción corta: guardar el company.id (y descartar lo que el proveedor tenga en caché del local).
-        if (createdCompanyId != null) {
-            configService.updateProviderCompanyId(storeId, PRODUCTION, createdCompanyId, actor);
-        }
         return evaluate(storeId, Map.of());
+    }
+
+    private void registerCompany(Long storeId, CompanyProfileData data, String actor) {
+        BillingCompanyRegistrationTransactions.Reservation reservation = registrations.reserve(
+                storeId, PRODUCTION, activeBillingProvider.configuredName(), data.identification());
+        String companyId = reservation.providerCompanyId();
+        if (!reservation.hasReceipt()) {
+            try {
+                companyId = onboardingProvider.createCompany(PRODUCTION, data);
+            } catch (RuntimeException ex) {
+                // Only explicit validation rejection proves that no company was created. Timeouts remain uncertain.
+                boolean rejected = ex instanceof BillingProviderException providerException
+                        && (providerException.getUpstreamStatus() == 400 || providerException.getUpstreamStatus() == 422);
+                registrations.recordFailure(reservation, rejected);
+                throw ex;
+            }
+            registrations.recordReceipt(reservation, companyId);
+        }
+        // Receipt commits separately BEFORE attachment. A failed local write never triggers another external CREATE.
+        configService.updateProviderCompanyId(storeId, PRODUCTION, companyId, actor);
+        registrations.markAttached(reservation);
+        if (reservation.hasReceipt()) {
+            onboardingProvider.updateCompany(PRODUCTION, companyId, data);
+        }
     }
 
     @Override
@@ -358,6 +381,12 @@ public class BillingSetupServiceImpl implements BillingSetupService {
 
         if (snapshot.profile() != null && !snapshot.fiscalDone() && !platformReady) {
             problems.putIfAbsent(Key.FISCAL_DATA, PLATFORM_NOT_READY);
+        }
+        if (snapshot.profile() != null && !snapshot.fiscalDone() && platformReady) {
+            String recoveryMessage = registrations.recoveryMessage(storeId, PRODUCTION, activeBillingProvider.configuredName());
+            if (recoveryMessage != null) {
+                problems.putIfAbsent(Key.FISCAL_DATA, recoveryMessage);
+            }
         }
 
         DianEnablementStatus enablement = null;

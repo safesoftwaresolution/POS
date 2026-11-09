@@ -15,14 +15,17 @@ import com.sciencebot.pos.billing.exception.BillingNotEnabledException;
 import com.sciencebot.pos.billing.internal.adapters.ActiveBillingProvider;
 import com.sciencebot.pos.billing.internal.adapters.BillingOnboardingProvider;
 import com.sciencebot.pos.billing.internal.adapters.ElectronicInvoicingProvider;
+import com.sciencebot.pos.billing.internal.adapters.mock.MockOnboardingProvider;
 import com.sciencebot.pos.billing.internal.adapters.dto.CompanyProfileData;
 import com.sciencebot.pos.billing.internal.adapters.dto.DianEnablementStatus;
 import com.sciencebot.pos.billing.internal.adapters.dto.DianResolutionData;
 import com.sciencebot.pos.billing.internal.entities.BillingCompanyProfile;
+import com.sciencebot.pos.billing.internal.entities.BillingCompanyRegistration;
 import com.sciencebot.pos.billing.internal.entities.StoreBillingConfig;
 import com.sciencebot.pos.billing.internal.mappers.BillingSetupMapper;
 import com.sciencebot.pos.billing.internal.mappers.DianResolutionMapper;
 import com.sciencebot.pos.billing.internal.repositories.BillingCompanyProfileRepository;
+import com.sciencebot.pos.billing.internal.repositories.BillingCompanyRegistrationRepository;
 import com.sciencebot.pos.billing.internal.repositories.StoreBillingConfigRepository;
 import com.sciencebot.pos.config.tenant.TenantContext;
 import com.sciencebot.pos.stores.StoreDto;
@@ -33,6 +36,9 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 import org.springframework.transaction.PlatformTransactionManager;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
+import jakarta.persistence.TypedQuery;
 
 import java.time.Clock;
 import java.time.LocalDate;
@@ -122,11 +128,30 @@ class BillingSetupServiceImplTest {
         when(storeFacade.getById(STORE)).thenReturn(store("900123456-8"));
 
         transactionManager = mock(PlatformTransactionManager.class);
+        BillingCompanyRegistrationRepository registrationsRepository = mock(BillingCompanyRegistrationRepository.class);
+        Map<Long, BillingCompanyRegistration> registrations = new HashMap<>();
+        when(registrationsRepository.findByStoreIdAndEnvironmentAndProviderName(any(), any(), any()))
+                .thenAnswer(inv -> Optional.ofNullable(registrations.get(inv.<Long>getArgument(0))));
+        when(registrationsRepository.saveAndFlush(any())).thenAnswer(inv -> {
+            BillingCompanyRegistration saved = inv.getArgument(0);
+            registrations.put(saved.getStoreId(), saved);
+            return saved;
+        });
+        EntityManager entityManager = mock(EntityManager.class);
+        when(entityManager.find(eq(StoreBillingConfig.class), any(), eq(LockModeType.PESSIMISTIC_WRITE)))
+                .thenAnswer(inv -> configs.get(inv.<Long>getArgument(1)));
+        @SuppressWarnings("unchecked") TypedQuery<Long> companyCount = mock(TypedQuery.class);
+        when(entityManager.createQuery(anyString(), eq(Long.class))).thenReturn(companyCount);
+        when(companyCount.setParameter(anyString(), any())).thenReturn(companyCount);
+        when(companyCount.getSingleResult()).thenReturn(0L);
+        BillingCompanyRegistrationTransactions registrationTransactions = new BillingCompanyRegistrationTransactions(
+                registrationsRepository, entityManager);
 
         service = new BillingSetupServiceImpl(configService, configRepository, profileRepository, onboarding,
                 new ActiveBillingProvider(List.of(provider), "alegra"), rangeService, storeFacade,
                 new BillingSetupMapper(), new DianResolutionMapper(), transactionManager,
-                Clock.fixed(TODAY.atStartOfDay(ZoneId.systemDefault()).toInstant(), ZoneId.systemDefault()));
+                Clock.fixed(TODAY.atStartOfDay(ZoneId.systemDefault()).toInstant(), ZoneId.systemDefault()),
+                registrationTransactions);
         TenantContext.setStoreId(STORE);
     }
 
@@ -376,6 +401,91 @@ class BillingSetupServiceImplTest {
         verify(onboarding).updateCompany(eq(PROD), eq("co-1"), any());
         verify(onboarding, never()).createCompany(any(), any());
         verify(configService, never()).updateProviderCompanyId(any(), any(), any(), any());
+    }
+
+    @Test
+    void aReceivedCompanyIsReattachedAfterLocalAssociationFailsWithoutCreatingAgain() {
+        when(onboarding.createCompany(eq(PROD), any())).thenReturn("co-recovered");
+        java.util.concurrent.atomic.AtomicInteger attempts = new java.util.concurrent.atomic.AtomicInteger();
+        doAnswer(inv -> {
+            if (attempts.getAndIncrement() == 0) {
+                throw new IllegalStateException("Local association unavailable");
+            }
+            configs.get(STORE).assignCompanyId(PROD, inv.getArgument(2));
+            return null;
+        }).when(configService).updateProviderCompanyId(eq(STORE), eq(PROD), anyString(), eq(ADMIN));
+
+        BillingSetupDto failed = assertDoesNotThrow(() -> service.saveFiscalProfile(STORE, request(), ADMIN));
+        assertEquals(State.ERROR, step(failed, Key.FISCAL_DATA).state());
+        assertNotNull(profiles.get(STORE));
+
+        BillingSetupDto recovered = service.saveFiscalProfile(STORE, request(), ADMIN);
+
+        assertEquals(State.DONE, step(recovered, Key.FISCAL_DATA).state());
+        assertEquals("co-recovered", configs.get(STORE).companyIdFor(PROD));
+        verify(onboarding, times(1)).createCompany(eq(PROD), any());
+    }
+
+    @Test
+    void anUncertainCreationIsNotBlindlyPostedAgain() {
+        when(onboarding.createCompany(eq(PROD), any()))
+                .thenThrow(new AlegraApiException(0, "Provider timed out after accepting the request", null));
+
+        service.saveFiscalProfile(STORE, request(), ADMIN);
+        BillingSetupDto retried = service.saveFiscalProfile(STORE, request(), ADMIN);
+
+        assertEquals(State.ERROR, step(retried, Key.FISCAL_DATA).state());
+        assertNull(configs.get(STORE).companyIdFor(PROD));
+        verify(onboarding, times(1)).createCompany(eq(PROD), any());
+        BillingSetupStepDto afterReload = step(service.getSetup(STORE), Key.FISCAL_DATA);
+        assertEquals(State.ERROR, afterReload.state());
+        assertTrue(afterReload.message().contains("soporte"));
+    }
+
+    @Test
+    void aConfirmedValidationRejectionCanBeCorrectedWithoutManualAssociation() {
+        when(onboarding.createCompany(eq(PROD), any()))
+                .thenThrow(new AlegraApiException(422, "Invalid fiscal data", null))
+                .thenReturn("co-corrected");
+
+        assertEquals(State.ERROR, step(service.saveFiscalProfile(STORE, request(), ADMIN), Key.FISCAL_DATA).state());
+        BillingSetupDto corrected = service.saveFiscalProfile(STORE, request(), ADMIN);
+
+        assertEquals(State.DONE, step(corrected, Key.FISCAL_DATA).state());
+        assertEquals("co-corrected", configs.get(STORE).companyIdFor(PROD));
+        verify(onboarding, times(2)).createCompany(eq(PROD), any());
+    }
+
+    @Test
+    void theMockWizardCompletesWithoutProductionCredentials() {
+        Clock clock = Clock.fixed(TODAY.atStartOfDay(ZoneId.systemDefault()).toInstant(), ZoneId.systemDefault());
+        MockOnboardingProvider local = new MockOnboardingProvider(clock);
+        when(onboarding.createCompany(any(), any())).thenAnswer(inv -> local.createCompany(inv.getArgument(0), inv.getArgument(1)));
+        when(onboarding.readEnablement(any(), any())).thenAnswer(inv -> local.readEnablement(inv.getArgument(0), inv.getArgument(1)));
+        when(onboarding.listResolutions(any(), any())).thenAnswer(inv -> local.listResolutions(inv.getArgument(0), inv.getArgument(1)));
+        List<NumberingRangeDto> imported = new ArrayList<>();
+        when(rangeService.listNumberingRanges()).thenAnswer(inv -> List.copyOf(imported));
+        when(rangeService.createNumberingRange(any())).thenAnswer(inv -> {
+            CreateNumberingRangeRequest request = inv.getArgument(0);
+            NumberingRangeDto created = range(request.document(), request.prefix(), request.resolutionNumber(), true);
+            imported.add(created);
+            return created;
+        });
+        when(provider.hasUsableInvoiceRange(STORE, PROD)).thenAnswer(inv -> imported.stream()
+                .anyMatch(range -> "01".equals(range.document())));
+        when(provider.countInvoiceRanges(STORE, PROD)).thenAnswer(inv -> (int) imported.stream()
+                .filter(range -> "01".equals(range.document())).count());
+
+        BillingSetupDto fiscal = service.saveFiscalProfile(STORE, request(), ADMIN);
+        assertEquals(State.DONE, step(fiscal, Key.FISCAL_DATA).state());
+        service.startDianEnablement(STORE, TEST_SET, ADMIN);
+        NumberingImportResultDto result = service.importNumbering(STORE, ADMIN);
+
+        assertEquals(1, result.importedCount());
+        assertEquals(2, result.noteRangesCreated());
+        assertEquals(BillingActivationStatus.ACTIVE, result.setup().status());
+        assertTrue(result.setup().steps().stream().allMatch(step -> step.state() == State.DONE));
+        assertEquals(PROD, result.setup().environment());
     }
 
     @Test

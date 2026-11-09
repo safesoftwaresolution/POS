@@ -92,6 +92,7 @@ public class StorePurgeDao {
         delete("DELETE FROM store_documents WHERE store_id = :storeId", storeId);
         delete("DELETE FROM support_tickets WHERE store_id = :storeId", storeId);
         delete("DELETE FROM numbering_range_audit WHERE store_id = :storeId", storeId);
+        delete("DELETE FROM billing_company_registration WHERE store_id = :storeId", storeId);
         delete("DELETE FROM store_billing_config WHERE store_id = :storeId", storeId);
         delete("DELETE FROM billing_company_profile WHERE store_id = :storeId", storeId);
         delete("DELETE FROM settings WHERE id = :storeId", storeId);

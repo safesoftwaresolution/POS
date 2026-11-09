@@ -165,3 +165,7 @@ Antes de la landing, el sistema vivía en `posbento.com`; los correos ya enviado
 5. Limpieza: dejar `APP_CORS_ALLOWED_ORIGINS` solo con `https://app.posbento.com`; probar un correo real de verificación y uno de recuperación.
 
 Reversa: devolver `posbento.com` al `frontend` y restaurar el valor anterior de `APP_FRONTEND_URL`.
+
+## Facturación: control previo al despliegue
+
+Consultar [la guía de preproducción](modules/billing/preproduction.md) antes de actualizar esta rama. Las nuevas migraciones no solucionan la divergencia V33–V37 con main. No desplegar sobre una base de historial distinto ni ejecutar repair para ocultar la diferencia. La activación real requiere credenciales y configuración del emisor, no solo cambiar un token.

@@ -228,3 +228,11 @@ Toda modificación al esquema físico (tablas, columnas, datos semilla, índices
 - **Compatibilidad H2**: las migraciones con datos deben ser seguras en H2 (perfil `dev`); H2 2.4.x falla al validar `CHECK … IN (…)` desde una conexión distinta a la que los creó.
 
 Nota: el DDL detallado de las tablas de billing está en `modules/billing/spec.md`.
+
+## Endurecimiento de facturación (V38–V39)
+
+V38 agrega contexto fiscal (`environment`, `provider_name`, `provider_company_id`) a los documentos y solicitud/recepción recuperables (`outcome`, `provider_document_id`, `request_payload`, `response_payload`, `request_hash`) a `billing_document_number`. Los campos históricos desconocidos permanecen nulos; `completed` no demuestra aceptación.
+
+V39 crea `billing_company_registration`, con reserva por local/entorno/proveedor, identidad fiscal, operación, estado y recepción de empresa. Restricciones únicas protegen la operación del local y la asociación de una misma empresa.
+
+Estas migraciones extienden únicamente la historia de esta rama; no resuelven el historial divergente V33–V37 de otras ramas. Ver [preproducción](modules/billing/preproduction.md).

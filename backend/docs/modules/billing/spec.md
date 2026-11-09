@@ -572,27 +572,22 @@ Datos fiscales del local (los de su RUT) con los que se crea y actualiza su empr
 
 ## Pendiente / no verificado
 
+- **Despliegue**: V33–V37 divergen de la referencia conocida de main. V38/V39 no reconcilian ese historial. Se necesita el historial Flyway real y una prueba de actualización restaurable antes de desplegar.
+- **Producción real**: token, empresa habilitada, resoluciones/numeración y ensayo controlado de factura, notas, archivos y correo pendientes. Los tests HTTP simulados no sustituyen esa verificación.
+- **Documentos históricos**: contexto fiscal desconocido requiere asociación verificada; no hay backfill especulativo. Una asignación antigua con `completed=true` no demuestra aceptación.
+- **Notas**: existe recuperación explícita por `POST /{id}/retry`, conciliación por identificador y estado PENDING conservado. No hay job automático de notas ni webhook. Un rechazo que necesita cambios se corrige explícitamente, sin alterar una solicitud incierta.
+- **Alta de empresa incierta**: un recibo guardado se reutiliza. Si el CREATE quedó incierto sin recibo, soporte debe verificar la asociación; no se repite ni se asocia automáticamente por NIT.
+- **Correo**: el sandbox entrega a `replyTo`; revisar la entrega real y las notificaciones de la empresa en producción.
+- **Descargas**: el timeout de lectura no limita por sí solo la duración total de una descarga lenta. Las notas reutilizan el descargador seguro; falta ensayo real de sus PDF/XML en esta revisión.
+- **Precisión**: los mappers preservan el bruto persistido y tienen regresiones de cantidades altas y tasas mixtas. La aceptación real del precio unitario de precisión ampliada en Alegra sigue pendiente.
+- **Mejoras posteriores**: alertas de numeración próxima a agotarse, centralización de códigos DIAN y registro de resoluciones adicionales como inactivas durante la importación.
+- **Nota de versión V36**: elimina credenciales heredadas de Factus y cambia contratos antiguos; conservar copia restaurable y revisar consumidores antes de actualizar desde una versión anterior.
+## Preparación previa al token de producción
 
-- **Cambios de contrato de `V36` (nota de versión)**: la respuesta de las facturas devuelve `legalNumber` en lugar de `factusNumber` (sin alias de salida); la solicitud de venta acepta `sendElectronicInvoice` y sigue aceptando `sendToFactus` como alias; el endpoint `PUT …/billing/credentials` ya no existe. `V36` **borra** las credenciales cifradas de Factus: hacer copia de la base antes de aplicarla en producción (no hay vuelta atrás).
+La guía [preproduction.md](preproduction.md) distingue pruebas HTTP contractuales de pruebas reales sandbox, define recuperación segura y enumera los bloqueos de despliegue. El asistente del cliente conserva producción; las resoluciones no se consultan en sandbox.
 
-- **Notas: fallo del paso de registro y borrado en curso** (advertencias de la revisión independiente): si `complete` falla después de llamar al proveedor (base caída), el resultado se pierde y, vencido el lease, un reintento vuelve a emitir (con Alegra la llave de idempotencia lo cubre; las facturas además concilian por id). El borrado de una nota sin validar no respeta el lease: si coincide con una emisión en curso, el emisor termina con error en `complete`. Mitigación pendiente: rechazar el borrado con reserva vigente y conciliar notas por `providerDocumentId`.
-- **Notas sin conciliación ni reintento automático**: un documento de nota que Alegra deja en espera (`WAITING_RESPONSE`) se registra como `ERROR`, guarda su `providerDocumentId` y se reintenta a mano con la misma referencia (la llave de idempotencia evita duplicarlo). Falta conciliarlo por id y un job de reintento como el de las facturas.
-- **Conciliación**: una factura `PENDING` se concilia cuando el job la toma o alguien la reintenta; no hay webhook de Alegra ni job de conciliación propio.
-- **Token de producción de Alegra**: cómo se obtiene y si cambia por entorno no está documentado; confirmar con Alegra antes del despliegue.
-- **Correo con Alegra**: el sandbox entrega a `replyTo` y no a `to` (ver «PDF, XML y correo»); confirmar con Alegra y revisar en producción. Las
-  empresas nuevas traen las notificaciones apagadas.
-- **Descarga lenta**: el timeout de lectura (45 s) es por lectura, no por descarga completa; un servidor de confianza que gotee datos podría
-  retener un hilo hasta el tope de tamaño.
-- **Centavos**: la factura suma líneas ya redondeadas y puede diferir unos centavos del total del ticket del POS.
-- **Códigos DIAN hardcodeados**: unidad `94`, tributo `01`, municipio `11001` por defecto y el mapeo de medios de pago
-  (`TRANSFER→31`, `NEQUI→42`, `CARD→48`) están repetidos en `BillingCanonicalMapper`, `AlegraInvoiceMapper` y
-  `CreditNoteServiceImpl`; hay que centralizarlos (el catálogo `PAYMENT_METHODS.extra_value` ya existe).
+Los documentos nuevos fijan entorno, proveedor y empresa, sin guardar tokens. La configuración actual del local no sustituye ese contexto para consultas o recuperación. Un documento histórico sin contexto verificable requiere revisión; no se infiere su empresa desde el estado actual.
 
-- **Vigencia y agotamiento del rango**: con Alegra `AlegraNumberAllocator` valida que el rango esté activo, vigente y con cupo antes de gastar un número. Falta la alerta de «rango próximo a agotarse» (umbral, a quién notifica, si usa `notifications`).
-- **Frontend**: no hay pantallas para ninguno de estos flujos todavía.
-- **Asistente**: (1) la importación deja activa una sola resolución de facturas (RN-BILL-008); las demás vigentes
-  salen en `skipped` y no se registran como inactivas. (2) Si Alegra crea la empresa y falla el guardado del
-  `company.id` (paso 3), la empresa queda sin asociar; al reintentar se crea otra o Alegra la rechaza por NIT
-  repetido, y hay que cargar su `company.id` a mano. (3) Sin verificar contra la producción real de Alegra (token
-  de producción pendiente). (4) Las notas crédito y débito aún guardan «Error en proveedor <nombre>: » en su mensaje
-  de error (las facturas ya dicen «No se pudo emitir la factura: »).
+Las solicitudes y recepciones fiscales se guardan por separado del cierre local. Una respuesta incierta no autoriza cambiar la llave ni emitir a ciegas. El alta de empresa usa un registro transaccional por local/entorno/proveedor; una recepción conocida se reutiliza y una creación incierta exige soporte, sin asociación automática solo por NIT.
+
+El mapeo fiscal conserva el importe bruto persistido de cada línea de venta. Las notas automáticas reciben el mismo snapshot; los ajustes manuales mantienen precios antes de impuestos. Una nota fiscal no registra por sí misma un reembolso ni movimientos de inventario.

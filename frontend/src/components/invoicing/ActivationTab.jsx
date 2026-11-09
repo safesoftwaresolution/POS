@@ -1,86 +1,34 @@
 import React, { useState } from 'react';
-import { RefreshCw, Eye, X, Plus, Hash, CheckCircle2, Ban, PauseCircle, Star, Building2 } from 'lucide-react';
+import { X, Plus, Hash, CheckCircle2, Ban, PauseCircle, Star } from 'lucide-react';
 import {
-  requestBillingActivationApi,
-  getDianNumberingRangesApi,
-  createNumberingRangeApi,
   deleteNumberingRangeApi,
   toggleNumberingRangeStatusApi,
   updateNumberingRangeCurrentApi,
   setDefaultNumberingRangeApi
 } from '../../services/billingApi';
 import useModal from '../../hooks/useModal';
-import { ACTIVATION_LABELS, ACTIVATION_STYLES, EMPTY_RANGE_FORM, FIELD_CLASS, formatDateTime } from './constants';
+import { Button, Card } from '../ui';
+import BillingSetupWizard from './BillingSetupWizard';
+import ManualRangeForm from './ManualRangeForm';
+import { isInvoiceDocument } from './constants';
 
-export default function ActivationTab({ role, activation, ranges, rangesLoading, activeRangeId, onReload }) {
+/**
+ * Habilitación de la facturación electrónica: el asistente paso a paso (el administrador lo recorre, el supervisor
+ * ve el avance) y, con la facturación activa, los rangos de numeración del local.
+ */
+export default function ActivationTab({ role, activation, ranges, rangesLoading, activeRangeId, refreshKey, onReload }) {
   const { notify, confirm } = useModal();
   const isAdmin = role === 'ADMINISTRATOR';
-  const [requesting, setRequesting] = useState(false);
-  const [dianRanges, setDianRanges] = useState(null);
-  const [dianLoading, setDianLoading] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [createForm, setCreateForm] = useState(EMPTY_RANGE_FORM);
-  const [creating, setCreating] = useState(false);
   const [editingCurrent, setEditingCurrent] = useState(null);
   const [currentValue, setCurrentValue] = useState('');
-
-  const canRequest = isAdmin && activation?.status === 'NOT_REQUESTED';
-
-  const handleRequestActivation = async () => {
-    setRequesting(true);
-    try {
-      await requestBillingActivationApi();
-      await onReload();
-    } catch (err) {
-      notify('Error empezando la habilitación: ' + err.message);
-    } finally {
-      setRequesting(false);
-    }
-  };
-
-  const loadDianRanges = async () => {
-    setDianLoading(true);
-    try {
-      setDianRanges(await getDianNumberingRangesApi());
-    } catch (err) {
-      notify('Error consultando resoluciones DIAN: ' + err.message);
-      setDianRanges([]);
-    } finally {
-      setDianLoading(false);
-    }
-  };
-
-  const handleCreateRange = async (e) => {
-    e.preventDefault();
-    setCreating(true);
-    try {
-      await createNumberingRangeApi({
-        document: createForm.document.trim(),
-        prefix: createForm.prefix.trim(),
-        resolutionNumber: createForm.resolutionNumber.trim(),
-        current: Number(createForm.current),
-        from: Number(createForm.from),
-        to: Number(createForm.to),
-        startDate: createForm.startDate,
-        endDate: createForm.endDate,
-        technicalKey: createForm.technicalKey.trim()
-      });
-      setShowCreateForm(false);
-      setCreateForm(EMPTY_RANGE_FORM);
-      await onReload();
-    } catch (err) {
-      notify('Error registrando el rango: ' + err.message);
-    } finally {
-      setCreating(false);
-    }
-  };
 
   const handleToggleStatus = async (range) => {
     try {
       await toggleNumberingRangeStatusApi(range.id);
       await onReload();
     } catch (err) {
-      notify('Error cambiando el estado del rango: ' + err.message);
+      notify('No pudimos cambiar el estado del rango: ' + err.message);
     }
   };
 
@@ -91,7 +39,7 @@ export default function ActivationTab({ role, activation, ranges, rangesLoading,
       await deleteNumberingRangeApi(range.id);
       await onReload();
     } catch (err) {
-      notify('Error eliminando el rango: ' + err.message);
+      notify('No pudimos eliminar el rango: ' + err.message);
     }
   };
 
@@ -100,7 +48,7 @@ export default function ActivationTab({ role, activation, ranges, rangesLoading,
       await setDefaultNumberingRangeApi(range.id);
       await onReload();
     } catch (err) {
-      notify('Error eligiendo el rango: ' + err.message);
+      notify('No pudimos elegir el rango: ' + err.message);
     }
   };
 
@@ -110,141 +58,34 @@ export default function ActivationTab({ role, activation, ranges, rangesLoading,
       setEditingCurrent(null);
       await onReload();
     } catch (err) {
-      notify('Error actualizando el consecutivo: ' + err.message);
+      notify('No pudimos actualizar el consecutivo: ' + err.message);
     }
   };
 
-  const tile = 'p-3 rounded-2xl bg-page border border-line';
+  const showRanges = activation?.status === 'ACTIVE';
 
   return (
     <div className="space-y-6">
-      <div className="bento-card p-6 space-y-4">
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-solid text-brand flex items-center justify-center shrink-0">
-              <Building2 className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="font-extrabold text-sm text-ink">Estado de habilitación ante el proveedor y la DIAN</h3>
-              <p className="text-[11px] text-ink-soft font-medium">
-                {activation ? `Entorno activo: ${activation.environment}` : 'Consultando...'}
-              </p>
-            </div>
-          </div>
-          {activation && (
-            <span className={`text-[11px] px-3 py-1 rounded-full font-extrabold ${ACTIVATION_STYLES[activation.status] || ''}`}>
-              {ACTIVATION_LABELS[activation.status] || activation.status}
-            </span>
-          )}
-        </div>
+      <BillingSetupWizard canEdit={isAdmin} refreshKey={refreshKey} onChanged={onReload} />
 
-        {activation?.statusReason && (
-          <p className="text-[11px] text-red-500 dark:text-red-400 font-semibold">Motivo: {activation.statusReason}</p>
-        )}
-
-        {activation && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
-            <div className={tile}>
-              <span className="text-[10px] font-extrabold uppercase text-ink-muted">Sandbox</span>
-              <p className="font-bold text-ink mt-0.5 flex items-center gap-1.5">
-                {activation.sandboxConfigured ? <><CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> Configurado</> : 'Sin configurar'}
-              </p>
-            </div>
-            <div className={tile}>
-              <span className="text-[10px] font-extrabold uppercase text-ink-muted">Producción</span>
-              <p className="font-bold text-ink mt-0.5 flex items-center gap-1.5">
-                {activation.productionConfigured ? <><CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> Configurada</> : 'Pendiente de paso a producción'}
-              </p>
-            </div>
-            <div className={tile}>
-              <span className="text-[10px] font-extrabold uppercase text-ink-muted">Última actualización</span>
-              <p className="font-bold text-ink mt-0.5">{formatDateTime(activation.updatedAt)}</p>
-            </div>
-          </div>
-        )}
-
-        {canRequest && (
-          <button
-            type="button"
-            onClick={handleRequestActivation}
-            disabled={requesting}
-            className="px-4 py-2.5 bg-solid hover:bg-solid-hover disabled:opacity-50 text-solid-ink rounded-2xl text-xs font-bold cursor-pointer"
-          >
-            {requesting ? 'Empezando...' : 'Empezar la habilitación'}
-          </button>
-        )}
-      </div>
-
+      {showRanges && (
       <div className="space-y-4">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <h3 className="font-extrabold text-sm text-ink flex items-center gap-2">
             <Hash className="w-4 h-4 text-brand" /> Resoluciones y rangos de numeración
           </h3>
-          <div className="flex items-center gap-3">
-            <button type="button" onClick={loadDianRanges} className="text-xs font-bold text-ink-soft flex items-center gap-1.5 hover:underline cursor-pointer">
-              {dianLoading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Eye className="w-3.5 h-3.5" />} Consultar resoluciones en la DIAN
-            </button>
-            {isAdmin && (
-              <button
-                type="button"
-                onClick={() => setShowCreateForm(v => !v)}
-                className="px-3.5 py-2 bg-solid hover:bg-solid-hover text-solid-ink rounded-xl text-[11px] font-bold flex items-center gap-1.5 cursor-pointer"
-              >
-                <Plus className="w-3.5 h-3.5" /> Registrar rango
-              </button>
-            )}
-          </div>
+          {isAdmin && (
+            <Button size="sm" icon={Plus} onClick={() => setShowCreateForm(v => !v)}>Registrar rango</Button>
+          )}
         </div>
 
-        {dianRanges && (
-          <div className="p-4 bg-gray-50/60 dark:bg-white/5 rounded-2xl border border-line text-[11px] space-y-1.5">
-            <p className="font-extrabold text-gray-600 dark:text-gray-300">Resoluciones autorizadas por la DIAN para este local:</p>
-            {dianRanges.length === 0 ? (
-              <p className="text-gray-400">No hay resoluciones asociadas todavía.</p>
-            ) : dianRanges.map((r, idx) => (
-              <p key={idx} className="font-mono text-ink-soft">
-                {r.prefix} · Res. {r.resolutionNumber} · {r.startDate} a {r.endDate}
-              </p>
-            ))}
-          </div>
-        )}
-
         {isAdmin && showCreateForm && (
-          <form onSubmit={handleCreateRange} className="bento-card p-5 space-y-3">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-              {[
-                ['range-document', 'Código de documento:', 'document', 'text', '01'],
-                ['range-prefix', 'Prefijo:', 'prefix', 'text', 'SETP'],
-                ['range-resolution', 'Número de resolución:', 'resolutionNumber', 'text', ''],
-                ['range-current', 'Consecutivo actual:', 'current', 'number', '1'],
-                ['range-from', 'Consecutivo inicial de la resolución:', 'from', 'number', '1'],
-                ['range-to', 'Consecutivo final de la resolución:', 'to', 'number', '5000'],
-                ['range-start', 'Inicio de vigencia:', 'startDate', 'date', ''],
-                ['range-end', 'Fin de vigencia:', 'endDate', 'date', ''],
-                ['range-technical-key', 'Clave técnica:', 'technicalKey', 'text', '']
-              ].map(([id, label, key, type, ph]) => (
-                <div key={id}>
-                  <label htmlFor={id} className="font-bold text-gray-700 dark:text-gray-300 block mb-1">{label}</label>
-                  <input
-                    id={id}
-                    required
-                    type={type}
-                    min={type === 'number' ? 1 : undefined}
-                    placeholder={ph}
-                    value={createForm[key]}
-                    onChange={e => setCreateForm({ ...createForm, [key]: e.target.value })}
-                    className={FIELD_CLASS}
-                  />
-                </div>
-              ))}
-            </div>
-            <div className="flex gap-2">
-              <button type="button" onClick={() => setShowCreateForm(false)} className="flex-1 py-2.5 bg-gray-100 dark:bg-line text-gray-700 dark:text-gray-300 rounded-xl text-[11px] font-bold cursor-pointer">Cancelar</button>
-              <button type="submit" disabled={creating} className="flex-1 py-2.5 bg-solid hover:bg-solid-hover disabled:opacity-50 text-solid-ink rounded-xl text-[11px] font-extrabold cursor-pointer">
-                {creating ? 'Registrando...' : 'Registrar'}
-              </button>
-            </div>
-          </form>
+          <Card>
+            <ManualRangeForm
+              onCreated={() => { setShowCreateForm(false); onReload(); }}
+              onCancel={() => setShowCreateForm(false)}
+            />
+          </Card>
         )}
 
         {rangesLoading && ranges.length === 0 ? (
@@ -252,7 +93,7 @@ export default function ActivationTab({ role, activation, ranges, rangesLoading,
         ) : ranges.length === 0 ? (
           <div className="py-10 text-center space-y-1 bg-gray-50/50 dark:bg-white/5 rounded-3xl border border-dashed border-gray-200 dark:border-gray-700">
             <p className="text-xs font-bold text-gray-700 dark:text-gray-300">Sin rangos de numeración registrados</p>
-            {isAdmin && <p className="text-[11px] text-ink-muted">Registra la resolución que la DIAN te asignó para empezar a facturar.</p>}
+            {isAdmin && <p className="text-[11px] text-ink-muted">Tráelos de la DIAN en el paso «Numeración» o regístralos a mano.</p>}
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -290,7 +131,7 @@ export default function ActivationTab({ role, activation, ranges, rangesLoading,
 
                     {isAdmin && (
                       <div className="flex items-center gap-1 shrink-0">
-                        {!isDefault && (
+                        {!isDefault && isInvoiceDocument(r.document) && (
                           <button type="button" onClick={() => handleSetDefault(r)} title="Elegir para facturar" aria-label="Elegir para facturar" className="p-1.5 text-gray-400 hover:text-brand rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer">
                             <Star className="w-4 h-4" />
                           </button>
@@ -359,6 +200,7 @@ export default function ActivationTab({ role, activation, ranges, rangesLoading,
           </div>
         )}
       </div>
+      )}
     </div>
   );
 }

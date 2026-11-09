@@ -8,6 +8,11 @@ export async function getBackofficeStoreBillingApi(storeId) {
   return await fetchApi(`/backoffice/stores/${storeId}/billing`);
 }
 
+/** Avance del asistente de habilitación del local (solo lectura). */
+export async function getStoreBillingSetupApi(storeId) {
+  return await fetchApi(`/backoffice/stores/${storeId}/billing/setup`);
+}
+
 export async function updateBackofficeBillingCompanyIdApi(storeId, environment, companyId) {
   return await fetchApi(`/backoffice/stores/${storeId}/billing/company-id?environment=${environment}`, {
     method: 'PUT',

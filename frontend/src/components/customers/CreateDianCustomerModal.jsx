@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
-import { X, Building2, User, FileText, CheckCircle2, MapPin, Mail, Phone, AlertCircle } from 'lucide-react';
+import { X, Building2, User, FileText, CheckCircle2, Mail, Phone, AlertCircle } from 'lucide-react';
 import { createCustomerApi, updateCustomerApi } from '../../services/customersApi';
+import { calculateDv } from '../../utils/dianCheckDigit';
+import { toDaneCode } from '../../utils/divipola';
+import MunicipalityPicker from '../invoicing/MunicipalityPicker';
 
 // Personas según el catálogo de la DIAN: 1 = jurídica (NIT con DV), 13 = natural.
 const LEGAL_ORG_JURIDICA = 1;
@@ -12,19 +15,6 @@ const TRIBUTE_NO_RESPONSABLE = 21;
 const INPUT_CLASS =
   'w-full h-11 px-3.5 bg-page border border-line rounded-2xl text-xs font-semibold text-ink placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-ink dark:focus:border-brand';
 
-// Dígito de verificación del NIT (módulo 11, algoritmo oficial de la DIAN).
-function calculateDv(nit) {
-  const clean = nit.replace(/\D/g, '');
-  if (!clean) return '';
-  const weights = [3, 7, 13, 17, 19, 23, 29, 37, 41, 43, 47, 53, 59, 67, 71];
-  let sum = 0;
-  for (let i = 0; i < clean.length; i++) {
-    sum += parseInt(clean.charAt(clean.length - 1 - i), 10) * weights[i];
-  }
-  const rem = sum % 11;
-  return String(rem === 0 || rem === 1 ? rem : 11 - rem);
-}
-
 const EMPTY_FORM = {
   legalOrganizationId: LEGAL_ORG_JURIDICA,
   tributeId: TRIBUTE_IVA,
@@ -34,6 +24,7 @@ const EMPTY_FORM = {
   email: '',
   phone: '',
   municipalityId: '',
+  departmentCode: '',
   address: ''
 };
 
@@ -47,7 +38,9 @@ function formFromCustomer(c) {
     dv: c.dv || '',
     email: c.email || '',
     phone: c.phone || '',
-    municipalityId: c.municipalityId ?? '',
+    // El código DANE se guarda como número: 05001 llega como 5001.
+    municipalityId: toDaneCode(c.municipalityId),
+    departmentCode: toDaneCode(c.municipalityId).slice(0, 2),
     address: c.address || ''
   };
 }
@@ -233,33 +226,24 @@ export default function CreateDianCustomerModal({ onClose, onCreated, initialNam
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label htmlFor="dian-phone" className="font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1.5 mb-1">
-                <Phone className="w-3.5 h-3.5 text-gray-400" /> Teléfono
-              </label>
-              <input
-                id="dian-phone"
-                type="text"
-                value={form.phone}
-                onChange={e => set({ phone: e.target.value })}
-                className={INPUT_CLASS}
-              />
-            </div>
-            <div>
-              <label htmlFor="dian-city" className="font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1.5 mb-1">
-                <MapPin className="w-3.5 h-3.5 text-gray-400" /> Código DANE del municipio
-              </label>
-              <input
-                id="dian-city"
-                type="text"
-                inputMode="numeric"
-                value={form.municipalityId}
-                onChange={e => set({ municipalityId: e.target.value.replace(/\D/g, '') })}
-                className={`${INPUT_CLASS} font-mono`}
-              />
-            </div>
+          <div>
+            <label htmlFor="dian-phone" className="font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1.5 mb-1">
+              <Phone className="w-3.5 h-3.5 text-gray-400" /> Teléfono
+            </label>
+            <input
+              id="dian-phone"
+              type="text"
+              value={form.phone}
+              onChange={e => set({ phone: e.target.value })}
+              className={INPUT_CLASS}
+            />
           </div>
+
+          <MunicipalityPicker
+            cityCode={form.municipalityId}
+            departmentCode={form.departmentCode}
+            onChange={({ cityCode, departmentCode }) => set({ municipalityId: cityCode, departmentCode })}
+          />
 
           <div>
             <label htmlFor="dian-address" className="font-bold text-gray-700 dark:text-gray-300 block mb-1">Dirección fiscal</label>

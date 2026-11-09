@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { FileText, RefreshCw, Download, FileCode, Mail, Eye, X, CheckCircle2, Search, Copy, Check, ExternalLink, QrCode, AlertTriangle, Clock } from 'lucide-react';
+import { FileText, RefreshCw, Download, FileCode, Mail, Eye, X, CheckCircle2, Search, Copy, Check, ExternalLink, QrCode, AlertTriangle, Clock, FlaskConical } from 'lucide-react';
+import { Badge } from '../ui';
 import {
   listInvoicesApi,
   getSaleInvoiceApi,
@@ -14,7 +15,7 @@ import useModal from '../../hooks/useModal';
 import { INVOICE_STATUSES, INVOICE_STATUS_LABELS, INVOICE_STATUS_STYLES, FIELD_CLASS, formatDateTime } from './constants';
 
 export default function InvoicesTab({ role, refreshKey, onChanged }) {
-  const { notify } = useModal();
+  const { notify, confirm } = useModal();
   const canRetry = role === 'ADMINISTRATOR' || role === 'SUPERVISOR';
   const [statusFilter, setStatusFilter] = useState('');
   const [search, setSearch] = useState('');
@@ -33,6 +34,13 @@ export default function InvoicesTab({ role, refreshKey, onChanged }) {
   );
 
   const handleRetry = async (invoice) => {
+    if (invoice.status === 'REJECTED') {
+      const ok = await confirm(
+        'La DIAN rechazó esta factura. Antes de reintentar, corrige lo que indica el rechazo (por ejemplo, los datos del cliente); si no, la volverá a rechazar.',
+        { title: '¿Reintentar la factura rechazada?', confirmText: 'Reintentar', danger: false },
+      );
+      if (!ok) return;
+    }
     setRetrying(invoice.saleId);
     try {
       await retryInvoiceApi(invoice.saleId);
@@ -166,7 +174,14 @@ export default function InvoicesTab({ role, refreshKey, onChanged }) {
                   return (
                     <tr key={inv.id} className="hover:bg-gray-50/60 dark:hover:bg-white/5">
                       <td data-label="" className="py-3.5 px-5">
-                        <span className="font-mono font-bold text-ink block">{inv.legalNumber || '—'}</span>
+                        <span className="font-mono font-bold text-ink flex items-center gap-1.5">
+                          {inv.legalNumber || '—'}
+                          {inv.environment === 'SANDBOX' && (
+                            <Badge tone="warning" className="font-sans">
+                              <FlaskConical className="w-3 h-3" /> Prueba
+                            </Badge>
+                          )}
+                        </span>
                         <span className="text-[10px] text-ink-muted font-mono">Venta #{inv.saleId}</span>
                       </td>
                       <td data-label="Validada el" className="py-3.5 px-4 text-gray-600 dark:text-gray-300 font-medium">{formatDateTime(inv.validatedAt)}</td>
@@ -212,7 +227,7 @@ export default function InvoicesTab({ role, refreshKey, onChanged }) {
                           <button type="button" onClick={() => openDetail(inv)} title="Ver detalle" aria-label="Ver detalle" className={iconBtn}>
                             <Eye className="w-3.5 h-3.5" />
                           </button>
-                          {canRetry && (inv.status === 'ERROR' || inv.status === 'PENDING') && (
+                          {canRetry && ['ERROR', 'PENDING', 'REJECTED'].includes(inv.status) && (
                             <button
                               type="button"
                               onClick={() => handleRetry(inv)}

@@ -15,6 +15,41 @@ export async function requestBillingActivationApi() {
   return await fetchApi('/billing/activation/request', { method: 'POST' });
 }
 
+// ---------- Asistente de habilitación (autoservicio, producción) ----------
+
+/** Avance paso a paso: `{ status, environment, platformReady, steps[], profile, invoiceRangesCount }`. */
+export async function getBillingSetupApi() {
+  return await fetchApi('/billing/setup');
+}
+
+/** Datos del RUT. Devuelve el asistente actualizado (un fallo del proveedor llega como paso en ERROR). */
+export async function saveFiscalProfileApi(profile) {
+  return await fetchApi('/billing/setup/fiscal-profile', {
+    method: 'PUT',
+    body: JSON.stringify(profile),
+  });
+}
+
+/** Envía el TestSetId que entregó la DIAN. Devuelve el asistente actualizado. */
+export async function startDianEnablementApi(testSetId) {
+  return await fetchApi('/billing/setup/dian-enablement', {
+    method: 'POST',
+    body: JSON.stringify({ testSetId }),
+  });
+}
+
+/** Trae las resoluciones de la DIAN como rangos: `{ importedCount, noteRangesCreated, skipped[], setup }`. */
+export async function importNumberingApi() {
+  return await fetchApi('/billing/setup/numbering/import', { method: 'POST' });
+}
+
+// ---------- Catálogos ----------
+
+/** Departamentos y municipios de Colombia (DIVIPOLA del DANE). */
+export async function getDivipolaApi() {
+  return await fetchApi('/billing/catalogs/divipola');
+}
+
 // ---------- Rangos de numeración DIAN ----------
 
 export async function getDianNumberingRangesApi() {

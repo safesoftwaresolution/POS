@@ -28,9 +28,16 @@ export const ACTIVATION_STYLES = {
   SUSPENDED: 'bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/20'
 };
 
-export const EMPTY_RANGE_FORM = {
-  document: '', prefix: '', resolutionNumber: '', current: '', from: '', to: '', startDate: '', endDate: '', technicalKey: ''
-};
+// Documentos de un rango de numeración (códigos DIAN). Solo las facturas (01) llevan resolución.
+export const INVOICE_DOCUMENT = '01';
+
+export const DOCUMENT_OPTIONS = [
+  { value: '01', label: 'Factura de venta' },
+  { value: '91', label: 'Nota crédito' },
+  { value: '92', label: 'Nota débito' },
+];
+
+export const isInvoiceDocument = (document) => document === INVOICE_DOCUMENT;
 
 export const FIELD_CLASS =
   'w-full p-2.5 bg-white dark:bg-[#0E0E12] border border-line rounded-xl text-xs font-semibold text-ink focus:outline-none focus:border-ink dark:focus:border-brand';

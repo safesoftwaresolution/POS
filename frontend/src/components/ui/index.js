@@ -5,6 +5,7 @@ export { default as Modal } from './Modal';
 export { default as SegmentedControl } from './SegmentedControl';
 export { default as EmptyState } from './EmptyState';
 export { default as PageHeader } from './PageHeader';
+export { default as Stepper } from './Stepper';
 export { Field, Input, Select, inputClass } from './Field';
 export { default as DateRangeFilter } from './DateRangeFilter';
 export { default as MoneyInput } from './MoneyInput';

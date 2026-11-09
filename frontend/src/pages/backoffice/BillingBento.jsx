@@ -10,11 +10,14 @@ import {
   AlertCircle,
   X,
   RefreshCw,
-  ArrowLeftRight
+  ArrowLeftRight,
+  ChevronDown,
+  ListChecks
 } from 'lucide-react';
 import {
   listBackofficeBillingByStatusApi,
   getBackofficeStoreBillingApi,
+  getStoreBillingSetupApi,
   updateBackofficeBillingCompanyIdApi,
   testBackofficeBillingConnectionApi,
   switchBackofficeBillingEnvironmentApi,
@@ -24,6 +27,9 @@ import { getBackofficeStoresApi } from '../../services/backoffice/storesApi';
 import useModal from '../../hooks/useModal';
 import useLoad from '../../hooks/useLoad';
 import asList from '../../utils/asList';
+import { Stepper } from '../../components/ui';
+import FiscalSummary from '../../components/invoicing/FiscalSummary';
+import { ENVIRONMENT_LABELS, toStepperSteps } from '../../components/invoicing/setupSteps';
 
 const STATUSES = ['IN_SETUP', 'ACTIVE', 'SUSPENDED', 'NOT_REQUESTED'];
 
@@ -70,6 +76,7 @@ export default function BillingBento() {
   );
 
   const [detail, setDetail] = useState(null);
+  const [setup, setSetup] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [envTab, setEnvTab] = useState('SANDBOX');
   const [companyIdForm, setCompanyIdForm] = useState('');
@@ -86,8 +93,14 @@ export default function BillingBento() {
     setReasonTarget(null);
     setReasonText('');
     setCompanyIdForm('');
+    setSetup(null);
     try {
-      const data = await getBackofficeStoreBillingApi(storeId);
+      // El avance del asistente es informativo: si falla, el detalle se muestra igual.
+      const [data, setupData] = await Promise.all([
+        getBackofficeStoreBillingApi(storeId),
+        getStoreBillingSetupApi(storeId).catch(() => null),
+      ]);
+      setSetup(setupData);
       setDetail(data);
       setEnvTab(data.environment || 'SANDBOX');
     } catch (e) {
@@ -133,6 +146,18 @@ export default function BillingBento() {
 
   const handleSwitchEnvironment = async (environment) => {
     if (!detail) return;
+    const toSandbox = environment === 'SANDBOX';
+    const ok = await confirm(
+      toSandbox
+        ? 'En el entorno de pruebas las facturas son de prueba: no tienen validez ante la DIAN y el local las verá marcadas como «Prueba». Úsalo solo para pruebas de la plataforma. Se le avisará al local.'
+        : 'El local pasará a emitir facturas reales ante la DIAN. Necesita su empresa y un rango de facturas vigente en producción. Se le avisará al local.',
+      {
+        title: toSandbox ? '¿Pasar el local a pruebas?' : '¿Pasar el local a producción?',
+        confirmText: toSandbox ? 'Pasar a pruebas' : 'Pasar a producción',
+        danger: toSandbox,
+      },
+    );
+    if (!ok) return;
     try {
       const updated = await switchBackofficeBillingEnvironmentApi(detail.storeId, environment);
       setDetail(updated);
@@ -230,7 +255,7 @@ export default function BillingBento() {
                       <p className="font-extrabold text-ink">{storeName(r.storeId)}</p>
                       <p className="text-[10px] text-ink-muted">{storesById[r.storeId]?.email || '—'}</p>
                     </td>
-                    <td data-label="Entorno Activo" className="px-2 py-3 font-semibold text-gray-600 dark:text-gray-300">{r.environment}</td>
+                    <td data-label="Entorno Activo" className="px-2 py-3 font-semibold text-gray-600 dark:text-gray-300">{ENVIRONMENT_LABELS[r.environment] || r.environment}</td>
                     <td data-label="Sandbox" className="px-2 py-3 text-center">
                       {r.sandboxConfigured
                         ? <CheckCircle2 className="w-4 h-4 text-emerald-500 inline" />
@@ -284,6 +309,31 @@ export default function BillingBento() {
                   >
                     <X className="w-5 h-5" />
                   </button>
+                </div>
+
+                {/* Avance del asistente del local (solo lectura) */}
+                <div className="p-4 bg-gray-50/60 dark:bg-white/5 rounded-2xl border border-line space-y-4">
+                  <h4 className="font-extrabold text-xs text-ink flex items-center gap-2">
+                    <ListChecks className="w-3.5 h-3.5 text-brand" /> Avance de la habilitación
+                  </h4>
+                  {setup ? (
+                    <>
+                      <Stepper ariaLabel="Avance de la habilitación del local" steps={toStepperSteps(setup.steps)} />
+                      {setup.steps?.filter((s) => s.state === 'ERROR' || s.state === 'CURRENT').map((s) => (
+                        <p
+                          key={s.key}
+                          className={`text-[11px] font-semibold ${s.state === 'ERROR' ? 'text-red-600 dark:text-red-400' : 'text-ink-soft'}`}
+                        >
+                          {s.message}
+                        </p>
+                      ))}
+                      {setup.profile?.saved
+                        ? <FiscalSummary profile={setup.profile} />
+                        : <p className="text-[11px] text-ink-muted">El local aún no ha guardado sus datos fiscales.</p>}
+                    </>
+                  ) : (
+                    <p className="text-[11px] text-ink-muted">No pudimos consultar el avance del asistente de este local.</p>
+                  )}
                 </div>
 
                 {/* Etapa del proceso */}
@@ -350,7 +400,7 @@ export default function BillingBento() {
                 {/* Entorno activo */}
                 <div className="p-4 bg-gray-50/60 dark:bg-white/5 rounded-2xl border border-line space-y-3">
                   <h4 className="font-extrabold text-xs text-ink flex items-center gap-2">
-                    <ArrowLeftRight className="w-3.5 h-3.5 text-brand" /> Entorno activo para facturar: <span className="text-brand">{detail.environment}</span>
+                    <ArrowLeftRight className="w-3.5 h-3.5 text-brand" /> Entorno activo para facturar: <span className="text-brand">{ENVIRONMENT_LABELS[detail.environment] || detail.environment}</span>
                   </h4>
                   <div className="flex gap-2">
                     {['SANDBOX', 'PRODUCTION'].map(env => (
@@ -361,17 +411,20 @@ export default function BillingBento() {
                         onClick={() => handleSwitchEnvironment(env)}
                         className="flex-1 py-1.5 bg-white dark:bg-line border border-[#EAEAEA] dark:border-transparent disabled:opacity-40 text-gray-700 dark:text-gray-200 rounded-xl text-[11px] font-bold cursor-pointer"
                       >
-                        Usar {env}
+                        Usar {ENVIRONMENT_LABELS[env].toLowerCase()}
                       </button>
                     ))}
                   </div>
                 </div>
 
-                {/* Empresa en el proveedor */}
-                <div className="p-4 bg-gray-50/60 dark:bg-white/5 rounded-2xl border border-line space-y-3">
-                  <h4 className="font-extrabold text-xs text-ink flex items-center gap-2">
-                    <Key className="w-3.5 h-3.5 text-brand" /> Empresa en el proveedor (company.id)
-                  </h4>
+                {/* Avanzado: el asistente crea la empresa sola; cargar el company.id a mano es la excepción. */}
+                <details className="group p-4 bg-gray-50/60 dark:bg-white/5 rounded-2xl border border-line">
+                  <summary className="font-extrabold text-xs text-ink flex items-center gap-2 cursor-pointer list-none">
+                    <Key className="w-3.5 h-3.5 text-brand" /> Avanzado: empresa en el proveedor (company.id)
+                    <ChevronDown className="w-3.5 h-3.5 ml-auto transition-transform group-open:rotate-180" />
+                  </summary>
+                  <div className="space-y-3 pt-3">
+                  <p className="text-[11px] text-ink-muted">El asistente del local registra su empresa solo. Úsalo únicamente si hay que corregir el company.id a mano.</p>
 
                   <div className="flex gap-2">
                     {['SANDBOX', 'PRODUCTION'].map(env => (
@@ -381,7 +434,7 @@ export default function BillingBento() {
                         onClick={() => { setEnvTab(env); setCompanyIdForm(''); setTestResult(null); }}
                         className={`px-3 py-1.5 rounded-full text-[11px] font-bold cursor-pointer ${envTab === env ? 'bg-solid text-solid-ink' : 'bg-white dark:bg-white/10 text-gray-600 dark:text-gray-300'}`}
                       >
-                        {env} {env === 'SANDBOX' ? (detail.sandboxCompanyIdConfigured ? '✓' : '') : (detail.productionCompanyIdConfigured ? '✓' : '')}
+                        {ENVIRONMENT_LABELS[env]} {env === 'SANDBOX' ? (detail.sandboxCompanyIdConfigured ? '✓' : '') : (detail.productionCompanyIdConfigured ? '✓' : '')}
                       </button>
                     ))}
                   </div>
@@ -428,11 +481,12 @@ export default function BillingBento() {
                         disabled={savingCompanyId}
                         className="flex-1 py-2 bg-solid hover:bg-solid-hover disabled:opacity-50 text-solid-ink rounded-xl text-[11px] font-extrabold cursor-pointer shadow-sm shadow-[#0A0A0A]/10"
                       >
-                        {savingCompanyId ? 'Guardando...' : `Guardar company.id ${envTab}`}
+                        {savingCompanyId ? 'Guardando...' : `Guardar company.id de ${ENVIRONMENT_LABELS[envTab].toLowerCase()}`}
                       </button>
                     </div>
                   </form>
-                </div>
+                  </div>
+                </details>
               </>
             )}
           </div>

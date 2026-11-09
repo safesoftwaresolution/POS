@@ -9,6 +9,7 @@ import {
 import useAuth from '../hooks/useAuth';
 import { INVOICE_STATUSES, ACTIVATION_LABELS } from '../components/invoicing/constants';
 import { TabButton, KpiCard } from '../components/invoicing/parts';
+import { ENVIRONMENT_LABELS } from '../components/invoicing/setupSteps';
 
 import InvoicesTab from '../components/invoicing/InvoicesTab';
 import ActivationTab from '../components/invoicing/ActivationTab';
@@ -113,7 +114,7 @@ export default function InvoicingBento() {
             <KpiCard
               label="Habilitación del local"
               value={activation ? (ACTIVATION_LABELS[activation.status] || activation.status) : '—'}
-              hint={activation ? `Entorno ${activation.environment}` : 'Consultando...'}
+              hint={activation ? `Entorno de ${(ENVIRONMENT_LABELS[activation.environment] || activation.environment).toLowerCase()}` : 'Consultando...'}
               hintClass={activation?.status === 'ACTIVE' ? 'text-emerald-600 dark:text-emerald-400' : 'text-ink-soft'}
               icon={activation?.status === 'ACTIVE' ? ShieldCheck : ShieldAlert}
               accent={activation?.status === 'ACTIVE' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300'}
@@ -138,6 +139,7 @@ export default function InvoicingBento() {
           ranges={ranges}
           rangesLoading={rangesLoading}
           activeRangeId={activeRangeId}
+          refreshKey={refreshKey}
           onReload={() => reloadBilling()}
         />
       )}

@@ -85,6 +85,15 @@ El administrador del local habilita su facturación solo, en producción, en cua
 - **`POST …/dian-enablement`** (ADMINISTRATOR, `{ "testSetId": "<uuid>" }`; formato inválido → 400 «El código del set de pruebas no tiene el formato correcto»). Exige `FISCAL_DATA` hecho (si no, 409). Llama a `startDianEnablement(PRODUCTION, companyId, testSetId)` y devuelve el asistente con lo que responde la DIAN.
 - **`POST …/numbering/import`** (ADMINISTRATOR). Exige la habilitación de la DIAN, el entorno `PRODUCTION` y que el local sea el de la solicitud (409 si no). Pide `listResolutions(PRODUCTION, nit)` y registra cada resolución vigente que aún no esté registrada como rango `01` por el camino normal (`NumberingRangeService.createNumberingRange`: mismas validaciones, guardas RN-BILL-008 y regla de «el primer rango queda elegido»). Las vigentes hoy y que vencen más tarde van primero; las vencidas y las que rechazan las guardas (por ejemplo, ya hay un rango de facturas activo) se informan en `skipped`. Con un rango de facturas activo, crea los rangos de notas que falten: `91` prefijo `NC` y `92` prefijo `ND`, del 1 al 99.999.999, resolución `SIN-RESOLUCION`, vigentes desde hoy por 10 años (las notas no llevan resolución). Responde `{ importedCount, noteRangesCreated, skipped, setup }`.
 - **Activación automática**: tras cada una de las tres escrituras y en cada `GET`, si el local está `IN_SETUP`, la DIAN lo habilitó y tiene numeración de facturas utilizable, pasa a `ACTIVE` con actor `system` por la transición normal (que vuelve a aplicar la guarda de RN-BILL-006 y notifica al local). Si la guarda lo rechaza, `READY` sale en `ERROR` con el motivo.
+- **Back office**: `GET /api/v1/backoffice/stores/{storeId}/billing/setup` (SUPER_ADMIN, `BackofficeBillingSetupController`) devuelve el mismo `BillingSetupDto` para el local de la ruta (nunca el del contexto), para seguir el avance sin entrar al local. Como el `GET` del local, si ya cumple todo lo activa (actor `system`).
+
+### Catálogo DIVIPOLA (`/api/v1/billing/catalogs/divipola`)
+`backend/src/main/resources/billing/divipola.json` (DANE DIVIPOLA, datos.gov.co `gdxc-w37w`, corte 30-dic-2024, CC BY-SA 4.0): 33 departamentos y 1.122 municipios `{ source, departments:[{code,name}], municipalities:[{code,name,departmentCode}] }`. `DivipolaCatalog` lo carga una vez al arrancar en un `DivipolaCatalogDto` inmutable (si falta o está vacío, la aplicación no arranca). `GET /api/v1/billing/catalogs/divipola` (`BillingCatalogController`; SUPER_ADMIN y cualquier rol de local) lo sirve con `Cache-Control: max-age=86400`. Lo usan el paso «Datos de tu RUT» y el registro de clientes fiscales para elegir el municipio por nombre en lugar de escribir su código.
+
+### Frontend del asistente
+- `InvoicingBento` → pestaña «Habilitación y rangos» (`ActivationTab`): `BillingSetupWizard` guiado por `GET /billing/setup` (`useLoad`), con `Stepper` (`components/ui`) y un panel por paso: **Datos de tu RUT** (NIT con DV calculado, tipo de persona, responsabilidades con su nombre del RUT, departamento + municipio DIVIPOLA, CIIU opcional; los errores de validación se muestran junto a cada campo; sin token de producción, aviso «Guardamos tus datos. Te avisaremos cuando la facturación esté disponible.»), **Habilítate en la DIAN** (guía del portal de habilitación y envío del TestSetId), **Numeración** (guía MUISCA, «Traer mis rangos de la DIAN» con lo importado y lo omitido, y registro manual plegado donde las notas `91`/`92` no piden resolución ni clave técnica) y **Listo**. El SUPERVISOR ve el avance sin formularios. Con el local `ACTIVE` se muestran debajo los rangos; la estrella «para facturar» solo en rangos de facturas (`01`).
+- Facturas emitidas: insignia «Prueba» si `environment = SANDBOX`; «Reintentar» también en `REJECTED`, con una confirmación que pide corregir antes los datos (por ejemplo, del cliente).
+- Back office (`BillingBento`): el detalle del local muestra el avance (Stepper de solo lectura) y el resumen de sus datos fiscales; el cambio de entorno pide confirmación (en pruebas las facturas no tienen validez); la carga manual del `company.id` queda en «Avanzado».
 
 ### Numeración local
 Alegra no asigna el consecutivo: el sistema envía el `number` y la `resolution` completa en cada factura.
@@ -304,6 +313,7 @@ El mensaje del proveedor se propaga al cliente (truncado a 500 caracteres) para 
 
 ### RN-BILL-021 — Factura de una Venta a Fiado
 - La factura electrónica es opcional también en el fiado: solo se emite si quien vende lo pidió (`sendElectronicInvoice`), como en cualquier venta. Cuando la venta es `CREDIT`, `BillingCanonicalMapper` la arma a **crédito**: `payment_form = "2"`, `payment_method_code = "1"` (instrumento no definido) y `payment_due_date` con la fecha límite del fiado (`CreditFacade.findChargeDueDate(storeId, saleId)`, 30 días desde la venta si faltara). El resto de ventas siguen saliendo de contado (`payment_form = "1"`). Ver `credit/spec.md`, RN-CRE-005.
+- El municipio del cliente se envía siempre con los 5 dígitos del código DANE: `customers.municipality_id` es numérico y guarda `05001` (Medellín) como `5001`, así que `BillingCanonicalMapper` lo completa con `%05d`.
 
 ### RN-BILL-013 — Notas Débito solo con Referencia a Factura
 - Solo se emiten notas débito con `customization_id=30` (con referencia a una factura electrónica). El tipo `32` (sin referencia) no está soportado y `electronic_debit_notes.bill_number` es `NOT NULL`, así que se rechaza con 400.
@@ -369,6 +379,8 @@ Detalle en «Asistente de habilitación». El local sale siempre de la solicitud
 - `PUT /api/v1/billing/setup/fiscal-profile` — guardar los datos del RUT y registrar la empresa en producción (ADMINISTRATOR).
 - `POST /api/v1/billing/setup/dian-enablement` — enviar el TestSetId de la DIAN (ADMINISTRATOR).
 - `POST /api/v1/billing/setup/numbering/import` — importar las resoluciones de la DIAN y crear los rangos de notas (ADMINISTRATOR).
+- `GET /api/v1/backoffice/stores/{storeId}/billing/setup` — el mismo avance para un local, desde el back office (SUPER_ADMIN, `BackofficeBillingSetupController`).
+- `GET /api/v1/billing/catalogs/divipola` — departamentos y municipios DANE (SUPER_ADMIN y cualquier rol de local, `BillingCatalogController`, `Cache-Control: max-age=86400`).
 
 ### 5. Notas Crédito Electrónicas (`BillingCreditNoteController`)
 - `POST /api/v1/billing/credit-notes/validate` — crear y validar nota crédito ante Alegra y la DIAN.
@@ -546,7 +558,7 @@ Datos fiscales del local (los de su RUT) con los que se crea y actualiza su empr
 |---|---|---|---|
 | Ver estado de facturación del propio local | - | ✓ | ✓ |
 | Solicitar activación | - | ✓ | - |
-| Ver el avance del asistente | - | ✓ | ✓ |
+| Ver el avance del asistente | ✓ (cualquier local, back office) | ✓ | ✓ |
 | Datos fiscales, set de pruebas DIAN, importar numeración (asistente) | - | ✓ | - |
 | Ver cola de revisión / estado de cualquier local | ✓ | - | - |
 | Cargar credenciales / probar conexión | ✓ | - | - |
@@ -559,6 +571,7 @@ Datos fiscales del local (los de su RUT) con los que se crea y actualiza su empr
 ---
 
 ## Pendiente / no verificado
+
 
 - **Cambios de contrato de `V36` (nota de versión)**: la respuesta de las facturas devuelve `legalNumber` en lugar de `factusNumber` (sin alias de salida); la solicitud de venta acepta `sendElectronicInvoice` y sigue aceptando `sendToFactus` como alias; el endpoint `PUT …/billing/credentials` ya no existe. `V36` **borra** las credenciales cifradas de Factus: hacer copia de la base antes de aplicarla en producción (no hay vuelta atrás).
 

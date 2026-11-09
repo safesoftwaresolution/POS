@@ -15,6 +15,7 @@ import com.sciencebot.pos.billing.internal.adapters.dto.CustomerBillingData;
 import com.sciencebot.pos.billing.internal.adapters.dto.InvoiceItemData;
 import com.sciencebot.pos.billing.internal.adapters.dto.InvoiceRequest;
 import com.sciencebot.pos.billing.internal.adapters.dto.InvoiceResult;
+import com.sciencebot.pos.billing.internal.adapters.dto.BillingDocumentContext;
 import com.sciencebot.pos.config.tenant.TenantContext;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -85,6 +86,54 @@ class AlegraInvoiceClientTest {
         InvoiceItemData item = new InvoiceItemData("REF-A", "Producto", new BigDecimal("1"), new BigDecimal("10000"),
                 new BigDecimal("19"), new BigDecimal("10000"), "94", "999", "01", BigDecimal.ZERO, false);
         return new InvoiceRequest(7L, 5L, null, "FAC-1", "1", "10", customer, List.of(item), new BigDecimal("11900"), "obs");
+    }
+
+    @Test
+    void legacyCompletedAllocationDoesNotRotateOrBlindlyReissue() {
+        when(allocator.allocate(eq(5L), eq(BillingEnvironment.SANDBOX), eq("01"), anyString()))
+                .thenReturn(new Allocation(11L, 2L, "SETP", 990_000_101L, "18760000001", 990_000_000L,
+                        995_000_000L, LocalDate.of(2019, 1, 19), LocalDate.of(2030, 1, 19),
+                        "technical-key", "old-key", true));
+
+        InvoiceResult result = client.emitInvoice(request());
+
+        assertEquals("PENDING", result.status());
+        verify(allocator, never()).rotateIdempotencyKey(any());
+        server.verify();
+    }
+
+    @Test
+    void payloadConflictNeverRotatesAnUncertainEmissionKey() {
+        expectPost(withStatus(HttpStatus.UNPROCESSABLE_ENTITY).contentType(MediaType.APPLICATION_JSON)
+                .body("{\"errors\":[{\"code\":\"IDEMPOTENCY_KEY_REUSED_WITH_DIFFERENT_PAYLOAD\",\"message\":\"reused\"}]}"));
+
+        InvoiceResult result = client.emitInvoice(request());
+
+        assertEquals("PENDING", result.status());
+        verify(allocator, never()).rotateIdempotencyKey(any());
+        server.verify();
+    }
+
+    @Test
+    void acceptedReceiptRecoversWithoutAnyProviderCallOrNewKeyAfterLocalFinalizationFailure() {
+        var context = new BillingDocumentContext(5L, BillingEnvironment.SANDBOX, "alegra", "original-company");
+        Allocation base = allocation(true, "key-1");
+        Allocation received = new Allocation(base.id(), base.rangeId(), base.prefix(), base.number(), base.resolutionNumber(),
+                base.minNumber(), base.maxNumber(), base.startDate(), base.endDate(), base.technicalKey(),
+                base.idempotencyKey(), true, "ACCEPTED", "inv-123", "{}", "receipt");
+        when(allocator.findAllocation(5L, BillingEnvironment.SANDBOX, "01", "FAC-1-7"))
+                .thenReturn(java.util.Optional.of(received));
+        when(allocator.receipt(received)).thenReturn(InvoiceResult.success("SETP990000101", "cufe-abc", "qr", null)
+                .withProviderDocumentId("inv-123"));
+
+        InvoiceResult recovered = client.emitInvoice(request(), context);
+
+        assertEquals("VALIDATED", recovered.status());
+        assertEquals("cufe-abc", recovered.cufe());
+        verifyNoInteractions(resolver, companyProvider);
+        verify(allocator, never()).rotateIdempotencyKey(any());
+        verify(allocator, never()).allocate(any(), any(), any(), any());
+        server.verify();
     }
 
     private static String response(String status, String legalStatus, String code, String message, String... errorMessages) {
@@ -212,7 +261,7 @@ class AlegraInvoiceClientTest {
     }
 
     @Test
-    void keyReusedWithADifferentPayload_422_RotatesTheKeyAndReportsPending() {
+    void keyReusedWithADifferentPayload_422_RequiresReconciliationWithoutRotating() {
         expectPost(withStatus(HttpStatus.UNPROCESSABLE_ENTITY).contentType(MediaType.APPLICATION_JSON)
                 .body("{\"errors\":[{\"code\":\"IDEMPOTENCY_KEY_REUSED_WITH_DIFFERENT_PAYLOAD\",\"message\":\"reused\"}]}"));
         when(allocator.rotateIdempotencyKey(11L)).thenReturn(allocation(false, "key-2"));
@@ -220,7 +269,7 @@ class AlegraInvoiceClientTest {
         InvoiceResult result = client.emitInvoice(request());
 
         assertEquals("PENDING", result.status());
-        verify(allocator).rotateIdempotencyKey(11L);
+        verify(allocator, never()).rotateIdempotencyKey(11L);
     }
 
     @Test
@@ -236,7 +285,11 @@ class AlegraInvoiceClientTest {
 
     @Test
     void afterAFinalNonAcceptedOutcomeTheNumberIsKeptButTheKeyIsRotatedBeforeSending() {
-        when(allocator.allocate(eq(5L), eq(BillingEnvironment.SANDBOX), eq("01"), anyString())).thenReturn(allocation(true, "old-key"));
+        Allocation old = allocation(true, "old-key");
+        when(allocator.allocate(eq(5L), eq(BillingEnvironment.SANDBOX), eq("01"), anyString()))
+                .thenReturn(new Allocation(old.id(), old.rangeId(), old.prefix(), old.number(), old.resolutionNumber(),
+                        old.minNumber(), old.maxNumber(), old.startDate(), old.endDate(), old.technicalKey(),
+                        old.idempotencyKey(), true, "REJECTED", "rejected-id", null, null));
         when(allocator.rotateIdempotencyKey(11L)).thenReturn(allocation(false, "key-1"));
         expectPost(withSuccess(response("SENT", "ACCEPTED", "00", "ok"), MediaType.APPLICATION_JSON));
 
@@ -302,7 +355,7 @@ class AlegraInvoiceClientTest {
         server.expect(once(), requestTo(URL + "/invoices/inv-404"))
                 .andRespond(withStatus(HttpStatus.NOT_FOUND).contentType(MediaType.APPLICATION_JSON)
                         .body("{\"errors\":[{\"code\":\"AEP2001\",\"message\":\"Document not found\"}]}"));
-        assertEquals("ERROR", client.queryInvoiceByProviderId("inv-404").status());
+        assertEquals("PENDING", client.queryInvoiceByProviderId("inv-404").status());
     }
 
     @Test
@@ -347,7 +400,7 @@ class AlegraInvoiceClientTest {
     }
 
     @Test
-    void aDocumentThatAlegraSaysDoesNotExistIsAConfirmedErrorCarryingItsId() {
+    void aMissingProviderDocumentRemainsPendingRatherThanPermittingAnotherIssue() {
         TenantContext.setStoreId(5L);
         server.expect(once(), requestTo(URL + "/invoices/inv-gone"))
                 .andRespond(withStatus(HttpStatus.NOT_FOUND).contentType(MediaType.APPLICATION_JSON)
@@ -355,7 +408,7 @@ class AlegraInvoiceClientTest {
 
         InvoiceResult result = client.queryInvoiceByProviderId("inv-gone");
 
-        assertEquals("ERROR", result.status());
+        assertEquals("PENDING", result.status());
         assertEquals("inv-gone", result.providerDocumentId());
     }
 }

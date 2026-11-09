@@ -21,6 +21,13 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.Map;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HexFormat;
+import com.sciencebot.pos.billing.internal.adapters.dto.InvoiceResult;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Asigna el consecutivo y la resolución que Alegra exige en cada documento: el sistema envía el
@@ -40,7 +47,17 @@ public class AlegraNumberAllocator {
     /** Número asignado a una referencia, con los datos de resolución que exige el documento. */
     public record Allocation(Long id, Long rangeId, String prefix, long number, String resolutionNumber,
                              long minNumber, long maxNumber, LocalDate startDate, LocalDate endDate, String technicalKey,
-                             String idempotencyKey, boolean completed) {}
+                             String idempotencyKey, boolean completed, String outcome, String providerDocumentId,
+                             String requestPayload, String responsePayload) {
+        public Allocation(Long id, Long rangeId, String prefix, long number, String resolutionNumber,
+                          long minNumber, long maxNumber, LocalDate startDate, LocalDate endDate, String technicalKey,
+                          String idempotencyKey, boolean completed) {
+            this(id, rangeId, prefix, number, resolutionNumber, minNumber, maxNumber, startDate, endDate,
+                    technicalKey, idempotencyKey, completed, null, null, null, null);
+        }
+    }
+
+    private static final JsonMapper JSON = JsonMapper.builder().build();
 
     private final NumberingRangeRepository rangeRepository;
     private final DocumentNumberAllocationRepository allocationRepository;
@@ -87,7 +104,7 @@ public class AlegraNumberAllocator {
     /** Marca que el proveedor ya recibió el documento con el número asignado. */
     public void markCompleted(Long allocationId) {
         requiresNew.executeWithoutResult(status -> {
-            DocumentNumberAllocation allocation = load(allocationId);
+            DocumentNumberAllocation allocation = loadForUpdate(allocationId);
             allocation.markCompleted();
             allocationRepository.save(allocation);
         });
@@ -96,10 +113,54 @@ public class AlegraNumberAllocator {
     /** Genera una llave de idempotencia nueva conservando el número (tras una respuesta final no aceptada). */
     public Allocation rotateIdempotencyKey(Long allocationId) {
         return requiresNew.execute(status -> {
-            DocumentNumberAllocation allocation = load(allocationId);
+            DocumentNumberAllocation allocation = loadForUpdate(allocationId);
             allocation.rotateIdempotencyKey(UUID.randomUUID().toString());
             return toAllocation(allocationRepository.save(allocation));
         });
+    }
+
+    /** Freeze before HTTP: later attempts replay these exact bytes, even if customer/company data changed. */
+    public String freezeRequest(Long allocationId, Map<String, Object> body) {
+        String payload = JSON.writeValueAsString(body);
+        return requiresNew.execute(status -> {
+            DocumentNumberAllocation allocation = loadForUpdate(allocationId);
+            allocation.freezeRequest(payload, sha256(payload));
+            allocationRepository.save(allocation);
+            return allocation.getRequestPayload();
+        });
+    }
+
+    /** A durable receipt is independent of the invoice/note finalization transaction. */
+    public void recordResult(Long allocationId, InvoiceResult result) {
+        if (allocationId == null || result == null) return;
+        String outcome = switch (result.status()) {
+            case "VALIDATED" -> "ACCEPTED";
+            case "REJECTED" -> "REJECTED";
+            case "ERROR" -> result.providerDocumentId() != null ? "FAILED" : "UNCERTAIN";
+            default -> "PENDING";
+        };
+        String payload = JSON.writeValueAsString(result);
+        requiresNew.executeWithoutResult(status -> {
+            DocumentNumberAllocation allocation = loadForUpdate(allocationId);
+            allocation.recordResponse(outcome, result.providerDocumentId(), payload);
+            allocationRepository.save(allocation);
+        });
+    }
+
+    public InvoiceResult receipt(Allocation allocation) {
+        return allocation.responsePayload() == null ? null : JSON.readValue(allocation.responsePayload(), InvoiceResult.class);
+    }
+
+    public Optional<Allocation> findAllocation(Long storeId, BillingEnvironment environment, String document, String reference) {
+        return requiresNew.execute(status -> find(storeId, environment, document, reference).map(this::toAllocation));
+    }
+
+    private static String sha256(String payload) {
+        try {
+            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(payload.getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException impossible) {
+            throw new IllegalStateException(impossible);
+        }
     }
 
     private Allocation doAllocate(Long storeId, BillingEnvironment environment, String document, String reference) {
@@ -185,6 +246,13 @@ public class AlegraNumberAllocator {
                 () -> new IllegalArgumentException("No existe la asignación de numeración " + allocationId));
     }
 
+    private DocumentNumberAllocation loadForUpdate(Long allocationId) {
+        Long storeId = allocationRepository.findStoreIdById(allocationId).orElseThrow(
+                () -> new IllegalArgumentException("No existe la asignación de numeración " + allocationId));
+        return allocationRepository.findAllocationForUpdateAndStoreId(allocationId, storeId).orElseThrow(
+                () -> new IllegalArgumentException("No existe la asignación de numeración " + allocationId));
+    }
+
     private Allocation toAllocation(DocumentNumberAllocation allocation) {
         NumberingRange range = rangeRepository.findById(allocation.getRangeId()).orElseThrow(
                 () -> new IllegalStateException("La asignación " + allocation.getId() + " apunta a un rango inexistente"));
@@ -195,6 +263,7 @@ public class AlegraNumberAllocator {
         return new Allocation(allocation.getId(), allocation.getRangeId(), allocation.getPrefix(),
                 allocation.getNumber(), range.getResolutionNumber(), range.getMinNumber(), range.getMaxNumber(),
                 range.getStartDate(), range.getEndDate(),
-                range.getTechnicalKey(), allocation.getIdempotencyKey(), allocation.isCompleted());
+                range.getTechnicalKey(), allocation.getIdempotencyKey(), allocation.isCompleted(), allocation.getOutcome(),
+                allocation.getProviderDocumentId(), allocation.getRequestPayload(), allocation.getResponsePayload());
     }
 }

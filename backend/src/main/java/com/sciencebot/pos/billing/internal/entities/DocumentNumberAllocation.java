@@ -47,6 +47,21 @@ public class DocumentNumberAllocation {
     @Column(name = "completed", nullable = false)
     private boolean completed = false;
 
+    @Column(name = "outcome", length = 24)
+    private String outcome;
+
+    @Column(name = "provider_document_id", length = 100)
+    private String providerDocumentId;
+
+    @Column(name = "request_payload", columnDefinition = "TEXT")
+    private String requestPayload;
+
+    @Column(name = "response_payload", columnDefinition = "TEXT")
+    private String responsePayload;
+
+    @Column(name = "request_hash", length = 64)
+    private String requestHash;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -70,7 +85,31 @@ public class DocumentNumberAllocation {
 
     /** Cambia la llave de idempotencia conservando el número (tras una respuesta final no aceptada). */
     public void rotateIdempotencyKey(String newKey) {
+        if (!"REJECTED".equals(outcome) && !"FAILED".equals(outcome)) {
+            throw new IllegalStateException("No se puede cambiar la llave de una emisión aceptada o de resultado incierto");
+        }
         this.idempotencyKey = newKey;
+        this.completed = false;
+        this.outcome = null;
+        this.providerDocumentId = null;
+        this.requestPayload = null;
+        this.requestHash = null;
+        this.responsePayload = null;
+    }
+
+    public void freezeRequest(String payload, String hash) {
+        if (requestPayload == null) {
+            requestPayload = payload;
+            requestHash = hash;
+        }
+    }
+
+    public void recordResponse(String outcome, String documentId, String payload) {
+        if ("ACCEPTED".equals(this.outcome)) return;
+        this.outcome = outcome;
+        this.providerDocumentId = documentId;
+        this.responsePayload = payload;
+        this.completed = "ACCEPTED".equals(outcome) || "REJECTED".equals(outcome) || "FAILED".equals(outcome);
     }
 
     /** Marca que el proveedor ya recibió el documento con este número. */

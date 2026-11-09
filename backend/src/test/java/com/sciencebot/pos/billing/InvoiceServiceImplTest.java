@@ -6,6 +6,8 @@ import com.sciencebot.pos.billing.internal.adapters.InvoiceProvider;
 import com.sciencebot.pos.billing.internal.adapters.dto.CustomerBillingData;
 import com.sciencebot.pos.billing.internal.adapters.dto.InvoiceItemData;
 import com.sciencebot.pos.billing.internal.adapters.dto.InvoiceRequest;
+import com.sciencebot.pos.billing.internal.adapters.dto.BillingDocumentContext;
+import com.sciencebot.pos.billing.dto.BillingEnvironment;
 import com.sciencebot.pos.billing.internal.adapters.mock.MockBillingAdapter;
 import com.sciencebot.pos.billing.internal.entities.ElectronicInvoice;
 import com.sciencebot.pos.billing.internal.mappers.BillingCanonicalMapper;
@@ -35,6 +37,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 class InvoiceServiceImplTest {
+    private static final BillingDocumentContext CONTEXT =
+            new BillingDocumentContext(1L, BillingEnvironment.SANDBOX, "alegra", "original-company");
 
     @Mock
     private ElectronicInvoiceRepository repository;
@@ -64,6 +68,15 @@ class InvoiceServiceImplTest {
         mockAdapter = new MockBillingAdapter();
 
         when(customProvider.getProviderName()).thenReturn("alegra");
+        doAnswer(i -> customProvider.emitInvoice(i.getArgument(0))).when(customProvider).emitInvoice(any(), any());
+        doAnswer(i -> customProvider.queryInvoiceByProviderId(i.getArgument(0)))
+                .when(customProvider).queryInvoiceByProviderId(any(), any());
+        doAnswer(i -> customProvider.downloadInvoicePDFByProviderId(i.getArgument(0)))
+                .when(customProvider).downloadInvoicePDFByProviderId(any(), any());
+        doAnswer(i -> customProvider.downloadInvoiceXMLByProviderId(i.getArgument(0)))
+                .when(customProvider).downloadInvoiceXMLByProviderId(any(), any());
+        doAnswer(i -> customProvider.sendInvoiceEmailByProviderId(i.getArgument(0), i.getArgument(1)))
+                .when(customProvider).sendInvoiceEmailByProviderId(any(), any(), any());
 
         invoiceService = new InvoiceServiceImpl(
                 repository,
@@ -78,6 +91,19 @@ class InvoiceServiceImplTest {
     @AfterEach
     void tearDown() {
         TenantContext.clear();
+    }
+
+    @Test
+    void historicalDocumentWithoutCompanySnapshotIsRefusedInsteadOfUsingCurrentConfiguration() {
+        ReflectionTestUtils.setField(invoiceService, "activeProviderName", "alegra");
+        ElectronicInvoice legacy = ElectronicInvoice.initialize(1L, 1L);
+        legacy.assignEnvironmentIfMissing(BillingEnvironment.SANDBOX);
+        legacy.markAsValidated("SETP1", "cufe", "qr", null, LocalDateTime.now());
+        legacy.trackProviderDocument("legacy-1");
+        when(repository.findBySaleIdAndStoreId(1L, 1L)).thenReturn(Optional.of(legacy));
+
+        assertThrows(BillingNotEnabledException.class, () -> invoiceService.downloadInvoicePDF(1L));
+        verify(customProvider, never()).downloadInvoicePDFByProviderId(any(), any());
     }
 
     @Test
@@ -147,6 +173,7 @@ class InvoiceServiceImplTest {
         ReflectionTestUtils.setField(invoiceService, "activeProviderName", "mock");
 
         ElectronicInvoice validated = ElectronicInvoice.initialize(1L, 1L);
+        validated.assignDocumentContext(new BillingDocumentContext(1L, BillingEnvironment.SANDBOX, "mock", null));
         validated.setId(10L);
         validated.markAsValidated("SETP-001", "cufe", "qr", "pdf", LocalDateTime.now());
         when(repository.findBySaleIdAndStoreId(1L, 1L)).thenReturn(Optional.of(validated));
@@ -189,6 +216,7 @@ class InvoiceServiceImplTest {
     void unknownProvider_FailsInsteadOfSilentlyUsingMock() {
         ReflectionTestUtils.setField(invoiceService, "activeProviderName", "factsus");
         ElectronicInvoice validated = ElectronicInvoice.initialize(1L, 1L);
+        validated.assignDocumentContext(new BillingDocumentContext(1L, BillingEnvironment.SANDBOX, "factsus", null));
         validated.markAsValidated("SETP-001", "cufe", "qr", "pdf", LocalDateTime.now());
         when(repository.findBySaleIdAndStoreId(1L, 1L)).thenReturn(Optional.of(validated));
 
@@ -265,6 +293,7 @@ class InvoiceServiceImplTest {
     void downloadInvoicePDF_UsesTheProviderDocumentIdWhenTheInvoiceHasOne() {
         ReflectionTestUtils.setField(invoiceService, "activeProviderName", "alegra");
         ElectronicInvoice validated = ElectronicInvoice.initialize(1L, 1L);
+        validated.assignDocumentContext(CONTEXT);
         validated.markAsValidated("SETP-1", "cufe", "qr", null, LocalDateTime.now());
         validated.trackProviderDocument("doc-1");
         when(repository.findBySaleIdAndStoreId(1L, 1L)).thenReturn(Optional.of(validated));
@@ -279,6 +308,7 @@ class InvoiceServiceImplTest {
     void downloadInvoicePDF_FallsBackToTheLegalNumberWhenThereIsNoProviderDocumentId() {
         ReflectionTestUtils.setField(invoiceService, "activeProviderName", "alegra");
         ElectronicInvoice validated = ElectronicInvoice.initialize(1L, 1L);
+        validated.assignDocumentContext(CONTEXT);
         validated.markAsValidated("SETP-1", "cufe", "qr", null, LocalDateTime.now());
         when(repository.findBySaleIdAndStoreId(1L, 1L)).thenReturn(Optional.of(validated));
         when(customProvider.downloadInvoicePDF("SETP-1")).thenReturn(new byte[]{7});
@@ -292,6 +322,7 @@ class InvoiceServiceImplTest {
     void sendInvoiceEmailAndDownloadXml_UseTheProviderDocumentIdWhenThereIsOne() {
         ReflectionTestUtils.setField(invoiceService, "activeProviderName", "alegra");
         ElectronicInvoice validated = ElectronicInvoice.initialize(1L, 1L);
+        validated.assignDocumentContext(CONTEXT);
         validated.markAsValidated("SETP-1", "cufe", "qr", null, LocalDateTime.now());
         validated.trackProviderDocument("doc-1");
         when(repository.findBySaleIdAndStoreId(1L, 1L)).thenReturn(Optional.of(validated));
@@ -310,6 +341,7 @@ class InvoiceServiceImplTest {
         ReflectionTestUtils.setField(invoiceService, "activeProviderName", "alegra");
         SaleDto saleDto = new SaleDto(1L, "FACT-000001", null, "Cliente General", BigDecimal.TEN, BigDecimal.TEN, BigDecimal.ZERO, "admin", List.of(), "CASH");
         ElectronicInvoice invoice = ElectronicInvoice.initialize(1L, 1L);
+        invoice.assignDocumentContext(CONTEXT);
         when(repository.findBySaleIdForUpdate(1L)).thenReturn(Optional.of(invoice));
         when(repository.save(any(ElectronicInvoice.class))).thenAnswer(inv -> inv.getArgument(0));
         when(canonicalMapper.toInvoiceRequest(saleDto)).thenReturn(mock(InvoiceRequest.class));
@@ -352,6 +384,7 @@ class InvoiceServiceImplTest {
         ReflectionTestUtils.setField(invoiceService, "activeProviderName", "alegra");
         SaleDto saleDto = new SaleDto(1L, "FACT-000001", null, "Cliente General", BigDecimal.TEN, BigDecimal.TEN, BigDecimal.ZERO, "admin", List.of(), "CASH");
         ElectronicInvoice invoice = ElectronicInvoice.initialize(1L, 1L);
+        invoice.assignDocumentContext(CONTEXT);
         when(repository.findBySaleIdForUpdate(1L)).thenReturn(Optional.of(invoice));
         when(repository.save(any(ElectronicInvoice.class))).thenAnswer(inv -> inv.getArgument(0));
         when(canonicalMapper.toInvoiceRequest(saleDto)).thenReturn(mock(InvoiceRequest.class));
@@ -388,6 +421,7 @@ class InvoiceServiceImplTest {
     void sendInvoiceEmailAndDownloadXml_KeepUsingTheLegalNumberWithoutAProviderId() {
         ReflectionTestUtils.setField(invoiceService, "activeProviderName", "alegra");
         ElectronicInvoice validated = ElectronicInvoice.initialize(1L, 1L);
+        validated.assignDocumentContext(CONTEXT);
         validated.markAsValidated("SETP-1", "cufe", "qr", null, LocalDateTime.now());
         when(repository.findBySaleIdAndStoreId(1L, 1L)).thenReturn(Optional.of(validated));
         when(customProvider.sendInvoiceEmail("SETP-1", "a@b.co")).thenReturn(true);

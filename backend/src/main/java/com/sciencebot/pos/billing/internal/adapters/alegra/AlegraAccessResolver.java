@@ -6,6 +6,7 @@ import com.sciencebot.pos.billing.exception.BillingNotEnabledException;
 import com.sciencebot.pos.billing.internal.entities.StoreBillingConfig;
 import com.sciencebot.pos.billing.internal.repositories.StoreBillingConfigRepository;
 import com.sciencebot.pos.config.tenant.TenantContext;
+import com.sciencebot.pos.billing.internal.adapters.dto.BillingDocumentContext;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
@@ -43,6 +44,33 @@ public class AlegraAccessResolver {
     /** Acceso para facturar. Exige facturación {@code ACTIVE}; sin {@code storeId} usa el local de la solicitud. */
     public AlegraAccess resolve(Long storeId) {
         return resolve(storeId, null, true);
+    }
+
+    /** Route a historical document using its immutable context, not today's store configuration. */
+    public AlegraAccess resolveDocument(BillingDocumentContext context) {
+        Objects.requireNonNull(context, "El documento requiere su contexto fiscal original");
+        if (!"alegra".equals(context.providerName())) {
+            throw new BillingNotEnabledException("El documento pertenece a otro proveedor de facturación");
+        }
+        Long requestStore = TenantContext.getStoreId();
+        if (requestStore != null && !requestStore.equals(context.storeId())) {
+            throw new BillingNotEnabledException("El documento no pertenece al local de la solicitud");
+        }
+        String token = tokenFor(context.environment());
+        if (isBlank(token)) {
+            throw new BillingNotEnabledException("Falta el token del entorno original de " + context.environment().label());
+        }
+        return new AlegraAccess(context.storeId(), context.environment(), urlFor(context.environment()), token.trim(), context.companyId());
+    }
+
+    public AlegraAccess resolveDocumentForEmission(BillingDocumentContext context) {
+        AlegraAccess access = resolveDocument(context);
+        StoreBillingConfig config = repository.findById(context.storeId()).orElseThrow(
+                () -> new BillingNotEnabledException("El local no tiene la facturación electrónica habilitada"));
+        if (config.getStatus() != BillingActivationStatus.ACTIVE) {
+            throw new BillingNotEnabledException("La facturación electrónica del local no está activa");
+        }
+        return access;
     }
 
     /** Igual pero sin exigir {@code ACTIVE} y en el entorno indicado: sirve para probar la conexión antes de activar. */

@@ -2,6 +2,7 @@ package com.sciencebot.pos.billing.internal.adapters;
 
 import com.sciencebot.pos.billing.internal.adapters.dto.InvoiceRequest;
 import com.sciencebot.pos.billing.internal.adapters.dto.InvoiceResult;
+import com.sciencebot.pos.billing.internal.adapters.dto.BillingDocumentContext;
 
 /**
  * Puerto de salida (SPI) para operaciones de emisión y consulta de Facturas Electrónicas ante el proveedor DIAN.
@@ -17,6 +18,26 @@ public interface InvoiceProvider {
      * Emite y valida una factura electrónica ante el proveedor y la DIAN.
      */
     InvoiceResult emitInvoice(InvoiceRequest request);
+
+    default InvoiceResult emitInvoice(InvoiceRequest request, BillingDocumentContext context) {
+        return emitInvoice(request);
+    }
+
+    default InvoiceResult queryInvoiceByProviderId(String id, BillingDocumentContext context) {
+        return queryInvoiceByProviderId(id);
+    }
+
+    default boolean sendInvoiceEmailByProviderId(String id, String email, BillingDocumentContext context) {
+        return sendInvoiceEmailByProviderId(id, email);
+    }
+
+    default byte[] downloadInvoicePDFByProviderId(String id, BillingDocumentContext context) {
+        return downloadInvoicePDFByProviderId(id);
+    }
+
+    default byte[] downloadInvoiceXMLByProviderId(String id, BillingDocumentContext context) {
+        return downloadInvoiceXMLByProviderId(id);
+    }
 
     /**
      * Consulta el estado de una factura electrónica por su número legal o referencia.

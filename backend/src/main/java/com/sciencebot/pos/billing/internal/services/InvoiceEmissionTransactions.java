@@ -14,6 +14,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import com.sciencebot.pos.billing.internal.adapters.dto.BillingDocumentContext;
+import com.sciencebot.pos.billing.dto.BillingEnvironment;
 
 /**
  * Los pasos A y C de la emisión de una factura, cada uno en su propia transacción corta. La llamada al proveedor
@@ -24,7 +26,15 @@ import java.time.LocalDateTime;
 public class InvoiceEmissionTransactions {
 
     /** Resultado del paso A: quién emite y, si no es este hilo, el estado actual de la factura. */
-    public record Reservation(ReserveOutcome outcome, ElectronicInvoiceDto invoice, String reconcileProviderDocumentId) {}
+    public record Reservation(ReserveOutcome outcome, ElectronicInvoiceDto invoice, String reconcileProviderDocumentId,
+                              BillingDocumentContext context) {
+        public Reservation(ReserveOutcome outcome, ElectronicInvoiceDto invoice, String reconcileProviderDocumentId) {
+            this(outcome, invoice, reconcileProviderDocumentId, null);
+        }
+    }
+
+    @Value("${billing.provider:alegra}")
+    private String activeProviderName = "alegra";
 
     private final ElectronicInvoiceRepository repository;
     private final ElectronicInvoiceMapper mapper;
@@ -48,6 +58,9 @@ public class InvoiceEmissionTransactions {
         ElectronicInvoice invoice = repository.findBySaleIdForUpdate(saleId)
                 .orElseGet(() -> repository.saveAndFlush(ElectronicInvoice.initialize(saleId, storeId)));
         invoice.assignStoreIdIfMissing(storeId);
+        if (!storeId.equals(invoice.getStoreId())) {
+            throw new IllegalStateException("La factura no pertenece al local de la venta");
+        }
         // Si el proveedor ya recibió el documento, quien emite lo concilia por su id en vez de emitirlo otra vez.
         String reconcile = invoice.awaitsProviderResponse() ? invoice.getProviderDocumentId() : null;
         ReserveOutcome outcome = invoice.reserveForEmission(LocalDateTime.now(), lease);
@@ -55,7 +68,8 @@ public class InvoiceEmissionTransactions {
             assignStoreEnvironment(invoice);
         }
         repository.save(invoice);
-        return new Reservation(outcome, mapper.toDto(invoice), reconcile);
+        BillingDocumentContext context = invoice.getProviderName() != null ? invoice.documentContext() : null;
+        return new Reservation(outcome, mapper.toDto(invoice), reconcile, context);
     }
 
     /** Paso C: vuelve a bloquear la fila, aplica el resultado del proveedor y programa el reintento que corresponda. */
@@ -94,11 +108,25 @@ public class InvoiceEmissionTransactions {
 
     /** La factura que se va a emitir toma el entorno actual de su local, si aún no tiene uno. */
     private void assignStoreEnvironment(ElectronicInvoice invoice) {
-        if (invoice.getEnvironment() != null || invoice.getStoreId() == null) {
+        if (invoice.getProviderName() != null || invoice.getStoreId() == null) {
             return;
         }
-        configRepository.findById(invoice.getStoreId())
-                .ifPresent(config -> invoice.assignEnvironmentIfMissing(config.getEnvironment()));
+        if (!"alegra".equalsIgnoreCase(activeProviderName)) {
+            invoice.assignDocumentContext(new BillingDocumentContext(invoice.getStoreId(),
+                    invoice.getEnvironment() != null ? invoice.getEnvironment() : BillingEnvironment.SANDBOX,
+                    activeProviderName, null));
+            return;
+        }
+        // Only a first, never-sent attempt may adopt today's configuration. Historical context is never guessed.
+        if (invoice.getAttempts() != 1 || invoice.getProviderDocumentId() != null) return;
+        configRepository.findById(invoice.getStoreId()).ifPresent(config -> {
+            BillingEnvironment environment = invoice.getEnvironment() != null ? invoice.getEnvironment() : config.getEnvironment();
+            invoice.assignEnvironmentIfMissing(environment);
+            String companyId = config.companyIdFor(environment);
+            if (companyId != null && (invoice.getEnvironment() == null || invoice.getEnvironment() == config.getEnvironment())) {
+                invoice.assignDocumentContext(new BillingDocumentContext(invoice.getStoreId(), environment, activeProviderName, companyId));
+            }
+        });
     }
 
     /** Aplica el resultado y devuelve cuándo reintentar (null si no debe reintentarse sola). */

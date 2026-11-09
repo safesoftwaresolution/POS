@@ -10,6 +10,7 @@ import com.sciencebot.pos.billing.internal.repositories.ElectronicInvoiceReposit
 import com.sciencebot.pos.billing.internal.repositories.StoreBillingConfigRepository;
 import com.sciencebot.pos.billing.internal.services.EmissionRetryPolicy;
 import com.sciencebot.pos.billing.internal.services.InvoiceEmissionTransactions;
+import com.sciencebot.pos.billing.internal.adapters.dto.BillingDocumentContext;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
@@ -28,6 +29,31 @@ class ElectronicInvoiceEmissionTest {
 
     private static ElectronicInvoice newInvoice() {
         return ElectronicInvoice.initialize(1L, 1L);
+    }
+
+    @Test
+    void reservationPinsOriginalCompanyAndEnvironmentAcrossStoreSwitch() {
+        var repository = mock(ElectronicInvoiceRepository.class);
+        var configRepository = mock(StoreBillingConfigRepository.class);
+        var invoice = newInvoice();
+        var config = new StoreBillingConfig();
+        config.setStoreId(1L);
+        config.setEnvironment(BillingEnvironment.SANDBOX);
+        config.assignCompanyId(BillingEnvironment.SANDBOX, "original-sandbox");
+        config.assignCompanyId(BillingEnvironment.PRODUCTION, "production-company");
+        when(repository.findBySaleIdForUpdate(1L)).thenReturn(Optional.of(invoice));
+        when(configRepository.findById(1L)).thenReturn(Optional.of(config));
+        var emissions = new InvoiceEmissionTransactions(repository, new ElectronicInvoiceMapper(), configRepository, LEASE);
+
+        var first = emissions.reserve(1L, 1L);
+        config.setEnvironment(BillingEnvironment.PRODUCTION);
+        config.assignCompanyId(BillingEnvironment.SANDBOX, "replacement-sandbox");
+        invoice.completeAttempt(null);
+        var retried = emissions.reserve(1L, 1L);
+
+        assertEquals(new BillingDocumentContext(1L, BillingEnvironment.SANDBOX, "alegra", "original-sandbox"), first.context());
+        assertEquals(first.context(), retried.context());
+        assertEquals(BillingEnvironment.SANDBOX, retried.invoice().environment());
     }
 
     @Test
@@ -186,7 +212,7 @@ class ElectronicInvoiceEmissionTest {
                 new InvoiceEmissionTransactions(invoices, new ElectronicInvoiceMapper(), configs, LEASE).reserve(10L, 1L);
 
         assertEquals(BillingEnvironment.SANDBOX, reservation.invoice().environment());
-        verify(configs, never()).findById(any());
+        assertNull(reservation.context(), "An environment alone is not proof of the original provider company");
     }
 
     @Test

@@ -10,6 +10,7 @@ import com.sciencebot.pos.billing.internal.adapters.dto.CreditNoteResult;
 import com.sciencebot.pos.billing.internal.adapters.dto.DebitNoteResult;
 import com.sciencebot.pos.billing.internal.adapters.dto.InvoiceRequest;
 import com.sciencebot.pos.billing.internal.adapters.dto.InvoiceResult;
+import com.sciencebot.pos.billing.internal.adapters.dto.BillingDocumentContext;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
@@ -78,6 +79,31 @@ public class AlegraBillingAdapter implements ElectronicInvoicingProvider {
     @Override
     public InvoiceResult emitInvoice(InvoiceRequest request) {
         return invoiceClient.emitInvoice(request);
+    }
+
+    @Override
+    public InvoiceResult emitInvoice(InvoiceRequest request, BillingDocumentContext context) {
+        return invoiceClient.emitInvoice(request, context);
+    }
+
+    @Override
+    public InvoiceResult queryInvoiceByProviderId(String id, BillingDocumentContext context) {
+        return invoiceClient.queryInvoiceByProviderId(id, context);
+    }
+
+    @Override
+    public boolean sendInvoiceEmailByProviderId(String id, String email, BillingDocumentContext context) {
+        return invoiceClient.sendInvoiceEmail(id, email, context);
+    }
+
+    @Override
+    public byte[] downloadInvoicePDFByProviderId(String id, BillingDocumentContext context) {
+        return invoiceClient.downloadInvoicePDF(id, context);
+    }
+
+    @Override
+    public byte[] downloadInvoiceXMLByProviderId(String id, BillingDocumentContext context) {
+        return invoiceClient.downloadInvoiceXML(id, context);
     }
 
     @Override

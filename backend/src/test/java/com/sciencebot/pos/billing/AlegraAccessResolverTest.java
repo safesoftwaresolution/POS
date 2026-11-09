@@ -6,6 +6,7 @@ import com.sciencebot.pos.billing.exception.BillingNotEnabledException;
 import com.sciencebot.pos.billing.internal.adapters.alegra.AlegraAccess;
 import com.sciencebot.pos.billing.internal.adapters.alegra.AlegraAccessResolver;
 import com.sciencebot.pos.billing.internal.entities.StoreBillingConfig;
+import com.sciencebot.pos.billing.internal.adapters.dto.BillingDocumentContext;
 import com.sciencebot.pos.billing.internal.repositories.StoreBillingConfigRepository;
 import com.sciencebot.pos.config.tenant.TenantContext;
 import org.junit.jupiter.api.AfterEach;
@@ -46,6 +47,28 @@ class AlegraAccessResolverTest {
         if (productionCompany != null) config.assignCompanyId(BillingEnvironment.PRODUCTION, productionCompany);
         when(repository.findById(storeId)).thenReturn(Optional.of(config));
         return config;
+    }
+
+    @Test
+    void historicalContextUsesOriginalEnvironmentAndCompanyAfterStoreSwitch() {
+        var current = config(5L, BillingActivationStatus.ACTIVE, "replaced-sandbox-company", "production-company");
+        current.setEnvironment(BillingEnvironment.PRODUCTION);
+        var original = new BillingDocumentContext(5L, BillingEnvironment.SANDBOX, "alegra", "original-company");
+
+        AlegraAccess access = resolver.resolveDocument(original);
+
+        assertEquals(BillingEnvironment.SANDBOX, access.environment());
+        assertEquals(SANDBOX_URL, access.baseUrl());
+        assertEquals("sandbox-token", access.token());
+        assertEquals("original-company", access.companyId());
+        assertEquals(BillingEnvironment.PRODUCTION, resolver.resolve(5L).environment());
+    }
+
+    @Test
+    void historicalContextCannotBeUsedByAnotherStore() {
+        TenantContext.setStoreId(6L);
+        var context = new BillingDocumentContext(5L, BillingEnvironment.SANDBOX, "alegra", "company-5");
+        assertThrows(BillingNotEnabledException.class, () -> resolver.resolveDocument(context));
     }
 
     @Test

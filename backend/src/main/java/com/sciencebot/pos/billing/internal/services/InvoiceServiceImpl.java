@@ -6,6 +6,7 @@ import com.sciencebot.pos.billing.exception.BillingNotEnabledException;
 import com.sciencebot.pos.billing.internal.adapters.InvoiceProvider;
 import com.sciencebot.pos.billing.internal.adapters.dto.InvoiceRequest;
 import com.sciencebot.pos.billing.internal.adapters.dto.InvoiceResult;
+import com.sciencebot.pos.billing.internal.adapters.dto.BillingDocumentContext;
 import com.sciencebot.pos.billing.internal.entities.ElectronicInvoice;
 import com.sciencebot.pos.billing.internal.mappers.BillingCanonicalMapper;
 import com.sciencebot.pos.billing.internal.mappers.ElectronicInvoiceMapper;
@@ -101,13 +102,18 @@ public class InvoiceServiceImpl implements InvoiceService {
         InvoiceResult result = null;
         InvoiceProvider provider = null;
         try {
-            provider = resolveProvider();
+            BillingDocumentContext context = reservation.context();
+            provider = resolveProvider(context);
+            if (context == null && "alegra".equalsIgnoreCase(provider.getProviderName())) {
+                throw new BillingNotEnabledException("El documento no tiene su contexto fiscal original; requiere revisión manual");
+            }
             if (reservation.reconcileProviderDocumentId() != null) {
-                result = reconcile(provider, reservation.reconcileProviderDocumentId());
+                result = reconcile(provider, reservation.reconcileProviderDocumentId(), context);
             }
             if (result == null) {
                 InvoiceRequest request = canonicalMapper.toInvoiceRequest(sale);
-                result = provider.emitInvoice(request);
+                result = context == null || !"alegra".equalsIgnoreCase(provider.getProviderName())
+                        ? provider.emitInvoice(request) : provider.emitInvoice(request, context);
             }
         } catch (BillingNotEnabledException notEnabled) {
             log.warn("La venta ID {} no se facturó: {}", sale.id(), notEnabled.getMessage());
@@ -127,9 +133,11 @@ public class InvoiceServiceImpl implements InvoiceService {
      * un duplicado ante la DIAN). Devuelve null si el proveedor no sabe conciliar, y entonces se emite normalmente.
      * Un fallo al consultar deja la factura PENDING: ante la duda no se emite.
      */
-    private InvoiceResult reconcile(InvoiceProvider provider, String providerDocumentId) {
+    private InvoiceResult reconcile(InvoiceProvider provider, String providerDocumentId, BillingDocumentContext context) {
         try {
-            InvoiceResult queried = provider.queryInvoiceByProviderId(providerDocumentId);
+            InvoiceResult queried = context == null || !"alegra".equalsIgnoreCase(provider.getProviderName())
+                    ? provider.queryInvoiceByProviderId(providerDocumentId)
+                    : provider.queryInvoiceByProviderId(providerDocumentId, context);
             boolean lookupFailed = queried == null
                     || ("ERROR".equalsIgnoreCase(queried.status()) && queried.providerDocumentId() == null);
             if (lookupFailed) {
@@ -188,7 +196,6 @@ public class InvoiceServiceImpl implements InvoiceService {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public void sendInvoiceEmail(Long saleId, String email) {
         Objects.requireNonNull(saleId, "El ID de la venta es obligatorio");
         Objects.requireNonNull(email, "El correo electrónico es obligatorio");
@@ -199,10 +206,13 @@ public class InvoiceServiceImpl implements InvoiceService {
 
         einvoice.assertCanSendEmail(); // Delegación de invariante a la entidad
 
-        InvoiceProvider provider = resolveProvider();
+        BillingDocumentContext context = contextOf(einvoice);
+        InvoiceProvider provider = resolveProvider(context);
         String providerDocumentId = einvoice.getProviderDocumentId();
         boolean sent = providerDocumentId != null
-                ? provider.sendInvoiceEmailByProviderId(providerDocumentId, email)
+                ? (context == null || !"alegra".equalsIgnoreCase(provider.getProviderName())
+                    ? provider.sendInvoiceEmailByProviderId(providerDocumentId, email)
+                    : provider.sendInvoiceEmailByProviderId(providerDocumentId, email, context))
                 : provider.sendInvoiceEmail(einvoice.getLegalNumber(), email);
         if (!sent) {
             throw new IllegalStateException("El proveedor no pudo procesar el envío de correo para la factura " + einvoice.getLegalNumber());
@@ -245,7 +255,6 @@ public class InvoiceServiceImpl implements InvoiceService {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public byte[] downloadInvoicePDF(Long saleId) {
         assertSaleVisible(saleId);
         ElectronicInvoice einvoice = repository.findBySaleIdAndStoreId(saleId, requireStoreId())
@@ -253,16 +262,18 @@ public class InvoiceServiceImpl implements InvoiceService {
 
         einvoice.assertCanDownloadLegalDocument();
 
-        InvoiceProvider provider = resolveProvider();
+        BillingDocumentContext context = contextOf(einvoice);
+        InvoiceProvider provider = resolveProvider(context);
         // Alegra identifica el documento por su id (el enlace del PDF caduca, se pide fresco); el número legal solo lo usa el mock.
         String providerDocumentId = einvoice.getProviderDocumentId();
         return providerDocumentId != null
-                ? provider.downloadInvoicePDFByProviderId(providerDocumentId)
+                ? (context == null || !"alegra".equalsIgnoreCase(provider.getProviderName())
+                    ? provider.downloadInvoicePDFByProviderId(providerDocumentId)
+                    : provider.downloadInvoicePDFByProviderId(providerDocumentId, context))
                 : provider.downloadInvoicePDF(einvoice.getLegalNumber());
     }
 
     @Override
-    @Transactional(readOnly = true)
     public byte[] downloadInvoiceXML(Long saleId) {
         assertSaleVisible(saleId);
         ElectronicInvoice einvoice = repository.findBySaleIdAndStoreId(saleId, requireStoreId())
@@ -270,10 +281,13 @@ public class InvoiceServiceImpl implements InvoiceService {
 
         einvoice.assertCanDownloadLegalDocument();
 
-        InvoiceProvider provider = resolveProvider();
+        BillingDocumentContext context = contextOf(einvoice);
+        InvoiceProvider provider = resolveProvider(context);
         String providerDocumentId = einvoice.getProviderDocumentId();
         return providerDocumentId != null
-                ? provider.downloadInvoiceXMLByProviderId(providerDocumentId)
+                ? (context == null || !"alegra".equalsIgnoreCase(provider.getProviderName())
+                    ? provider.downloadInvoiceXMLByProviderId(providerDocumentId)
+                    : provider.downloadInvoiceXMLByProviderId(providerDocumentId, context))
                 : provider.downloadInvoiceXML(einvoice.getLegalNumber());
     }
 
@@ -293,7 +307,18 @@ public class InvoiceServiceImpl implements InvoiceService {
     }
 
     private InvoiceProvider resolveProvider() {
-        String key = (activeProviderName != null) ? activeProviderName.trim().toLowerCase() : "alegra";
+        return resolveProvider(null);
+    }
+
+    private BillingDocumentContext contextOf(ElectronicInvoice invoice) {
+        if (invoice.getProviderName() != null) return invoice.documentContext();
+        if (!"alegra".equalsIgnoreCase(activeProviderName)) return null;
+        throw new BillingNotEnabledException("El documento histórico no tiene un contexto fiscal verificable; requiere revisión manual");
+    }
+
+    private InvoiceProvider resolveProvider(BillingDocumentContext context) {
+        String key = context != null ? context.providerName()
+                : (activeProviderName != null ? activeProviderName.trim().toLowerCase() : "alegra");
         InvoiceProvider provider = providersMap.get(key);
         if (provider == null) {
             // Sin respaldo silencioso a 'mock': un BILLING_PROVIDER mal escrito emitiria facturas falsas.

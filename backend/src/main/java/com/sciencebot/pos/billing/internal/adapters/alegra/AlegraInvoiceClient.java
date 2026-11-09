@@ -6,6 +6,8 @@ import com.sciencebot.pos.billing.exception.BillingProviderException;
 import com.sciencebot.pos.billing.internal.adapters.alegra.AlegraNumberAllocator.Allocation;
 import com.sciencebot.pos.billing.internal.adapters.dto.InvoiceRequest;
 import com.sciencebot.pos.billing.internal.adapters.dto.InvoiceResult;
+import com.sciencebot.pos.billing.internal.adapters.dto.BillingDocumentContext;
+import tools.jackson.databind.json.JsonMapper;
 import com.sciencebot.pos.config.tenant.TenantContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -84,12 +86,24 @@ public class AlegraInvoiceClient {
      * servicio); cualquier respuesta de Alegra o fallo de red sale como un {@link InvoiceResult}.
      */
     public InvoiceResult emitInvoice(InvoiceRequest request) {
+        return emitInvoice(request, null);
+    }
+
+    public InvoiceResult emitInvoice(InvoiceRequest request, BillingDocumentContext context) {
         String invalid = invalidRequest(request);
         if (invalid != null) {
             return InvoiceResult.error(invalid); // antes de asignar número: no se gasta un consecutivo en algo que no puede enviarse
         }
         Long storeId = request.storeId() != null ? request.storeId() : TenantContext.getStoreId();
-        AlegraAccess access = accessResolver.resolve(storeId);
+        String reference = (request.invoiceNumber() != null ? request.invoiceNumber() : "FACT") + "-" + request.saleId();
+        if (context != null) {
+            if (!context.storeId().equals(storeId)) throw new IllegalStateException("El contexto pertenece a otro local");
+            var previous = allocator.findAllocation(context.storeId(), context.environment(), INVOICE_DOCUMENT, reference);
+            if (previous.isPresent() && "ACCEPTED".equals(previous.get().outcome())) {
+                return allocator.receipt(previous.get());
+            }
+        }
+        AlegraAccess access = context == null ? accessResolver.resolve(storeId) : accessResolver.resolveDocumentForEmission(context);
 
         AlegraCompany company;
         try {
@@ -98,10 +112,20 @@ public class AlegraInvoiceClient {
             return fromProviderError(ex, null);
         }
 
-        String reference = (request.invoiceNumber() != null ? request.invoiceNumber() : "FACT") + "-" + request.saleId();
         Allocation allocation = allocator.allocate(access.storeId(), access.environment(), INVOICE_DOCUMENT, reference);
-        if (allocation.completed()) {
+        if ("ACCEPTED".equals(allocation.outcome())) {
+            return allocator.receipt(allocation);
+        }
+        if (allocation.completed() && allocation.outcome() == null && allocation.requestPayload() == null) {
+            return InvoiceResult.pending("Asignación histórica sin resultado verificable; requiere conciliación manual");
+        }
+        if ("REJECTED".equals(allocation.outcome()) || "FAILED".equals(allocation.outcome())) {
             allocation = allocator.rotateIdempotencyKey(allocation.id());
+        }
+        if (allocation.providerDocumentId() != null) {
+            InvoiceResult queried = queryInvoiceByProviderId(allocation.providerDocumentId(), context);
+            allocator.recordResult(allocation.id(), queried);
+            return queried;
         }
 
         Map<String, Object> body;
@@ -115,7 +139,7 @@ public class AlegraInvoiceClient {
             ResponseEntity<Envelope> response = helper.authorizedPost("/invoices", access)
                     .header("Idempotency-Key", allocation.idempotencyKey())
                     .contentType(MediaType.APPLICATION_JSON)
-                    .body(body)
+                    .body(frozenBody(allocation, body))
                     .retrieve()
                     .toEntity(Envelope.class);
             Envelope envelope = response.getBody();
@@ -145,7 +169,11 @@ public class AlegraInvoiceClient {
      * empresa y no al cliente. Cuando Alegra lo corrija se puede volver a usar el correo de la empresa como respuesta.
      */
     public boolean sendInvoiceEmail(String providerDocumentId, String to) {
-        AlegraAccess access = accessResolver.resolve(null);
+        return sendInvoiceEmail(providerDocumentId, to, null);
+    }
+
+    public boolean sendInvoiceEmail(String providerDocumentId, String to, BillingDocumentContext context) {
+        AlegraAccess access = context == null ? accessResolver.resolve(null) : accessResolver.resolveDocument(context);
         Map<String, Object> body = Map.of(
                 "documentType", INVOICE_DOCUMENT,
                 "documentId", providerDocumentId,
@@ -167,11 +195,19 @@ public class AlegraInvoiceClient {
      * termina de generarlo: se vuelve a consultar una vez. Solo se sigue un enlace de confianza y se exige XML.
      */
     public byte[] downloadInvoiceXML(String providerDocumentId) {
-        AlegraAccess access = accessResolver.resolve(null);
+        return downloadInvoiceXML(providerDocumentId, null);
+    }
+
+    public byte[] downloadInvoiceXML(String providerDocumentId, BillingDocumentContext context) {
+        AlegraAccess access = context == null ? accessResolver.resolve(null) : accessResolver.resolveDocument(context);
+        return downloadXML("/invoices/" + providerDocumentId, access);
+    }
+
+    byte[] downloadXML(String path, AlegraAccess access) {
         try {
             String link = null;
             for (int attempt = 0; attempt < 2 && (link == null || link.isBlank()); attempt++) {
-                FilesEnvelope envelope = helper.authorizedGet("/invoices/" + providerDocumentId, access)
+                FilesEnvelope envelope = helper.authorizedGet(path, access)
                         .retrieve()
                         .body(FilesEnvelope.class);
                 link = envelope != null && envelope.files() != null ? envelope.files().xml() : null;
@@ -206,9 +242,17 @@ public class AlegraInvoiceClient {
      * Se lee solo la entrada .pdf, con tope de tamaño, y se exige que de verdad sea un PDF.
      */
     public byte[] downloadInvoicePDF(String providerDocumentId) {
-        AlegraAccess access = accessResolver.resolve(null);
+        return downloadInvoicePDF(providerDocumentId, null);
+    }
+
+    public byte[] downloadInvoicePDF(String providerDocumentId, BillingDocumentContext context) {
+        AlegraAccess access = context == null ? accessResolver.resolve(null) : accessResolver.resolveDocument(context);
+        return downloadPDF("/invoices/" + providerDocumentId, access);
+    }
+
+    byte[] downloadPDF(String path, AlegraAccess access) {
         try {
-            FilesEnvelope envelope = helper.authorizedGet("/invoices/" + providerDocumentId, access)
+            FilesEnvelope envelope = helper.authorizedGet(path, access)
                     .retrieve()
                     .body(FilesEnvelope.class);
             String zipLink = envelope != null && envelope.files() != null ? envelope.files().zip() : null;
@@ -268,7 +312,11 @@ public class AlegraInvoiceClient {
 
     /** Lee un documento ya recibido por Alegra (para conciliar una factura pendiente en vez de emitirla de nuevo). */
     public InvoiceResult queryInvoiceByProviderId(String providerDocumentId) {
-        AlegraAccess access = accessResolver.resolve(null);
+        return queryInvoiceByProviderId(providerDocumentId, null);
+    }
+
+    public InvoiceResult queryInvoiceByProviderId(String providerDocumentId, BillingDocumentContext context) {
+        AlegraAccess access = context == null ? accessResolver.resolve(null) : accessResolver.resolveDocument(context);
         try {
             Envelope envelope = helper.authorizedGet("/invoices/" + providerDocumentId, access)
                     .retrieve()
@@ -279,7 +327,7 @@ public class AlegraInvoiceClient {
             if (translated instanceof BillingProviderException provider) {
                 if (provider.getUpstreamStatus() == 404) {
                     // Alegra confirma que ese documento no existe: no hay nada que conciliar y puede emitirse de nuevo.
-                    return InvoiceResult.error("El documento " + providerDocumentId + " ya no existe en Alegra")
+                    return InvoiceResult.pending("No se encontró el documento " + providerDocumentId + "; requiere conciliación antes de reenviar")
                             .withProviderDocumentId(providerDocumentId);
                 }
                 return fromProviderError(provider, null);
@@ -320,23 +368,20 @@ public class AlegraInvoiceClient {
         String status = invoice.status();
 
         if ("ACCEPTED".equalsIgnoreCase(legalStatus) || "ACCEPTED_WITH_OBSERVATIONS".equalsIgnoreCase(legalStatus)) {
-            complete(allocation);
             String legalNumber = invoice.fullNumber() != null && !invoice.fullNumber().isBlank()
                     ? invoice.fullNumber() : (invoice.prefix() == null ? "" : invoice.prefix()) + invoice.number();
             String code = invoice.cufe() != null ? invoice.cufe() : invoice.cude();
-            return InvoiceResult.success(legalNumber, code, invoice.qrCodeContent(), null)
-                    .withProviderDocumentId(invoice.id());
+            return recorded(allocation, InvoiceResult.success(legalNumber, code, invoice.qrCodeContent(), null)
+                    .withProviderDocumentId(invoice.id()));
         }
         if ("REJECTED".equalsIgnoreCase(legalStatus)) {
-            complete(allocation);
-            return InvoiceResult.rejected(reasons(invoice, "La DIAN rechazó la factura")).withProviderDocumentId(invoice.id());
+            return recorded(allocation, InvoiceResult.rejected(reasons(invoice, "La DIAN rechazó la factura")).withProviderDocumentId(invoice.id()));
         }
         if ("FAILED".equalsIgnoreCase(status)) {
-            complete(allocation);
-            return InvoiceResult.error(reasons(invoice, "Alegra no pudo procesar la factura")).withProviderDocumentId(invoice.id());
+            return recorded(allocation, InvoiceResult.error(reasons(invoice, "Alegra no pudo procesar la factura")).withProviderDocumentId(invoice.id()));
         }
         // REGISTERED, WAITING_RESPONSE o SENT sin legalStatus: la DIAN aún no responde.
-        return InvoiceResult.pending(WAITING).withProviderDocumentId(invoice.id());
+        return recorded(allocation, InvoiceResult.pending(WAITING).withProviderDocumentId(invoice.id()));
     }
 
     /** Traduce un fallo HTTP al resultado: qué se corrige, qué se reintenta y cuándo cambia la llave. */
@@ -345,12 +390,10 @@ public class AlegraInvoiceClient {
         log.warn("Alegra respondió con un error al emitir/consultar una factura (estado {}): {}", status, ex.getMessage());
         if (status == 400) {
             // Datos inválidos: nada se creó, pero el cuerpo debe corregirse, así que el próximo intento usa otra llave.
-            complete(allocation);
-            return InvoiceResult.rejected(ex.getMessage());
+            return recorded(allocation, InvoiceResult.rejected(ex.getMessage()));
         }
         if (status == 422 && allocation != null) {
-            allocator.rotateIdempotencyKey(allocation.id());
-            return InvoiceResult.pending("La llave de idempotencia ya se usó con otro contenido; se reintentará con una nueva");
+            return InvoiceResult.pending("La llave de idempotencia tiene contenido diferente; requiere conciliación antes de reenviar");
         }
         if (ex.isAuthenticationError() || ex.isTemporary() || status == 409) {
             return InvoiceResult.pending(ex.getMessage());
@@ -362,6 +405,20 @@ public class AlegraInvoiceClient {
         if (allocation != null) {
             allocator.markCompleted(allocation.id());
         }
+    }
+
+    private InvoiceResult recorded(Allocation allocation, InvoiceResult result) {
+        if (allocation != null) {
+            allocator.recordResult(allocation.id(), result);
+            if (!"PENDING".equals(result.status())) complete(allocation);
+        }
+        return result;
+    }
+
+    String frozenBody(Allocation allocation, Map<String, Object> body) {
+        String payload = allocator.freezeRequest(allocation.id(), body);
+        // Mock allocators in unit tests do not persist. The real allocator always returns the frozen bytes.
+        return payload != null ? payload : JsonMapper.builder().build().writeValueAsString(body);
     }
 
     private static String reasons(Invoice invoice, String fallback) {

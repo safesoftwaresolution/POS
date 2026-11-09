@@ -5,6 +5,8 @@ import com.sciencebot.pos.billing.internal.entities.DocumentNumberAllocation;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.data.jpa.repository.Lock;
+import jakarta.persistence.LockModeType;
 
 import java.util.Optional;
 
@@ -18,4 +20,12 @@ public interface DocumentNumberAllocationRepository extends JpaRepository<Docume
 
     Optional<DocumentNumberAllocation> findByStoreIdAndEnvironmentAndDocumentAndReferenceCode(
             Long storeId, BillingEnvironment environment, String document, String referenceCode);
+
+    /** The allocation id is internal; callers obtained it with the store-scoped allocation lookup. */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select a from DocumentNumberAllocation a where a.id = :id and a.storeId = :storeId")
+    Optional<DocumentNumberAllocation> findAllocationForUpdateAndStoreId(@Param("id") Long id, @Param("storeId") Long storeId);
+
+    @Query("select a.storeId from DocumentNumberAllocation a where a.id = :id")
+    Optional<Long> findStoreIdById(@Param("id") Long id);
 }

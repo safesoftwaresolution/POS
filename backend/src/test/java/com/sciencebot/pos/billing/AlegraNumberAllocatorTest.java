@@ -9,6 +9,8 @@ import com.sciencebot.pos.billing.internal.repositories.DocumentNumberAllocation
 import com.sciencebot.pos.billing.internal.repositories.NumberingRangeRepository;
 import com.sciencebot.pos.billing.internal.repositories.StoreBillingConfigRepository;
 import com.sciencebot.pos.billing.internal.entities.StoreBillingConfig;
+import com.sciencebot.pos.billing.internal.adapters.dto.InvoiceResult;
+import java.util.Map;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -232,6 +234,7 @@ class AlegraNumberAllocatorTest {
     void rotateIdempotencyKey_changesTheKeyAndKeepsTheNumber() {
         createRange(10L, 20L, null, null);
         Allocation first = allocator.allocate(storeId, ENV, INVOICE, "SALE-1");
+        allocator.recordResult(first.id(), InvoiceResult.rejected("Correctable data"));
 
         Allocation rotated = allocator.rotateIdempotencyKey(first.id());
 
@@ -248,6 +251,27 @@ class AlegraNumberAllocatorTest {
         allocator.markCompleted(first.id());
 
         assertTrue(allocator.allocate(storeId, ENV, INVOICE, "SALE-1").completed());
+    }
+
+    @Test
+    void uncertainPayloadIsFrozenAndAnAcceptedReceiptSurvivesLocalCompletionFailure() {
+        createRange(10L, 20L, null, null);
+        Allocation first = allocator.allocate(storeId, ENV, INVOICE, "SALE-RECOVER");
+        String payload = allocator.freezeRequest(first.id(), Map.of("number", first.number(), "description", "original"));
+        assertEquals(payload, allocator.freezeRequest(first.id(), Map.of("description", "changed")));
+        assertThrows(IllegalStateException.class, () -> allocator.rotateIdempotencyKey(first.id()));
+
+        InvoiceResult accepted = InvoiceResult.success("SETP10", "cufe-recovered", "qr", null).withProviderDocumentId("provider-10");
+        allocator.recordResult(first.id(), accepted);
+        // Deliberately do not complete the invoice transaction: a fresh allocation read must retain the receipt.
+        Allocation recovered = allocator.allocate(storeId, ENV, INVOICE, "SALE-RECOVER");
+        assertEquals("ACCEPTED", recovered.outcome());
+        assertEquals(first.idempotencyKey(), recovered.idempotencyKey());
+        assertEquals(first.number(), recovered.number());
+        assertEquals(payload, recovered.requestPayload());
+        assertEquals("cufe-recovered", allocator.receipt(recovered).cufe());
+        assertEquals("provider-10", allocator.receipt(recovered).providerDocumentId());
+        assertThrows(IllegalStateException.class, () -> allocator.rotateIdempotencyKey(recovered.id()));
     }
 
     /** Lanza {@code threads} asignaciones a la vez; falla el test si alguna lanza excepcion. */

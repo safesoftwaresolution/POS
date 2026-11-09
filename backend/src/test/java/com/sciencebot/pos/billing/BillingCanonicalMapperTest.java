@@ -74,6 +74,19 @@ class BillingCanonicalMapperTest {
     }
 
     @Test
+    void toInvoiceRequest_MunicipalityStoredWithoutItsLeadingZero_IsSentAsTheFiveDigitDaneCode() {
+        Long customerId = 16L;
+        CustomerDto medellin = new CustomerDto(customerId, "Ana Ruiz", "1020304051", "ana@example.com", "3001234568",
+                "Calle 10 # 40-20", true, "", 2, 21, 5001); // 05001 Medellín: la columna es entera y pierde el cero
+        when(customerFacade.getById(customerId)).thenReturn(Optional.of(medellin));
+        SaleItemDto item = new SaleItemDto(1L, 100L, "Camiseta", 1, BigDecimal.TEN, BigDecimal.TEN, BigDecimal.ZERO, BigDecimal.ZERO);
+        SaleDto sale = new SaleDto(1L, 5L, customerId, "FACT-0002", LocalDateTime.now(), "Ana Ruiz",
+                BigDecimal.TEN, BigDecimal.TEN, BigDecimal.ZERO, "admin", List.of(item), "CASH");
+
+        assertEquals("05001", mapper.toInvoiceRequest(sale).customer().municipalityCode());
+    }
+
+    @Test
     void toInvoiceRequest_WithNaturalPersonCustomer_ResolvesNaturalPersonCorrectly() {
         Long customerId = 15L;
         CustomerDto customer = new CustomerDto(

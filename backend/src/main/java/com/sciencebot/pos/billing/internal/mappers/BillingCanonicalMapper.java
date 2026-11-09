@@ -105,8 +105,9 @@ public class BillingCanonicalMapper {
                     String tributeCode = (customer.tributeId() != null && customer.tributeId() == 1) ? "01" : "ZZ";
                     List<String> responsibilities = isJuridica ? List.of("O-13", "R-99-PN") : List.of("R-99-PN");
 
+                    // El código DANE tiene 5 dígitos; la columna es entera y pierde el cero de 05001 (Medellín).
                     String munCode = customer.municipalityId() != null
-                            ? String.valueOf(customer.municipalityId())
+                            ? String.format("%05d", customer.municipalityId())
                             : "11001";
 
                     return new CustomerBillingData(

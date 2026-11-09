@@ -91,6 +91,32 @@ class NoteEmissionConcurrencyTest {
                         List.of(new CreateDebitNoteRequest.ItemDebitNoteRequest.TaxItemRequest("01", "19.00")))));
     }
 
+    @Test
+    void pendingCreditResponseRemainsPendingAndKeepsTheProviderId() {
+        doReturn(CreditNoteResult.pending("Waiting for DIAN").withProviderDocumentId("credit-waiting"))
+                .when(provider).emitCreditNote(any(), any());
+
+        CreditNoteDTO result = creditNoteService.createAndValidateCreditNote(creditRequest());
+
+        assertEquals("PENDING", result.status());
+        ElectronicCreditNote persisted = creditRepository.findByReferenceCodeAndStoreId(creditRef, storeId).orElseThrow();
+        assertEquals(ElectronicInvoiceStatus.PENDING, persisted.getStatus());
+        assertEquals("credit-waiting", persisted.getProviderDocumentId());
+    }
+
+    @Test
+    void pendingDebitResponseRemainsPendingAndKeepsTheProviderId() {
+        doReturn(DebitNoteResult.pending("Waiting for DIAN").withProviderDocumentId("debit-waiting"))
+                .when(provider).emitDebitNote(any(), any());
+
+        DebitNoteDTO result = debitNoteService.createAndValidateDebitNote(debitRequest());
+
+        assertEquals("PENDING", result.status());
+        ElectronicDebitNote persisted = debitRepository.findByReferenceCodeAndStoreId(debitRef, storeId).orElseThrow();
+        assertEquals(ElectronicInvoiceStatus.PENDING, persisted.getStatus());
+        assertEquals("debit-waiting", persisted.getProviderDocumentId());
+    }
+
     private <T> List<T> inParallel(int threads, Callable<T> task) throws Exception {
         ExecutorService pool = Executors.newFixedThreadPool(threads);
         CountDownLatch start = new CountDownLatch(1);

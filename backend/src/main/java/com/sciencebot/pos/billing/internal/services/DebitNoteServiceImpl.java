@@ -5,6 +5,8 @@ import com.sciencebot.pos.billing.dto.DebitNoteDTO;
 import com.sciencebot.pos.billing.dto.ElectronicInvoiceStatus;
 import com.sciencebot.pos.billing.internal.adapters.DebitNoteProvider;
 import com.sciencebot.pos.billing.internal.adapters.dto.DebitNoteResult;
+import com.sciencebot.pos.billing.internal.adapters.dto.BillingDocumentContext;
+import com.sciencebot.pos.billing.internal.adapters.dto.InvoiceItemData;
 import com.sciencebot.pos.billing.internal.entities.ElectronicDebitNote;
 import com.sciencebot.pos.billing.internal.entities.ElectronicInvoice;
 import com.sciencebot.pos.billing.internal.mappers.ElectronicDebitNoteMapper;
@@ -147,22 +149,32 @@ public class DebitNoteServiceImpl implements DebitNoteService {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public byte[] downloadDebitNotePDF(Long id) {
         Long storeId = requireStoreId();
         ElectronicDebitNote note = findValidatedNote(id, storeId);
-        return resolveProvider().downloadDebitNotePDF(note.getDebitNoteNumber(), storeId);
+        BillingDocumentContext context = contextOf(note);
+        var provider = resolveProvider(context);
+        return context == null || !"alegra".equalsIgnoreCase(provider.getProviderName())
+                ? provider.downloadDebitNotePDF(note.getDebitNoteNumber(), storeId)
+                : provider.downloadDebitNotePDF(note.getDebitNoteNumber(), note.getProviderDocumentId(), storeId, context);
     }
 
     @Override
-    @Transactional(readOnly = true)
     public byte[] downloadDebitNoteXML(Long id) {
         Long storeId = requireStoreId();
         ElectronicDebitNote note = findValidatedNote(id, storeId);
-        return resolveProvider().downloadDebitNoteXML(note.getDebitNoteNumber(), storeId);
+        BillingDocumentContext context = contextOf(note);
+        var provider = resolveProvider(context);
+        return context == null || !"alegra".equalsIgnoreCase(provider.getProviderName())
+                ? provider.downloadDebitNoteXML(note.getDebitNoteNumber(), storeId)
+                : provider.downloadDebitNoteXML(note.getDebitNoteNumber(), note.getProviderDocumentId(), storeId, context);
     }
 
     private DebitNoteDTO emit(CreateDebitNoteRequest request, Long saleId) {
+        return emit(request, saleId, null);
+    }
+
+    private DebitNoteDTO emit(CreateDebitNoteRequest request, Long saleId, List<InvoiceItemData> canonicalItems) {
         Preconditions.requireNotNull(request, "La solicitud de nota débito no puede ser nula");
         String referenceCode = Preconditions.requireNotBlank(request.referenceCode(), "El reference_code es obligatorio para la nota débito");
         Preconditions.checkArgument(CUSTOMIZATION_WITH_INVOICE_REFERENCE.equals(request.customizationId().trim()),
@@ -174,8 +186,6 @@ public class DebitNoteServiceImpl implements DebitNoteService {
         Preconditions.requireNotEmpty(request.items(), "La nota débito debe contener al menos un ítem");
         Long storeId = requireStoreId();
 
-        DebitNoteProvider provider = resolveProvider();
-
         // Paso A: reserva (transacción corta con lock). Si la nota ya está validada o la emite otro hilo, se
         // devuelve su estado actual.
         DebitNoteEmissionTransactions.Reservation reservation = reserve(request, saleId, storeId);
@@ -184,10 +194,19 @@ public class DebitNoteServiceImpl implements DebitNoteService {
             return reservation.note();
         }
 
+        DebitNoteProvider provider = resolveProvider(reservation.context());
+
         // Paso B: proveedor, sin transacción abierta.
         DebitNoteResult result;
         try {
-            result = provider.emitDebitNote(request, storeId);
+            if ("alegra".equalsIgnoreCase(provider.getProviderName())) {
+                if (reservation.context() == null) throw new IllegalStateException("La nota no tiene su contexto fiscal original; requiere revisión manual");
+                result = reservation.reconcileProviderDocumentId() != null
+                        ? provider.retryDebitNote(request.referenceCode(), reservation.context())
+                        : provider.emitDebitNote(request, storeId, reservation.context(), canonicalItems);
+            } else {
+                result = provider.emitDebitNote(request, storeId);
+            }
         } catch (Exception ex) {
             log.error("Error al procesar emisión de nota débito con proveedor {}: {}", provider.getProviderName(), ex.getMessage(), ex);
             result = DebitNoteResult.error("Error en proveedor " + provider.getProviderName() + ": " + ex.getMessage());
@@ -221,8 +240,34 @@ public class DebitNoteServiceImpl implements DebitNoteService {
         return storeId;
     }
 
+    private BillingDocumentContext contextOf(ElectronicDebitNote note) {
+        if (note.getProviderName() != null) return note.documentContext();
+        if (!"alegra".equalsIgnoreCase(activeProviderName)) return null;
+        throw new IllegalStateException("La nota histórica no tiene un contexto fiscal verificable; requiere revisión manual");
+    }
+
+    @Override
+    public DebitNoteDTO retry(Long id) {
+        Long storeId = requireStoreId();
+        var reservation = emissionTransactions.reserveRetry(id, storeId);
+        if (reservation.outcome() != ElectronicInvoice.ReserveOutcome.RESERVED) return reservation.note();
+        var provider = resolveProvider(reservation.context());
+        DebitNoteResult result;
+        try {
+            if (reservation.context() == null) throw new IllegalStateException("La nota no tiene un contexto fiscal verificable");
+            result = provider.retryDebitNote(reservation.note().referenceCode(), reservation.context());
+        } catch (Exception ex) {
+            result = DebitNoteResult.pending("No se pudo recuperar la nota: " + ex.getMessage());
+        }
+        return emissionTransactions.complete(reservation.note().referenceCode(), storeId, result);
+    }
+
     private DebitNoteProvider resolveProvider() {
-        String key = (activeProviderName != null) ? activeProviderName.trim().toLowerCase() : "alegra";
+        return resolveProvider(null);
+    }
+
+    private DebitNoteProvider resolveProvider(BillingDocumentContext context) {
+        String key = context != null ? context.providerName() : ((activeProviderName != null) ? activeProviderName.trim().toLowerCase() : "alegra");
         DebitNoteProvider provider = providersMap.get(key);
         if (provider == null) {
             // Sin respaldo silencioso a 'mock': un BILLING_PROVIDER mal escrito emitiria facturas falsas.

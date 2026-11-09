@@ -21,6 +21,7 @@ import com.sciencebot.pos.billing.internal.adapters.dto.CreditNoteResult;
 import com.sciencebot.pos.billing.internal.adapters.dto.CustomerBillingData;
 import com.sciencebot.pos.billing.internal.adapters.dto.DebitNoteResult;
 import com.sciencebot.pos.billing.internal.adapters.dto.InvoiceRequest;
+import com.sciencebot.pos.billing.internal.adapters.dto.BillingDocumentContext;
 import com.sciencebot.pos.billing.internal.entities.ElectronicInvoice;
 import com.sciencebot.pos.billing.internal.mappers.BillingCanonicalMapper;
 import com.sciencebot.pos.billing.internal.repositories.ElectronicInvoiceRepository;
@@ -63,10 +64,11 @@ class AlegraNoteClientTest {
     private BillingCanonicalMapper canonicalMapper;
     private MockRestServiceServer server;
     private AlegraNoteClient client;
+    private AlegraAccessResolver resolver;
 
     @BeforeEach
     void setUp() {
-        AlegraAccessResolver resolver = mock(AlegraAccessResolver.class);
+        resolver = mock(AlegraAccessResolver.class);
         AlegraCompanyProvider companyProvider = mock(AlegraCompanyProvider.class);
         allocator = mock(AlegraNumberAllocator.class);
         invoiceRepository = mock(ElectronicInvoiceRepository.class);
@@ -82,6 +84,8 @@ class AlegraNoteClientTest {
 
         AlegraAccess access = new AlegraAccess(5L, BillingEnvironment.SANDBOX, URL, TOKEN, "company-1");
         when(resolver.resolve(5L)).thenReturn(access);
+        when(resolver.resolveDocument(any())).thenReturn(access);
+        when(resolver.resolveDocumentForEmission(any())).thenReturn(access);
         when(companyProvider.get(access)).thenReturn(new AlegraCompany("company-1", "Empresa", null, "900559088", "2",
                 "R-99-PN", 1, "31", "a@b.co", null, null, Map.of()));
         ElectronicInvoice invoice = ElectronicInvoice.initialize(7L, 5L);
@@ -94,6 +98,43 @@ class AlegraNoteClientTest {
 
     private static Allocation allocation(boolean completed, String key) {
         return new Allocation(11L, 2L, "NC", 700_000_123L, null, 1L, 999_999_999L, null, null, null, key, completed);
+    }
+
+    @Test
+    void pendingCreditNoteIsQueriedWithoutAnotherPost() {
+        var context = new BillingDocumentContext(5L, BillingEnvironment.SANDBOX, "alegra", "company-1");
+        var original = allocation(false, "key-1");
+        var pending = new Allocation(original.id(), original.rangeId(), original.prefix(), original.number(),
+                original.resolutionNumber(), original.minNumber(), original.maxNumber(), original.startDate(),
+                original.endDate(), original.technicalKey(), original.idempotencyKey(), false, "PENDING", "note-9", "{}", null);
+        when(allocator.findAllocation(5L, BillingEnvironment.SANDBOX, "91", "NC-FAC-1-C2")).thenReturn(Optional.of(pending));
+        server.expect(requestTo(URL + "/credit-notes/note-9"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess(response("creditNote", "SENT", "ACCEPTED"), MediaType.APPLICATION_JSON));
+
+        var result = client.retryCreditNote("NC-FAC-1-C2", context);
+
+        assertEquals("VALIDATED", result.status());
+        assertEquals("note-9", result.providerDocumentId());
+        verify(allocator, never()).rotateIdempotencyKey(any());
+        verify(allocator).recordResult(eq(11L), any());
+        server.verify();
+    }
+
+    @Test
+    void noteXmlUsesItsBoundEndpointAndSafeDownloaderWithoutSendingCredentialsToFileLink() {
+        var context = new BillingDocumentContext(5L, BillingEnvironment.SANDBOX, "alegra", "company-1");
+        String link = "https://sandbox-api.alegra.com/files/note.xml";
+        server.expect(requestTo(URL + "/debit-notes/note-9"))
+                .andRespond(withSuccess("{\"files\":{\"xml\":\"" + link + "\"}}", MediaType.APPLICATION_JSON));
+        server.expect(requestTo(link)).andExpect(headerDoesNotExist("Authorization"))
+                .andRespond(withSuccess("<?xml version=\"1.0\"?><DebitNote/>", MediaType.APPLICATION_XML));
+
+        byte[] xml = client.download("/debit-notes", "note-9", context, false);
+
+        assertTrue(new String(xml, java.nio.charset.StandardCharsets.UTF_8).contains("DebitNote"));
+        verify(resolver).resolveDocument(context);
+        server.verify();
     }
 
     private static CreateCreditNoteRequest credit(String bill) {
@@ -268,7 +309,11 @@ class AlegraNoteClientTest {
     @Test
     void afterAFinalNonAcceptedOutcomeTheKeyIsRotatedBeforeSending() {
         saleCustomer();
-        when(allocator.allocate(eq(5L), eq(BillingEnvironment.SANDBOX), eq("91"), anyString())).thenReturn(allocation(true, "old"));
+        Allocation old = allocation(true, "old");
+        when(allocator.allocate(eq(5L), eq(BillingEnvironment.SANDBOX), eq("91"), anyString()))
+                .thenReturn(new Allocation(old.id(), old.rangeId(), old.prefix(), old.number(), old.resolutionNumber(),
+                        old.minNumber(), old.maxNumber(), old.startDate(), old.endDate(), old.technicalKey(),
+                        old.idempotencyKey(), true, "REJECTED", "rejected-note", null, null));
         when(allocator.rotateIdempotencyKey(11L)).thenReturn(allocation(false, "key-1"));
         expectPost("/credit-notes", withSuccess(response("creditNote", "SENT", "ACCEPTED"), MediaType.APPLICATION_JSON));
 

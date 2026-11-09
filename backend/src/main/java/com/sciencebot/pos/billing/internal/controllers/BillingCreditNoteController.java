@@ -97,4 +97,10 @@ public class BillingCreditNoteController implements BillingCreditNoteApiDoc {
         CreditNoteDTO result = creditNoteService.createFromSale(saleId, conceptCode, observation);
         return ResponseEntity.ok(result);
     }
+    @Override
+    @PostMapping("/{id}/retry")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'SUPERVISOR')")
+    public ResponseEntity<CreditNoteDTO> retry(@PathVariable Long id) {
+        return ResponseEntity.ok(creditNoteService.retry(id));
+    }
 }

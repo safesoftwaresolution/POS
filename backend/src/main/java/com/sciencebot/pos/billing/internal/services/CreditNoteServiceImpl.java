@@ -5,6 +5,8 @@ import com.sciencebot.pos.billing.dto.CreditNoteDTO;
 import com.sciencebot.pos.billing.dto.ElectronicInvoiceStatus;
 import com.sciencebot.pos.billing.internal.adapters.CreditNoteProvider;
 import com.sciencebot.pos.billing.internal.adapters.dto.CreditNoteResult;
+import com.sciencebot.pos.billing.internal.adapters.dto.BillingDocumentContext;
+import com.sciencebot.pos.billing.internal.adapters.dto.InvoiceItemData;
 import com.sciencebot.pos.billing.internal.entities.ElectronicCreditNote;
 import com.sciencebot.pos.billing.internal.entities.ElectronicInvoice;
 import com.sciencebot.pos.billing.internal.mappers.ElectronicCreditNoteMapper;
@@ -17,6 +19,8 @@ import com.sciencebot.pos.sales.SaleFacade;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
+import com.sciencebot.pos.billing.internal.mappers.BillingCanonicalMapper;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
@@ -41,6 +45,7 @@ public class CreditNoteServiceImpl implements CreditNoteService {
     private final SaleFacade saleFacade;
     private final CreditNoteEmissionTransactions emissionTransactions;
     private final Map<String, CreditNoteProvider> providersMap;
+    private final BillingCanonicalMapper canonicalMapper;
 
     @Value("${billing.provider:alegra}")
     private String activeProviderName;
@@ -53,11 +58,20 @@ public class CreditNoteServiceImpl implements CreditNoteService {
             CreditNoteEmissionTransactions emissionTransactions,
             List<CreditNoteProvider> providers
     ) {
+        this(repository, mapper, invoiceRepository, saleFacade, emissionTransactions, providers, null);
+    }
+
+    @Autowired
+    public CreditNoteServiceImpl(ElectronicCreditNoteRepository repository, ElectronicCreditNoteMapper mapper,
+            ElectronicInvoiceRepository invoiceRepository, @Lazy SaleFacade saleFacade,
+            CreditNoteEmissionTransactions emissionTransactions, List<CreditNoteProvider> providers,
+            BillingCanonicalMapper canonicalMapper) {
         this.repository = repository;
         this.mapper = mapper;
         this.invoiceRepository = invoiceRepository;
         this.saleFacade = saleFacade;
         this.emissionTransactions = emissionTransactions;
+        this.canonicalMapper = canonicalMapper;
         this.providersMap = providers.stream()
                 .collect(Collectors.toMap(
                         p -> p.getProviderName().toLowerCase(),
@@ -76,6 +90,10 @@ public class CreditNoteServiceImpl implements CreditNoteService {
      * registrar el resultado (transaccion corta). Emisiones simultaneas de la misma referencia llaman al proveedor una vez.
      */
     private CreditNoteDTO emit(CreateCreditNoteRequest request, Long saleId) {
+        return emit(request, saleId, null);
+    }
+
+    private CreditNoteDTO emit(CreateCreditNoteRequest request, Long saleId, List<InvoiceItemData> canonicalItems) {
         Objects.requireNonNull(request, "La solicitud de nota crédito no puede ser nula");
         if (request.referenceCode() == null || request.referenceCode().isBlank()) {
             throw new IllegalArgumentException("El reference_code es obligatorio para la nota crédito");
@@ -83,8 +101,6 @@ public class CreditNoteServiceImpl implements CreditNoteService {
 
         // Sin local en la sesión no se emite: antes se asumía el local 1 y se facturaba con el equivocado.
         Long storeId = requireStoreId();
-        CreditNoteProvider provider = resolveProvider();
-
         // Paso A: reserva. Si la nota ya está validada o la emite otro hilo, se devuelve su estado actual.
         CreditNoteEmissionTransactions.Reservation reservation = reserve(request, saleId, storeId);
         if (reservation.outcome() != ElectronicInvoice.ReserveOutcome.RESERVED) {
@@ -92,10 +108,19 @@ public class CreditNoteServiceImpl implements CreditNoteService {
             return reservation.note();
         }
 
+        CreditNoteProvider provider = resolveProvider(reservation.context());
+
         // Paso B: proveedor, sin transacción abierta.
         CreditNoteResult result;
         try {
-            result = provider.emitCreditNote(request, storeId);
+            if ("alegra".equalsIgnoreCase(provider.getProviderName())) {
+                if (reservation.context() == null) throw new IllegalStateException("La nota no tiene su contexto fiscal original; requiere revisión manual");
+                result = reservation.reconcileProviderDocumentId() != null
+                        ? provider.retryCreditNote(request.referenceCode(), reservation.context())
+                        : provider.emitCreditNote(request, storeId, reservation.context(), canonicalItems);
+            } else {
+                result = provider.emitCreditNote(request, storeId);
+            }
         } catch (Exception ex) {
             log.error("Error al procesar emisión de nota crédito con proveedor {}: {}", provider.getProviderName(), ex.getMessage(), ex);
             result = CreditNoteResult.error("Error en proveedor " + provider.getProviderName() + ": " + ex.getMessage());
@@ -156,7 +181,6 @@ public class CreditNoteServiceImpl implements CreditNoteService {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public byte[] downloadCreditNotePDF(Long id) {
         Long storeId = requireStoreId();
         ElectronicCreditNote note = repository.findById(id)
@@ -167,12 +191,14 @@ public class CreditNoteServiceImpl implements CreditNoteService {
             throw new IllegalStateException("La nota crédito no ha sido validada por la DIAN");
         }
 
-        CreditNoteProvider provider = resolveProvider();
-        return provider.downloadCreditNotePDF(note.getCreditNoteNumber(), storeId);
+        BillingDocumentContext context = contextOf(note);
+        CreditNoteProvider provider = resolveProvider(context);
+        return context == null || !"alegra".equalsIgnoreCase(provider.getProviderName())
+                ? provider.downloadCreditNotePDF(note.getCreditNoteNumber(), storeId)
+                : provider.downloadCreditNotePDF(note.getCreditNoteNumber(), note.getProviderDocumentId(), storeId, context);
     }
 
     @Override
-    @Transactional(readOnly = true)
     public byte[] downloadCreditNoteXML(Long id) {
         Long storeId = requireStoreId();
         ElectronicCreditNote note = repository.findById(id)
@@ -183,8 +209,11 @@ public class CreditNoteServiceImpl implements CreditNoteService {
             throw new IllegalStateException("La nota crédito no ha sido validada por la DIAN");
         }
 
-        CreditNoteProvider provider = resolveProvider();
-        return provider.downloadCreditNoteXML(note.getCreditNoteNumber(), storeId);
+        BillingDocumentContext context = contextOf(note);
+        CreditNoteProvider provider = resolveProvider(context);
+        return context == null || !"alegra".equalsIgnoreCase(provider.getProviderName())
+                ? provider.downloadCreditNoteXML(note.getCreditNoteNumber(), storeId)
+                : provider.downloadCreditNoteXML(note.getCreditNoteNumber(), note.getProviderDocumentId(), storeId, context);
     }
 
     @Override
@@ -264,7 +293,7 @@ public class CreditNoteServiceImpl implements CreditNoteService {
                 items
         );
 
-        return emit(request, saleId);
+        return emit(request, saleId, canonicalMapper != null ? canonicalMapper.toInvoiceItems(sale.items()) : null);
     }
 
     private Long requireStoreId() {
@@ -273,8 +302,34 @@ public class CreditNoteServiceImpl implements CreditNoteService {
         return storeId;
     }
 
+    private BillingDocumentContext contextOf(ElectronicCreditNote note) {
+        if (note.getProviderName() != null) return note.documentContext();
+        if (!"alegra".equalsIgnoreCase(activeProviderName)) return null;
+        throw new IllegalStateException("La nota histórica no tiene un contexto fiscal verificable; requiere revisión manual");
+    }
+
+    @Override
+    public CreditNoteDTO retry(Long id) {
+        Long storeId = requireStoreId();
+        var reservation = emissionTransactions.reserveRetry(id, storeId);
+        if (reservation.outcome() != ElectronicInvoice.ReserveOutcome.RESERVED) return reservation.note();
+        var provider = resolveProvider(reservation.context());
+        CreditNoteResult result;
+        try {
+            if (reservation.context() == null) throw new IllegalStateException("La nota no tiene un contexto fiscal verificable");
+            result = provider.retryCreditNote(reservation.note().referenceCode(), reservation.context());
+        } catch (Exception ex) {
+            result = CreditNoteResult.pending("No se pudo recuperar la nota: " + ex.getMessage());
+        }
+        return emissionTransactions.complete(reservation.note().referenceCode(), storeId, result);
+    }
+
     private CreditNoteProvider resolveProvider() {
-        String key = (activeProviderName != null) ? activeProviderName.trim().toLowerCase() : "alegra";
+        return resolveProvider(null);
+    }
+
+    private CreditNoteProvider resolveProvider(BillingDocumentContext context) {
+        String key = context != null ? context.providerName() : ((activeProviderName != null) ? activeProviderName.trim().toLowerCase() : "alegra");
         CreditNoteProvider provider = providersMap.get(key);
         if (provider == null) {
             // Sin respaldo silencioso a 'mock': un BILLING_PROVIDER mal escrito emitiria facturas falsas.

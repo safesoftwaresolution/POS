@@ -14,6 +14,7 @@ import com.sciencebot.pos.billing.internal.adapters.dto.CustomerBillingData;
 import com.sciencebot.pos.billing.internal.adapters.dto.DebitNoteResult;
 import com.sciencebot.pos.billing.internal.adapters.dto.InvoiceItemData;
 import com.sciencebot.pos.billing.internal.adapters.dto.InvoiceResult;
+import com.sciencebot.pos.billing.internal.adapters.dto.BillingDocumentContext;
 import com.sciencebot.pos.billing.internal.entities.ElectronicInvoice;
 import com.sciencebot.pos.billing.internal.mappers.BillingCanonicalMapper;
 import com.sciencebot.pos.billing.internal.repositories.ElectronicInvoiceRepository;
@@ -93,25 +94,39 @@ public class AlegraNoteClient {
     }
 
     public CreditNoteResult emitCreditNote(CreateCreditNoteRequest request, Long storeId) {
+        return emitCreditNote(request, storeId, null, null);
+    }
+
+    public CreditNoteResult emitCreditNote(CreateCreditNoteRequest request, Long storeId,
+                                           BillingDocumentContext context, List<InvoiceItemData> canonicalItems) {
         Draft draft;
         try {
             draft = draftOf(request);
+            if (canonicalItems != null) {
+                draft = new Draft(draft.referenceCode(), draft.billNumber(), draft.conceptCode(), draft.observation(),
+                        draft.paymentForm(), draft.paymentMethod(), draft.dueDate(), draft.customer(), canonicalItems);
+            }
         } catch (RuntimeException invalid) {
             return CreditNoteResult.error("La nota crédito no se puede enviar: " + invalid.getMessage());
         }
-        InvoiceResult result = emit("91", "/credit-notes", draft, storeId);
+        InvoiceResult result = emit("91", "/credit-notes", draft, storeId, context);
         return withId(new CreditNoteResult(result.isSuccess(), result.legalInvoiceNumber(), result.cufe(), result.qrCode(),
                 result.pdfUrl(), result.status(), result.errorMessage(), result.validatedAt()), result.providerDocumentId());
     }
 
     public DebitNoteResult emitDebitNote(CreateDebitNoteRequest request, Long storeId) {
+        return emitDebitNote(request, storeId, null, null);
+    }
+
+    public DebitNoteResult emitDebitNote(CreateDebitNoteRequest request, Long storeId,
+                                         BillingDocumentContext context, List<InvoiceItemData> canonicalItems) {
         Draft draft;
         try {
             draft = draftOf(request);
         } catch (RuntimeException invalid) {
             return DebitNoteResult.error("La nota débito no se puede enviar: " + invalid.getMessage());
         }
-        InvoiceResult result = emit("92", "/debit-notes", draft, storeId);
+        InvoiceResult result = emit("92", "/debit-notes", draft, storeId, context);
         return withId(new DebitNoteResult(result.isSuccess(), result.legalInvoiceNumber(), result.cufe(), result.qrCode(),
                 result.pdfUrl(), result.status(), result.validatedAt(), result.errorMessage()), result.providerDocumentId());
     }
@@ -124,8 +139,13 @@ public class AlegraNoteClient {
         return result.withProviderDocumentId(providerDocumentId);
     }
 
-    private InvoiceResult emit(String document, String endpoint, Draft draft, Long storeId) {
-        AlegraAccess access = accessResolver.resolve(storeId);
+    private InvoiceResult emit(String document, String endpoint, Draft draft, Long storeId, BillingDocumentContext context) {
+        if (context != null) {
+            if (!context.storeId().equals(storeId)) throw new IllegalStateException("El contexto pertenece a otro local");
+            var previous = allocator.findAllocation(storeId, context.environment(), document, draft.referenceCode());
+            if (previous.isPresent() && "ACCEPTED".equals(previous.get().outcome())) return allocator.receipt(previous.get());
+        }
+        AlegraAccess access = context == null ? accessResolver.resolve(storeId) : accessResolver.resolveDocumentForEmission(context);
 
         Optional<ElectronicInvoice> found = invoiceRepository.findByStoreIdAndLegalNumber(access.storeId(), draft.billNumber());
         if (found.isEmpty() || !found.get().isValidated() || found.get().getCufe() == null) {
@@ -133,6 +153,9 @@ public class AlegraNoteClient {
                     + " en esta tienda; solo se puede emitir una nota sobre una factura aceptada por la DIAN");
         }
         ElectronicInvoice invoice = found.get();
+        if (context != null && (invoice.getProviderName() == null || !context.equals(invoice.documentContext()))) {
+            return InvoiceResult.error("La factura de origen no comparte el contexto fiscal de la nota");
+        }
         Matcher legal = LEGAL_NUMBER.matcher(invoice.getLegalNumber() == null ? "" : invoice.getLegalNumber().trim());
         if (!legal.matches()) {
             return InvoiceResult.error("El número de la factura " + invoice.getLegalNumber()
@@ -151,8 +174,17 @@ public class AlegraNoteClient {
         }
 
         Allocation allocation = allocator.allocate(access.storeId(), access.environment(), document, draft.referenceCode());
-        if (allocation.completed()) {
+        if ("ACCEPTED".equals(allocation.outcome())) return allocator.receipt(allocation);
+        if (allocation.completed() && allocation.outcome() == null && allocation.requestPayload() == null) {
+            return InvoiceResult.pending("Asignación histórica sin resultado verificable; requiere conciliación manual");
+        }
+        if ("REJECTED".equals(allocation.outcome()) || "FAILED".equals(allocation.outcome())) {
             allocation = allocator.rotateIdempotencyKey(allocation.id());
+        }
+        if (allocation.providerDocumentId() != null) {
+            InvoiceResult result = query(endpoint, allocation.providerDocumentId(), access);
+            allocator.recordResult(allocation.id(), result);
+            return result;
         }
 
         Map<String, Object> body;
@@ -162,7 +194,10 @@ public class AlegraNoteClient {
         } catch (IllegalStateException incomplete) {
             return InvoiceResult.error(incomplete.getMessage());
         }
+        return submit(endpoint, access, allocation, invoiceClient.frozenBody(allocation, body));
+    }
 
+    private InvoiceResult submit(String endpoint, AlegraAccess access, Allocation allocation, String body) {
         try {
             ResponseEntity<NoteEnvelope> response = helper.authorizedPost(endpoint, access)
                     .header("Idempotency-Key", allocation.idempotencyKey())
@@ -183,6 +218,67 @@ public class AlegraNoteClient {
             }
             throw translated;
         }
+    }
+
+    public CreditNoteResult retryCreditNote(String reference, BillingDocumentContext context) {
+        return creditResult(retry("91", "/credit-notes", reference, context));
+    }
+
+    public DebitNoteResult retryDebitNote(String reference, BillingDocumentContext context) {
+        return debitResult(retry("92", "/debit-notes", reference, context));
+    }
+
+    public CreditNoteResult queryCreditNote(String id, BillingDocumentContext context) {
+        return creditResult(query("/credit-notes", id, accessResolver.resolveDocument(context)));
+    }
+
+    public DebitNoteResult queryDebitNote(String id, BillingDocumentContext context) {
+        return debitResult(query("/debit-notes", id, accessResolver.resolveDocument(context)));
+    }
+
+    public byte[] download(String endpoint, String id, BillingDocumentContext context, boolean pdf) {
+        if (id == null || id.isBlank()) throw new IllegalStateException("La nota no tiene un identificador verificable en el proveedor");
+        AlegraAccess access = accessResolver.resolveDocument(context);
+        return pdf ? invoiceClient.downloadPDF(endpoint + "/" + id, access)
+                : invoiceClient.downloadXML(endpoint + "/" + id, access);
+    }
+
+    private InvoiceResult retry(String document, String endpoint, String reference, BillingDocumentContext context) {
+        Allocation allocation = allocator.findAllocation(context.storeId(), context.environment(), document, reference)
+                .orElseThrow(() -> new IllegalStateException("La nota no tiene una solicitud fiscal guardada; requiere revisión manual"));
+        if ("ACCEPTED".equals(allocation.outcome())) return allocator.receipt(allocation);
+        AlegraAccess access = accessResolver.resolveDocumentForEmission(context);
+        if (allocation.providerDocumentId() != null && !"REJECTED".equals(allocation.outcome()) && !"FAILED".equals(allocation.outcome())) {
+            InvoiceResult result = query(endpoint, allocation.providerDocumentId(), access);
+            allocator.recordResult(allocation.id(), result);
+            return result;
+        }
+        if (allocation.completed()) {
+            InvoiceResult receipt = allocator.receipt(allocation);
+            return receipt != null ? receipt : InvoiceResult.pending("Resultado histórico incierto; requiere revisión manual");
+        }
+        if (allocation.requestPayload() == null) return InvoiceResult.pending("La nota no tiene contenido recuperable; requiere revisión manual");
+        return submit(endpoint, access, allocation, allocation.requestPayload());
+    }
+
+    private InvoiceResult query(String endpoint, String id, AlegraAccess access) {
+        try {
+            NoteEnvelope envelope = helper.authorizedGet(endpoint + "/" + id, access).retrieve().body(NoteEnvelope.class);
+            return invoiceClient.fromInvoice(envelope != null ? envelope.document() : null, null).withProviderDocumentId(id);
+        } catch (Exception ex) {
+            return InvoiceResult.pending("No se pudo conciliar la nota; no se emitirá otra: " +
+                    helper.translate("Error de consulta de nota", ex).getMessage()).withProviderDocumentId(id);
+        }
+    }
+
+    private static CreditNoteResult creditResult(InvoiceResult result) {
+        return new CreditNoteResult(result.isSuccess(), result.legalInvoiceNumber(), result.cufe(), result.qrCode(),
+                result.pdfUrl(), result.status(), result.errorMessage(), result.validatedAt(), result.providerDocumentId());
+    }
+
+    private static DebitNoteResult debitResult(InvoiceResult result) {
+        return new DebitNoteResult(result.isSuccess(), result.legalInvoiceNumber(), result.cufe(), result.qrCode(),
+                result.pdfUrl(), result.status(), result.validatedAt(), result.errorMessage(), result.providerDocumentId());
     }
 
     /** Un replay devuelve la respuesta guardada del primer intento: se lee el estado actual de la nota. */

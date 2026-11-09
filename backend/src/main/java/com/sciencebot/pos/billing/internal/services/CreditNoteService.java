@@ -9,6 +9,9 @@ import java.util.Optional;
 
 public interface CreditNoteService {
 
+    /** Reconcile or replay the original request without creating another legal document. */
+    CreditNoteDTO retry(Long id);
+
     /**
      * Crea y valida una nota crédito electrónica ante la DIAN.
      */

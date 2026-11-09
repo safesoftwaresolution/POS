@@ -6,6 +6,8 @@ import com.sciencebot.pos.billing.internal.adapters.DebitNoteProvider;
 import com.sciencebot.pos.billing.internal.adapters.dto.DebitNoteResult;
 import com.sciencebot.pos.billing.internal.entities.ElectronicDebitNote;
 import com.sciencebot.pos.billing.internal.entities.ElectronicInvoice;
+import com.sciencebot.pos.billing.internal.adapters.dto.BillingDocumentContext;
+import com.sciencebot.pos.billing.dto.BillingEnvironment;
 import com.sciencebot.pos.billing.internal.mappers.ElectronicDebitNoteMapper;
 import com.sciencebot.pos.billing.internal.repositories.ElectronicDebitNoteRepository;
 import com.sciencebot.pos.billing.internal.repositories.ElectronicInvoiceRepository;
@@ -49,13 +51,19 @@ class DebitNoteServiceImplTest {
         TenantContext.setStoreId(1L);
 
         when(factusProvider.getProviderName()).thenReturn("alegra");
+        doAnswer(invocation -> factusProvider.emitDebitNote(invocation.getArgument(0), invocation.getArgument(1)))
+                .when(factusProvider).emitDebitNote(any(), any(), any(), any());
+        ElectronicInvoice source = ElectronicInvoice.initialize(10L, 1L);
+        source.assignDocumentContext(new BillingDocumentContext(1L, BillingEnvironment.SANDBOX, "alegra", "original-company"));
+        source.markAsValidated("SETP990002519", "cufe", "qr", null, LocalDateTime.now());
+        when(invoiceRepository.findByStoreIdAndLegalNumber(1L, "SETP990002519")).thenReturn(Optional.of(source));
 
         ElectronicDebitNoteMapper mapper = new ElectronicDebitNoteMapper();
         service = new DebitNoteServiceImpl(
                 repository,
                 mapper,
                 invoiceRepository,
-                new DebitNoteEmissionTransactions(repository, mapper, Duration.ofMinutes(5)),
+                new DebitNoteEmissionTransactions(repository, mapper, Duration.ofMinutes(5), invoiceRepository),
                 List.of(factusProvider)
         );
     }
@@ -256,6 +264,7 @@ class DebitNoteServiceImplTest {
     @Test
     void createForSale_WhenInvoiceValidated_BindsBillNumberAndSale() {
         ElectronicInvoice invoice = ElectronicInvoice.initialize(10L, 1L);
+        invoice.assignDocumentContext(new BillingDocumentContext(1L, BillingEnvironment.SANDBOX, "alegra", "original-company"));
         invoice.markAsValidated("SETP-001", "cufe-123", "qr", "pdf", LocalDateTime.now());
         when(invoiceRepository.findBySaleIdAndStoreId(10L, 1L)).thenReturn(Optional.of(invoice));
         stubNewNotePersistence();
@@ -292,6 +301,7 @@ class DebitNoteServiceImplTest {
     @Test
     void createForSale_WhenBillNumberDoesNotMatchSaleInvoice_ThrowsIllegalArgument() {
         ElectronicInvoice invoice = ElectronicInvoice.initialize(10L, 1L);
+        invoice.assignDocumentContext(new BillingDocumentContext(1L, BillingEnvironment.SANDBOX, "alegra", "original-company"));
         invoice.markAsValidated("SETP-001", "cufe-123", "qr", "pdf", LocalDateTime.now());
         when(invoiceRepository.findBySaleIdAndStoreId(10L, 1L)).thenReturn(Optional.of(invoice));
 

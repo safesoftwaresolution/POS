@@ -6,6 +6,8 @@ import com.sciencebot.pos.billing.internal.adapters.CreditNoteProvider;
 import com.sciencebot.pos.billing.internal.adapters.dto.CreditNoteResult;
 import com.sciencebot.pos.billing.internal.entities.ElectronicCreditNote;
 import com.sciencebot.pos.billing.internal.entities.ElectronicInvoice;
+import com.sciencebot.pos.billing.internal.adapters.dto.BillingDocumentContext;
+import com.sciencebot.pos.billing.dto.BillingEnvironment;
 import com.sciencebot.pos.billing.internal.mappers.ElectronicCreditNoteMapper;
 import com.sciencebot.pos.billing.internal.repositories.ElectronicCreditNoteRepository;
 import com.sciencebot.pos.billing.internal.repositories.ElectronicInvoiceRepository;
@@ -53,6 +55,12 @@ class CreditNoteServiceImplTest {
         TenantContext.setStoreId(1L);
 
         when(factusProvider.getProviderName()).thenReturn("alegra");
+        doAnswer(invocation -> factusProvider.emitCreditNote(invocation.getArgument(0), invocation.getArgument(1)))
+                .when(factusProvider).emitCreditNote(any(), any(), any(), any());
+        ElectronicInvoice source = ElectronicInvoice.initialize(10L, 1L);
+        source.assignDocumentContext(new BillingDocumentContext(1L, BillingEnvironment.SANDBOX, "alegra", "original-company"));
+        source.markAsValidated("SETP990002519", "cufe", "qr", null, LocalDateTime.now());
+        when(invoiceRepository.findByStoreIdAndLegalNumber(1L, "SETP990002519")).thenReturn(Optional.of(source));
 
         ElectronicCreditNoteMapper mapper = new ElectronicCreditNoteMapper();
         service = new CreditNoteServiceImpl(
@@ -60,7 +68,7 @@ class CreditNoteServiceImplTest {
                 mapper,
                 invoiceRepository,
                 saleFacade,
-                new CreditNoteEmissionTransactions(repository, mapper, Duration.ofMinutes(5)),
+                new CreditNoteEmissionTransactions(repository, mapper, Duration.ofMinutes(5), invoiceRepository),
                 List.of(factusProvider)
         );
     }
@@ -146,6 +154,7 @@ class CreditNoteServiceImplTest {
     @Test
     void createFromSale_WhenInvoiceValidated_BuildsAndEmitsCreditNote() {
         ElectronicInvoice invoice = ElectronicInvoice.initialize(10L, 1L);
+        invoice.assignDocumentContext(new BillingDocumentContext(1L, BillingEnvironment.SANDBOX, "alegra", "original-company"));
         invoice.markAsValidated("SETP-001", "cufe-123", "qr", "pdf", LocalDateTime.now());
         when(invoiceRepository.findBySaleIdAndStoreId(10L, 1L)).thenReturn(Optional.of(invoice));
 
@@ -191,6 +200,7 @@ class CreditNoteServiceImplTest {
     @Test
     void createFromSale_UsesDeterministicReferenceAndPersistsSaleId() {
         ElectronicInvoice invoice = ElectronicInvoice.initialize(10L, 1L);
+        invoice.assignDocumentContext(new BillingDocumentContext(1L, BillingEnvironment.SANDBOX, "alegra", "original-company"));
         invoice.markAsValidated("SETP-001", "cufe-123", "qr", "pdf", LocalDateTime.now());
         when(invoiceRepository.findBySaleIdAndStoreId(10L, 1L)).thenReturn(Optional.of(invoice));
         SaleDto sale = new SaleDto(10L, "FACT-001", LocalDateTime.now(), "Cliente", BigDecimal.valueOf(100), BigDecimal.valueOf(100), BigDecimal.ZERO, "cajero", List.of(), "CASH");

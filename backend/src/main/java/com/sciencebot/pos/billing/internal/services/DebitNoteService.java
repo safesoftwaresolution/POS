@@ -9,6 +9,9 @@ import java.util.Optional;
 
 public interface DebitNoteService {
 
+    /** Reconcile or replay the original request without creating another legal document. */
+    DebitNoteDTO retry(Long id);
+
     /**
      * Crea y valida una nota débito electrónica ante la DIAN.
      */

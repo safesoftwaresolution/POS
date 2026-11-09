@@ -121,4 +121,11 @@ public interface BillingCreditNoteApiDoc {
             @Parameter(description = "Código de corrección (ej. 2=Anulación)", example = "2") String conceptCode,
             @Parameter(description = "Observación o motivo", example = "Anulación solicitada por el cliente") String observation
     );
+    @Operation(summary = "Recuperar una nota pendiente o fallida",
+            description = "Consulta el documento recibido o reenvía exactamente la solicitud guardada con la misma llave. No reemite notas validadas. Solo administrador y supervisor.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Estado actual de la nota; consultar status"),
+        @ApiResponse(responseCode = "403", description = "El rol no puede recuperar notas")
+    })
+    ResponseEntity<CreditNoteDTO> retry(Long id);
 }

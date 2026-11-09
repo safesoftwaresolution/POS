@@ -94,4 +94,10 @@ public class BillingDebitNoteController implements BillingDebitNoteApiDoc {
             @Valid @RequestBody CreateDebitNoteRequest request) {
         return ResponseEntity.ok(debitNoteService.createForSale(saleId, request));
     }
+    @Override
+    @PostMapping("/{id}/retry")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'SUPERVISOR')")
+    public ResponseEntity<DebitNoteDTO> retry(@PathVariable Long id) {
+        return ResponseEntity.ok(debitNoteService.retry(id));
+    }
 }

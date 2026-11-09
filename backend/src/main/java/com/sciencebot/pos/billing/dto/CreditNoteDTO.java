@@ -50,5 +50,13 @@ public record CreditNoteDTO(
         LocalDateTime validatedAt,
 
         @Schema(description = "Fecha y hora de creación del registro local", example = "2026-09-24T15:58:00")
-        LocalDateTime createdAt
-) {}
+        LocalDateTime createdAt,
+        BillingEnvironment environment
+) {
+    public CreditNoteDTO(Long id, Long storeId, Long saleId, String referenceCode, String billNumber,
+            String creditNoteNumber, String correctionConceptCode, String customizationId, String cude, String qrCode,
+            String status, String errorMessage, String pdfUrl, LocalDateTime validatedAt, LocalDateTime createdAt) {
+        this(id, storeId, saleId, referenceCode, billNumber, creditNoteNumber, correctionConceptCode, customizationId,
+                cude, qrCode, status, errorMessage, pdfUrl, validatedAt, createdAt, null);
+    }
+}

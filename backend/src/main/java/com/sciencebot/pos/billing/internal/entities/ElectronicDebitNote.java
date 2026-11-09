@@ -1,9 +1,12 @@
 package com.sciencebot.pos.billing.internal.entities;
 
 import com.sciencebot.pos.billing.dto.ElectronicInvoiceStatus;
+import com.sciencebot.pos.billing.dto.BillingEnvironment;
 import com.sciencebot.pos.shared.validation.Preconditions;
 import jakarta.persistence.*;
+import com.sciencebot.pos.billing.internal.adapters.dto.BillingDocumentContext;
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 @Entity
 @Table(name = "electronic_debit_notes")
@@ -53,6 +56,15 @@ public class ElectronicDebitNote {
     /** Identificador del documento en el proveedor de facturación; se asigna una sola vez. */
     @Column(name = "provider_document_id", length = 64)
     private String providerDocumentId;
+
+    @Column(name = "provider_name", length = 32)
+    private String providerName;
+
+    @Column(name = "provider_company_id", length = 64)
+    private String providerCompanyId;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "environment", length = 12)
+    private BillingEnvironment environment;
 
     @Column(name = "validated_at")
     private LocalDateTime validatedAt;
@@ -268,4 +280,34 @@ public class ElectronicDebitNote {
 
     
 
+    public BillingDocumentContext documentContext() {
+        return new BillingDocumentContext(storeId, environment, providerName, providerCompanyId);
+    }
+
+    public void assignDocumentContext(BillingDocumentContext context) {
+        if (!Objects.equals(storeId, context.storeId())) {
+            throw new IllegalStateException("El contexto fiscal pertenece a otro local");
+        }
+        if (providerName != null && (!providerName.equals(context.providerName())
+                || !Objects.equals(providerCompanyId, context.companyId()) || environment != context.environment())) {
+            throw new IllegalStateException("El contexto fiscal de un documento no puede cambiar");
+        }
+        if (environment != null && environment != context.environment()) {
+            throw new IllegalStateException("El entorno fiscal de un documento no puede cambiar");
+        }
+        providerName = context.providerName();
+        providerCompanyId = context.companyId();
+        environment = context.environment();
+    }
+
+    public String getProviderName() { return providerName; }
+    public String getProviderCompanyId() { return providerCompanyId; }    public BillingEnvironment getEnvironment() { return environment; }
+
+    public void markAsPending(String message) {
+        if (status == ElectronicInvoiceStatus.VALIDATED) {
+            throw new IllegalStateException("Una nota validada es fiscalmente inmutable");
+        }
+        status = ElectronicInvoiceStatus.PENDING;
+        errorMessage = message;
+    }
 }

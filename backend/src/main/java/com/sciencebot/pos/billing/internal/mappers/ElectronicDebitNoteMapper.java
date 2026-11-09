@@ -29,7 +29,8 @@ public class ElectronicDebitNoteMapper {
                 entity.getErrorMessage(),
                 entity.getPdfUrl(),
                 entity.getValidatedAt(),
-                entity.getCreatedAt()
+                entity.getCreatedAt(),
+                entity.getEnvironment()
         );
     }
 }

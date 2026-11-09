@@ -15,6 +15,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Optional;
+import com.sciencebot.pos.billing.internal.adapters.dto.BillingDocumentContext;
+import com.sciencebot.pos.billing.internal.repositories.ElectronicInvoiceRepository;
+import com.sciencebot.pos.billing.dto.BillingEnvironment;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * Los pasos A y C de la emision de una nota debito, cada uno en su propia transaccion corta. La llamada al proveedor
@@ -25,17 +29,30 @@ import java.util.Optional;
 public class DebitNoteEmissionTransactions {
 
     /** Resultado del paso A: quien emite y, si no es este hilo, el estado actual de la nota. */
-    public record Reservation(ReserveOutcome outcome, DebitNoteDTO note) {}
+    public record Reservation(ReserveOutcome outcome, DebitNoteDTO note, BillingDocumentContext context,
+                              String reconcileProviderDocumentId) {
+        public Reservation(ReserveOutcome outcome, DebitNoteDTO note) { this(outcome, note, null, null); }
+    }
 
     private final ElectronicDebitNoteRepository repository;
     private final ElectronicDebitNoteMapper mapper;
     private final Duration lease;
+    private final ElectronicInvoiceRepository invoiceRepository;
+    @Value("${billing.provider:alegra}")
+    private String activeProviderName = "alegra";
 
     public DebitNoteEmissionTransactions(ElectronicDebitNoteRepository repository, ElectronicDebitNoteMapper mapper,
                                          @Value("${billing.emission.lease:PT5M}") Duration lease) {
+        this(repository, mapper, lease, null);
+    }
+
+    @Autowired
+    public DebitNoteEmissionTransactions(ElectronicDebitNoteRepository repository, ElectronicDebitNoteMapper mapper,
+            @Value("${billing.emission.lease:PT5M}") Duration lease, ElectronicInvoiceRepository invoiceRepository) {
         this.repository = repository;
         this.mapper = mapper;
         this.lease = lease;
+        this.invoiceRepository = invoiceRepository;
     }
 
     /** Paso A: bloquea (o crea) la nota de la referencia y toma la reserva de emision. */
@@ -62,11 +79,12 @@ public class DebitNoteEmissionTransactions {
                     request.customizationId()
             ));
         }
+        captureContext(note, saleId, storeId);
         ReserveOutcome outcome = note.reserveForEmission(LocalDateTime.now(), lease);
         if (outcome == ReserveOutcome.RESERVED) {
             repository.save(note);
         }
-        return new Reservation(outcome, mapper.toDto(note));
+        return reservation(note, outcome);
     }
 
     /** Paso C: vuelve a bloquear la fila, aplica el resultado del proveedor y libera la reserva. */
@@ -89,6 +107,33 @@ public class DebitNoteEmissionTransactions {
         return mapper.toDto(repository.save(note));
     }
 
+    @Transactional
+    public Reservation reserveRetry(Long id, Long storeId) {
+        ElectronicDebitNote selected = repository.findById(id).filter(n -> storeId.equals(n.getStoreId()))
+                .orElseThrow(() -> new IllegalArgumentException("Nota no encontrada"));
+        ElectronicDebitNote note = repository.findByReferenceCodeForUpdate(selected.getReferenceCode())
+                .filter(n -> storeId.equals(n.getStoreId())).orElseThrow();
+        ReserveOutcome outcome = note.reserveForEmission(LocalDateTime.now(), lease);
+        repository.save(note);
+        return reservation(note, outcome);
+    }
+
+    private Reservation reservation(ElectronicDebitNote note, ReserveOutcome outcome) {
+        return new Reservation(outcome, mapper.toDto(note),
+                note.getProviderName() == null ? null : note.documentContext(), note.getProviderDocumentId());
+    }
+
+    private void captureContext(ElectronicDebitNote note, Long saleId, Long storeId) {
+        if (note.getProviderName() != null || note.getAttempts() > 0) return;
+        if (!"alegra".equalsIgnoreCase(activeProviderName)) {
+            note.assignDocumentContext(new BillingDocumentContext(storeId, BillingEnvironment.SANDBOX, activeProviderName, null));
+        } else if (invoiceRepository != null) {
+            var source = saleId != null ? invoiceRepository.findBySaleIdAndStoreId(saleId, storeId)
+                    : invoiceRepository.findByStoreIdAndLegalNumber(storeId, note.getBillNumber());
+            source.filter(invoice -> invoice.getProviderName() != null && invoice.isValidated())
+                    .ifPresent(invoice -> note.assignDocumentContext(invoice.documentContext()));
+        }
+    }
     private static void apply(ElectronicDebitNote note, DebitNoteResult result) {
         if (result == null) {
             note.markAsError("Respuesta vacía del proveedor de facturación");
@@ -104,6 +149,8 @@ public class DebitNoteEmissionTransactions {
                     result.validatedAt());
         } else if ("REJECTED".equalsIgnoreCase(result.status())) {
             note.markAsRejected(Preconditions.defaultIfBlank(result.errorMessage(), "Nota débito rechazada por la DIAN"));
+        } else if ("PENDING".equalsIgnoreCase(result.status())) {
+            note.markAsPending(result.errorMessage());
         } else {
             note.markAsError(Preconditions.defaultIfBlank(result.errorMessage(), "Error en proceso de nota débito"));
         }

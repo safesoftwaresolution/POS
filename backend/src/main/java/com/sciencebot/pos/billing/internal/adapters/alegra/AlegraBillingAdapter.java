@@ -11,6 +11,7 @@ import com.sciencebot.pos.billing.internal.adapters.dto.DebitNoteResult;
 import com.sciencebot.pos.billing.internal.adapters.dto.InvoiceRequest;
 import com.sciencebot.pos.billing.internal.adapters.dto.InvoiceResult;
 import com.sciencebot.pos.billing.internal.adapters.dto.BillingDocumentContext;
+import com.sciencebot.pos.billing.internal.adapters.dto.InvoiceItemData;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
@@ -189,5 +190,54 @@ public class AlegraBillingAdapter implements ElectronicInvoicingProvider {
     @Override
     public NumberingRangeDto updateNumberingRangeCurrent(Long numberingRangeId, Long current) {
         return rangeClient.updateNumberingRangeCurrent(numberingRangeId, current);
+    }
+    @Override
+    public CreditNoteResult emitCreditNote(CreateCreditNoteRequest request, Long storeId,
+            BillingDocumentContext context, List<InvoiceItemData> canonicalItems) {
+        return noteClient.emitCreditNote(request, storeId, context, canonicalItems);
+    }
+
+    @Override
+    public CreditNoteResult retryCreditNote(String reference, BillingDocumentContext context) {
+        return noteClient.retryCreditNote(reference, context);
+    }
+
+    @Override
+    public CreditNoteResult queryCreditNote(String id, BillingDocumentContext context) {
+        return noteClient.queryCreditNote(id, context);
+    }
+
+    @Override
+    public byte[] downloadCreditNotePDF(String number, String id, Long storeId, BillingDocumentContext context) {
+        return noteClient.download("/credit-notes", id, context, true);
+    }
+
+    @Override
+    public byte[] downloadCreditNoteXML(String number, String id, Long storeId, BillingDocumentContext context) {
+        return noteClient.download("/credit-notes", id, context, false);
+    }    @Override
+    public DebitNoteResult emitDebitNote(CreateDebitNoteRequest request, Long storeId,
+            BillingDocumentContext context, List<InvoiceItemData> canonicalItems) {
+        return noteClient.emitDebitNote(request, storeId, context, canonicalItems);
+    }
+
+    @Override
+    public DebitNoteResult retryDebitNote(String reference, BillingDocumentContext context) {
+        return noteClient.retryDebitNote(reference, context);
+    }
+
+    @Override
+    public DebitNoteResult queryDebitNote(String id, BillingDocumentContext context) {
+        return noteClient.queryDebitNote(id, context);
+    }
+
+    @Override
+    public byte[] downloadDebitNotePDF(String number, String id, Long storeId, BillingDocumentContext context) {
+        return noteClient.download("/debit-notes", id, context, true);
+    }
+
+    @Override
+    public byte[] downloadDebitNoteXML(String number, String id, Long storeId, BillingDocumentContext context) {
+        return noteClient.download("/debit-notes", id, context, false);
     }
 }

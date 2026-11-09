@@ -123,4 +123,11 @@ public interface BillingDebitNoteApiDoc {
             @Parameter(description = "ID de la venta", example = "5", required = true) Long saleId,
             CreateDebitNoteRequest request
     );
+    @Operation(summary = "Recuperar una nota pendiente o fallida",
+            description = "Consulta el documento recibido o reenvía exactamente la solicitud guardada con la misma llave. No reemite notas validadas. Solo administrador y supervisor.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Estado actual de la nota; consultar status"),
+        @ApiResponse(responseCode = "403", description = "El rol no puede recuperar notas")
+    })
+    ResponseEntity<DebitNoteDTO> retry(Long id);
 }

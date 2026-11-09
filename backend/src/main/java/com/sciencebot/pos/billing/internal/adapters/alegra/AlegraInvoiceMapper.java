@@ -17,9 +17,8 @@ import java.util.Map;
 
 /**
  * Arma el cuerpo de {@code POST /invoices} de Alegra a partir de la solicitud canónica, la empresa del local y el
- * número asignado. Cada línea se redondea a 2 decimales (HALF_UP) y los totales son la suma de las líneas ya
- * redondeadas, que es lo que Alegra y la DIAN validan: la factura puede diferir unos centavos del total del ticket
- * del POS, que se calculó con otro redondeo.
+ * número asignado. Los importes de línea se redondean a 2 decimales (HALF_UP). Si la venta incluye su importe bruto
+ * guardado, la base y el impuesto se desglosan de ese importe para conservar exactamente lo cobrado en el POS.
  */
 @Component
 @ConditionalOnProperty(name = "billing.provider", havingValue = "alegra")
@@ -191,12 +190,31 @@ public class AlegraInvoiceMapper {
 
     private static Map<String, Object> mapItem(InvoiceItemData item) {
         BigDecimal quantity = item.quantity();
-        BigDecimal gross = money(quantity.multiply(item.unitPrice()));
         BigDecimal discountRate = item.discountRate() != null ? item.discountRate() : BigDecimal.ZERO;
-        BigDecimal discount = money(gross.multiply(discountRate).divide(HUNDRED, 4, RoundingMode.HALF_UP));
-        BigDecimal subtotal = gross.subtract(discount);
         BigDecimal rate = item.taxRate() != null ? item.taxRate() : BigDecimal.ZERO;
-        BigDecimal taxAmount = money(subtotal.multiply(rate).divide(HUNDRED, 4, RoundingMode.HALF_UP));
+        BigDecimal price;
+        BigDecimal subtotal;
+        BigDecimal discount;
+        BigDecimal taxAmount;
+        if (item.grossLineTotal() != null) {
+            // Derive both components from the charged amount, not from a rounded unit base.
+            BigDecimal taxFactor = BigDecimal.ONE.add(rate.divide(HUNDRED));
+            BigDecimal grossBase = item.grossLineTotal().divide(taxFactor, 2, RoundingMode.HALF_UP);
+            BigDecimal chargedAfterDiscount = money(item.grossLineTotal().multiply(HUNDRED.subtract(discountRate))
+                    .divide(HUNDRED));
+            subtotal = chargedAfterDiscount.divide(taxFactor, 2, RoundingMode.HALF_UP);
+            discount = grossBase.subtract(subtotal);
+            taxAmount = chargedAfterDiscount.subtract(subtotal);
+            price = quantity.signum() == 0 ? item.unitPrice()
+                    : grossBase.divide(quantity, 12, RoundingMode.HALF_UP);
+        } else {
+            // Manually supplied note/invoice prices remain tax-exclusive, including existing discounts.
+            BigDecimal gross = money(quantity.multiply(item.unitPrice()));
+            discount = money(gross.multiply(discountRate).divide(HUNDRED, 4, RoundingMode.HALF_UP));
+            subtotal = gross.subtract(discount);
+            taxAmount = money(subtotal.multiply(rate).divide(HUNDRED, 4, RoundingMode.HALF_UP));
+            price = money(item.unitPrice());
+        }
 
         Map<String, Object> tax = new LinkedHashMap<>();
         tax.put("taxCode", firstNonBlank(item.taxCode(), "01"));
@@ -206,7 +224,7 @@ public class AlegraInvoiceMapper {
 
         Map<String, Object> line = new LinkedHashMap<>();
         line.put("description", item.productName());
-        line.put("price", money(item.unitPrice()));
+        line.put("price", price);
         line.put("quantity", quantity);
         line.put("unitCode", firstNonBlank(item.unitMeasureCode(), "94"));
         line.put("subtotal", subtotal);

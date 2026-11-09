@@ -13,8 +13,17 @@ public record InvoiceItemData(
         String standardCode,
         String taxCode,
         BigDecimal discountRate,
-        boolean isExcluded
+        boolean isExcluded,
+        BigDecimal grossLineTotal
 ) {
+    /** Tax-exclusive callers keep their existing arithmetic when no charged gross snapshot is supplied. */
+    public InvoiceItemData(String productCode, String productName, BigDecimal quantity, BigDecimal unitPrice,
+                           BigDecimal taxRate, BigDecimal subtotal, String unitMeasureCode, String standardCode,
+                           String taxCode, BigDecimal discountRate, boolean isExcluded) {
+        this(productCode, productName, quantity, unitPrice, taxRate, subtotal, unitMeasureCode, standardCode,
+                taxCode, discountRate, isExcluded, null);
+    }
+
     // Constructor de conveniencia para compatibilidad con código existente
     public InvoiceItemData(
             String productCode,
@@ -35,7 +44,8 @@ public record InvoiceItemData(
                 "999",
                 "01",
                 BigDecimal.ZERO,
-                false
+                false,
+                null
         );
     }
 }

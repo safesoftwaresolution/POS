@@ -159,6 +159,38 @@ class AlegraInvoiceMapperTest {
     }
 
     @Test
+    void grossSnapshotIsSplitIntoConsistentLineBaseAndTaxIncludingDiscount() {
+        InvoiceItemData item = new InvoiceItemData("REF-D", "Discounted service", new BigDecimal("100"),
+                new BigDecimal("84.0336"), new BigDecimal("19"), new BigDecimal("8403.36"), "HUR", "90111500", "01",
+                new BigDecimal("10"), false, new BigDecimal("10000.00"));
+
+        Map<String, Object> body = mapper.toAlegraPayload(request(consumerFinal(), "1", item), company(1, "31"), allocation());
+        Map<String, Object> line = list(body.get("items")).get(0);
+        assertMoney("7563.03", line.get("subtotal"));
+        assertMoney("1436.97", line.get("taxAmount"));
+        assertMoney("840.33", line.get("discountAmount"));
+        assertMoney("9000.00", map(body.get("totalAmounts")).get("payableTotal"));
+        BigDecimal extendedPrice = ((BigDecimal) line.get("price")).multiply((BigDecimal) line.get("quantity"));
+        assertMoney("8403.36", extendedPrice.setScale(2, java.math.RoundingMode.HALF_UP));
+        assertMoney("7563.03", extendedPrice.subtract((BigDecimal) line.get("discountAmount"))
+                .setScale(2, java.math.RoundingMode.HALF_UP));
+    }
+
+    @Test
+    void legacyConstructorsKeepTaxExclusivePricesAndDoNotInventGrossSnapshots() {
+        InvoiceItemData item = new InvoiceItemData("REF-L", "Legacy", 2, new BigDecimal("100.00"),
+                new BigDecimal("19"), new BigDecimal("200.00"));
+
+        assertNull(item.grossLineTotal());
+        Map<String, Object> body = mapper.toAlegraPayload(request(consumerFinal(), "1", item), company(1, "31"), allocation());
+        Map<String, Object> line = list(body.get("items")).get(0);
+        assertMoney("100.00", line.get("price"));
+        assertMoney("200.00", line.get("subtotal"));
+        assertMoney("38.00", line.get("taxAmount"));
+        assertMoney("238.00", map(body.get("totalAmounts")).get("payableTotal"));
+    }
+
+    @Test
     void consumerFinalAndACompanyWithNitAndCheckDigit() {
         Map<String, Object> consumer = map(mapper.toAlegraPayload(
                 request(consumerFinal(), "1", item("A", "1", "100", "19")), company(1, "31"), allocation()).get("customer"));

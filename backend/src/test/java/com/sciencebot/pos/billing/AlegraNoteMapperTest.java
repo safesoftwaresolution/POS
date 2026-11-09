@@ -7,11 +7,16 @@ import com.sciencebot.pos.billing.internal.adapters.alegra.AlegraInvoiceMapper.O
 import com.sciencebot.pos.billing.internal.adapters.alegra.AlegraNumberAllocator.Allocation;
 import com.sciencebot.pos.billing.internal.adapters.dto.CustomerBillingData;
 import com.sciencebot.pos.billing.internal.adapters.dto.InvoiceItemData;
+import com.sciencebot.pos.billing.internal.mappers.BillingCanonicalMapper;
+import com.sciencebot.pos.sales.SaleDto;
+import com.sciencebot.pos.sales.SaleItemDto;
+import com.sciencebot.pos.sales.SaleItemType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -101,6 +106,26 @@ class AlegraNoteMapperTest {
         List<Map<String, Object>> lines = list(body.get("items"));
         assertEquals(2, lines.size());
         assertEquals("19.00", list(lines.get(0).get("taxes")).get(0).get("taxPercentage"));
+    }
+
+    @Test
+    void creditAndDebitNotePayloadsPreserveTheOriginalSaleGross() {
+        SaleItemDto service = new SaleItemDto(1L, null, "Service", 100, new BigDecimal("100.00"),
+                new BigDecimal("10000.00"), new BigDecimal("19"), BigDecimal.ZERO,
+                SaleItemType.SERVICE, 2L, "HUR", "90111500");
+        SaleDto sale = new SaleDto(1L, 5L, null, "FACT-1", LocalDateTime.of(2026, 11, 4, 10, 0), null,
+                new BigDecimal("10000.00"), new BigDecimal("10000.00"), BigDecimal.ZERO, "admin", List.of(service), "CASH");
+        InvoiceItemData canonical = new BillingCanonicalMapper(null, null, null).toInvoiceRequest(sale).items().get(0);
+
+        for (String concept : List.of("1", "2")) {
+            Map<String, Object> body = mapper.toAlegraNotePayload(note(concept, "1", canonical), company(), allocation(), original());
+            Map<String, Object> totals = map(body.get("totalAmounts"));
+            Map<String, Object> line = list(body.get("items")).get(0);
+            BigDecimal lineGross = ((BigDecimal) line.get("subtotal")).add((BigDecimal) line.get("taxAmount"));
+            assertEquals(0, new BigDecimal("10000.00").compareTo(lineGross));
+            assertEquals(0, lineGross.compareTo((BigDecimal) totals.get("payableTotal")));
+            assertEquals("HUR", line.get("unitCode"));
+        }
     }
 
     @Test

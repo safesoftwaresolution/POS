@@ -4,6 +4,9 @@ package com.sciencebot.pos.billing;
 import com.sciencebot.pos.billing.internal.adapters.dto.CustomerBillingData;
 import com.sciencebot.pos.billing.internal.adapters.dto.InvoiceItemData;
 import com.sciencebot.pos.billing.internal.adapters.dto.InvoiceRequest;
+import com.sciencebot.pos.billing.internal.adapters.alegra.AlegraCompany;
+import com.sciencebot.pos.billing.internal.adapters.alegra.AlegraInvoiceMapper;
+import com.sciencebot.pos.billing.internal.adapters.alegra.AlegraNumberAllocator.Allocation;
 import com.sciencebot.pos.billing.internal.mappers.BillingCanonicalMapper;
 import com.sciencebot.pos.customers.CustomerDto;
 import com.sciencebot.pos.customers.CustomerFacade;
@@ -19,7 +22,9 @@ import org.mockito.MockitoAnnotations;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -239,5 +244,76 @@ class BillingCanonicalMapperTest {
         assertEquals("90111500", data.standardCode());
         assertEquals(0, data.unitPrice().compareTo(BigDecimal.valueOf(100000.00)), "precio neto sin IVA");
         verifyNoInteractions(productFacade);
+    }
+
+    @Test
+    void chargedGrossIsPreservedForHighQuantityAndMixedTaxServiceLines() {
+        for (String rate : List.of("0", "5", "19")) {
+            SaleItemDto item = new SaleItemDto(1L, null, "Service", 100, new BigDecimal("100.00"),
+                    new BigDecimal("10000.00"), new BigDecimal(rate), BigDecimal.ZERO,
+                    SaleItemType.SERVICE, 2L, "HUR", "90111500");
+            Map<String, Object> payload = payloadFor(List.of(item), new BigDecimal("10000.00"));
+            assertPayloadAmounts("10000.00", payload);
+            Map<String, Object> line = lines(payload).get(0);
+            assertMoney("10000.00", ((BigDecimal) line.get("subtotal")).add((BigDecimal) line.get("taxAmount")));
+        }
+
+        List<SaleItemDto> mixed = List.of(
+                new SaleItemDto(1L, null, "Taxed service", 100, new BigDecimal("100.00"),
+                        new BigDecimal("10000.00"), new BigDecimal("19"), BigDecimal.ZERO,
+                        SaleItemType.SERVICE, 2L, "HUR", "90111500"),
+                new SaleItemDto(2L, 100L, "Reduced tax", 3, new BigDecimal("0.05"),
+                        new BigDecimal("0.15"), new BigDecimal("5"), BigDecimal.ZERO),
+                new SaleItemDto(3L, 101L, "Untaxed", 2, new BigDecimal("0.01"),
+                        new BigDecimal("0.02"), BigDecimal.ZERO, BigDecimal.ZERO));
+        assertPayloadAmounts("10000.17", payloadFor(mixed, new BigDecimal("10000.17")));
+    }
+
+    @Test
+    void theStoredGrossSubtotalIsAuthoritativeRatherThanReconstructedFromUnitPrice() {
+        SaleItemDto item = new SaleItemDto(1L, 100L, "Historical price snapshot", 3, new BigDecimal("33.33"),
+                new BigDecimal("100.00"), new BigDecimal("19"), BigDecimal.ZERO);
+
+        assertPayloadAmounts("100.00", payloadFor(List.of(item), new BigDecimal("100.00")));
+    }
+
+    private Map<String, Object> payloadFor(List<SaleItemDto> items, BigDecimal total) {
+        SaleDto sale = new SaleDto(10L, 5L, null, "FACT-0010", LocalDateTime.now(), null, total,
+                total, BigDecimal.ZERO, "admin", items, "CASH");
+        AlegraCompany company = new AlegraCompany("company-1", "Test Store", null, "900559088", "2",
+                "R-99-PN", 1, "31", "qa@example.com", null, null, Map.of());
+        Allocation allocation = new Allocation(1L, 2L, "SETP", 990000001L, "18760000001", 990000000L,
+                995000000L, LocalDate.of(2019, 1, 19), LocalDate.of(2030, 1, 19), "key", "idempotency-key", false);
+        return new AlegraInvoiceMapper().toAlegraPayload(mapper.toInvoiceRequest(sale), company, allocation);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static List<Map<String, Object>> lines(Map<String, Object> payload) {
+        return (List<Map<String, Object>>) payload.get("items");
+    }
+
+    @SuppressWarnings("unchecked")
+    private static void assertPayloadAmounts(String expectedGross, Map<String, Object> payload) {
+        BigDecimal subtotal = BigDecimal.ZERO;
+        BigDecimal tax = BigDecimal.ZERO;
+        for (Map<String, Object> line : lines(payload)) {
+            subtotal = subtotal.add((BigDecimal) line.get("subtotal"));
+            tax = tax.add((BigDecimal) line.get("taxAmount"));
+            Map<String, Object> lineTax = ((List<Map<String, Object>>) line.get("taxes")).get(0);
+            assertMoney(((BigDecimal) line.get("taxAmount")).toPlainString(), lineTax.get("taxAmount"));
+            assertMoney(((BigDecimal) line.get("subtotal")).toPlainString(), lineTax.get("taxableAmount"));
+            BigDecimal extendedPrice = ((BigDecimal) line.get("price")).multiply((BigDecimal) line.get("quantity"));
+            assertMoney(((BigDecimal) line.get("subtotal")).toPlainString(),
+                    extendedPrice.setScale(2, java.math.RoundingMode.HALF_UP));
+        }
+        Map<String, Object> totals = (Map<String, Object>) payload.get("totalAmounts");
+        assertMoney(expectedGross, subtotal.add(tax));
+        assertMoney(expectedGross, totals.get("payableTotal"));
+        assertMoney(subtotal.toPlainString(), totals.get("grossTotal"));
+        assertMoney(tax.toPlainString(), totals.get("taxTotal"));
+    }
+
+    private static void assertMoney(String expected, Object actual) {
+        assertEquals(0, new BigDecimal(expected).compareTo((BigDecimal) actual));
     }
 }

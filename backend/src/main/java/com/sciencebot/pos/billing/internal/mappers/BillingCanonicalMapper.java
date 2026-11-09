@@ -46,7 +46,7 @@ public class BillingCanonicalMapper {
         }
 
         CustomerBillingData customerData = resolveCustomer(sale.customerId());
-        List<InvoiceItemData> items = mapItems(sale.items());
+        List<InvoiceItemData> items = toInvoiceItems(sale.items());
         String paymentMethodCode = resolveDianPaymentMethod(sale.paymentMethod());
 
         // Una venta a fiado se factura a crédito (2) con su fecha de vencimiento; el resto, de contado (1).
@@ -162,7 +162,8 @@ public class BillingCanonicalMapper {
         };
     }
 
-    private List<InvoiceItemData> mapItems(List<SaleItemDto> items) {
+    /** Preserves the charged line snapshot for invoices and full-sale corrective notes. */
+    public List<InvoiceItemData> toInvoiceItems(List<SaleItemDto> items) {
         List<InvoiceItemData> list = new ArrayList<>();
         if (items != null) {
             for (SaleItemDto item : items) {
@@ -171,8 +172,12 @@ public class BillingCanonicalMapper {
 
                 BigDecimal taxRate = item.taxRate() != null ? item.taxRate() : BigDecimal.ZERO;
                 BigDecimal taxFactor = BigDecimal.ONE.add(taxRate.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP));
-                BigDecimal netUnitPrice = item.unitPrice().divide(taxFactor, 2, RoundingMode.HALF_UP);
-                BigDecimal netSubtotal = netUnitPrice.multiply(BigDecimal.valueOf(item.quantity()));
+                BigDecimal grossLineTotal = item.subtotal() != null ? item.subtotal()
+                        : item.unitPrice().multiply(BigDecimal.valueOf(item.quantity()));
+                BigDecimal netSubtotal = grossLineTotal.divide(taxFactor, 2, RoundingMode.HALF_UP);
+                BigDecimal netUnitPrice = item.quantity() == 0
+                        ? item.unitPrice().divide(taxFactor, 12, RoundingMode.HALF_UP)
+                        : netSubtotal.divide(BigDecimal.valueOf(item.quantity()), 12, RoundingMode.HALF_UP);
 
                 String standardCode = "999";
                 String unitMeasureCode = "94";  // 94 = Unidad estándar DIAN
@@ -204,7 +209,8 @@ public class BillingCanonicalMapper {
                         standardCode,
                         "01",  // 01 = IVA estándar DIAN
                         BigDecimal.ZERO,
-                        taxRate.compareTo(BigDecimal.ZERO) == 0
+                        taxRate.compareTo(BigDecimal.ZERO) == 0,
+                        grossLineTotal
                 ));
             }
         }

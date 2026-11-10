@@ -14,18 +14,18 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * V36 retira los restos de Factus del esquema: borra las credenciales cifradas de store_billing_config (el rango de
+ * V41 retira los restos de Factus del esquema: borra las credenciales cifradas de store_billing_config (el rango de
  * numeracion activo de cada entorno se conserva) y renombra electronic_invoices.factus_number a legal_number sin
  * perder los numeros ya emitidos.
  */
-class V36MigrationSqlTest {
+class V41MigrationSqlTest {
 
     private static final String URL = "jdbc:h2:mem:v36_migration_test;MODE=PostgreSQL;DB_CLOSE_DELAY=-1";
 
     @Test
     void dropsTheFactusCredentialsAndRenamesTheLegalNumberKeepingTheData() throws Exception {
         Flyway before = Flyway.configure().dataSource(URL, "sa", "").locations("classpath:db/migration")
-                .target("35").load();
+                .target("40").load();
         before.migrate();
 
         try (Connection conn = DriverManager.getConnection(URL, "sa", "");

@@ -1,4 +1,4 @@
--- V34__Invoice_Emission_Lease.sql
+-- V39__Invoice_Emission_Lease.sql
 -- La llamada al proveedor de facturacion sale de la transaccion: la emision se reserva con un lease en la fila
 -- de la factura (processing_started_at), se cuenta cada intento y se programa el siguiente reintento automatico.
 -- Seguro en H2: solo columnas nuevas e indice, sin CHECK ... IN (...).

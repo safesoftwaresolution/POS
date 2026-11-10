@@ -1,4 +1,4 @@
--- V37__Billing_Self_Service.sql
+-- V42__Billing_Self_Service.sql
 -- La habilitacion de la facturacion electronica pasa a autoservicio con Alegra, que no pide documentos.
 -- 1. Los estados de store_billing_config quedan NOT_REQUESTED -> IN_SETUP -> ACTIVE <-> SUSPENDED. Se retira el
 --    CHECK de estados (se validan en la aplicacion) y los estados retirados (DOCUMENTS_SUBMITTED,

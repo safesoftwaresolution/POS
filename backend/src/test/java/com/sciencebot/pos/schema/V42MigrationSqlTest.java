@@ -16,21 +16,21 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * V37 deja la habilitacion de la facturacion en autoservicio: retira el CHECK de estados de store_billing_config
+ * V42 deja la habilitacion de la facturacion en autoservicio: retira el CHECK de estados de store_billing_config
  * (los estados se validan en Java), lleva DOCUMENTS_SUBMITTED / AWAITING_PROVIDER / REJECTED a IN_SETUP, crea
  * billing_company_profile y agrega a electronic_invoices el entorno con el que se emitio, tomado del local.
  */
-class V37MigrationSqlTest {
+class V42MigrationSqlTest {
 
     @Test
     void mapsTheRetiredStatesToInSetupAndBackfillsTheInvoiceEnvironment() throws Exception {
         String url = "jdbc:h2:mem:v37_migration_data;MODE=PostgreSQL;DB_CLOSE_DELAY=-1";
-        Flyway.configure().dataSource(url, "sa", "").locations("classpath:db/migration").target("36").load().migrate();
+        Flyway.configure().dataSource(url, "sa", "").locations("classpath:db/migration").target("41").load().migrate();
 
         try (Connection conn = DriverManager.getConnection(url, "sa", "");
              Statement st = conn.createStatement()) {
-            // Sin FK ni CHECK ... IN: H2 2.4.x falla al validar ese CHECK desde otra conexion (ver V36MigrationSqlTest).
-            // V37 usa DROP CONSTRAINT IF EXISTS, asi que soltarlo aqui no cambia lo que se prueba de los datos.
+            // Sin FK ni CHECK ... IN: H2 2.4.x falla al validar ese CHECK desde otra conexion (ver V41MigrationSqlTest).
+            // V42 usa DROP CONSTRAINT IF EXISTS, asi que soltarlo aqui no cambia lo que se prueba de los datos.
             st.execute("ALTER TABLE store_billing_config DROP CONSTRAINT CK_store_billing_config_status");
             st.execute("ALTER TABLE store_billing_config DROP CONSTRAINT CK_store_billing_config_environment");
             st.execute("SET REFERENTIAL_INTEGRITY FALSE");
@@ -98,7 +98,7 @@ class V37MigrationSqlTest {
             assertTrue(profileConstraints.contains("FK_BILLING_COMPANY_PROFILE_STORE"), profileConstraints.toString());
 
             try (Statement st = conn.createStatement()) {
-                // El CHECK de entorno sigue (no es objeto de V37); se suelta solo por el bug de H2 con CHECK ... IN.
+                // El CHECK de entorno sigue (no es objeto de V42); se suelta solo por el bug de H2 con CHECK ... IN.
                 st.execute("ALTER TABLE store_billing_config DROP CONSTRAINT CK_store_billing_config_environment");
                 st.execute("SET REFERENTIAL_INTEGRITY FALSE");
                 st.execute("INSERT INTO store_billing_config (store_id, status, environment, created_at, updated_at) "

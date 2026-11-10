@@ -17,23 +17,26 @@ Fuentes: [entornos](https://e-provider-docs.alegra.com/docs/entornos), [creació
 
 ## Bloqueo previo a cualquier despliegue
 
-La rama `feature/billing-self-service`, con base `f5c8b55`, contiene una historia Flyway V33–V37 distinta de la referencia local conocida de `origin/main`. Las migraciones posteriores de endurecimiento solo amplían la historia de esta rama; **no reconcilian las dos historias**.
+`main`, `develop`, `origin/main` y `origin/develop` usan las versiones V33–V37 para otros módulos. Esta rama usaba esos mismos números para facturación, con otro contenido, así que el 2026-11-10 sus siete migraciones se **renumeraron a V38–V44**, por decisión del dueño del producto y sin consultar el historial de producción. La evidencia indirecta era que producción corre `main` (su log muestra el proveedor `factus`, que solo existe en `main`) y que ninguna base persistente se conectó a esta rama.
 
-Comparación verificada el 2026-11-10 contra `main`, `develop`, `origin/main` y `origin/develop` (las cuatro tienen la misma historia):
-
-| Versión | `main` / `develop` | `feature/billing-self-service` |
+| Versión | `main` / `develop` | Esta rama |
 |---|---|---|
-| V33 | `Store_Category_Template` | `Alegra_Local_Numbering` |
-| V34 | `Appointments` | `Invoice_Emission_Lease` |
-| V35 | `Store_Category_Theme` | `Note_Emission_Lease` |
-| V36 | `Store_Multiple_Templates` | `Retire_Factus_Leftovers` |
-| V37 | `Service_Categories` | `Billing_Self_Service` |
-| V38 | — | `Billing_Document_Context_And_Receipts` |
-| V39 | — | `Billing_Company_Registration_Journal` |
+| V33–V37 | `Store_Category_Template`, `Appointments`, `Store_Category_Theme`, `Store_Multiple_Templates`, `Service_Categories` | (no existen aquí; llegan al unir con `main`) |
+| V38 | — | `Alegra_Local_Numbering` (antes V33) |
+| V39 | — | `Invoice_Emission_Lease` (antes V34) |
+| V40 | — | `Note_Emission_Lease` (antes V35) |
+| V41 | — | `Retire_Factus_Leftovers` (antes V36) |
+| V42 | — | `Billing_Self_Service` (antes V37) |
+| V43 | — | `Billing_Document_Context_And_Receipts` (antes V38) |
+| V44 | — | `Billing_Company_Registration_Journal` (antes V39) |
 
-Las cinco versiones compartidas tienen contenido distinto. Si producción corre `main`, ya aplicó las V33–V37 de `main`, y desplegar esta rama tal como está haría fallar la validación de Flyway al arrancar. La salida probable es renumerar las siete migraciones de facturación a V38–V44 sobre la historia de `main`, pero **solo después** de confirmar con la consulta siguiente que ninguna base persistente aplicó las versiones de esta rama.
+Probado en H2 (modo PostgreSQL) sobre una base con la historia completa de `main` hasta V37 y datos sembrados:
+- **Con las migraciones de `main` más V38–V44** (el estado tras unir las ramas): las siete se aplican sin error, los estados retirados pasan a `IN_SETUP`, `factus_number` queda como `legal_number` y el entorno de las facturas se completa.
+- **Con solo esta rama**: Flyway rechaza arrancar (`Detected applied migration not resolved locally: 33`) antes de aplicar nada.
 
-Antes de desplegar, una persona con acceso autorizado debe comparar la rama elegida con el historial real de cada base:
+Una copia local que ya compiló la rama con la numeración vieja conserva en `target/classes/db/migration` los archivos V33–V39 junto a los nuevos, y Flyway falla por versiones duplicadas: hay que correr `mvn clean` (`.\mvnw.cmd clean`) una vez. Las imágenes Docker y la CI compilan desde cero y no se ven afectadas.
+
+Por eso **esta rama solo se despliega después de unirla con `main`**. Antes del despliegue, conviene confirmar igualmente el historial real de cada base persistente:
 
 ```sql
 SELECT installed_rank, version, description, script, checksum, success
@@ -41,14 +44,14 @@ FROM flyway_schema_history
 ORDER BY installed_rank;
 ```
 
-No editar migraciones aplicadas, renombrarlas como si nunca se hubieran ejecutado ni ejecutar `flyway repair` para ocultar discrepancias. Una base que ya aplicó las migraciones divergentes necesita una estrategia de integración específica y una prueba de actualización sobre una copia restaurable. Esta guía no autoriza conexiones al servidor ni cambios en producción.
+Si alguna base muestra `Alegra_Local_Numbering` u otra migración de facturación con número 33–39, esa base aplicó la numeración vieja y necesita una reparación específica sobre una copia restaurable antes de actualizar. No ejecutar `flyway repair` para ocultar la diferencia. Esta guía no autoriza conexiones al servidor ni cambios en producción.
 
 ## Recuperación y documentos históricos
 
 - Cada documento nuevo conserva su entorno, proveedor y empresa. Cambiar el entorno del local no debe redirigir las operaciones de documentos anteriores.
 - Conservar el token sandbox mientras existan documentos QA que deban consultarse; nunca usar el token de producción como respaldo.
 - Un documento histórico sin contexto fiscal verificable requiere revisión. No completar su empresa o entorno desde la configuración actual por suposición.
-  - Consecuencia conocida (revisión nativa 2026-11-10): las facturas y notas de Alegra emitidas antes de V38 no tienen `provider_name`, así que no se pueden reenviar por correo ni descargar su PDF o XML desde la app. Se acepta porque producción todavía factura con Factus (no hay documentos de Alegra anteriores a V38 fuera de los entornos de prueba). Si alguna base persistente sí los tiene, su contexto se completa con un script revisado a mano, documento por documento, nunca con un relleno masivo.
+  - Consecuencia conocida (revisión nativa 2026-11-10): las facturas y notas de Alegra emitidas antes de V43 no tienen `provider_name`, así que no se pueden reenviar por correo ni descargar su PDF o XML desde la app. Se acepta porque producción todavía factura con Factus (no hay documentos de Alegra anteriores a V38 fuera de los entornos de prueba). Si alguna base persistente sí los tiene, su contexto se completa con un script revisado a mano, documento por documento, nunca con un relleno masivo.
 - Si el proveedor guardado en el contexto de una nota ya no está registrado, la emisión y el reintento la dejan en error y liberan la reserva; no queda bloqueada hasta que venza el lease.
 - Una respuesta incierta o aceptada no autoriza una nueva emisión con otra llave. Primero se recupera la solicitud o el resultado persistido y se concilia.
 - La creación incierta de una empresa no se repite a ciegas. Una recepción ya guardada se reutiliza; si no se puede demostrar la pertenencia de una empresa encontrada, debe revisarse mediante el back office autorizado.

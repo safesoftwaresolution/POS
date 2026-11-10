@@ -58,7 +58,7 @@ java -jar target/app.pos-0.0.1-SNAPSHOT.jar
 ```
 
 ## Inicialización de BD
-- Esquema: **lo crea Flyway** (`db/migration`, hoy `V1`…`V24`) y Hibernate solo lo valida (`ddl-auto=validate`) en `dev` y `prod`. Nunca `update`. Solo el perfil `test` deja que Hibernate cree el esquema.
+- Esquema: **lo crea Flyway** (`db/migration`, hoy hasta `V44`) y Hibernate solo lo valida (`ddl-auto=validate`) en `dev` y `prod`. Nunca `update`. Solo el perfil `test` deja que Hibernate cree el esquema.
 - `dev` persiste en `./data/app_db` (borra `backend/data/` para empezar de cero).
 - Datos semilla: el `SUPER_ADMIN` inicial solo si se define `SEED_SUPERADMIN_PASSWORD`. El administrador `admin`, el local 1, el "Cliente General" y los ajustes de ejemplo se siembran **únicamente en `dev`**, igual que los productos de ejemplo (`ProductDemoSeeder`). En cualquier perfil se siembran, de forma idempotente, las categorías de producto base (`CategorySeeder`) y los tipos de negocio de los locales (`StoreCategorySeeder`). En producción cada local se crea por el flujo de auto-registro y onboarding.
 
@@ -168,4 +168,4 @@ Reversa: devolver `posbento.com` al `frontend` y restaurar el valor anterior de 
 
 ## Facturación: control previo al despliegue
 
-Consultar [la guía de preproducción](modules/billing/preproduction.md) antes de actualizar esta rama. Las nuevas migraciones no solucionan la divergencia V33–V37 con main. No desplegar sobre una base de historial distinto ni ejecutar repair para ocultar la diferencia. La activación real requiere credenciales y configuración del emisor, no solo cambiar un token.
+Consultar [la guía de preproducción](modules/billing/preproduction.md) antes de actualizar esta rama. Las migraciones de facturación (V38–V44) van después de las V33–V37 de `main`: desplegar solo después de unir esta rama con `main`. No desplegar sobre una base de historial distinto ni ejecutar repair para ocultar la diferencia. La activación real requiere credenciales y configuración del emisor, no solo cambiar un token.

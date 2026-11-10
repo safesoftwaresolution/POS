@@ -1,4 +1,4 @@
--- V33__Alegra_Local_Numbering.sql
+-- V38__Alegra_Local_Numbering.sql
 -- Alegra no asigna el consecutivo: el sistema envia el numero y la resolucion completa en cada documento.
 -- Esta migracion crea los rangos locales y el libro de numeros asignados, y agrega el company.id de Alegra
 -- por local/entorno y el identificador del documento en el proveedor.

@@ -1,4 +1,4 @@
--- V36__Retire_Factus_Leftovers.sql
+-- V41__Retire_Factus_Leftovers.sql
 -- Factus ya no es un proveedor soportado. Se borran las credenciales cifradas que guardaba store_billing_config
 -- (client_id, client_secret, username y password de cada entorno): ningun codigo las lee y los secretos no deben
 -- quedar en la base sin uso. El rango de numeracion activo de cada entorno y el company.id se conservan.

@@ -36,7 +36,7 @@ El módulo está internamente segregado por responsabilidades (Feature Slicing &
 
 Los servicios dependen de los puertos (`InvoiceProvider`, `CreditNoteProvider`, `DebitNoteProvider`, `NumberingRangeProvider`, `BillingAccountProvider`), nunca de la clase de un adaptador concreto. Los beans de Alegra existen solo con `billing.provider=alegra`.
 
-> **Factus fue retirado por completo**: el código antes y, con `V36`, sus credenciales cifradas (`store_billing_config`), el endpoint `PUT …/billing/credentials`, la clave `BILLING_ENCRYPTION_KEY` y los nombres `factus_number` / `factusNumber` / `sendToFactus` (hoy `legal_number` / `legalNumber` / `sendElectronicInvoice`). `store_billing_config` conserva el rango de numeración activo de cada entorno.
+> **Factus fue retirado por completo**: el código antes y, con `V41`, sus credenciales cifradas (`store_billing_config`), el endpoint `PUT …/billing/credentials`, la clave `BILLING_ENCRYPTION_KEY` y los nombres `factus_number` / `factusNumber` / `sendToFactus` (hoy `legal_number` / `legalNumber` / `sendElectronicInvoice`). `store_billing_config` conserva el rango de numeración activo de cada entorno.
 
 ---
 
@@ -145,7 +145,7 @@ Lo arma `AlegraInvoiceMapper`: cada línea se redondea a 2 decimales (HALF_UP) y
 `AlegraNoteClient`: numeración propia (documentos `91`/`92`, prefijo propio) **sin resolución**; el cuerpo lleva `invoicePeriod` (fecha de la factura de origen) y `associatedDocuments` (fecha, tipo `01`, prefijo, número y CUFE de la factura aceptada). La factura de origen se busca por `(tienda, número legal)`; si no existe o no está validada falla **antes de gastar un número**. El cliente sale de la venta original. Misma disciplina que las facturas (llave, estado legal, rotación tras un rechazo). Los servicios de notas emiten en tres pasos como las facturas (ver «Notas: reserva en tres pasos»).
 
 ### Notas: reserva en tres pasos
-`CreditNoteServiceImpl` y `DebitNoteServiceImpl` ya no son transaccionales y nunca llaman al proveedor con una transacción abierta ni con el lock de la fila (`V35` agrega `attempts` y `processing_started_at` a `electronic_credit_notes` y `electronic_debit_notes`):
+`CreditNoteServiceImpl` y `DebitNoteServiceImpl` ya no son transaccionales y nunca llaman al proveedor con una transacción abierta ni con el lock de la fila (`V40` agrega `attempts` y `processing_started_at` a `electronic_credit_notes` y `electronic_debit_notes`):
 1. **Reservar** (`CreditNoteEmissionTransactions.reserve` / `DebitNoteEmissionTransactions.reserve`, transacción corta con lock por `reference_code`): crea o bloquea la nota; si no está validada ni tiene una reserva vigente (`billing.emission.lease`, 5 min) la deja `PENDING`, cuenta el intento y toma la reserva. Una nota validada o en curso devuelve su estado sin llamar al proveedor. Si dos hilos crean la misma referencia a la vez, el segundo reintenta la reserva y ya la encuentra.
 2. **Llamar al proveedor sin transacción**.
 3. **Registrar el resultado** (`complete`, transacción corta): vuelve a bloquear la fila, aplica el resultado y libera la reserva. Una respuesta incompleta (por ejemplo, validada sin número legal) deja la nota en `ERROR` en vez de revertirla.
@@ -223,7 +223,7 @@ NOT_REQUESTED → IN_SETUP → ACTIVE ⇄ SUSPENDED
 | `SUSPENDED` | SUPER_ADMIN | Facturación pausada (exige motivo), desde `IN_SETUP` o `ACTIVE`. Reactivable a `ACTIVE` |
 
 - No se puede saltar pasos: cada transición se valida contra `BillingActivationStatus.canTransitionTo(...)`.
-  Los estados se validan solo en Java: `V37` retiró el `CHECK` de `store_billing_config.status` y llevó a
+  Los estados se validan solo en Java: `V42` retiró el `CHECK` de `store_billing_config.status` y llevó a
   `IN_SETUP` los locales que estaban en los estados retirados (`DOCUMENTS_SUBMITTED`, `AWAITING_PROVIDER`, `REJECTED`).
 - Pasar a `ACTIVE` (desde `IN_SETUP` o al reactivar desde `SUSPENDED`) exige, en el entorno del local: (1) la cuenta
   configurada (`isAccountConfigured`: token de plataforma del entorno y `company.id` del local; el mensaje dice cuál
@@ -241,7 +241,7 @@ NOT_REQUESTED → IN_SETUP → ACTIVE ⇄ SUSPENDED
   `/invoicing?tab=activation`). Pasar a `IN_SETUP` no notifica.
 
 ### RN-BILL-007 — (Retirada) Cifrado de Secretos en Reposo
-- Regla de las credenciales de Factus. `V36` las borró y se eliminaron `SecretCryptoConverter` y la clave `BILLING_ENCRYPTION_KEY`: con Alegra no hay secretos por local en la base.
+- Regla de las credenciales de Factus. `V41` las borró y se eliminaron `SecretCryptoConverter` y la clave `BILLING_ENCRYPTION_KEY`: con Alegra no hay secretos por local en la base.
 - Ningún DTO de salida expone el `company.id`: `BillingActivationDto` solo informa si cada entorno está configurado (`sandboxConfigured` / `productionConfigured`, `sandboxCompanyIdConfigured` / `productionCompanyIdConfigured`).
 
 ### RN-BILL-008 — Guardas de Rangos de Numeración
@@ -410,18 +410,18 @@ Detalle en «Asistente de habilitación». El local sale siempre de la solicitud
 | id | BIGSERIAL | PK, Auto-increment |
 | store_id | BIGINT | NOT NULL, FK → stores(id) (desde `V13`) |
 | sale_id | BIGINT | UNIQUE, NOT NULL, FK → sales(id) |
-| legal_number | VARCHAR(50) | NULLABLE (antes `factus_number`, renombrada en `V36`) |
+| legal_number | VARCHAR(50) | NULLABLE (antes `factus_number`, renombrada en `V41`) |
 | cufe | VARCHAR(255) | NULLABLE |
 | qr_code | TEXT | NULLABLE |
 | status | VARCHAR(20) | NOT NULL, DEFAULT 'PENDING' |
 | error_message | TEXT | NULLABLE |
 | pdf_url | VARCHAR(500) | NULLABLE |
 | validated_at | TIMESTAMP | NULLABLE |
-| provider_document_id | VARCHAR(64) | NULLABLE (`V33`): id del documento en el proveedor; también en las notas |
-| attempts | INT | NOT NULL, DEFAULT 0 (`V34`): intentos desde el último reinicio manual |
-| processing_started_at | TIMESTAMP | NULLABLE (`V34`): reserva (lease) de la emisión en curso |
-| next_retry_at | TIMESTAMP | NULLABLE (`V34`): cuándo puede reintentarla el job; índice `(status, next_retry_at)` |
-| environment | VARCHAR(12) | NULLABLE (`V37`): entorno con el que se emitió (`SANDBOX` = de prueba). Se anota al reservar la emisión con el entorno del local, solo si aún no tiene; las anteriores a `V37` tomaron el entorno actual de su local |
+| provider_document_id | VARCHAR(64) | NULLABLE (`V38`): id del documento en el proveedor; también en las notas |
+| attempts | INT | NOT NULL, DEFAULT 0 (`V39`): intentos desde el último reinicio manual |
+| processing_started_at | TIMESTAMP | NULLABLE (`V39`): reserva (lease) de la emisión en curso |
+| next_retry_at | TIMESTAMP | NULLABLE (`V39`): cuándo puede reintentarla el job; índice `(status, next_retry_at)` |
+| environment | VARCHAR(12) | NULLABLE (`V42`): entorno con el que se emitió (`SANDBOX` = de prueba). Se anota al reservar la emisión con el entorno del local, solo si aún no tiene; las anteriores a `V42` tomaron el entorno actual de su local |
 | created_at / updated_at | TIMESTAMP | NOT NULL |
 
 ### Tabla: `store_billing_config` (`V14__Store_Billing_Config.sql`)
@@ -430,7 +430,7 @@ Una fila por local (relación 1 a 1 con `stores`).
 | Campo | Tipo | Restricciones |
 |---|---|---|
 | store_id | BIGINT | PK, FK → stores(id) |
-| status | VARCHAR(30) | NOT NULL, DEFAULT 'NOT_REQUESTED'. Sin CHECK desde `V37`: se valida en Java (RN-BILL-006) |
+| status | VARCHAR(30) | NOT NULL, DEFAULT 'NOT_REQUESTED'. Sin CHECK desde `V42`: se valida en Java (RN-BILL-006) |
 | status_reason | VARCHAR(500) | NULLABLE (motivo de la suspensión) |
 | environment | VARCHAR(12) | NOT NULL, DEFAULT 'SANDBOX', CHECK IN ('SANDBOX','PRODUCTION') |
 | sandbox_numbering_range_id | INT | NULLABLE |
@@ -572,7 +572,7 @@ Datos fiscales del local (los de su RUT) con los que se crea y actualiza su empr
 
 ## Pendiente / no verificado
 
-- **Despliegue**: V33–V37 divergen de la referencia conocida de main. V38/V39 no reconcilian ese historial. Se necesita el historial Flyway real y una prueba de actualización restaurable antes de desplegar.
+- **Despliegue**: las migraciones de facturación van de V38 a V44, después de las V33–V37 que `main` usa para otros módulos. Esta rama se despliega solo después de unirla con `main` (sin sus V33–V37, Flyway rechaza arrancar sobre una base que ya las aplicó). Ver [preproducción](preproduction.md).
 - **Producción real**: token, empresa habilitada, resoluciones/numeración y ensayo controlado de factura, notas, archivos y correo pendientes. Los tests HTTP simulados no sustituyen esa verificación.
 - **Documentos históricos**: contexto fiscal desconocido requiere asociación verificada; no hay backfill especulativo. Una asignación antigua con `completed=true` no demuestra aceptación.
 - **Notas**: existe recuperación explícita por `POST /{id}/retry`, conciliación por identificador y estado PENDING conservado. No hay job automático de notas ni webhook. Un rechazo que necesita cambios se corrige explícitamente, sin alterar una solicitud incierta.
@@ -581,7 +581,7 @@ Datos fiscales del local (los de su RUT) con los que se crea y actualiza su empr
 - **Descargas**: el timeout de lectura no limita por sí solo la duración total de una descarga lenta. Las notas reutilizan el descargador seguro; falta ensayo real de sus PDF/XML en esta revisión.
 - **Precisión**: los mappers preservan el bruto persistido y tienen regresiones de cantidades altas y tasas mixtas. La aceptación real del precio unitario de precisión ampliada en Alegra sigue pendiente.
 - **Mejoras posteriores**: alertas de numeración próxima a agotarse, centralización de códigos DIAN y registro de resoluciones adicionales como inactivas durante la importación.
-- **Nota de versión V36**: elimina credenciales heredadas de Factus y cambia contratos antiguos; conservar copia restaurable y revisar consumidores antes de actualizar desde una versión anterior.
+- **Nota de versión V41**: elimina credenciales heredadas de Factus y cambia contratos antiguos; conservar copia restaurable y revisar consumidores antes de actualizar desde una versión anterior.
 ## Preparación previa al token de producción
 
 La guía [preproduction.md](preproduction.md) distingue pruebas HTTP contractuales de pruebas reales sandbox, define recuperación segura y enumera los bloqueos de despliegue. El asistente del cliente conserva producción; las resoluciones no se consultan en sandbox.

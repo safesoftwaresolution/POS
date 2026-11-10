@@ -1,5 +1,5 @@
--- V35__Note_Emission_Lease.sql
--- Las notas credito y debito siguen la misma disciplina que las facturas (V34): la llamada al proveedor sale de la
+-- V40__Note_Emission_Lease.sql
+-- Las notas credito y debito siguen la misma disciplina que las facturas (V39): la llamada al proveedor sale de la
 -- transaccion y la emision se reserva con un lease en la fila (processing_started_at); attempts cuenta los intentos.
 -- Las notas no tienen reintento automatico, por eso no llevan next_retry_at.
 -- Seguro en H2: solo columnas nuevas, sin CHECK ... IN (...).

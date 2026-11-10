@@ -1,4 +1,4 @@
--- Forward-only hardening for the V37 billing branch history.
+-- Forward-only hardening for the V42 billing branch history.
 -- Unknown historical context/receipts deliberately remain NULL: current store configuration
 -- and the legacy completed flag are not evidence of the original fiscal company or outcome.
 ALTER TABLE electronic_invoices ADD COLUMN provider_name VARCHAR(32);

@@ -12,8 +12,8 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/** Corre toda la cadena Flyway (V1..V33): numeración local y company.id para el proveedor Alegra. */
-class V33MigrationSqlTest {
+/** Corre toda la cadena Flyway (V1..V38): numeración local y company.id para el proveedor Alegra. */
+class V38MigrationSqlTest {
 
     private static final String URL = "jdbc:h2:mem:v33_migration_test;MODE=PostgreSQL;DB_CLOSE_DELAY=-1";
 

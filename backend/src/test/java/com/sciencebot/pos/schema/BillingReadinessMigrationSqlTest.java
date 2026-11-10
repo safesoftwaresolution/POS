@@ -14,7 +14,7 @@ class BillingReadinessMigrationSqlTest {
         String url = "jdbc:h2:mem:billing_readiness_" + UUID.randomUUID()
                 + ";MODE=PostgreSQL;DB_CLOSE_DELAY=-1";
         Flyway.configure().dataSource(url, "sa", "").locations("classpath:db/migration")
-                .target("37").load().migrate();
+                .target("42").load().migrate();
         try (var connection = DriverManager.getConnection(url, "sa", "");
              var statement = connection.createStatement()) {
             statement.execute("SET REFERENTIAL_INTEGRITY FALSE");

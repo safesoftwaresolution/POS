@@ -204,6 +204,30 @@ class NativeSqlDaosTest {
     }
 
     @Test
+    void storePurge_alsoRemovesTheNumberingRangesAndAssignedNumbersOfTheStore() {
+        long keep = store("Range Keep", "range-keep@test.com", "ACTIVE");
+        long victim = store("Range Victim", "range-victim@test.com", "REJECTED");
+        for (long s : new long[]{keep, victim}) {
+            jdbc.sql("INSERT INTO billing_numbering_range (store_id, environment, document, prefix, resolution_number, "
+                    + "min_number, max_number, next_number, created_at, updated_at) "
+                    + "VALUES (:s, 'PRODUCTION', '01', 'FE', '18760000001', 1, 1000, 2, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+                    .param("s", s).update();
+            jdbc.sql("INSERT INTO billing_document_number (store_id, environment, document, reference_code, range_id, prefix, "
+                    + "number, created_at, updated_at) VALUES (:s, 'PRODUCTION', '01', 'FAC-1', "
+                    + "(SELECT id FROM billing_numbering_range WHERE store_id = :s), 'FE', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+                    .param("s", s).update();
+        }
+
+        new StorePurgeDao(jdbc).purge(victim);
+
+        assertEquals(0L, count("SELECT COUNT(*) FROM stores WHERE id = " + victim));
+        assertEquals(0L, count("SELECT COUNT(*) FROM billing_document_number WHERE store_id = " + victim));
+        assertEquals(0L, count("SELECT COUNT(*) FROM billing_numbering_range WHERE store_id = " + victim));
+        assertEquals(1L, count("SELECT COUNT(*) FROM billing_document_number WHERE store_id = " + keep));
+        assertEquals(1L, count("SELECT COUNT(*) FROM billing_numbering_range WHERE store_id = " + keep));
+    }
+
+    @Test
     void storePurge_alsoRemovesTheOperationOfAStoreThatSold_andCountsValidatedInvoices() {
         long keep = store("Op Keep", "op-keep@test.com", "ACTIVE");
         long victim = store("Op Victim", "op-victim@test.com", "ACTIVE");

@@ -101,6 +101,9 @@ public class StorePurgeDao {
         delete("DELETE FROM store_templates WHERE store_id = :storeId", storeId);
         delete("DELETE FROM support_tickets WHERE store_id = :storeId", storeId);
         delete("DELETE FROM numbering_range_audit WHERE store_id = :storeId", storeId);
+        // Los números asignados apuntan al rango: se borran antes que él, y los dos antes que el local.
+        delete("DELETE FROM billing_document_number WHERE store_id = :storeId", storeId);
+        delete("DELETE FROM billing_numbering_range WHERE store_id = :storeId", storeId);
         delete("DELETE FROM billing_company_registration WHERE store_id = :storeId", storeId);
         delete("DELETE FROM store_billing_config WHERE store_id = :storeId", storeId);
         delete("DELETE FROM billing_company_profile WHERE store_id = :storeId", storeId);

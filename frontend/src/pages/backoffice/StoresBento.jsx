@@ -17,7 +17,12 @@ import {
   Trash2
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { templatesOf } from '../../utils/templateSelection';
+import { storeUpdatePayload } from '../../utils/storePayload';
+import TemplateChips from '../../components/backoffice/TemplateChips';
+import StoreTemplatesModal from '../../components/backoffice/StoreTemplatesModal';
 import {
+  updateBackofficeStoreTemplatesApi,
   getBackofficeMetricsApi,
   getBackofficeStoresApi,
   createBackofficeStoreApi,
@@ -97,6 +102,9 @@ export default function StoresBento() {
   const [errorMsg, setErrorMsg] = useState('');
 
   const [showStoreModal, setShowStoreModal] = useState(false);
+  const [templatesStore, setTemplatesStore] = useState(null); // local cuyas plantillas extra se editan
+  const [templatesSaving, setTemplatesSaving] = useState(false);
+  const [templatesError, setTemplatesError] = useState('');
   const [editingStore, setEditingStore] = useState(null);
   const [storeForm, setStoreForm] = useState(EMPTY_STORE_FORM);
   const [formError, setFormError] = useState('');
@@ -192,6 +200,31 @@ export default function StoresBento() {
       refreshAll();
     } catch (err) {
       setFormError(err.message || 'Error al guardar el local. Intenta nuevamente.');
+    }
+  };
+
+  // La plantilla del local sigue a su categoría, así que cambiar la categoría aquí cambia la plantilla.
+  const handleChangeCategory = async (store, categoryId) => {
+    setErrorMsg('');
+    try {
+      await updateBackofficeStoreApi(store.id, storeUpdatePayload(store, categoryId));
+      refreshAll();
+    } catch (err) {
+      setErrorMsg(err.message || 'Error al cambiar la categoría del local.');
+    }
+  };
+
+  const handleSaveTemplates = async (extraTemplates) => {
+    setTemplatesSaving(true);
+    setTemplatesError('');
+    try {
+      await updateBackofficeStoreTemplatesApi(templatesStore.id, extraTemplates);
+      setTemplatesStore(null);
+      refreshAll();
+    } catch (err) {
+      setTemplatesError(err.message || 'Error al guardar las plantillas del local.');
+    } finally {
+      setTemplatesSaving(false);
     }
   };
 
@@ -350,7 +383,30 @@ export default function StoresBento() {
                       <p className="font-extrabold text-ink">{s.name}</p>
                       <p className="text-[10px] text-ink-muted font-mono">NIT: {s.taxId || '—'}</p>
                     </td>
-                    <td data-label="Categoría" className="px-2 py-3 text-ink-soft font-semibold">{s.categoryName || 'Sin categoría'}</td>
+                    <td data-label="Categoría" className="px-2 py-3">
+                      <select
+                        value={s.storeCategoryId || ''}
+                        onChange={(e) => handleChangeCategory(s, e.target.value)}
+                        aria-label={`Categoría de ${s.name}`}
+                        className="max-w-44 p-1.5 bg-page border border-line rounded-xl text-[11px] font-semibold text-ink-soft cursor-pointer focus:outline-none focus:border-ink dark:focus:border-brand"
+                      >
+                        <option value="">Sin categoría</option>
+                        {categories.map(c => (
+                          <option key={c.id} value={c.id}>{c.name}</option>
+                        ))}
+                      </select>
+                      <div className="mt-1 flex flex-wrap items-center gap-1">
+                        <TemplateChips entity={s} />
+                        <button
+                          type="button"
+                          onClick={() => { setTemplatesStore(s); setTemplatesError(''); }}
+                          aria-label={`Plantillas de ${s.name}`}
+                          className="text-[10px] font-extrabold text-ink-soft underline hover:text-ink cursor-pointer"
+                        >
+                          Plantillas
+                        </button>
+                      </div>
+                    </td>
                     <td data-label="Contacto" className="px-2 py-3">
                       <p className="flex items-center gap-1.5 font-semibold text-gray-600 dark:text-gray-300">
                         <Mail className="w-3.5 h-3.5 text-ink-muted" /> {s.email}
@@ -483,6 +539,17 @@ export default function StoresBento() {
             </div>
           </div>
         </div>
+      )}
+
+      {templatesStore && (
+        <StoreTemplatesModal
+          store={templatesStore}
+          categoryTemplates={templatesOf(categories.find(c => c.id === templatesStore.storeCategoryId))}
+          saving={templatesSaving}
+          error={templatesError}
+          onSave={handleSaveTemplates}
+          onClose={() => setTemplatesStore(null)}
+        />
       )}
 
       {showStoreModal && (

@@ -23,3 +23,8 @@ export async function deletePendingUserApi(userId) {
 export async function getOnboardingStatsApi() {
   return await fetchApi('/backoffice/onboarding/stats');
 }
+
+// Marca como verificado el correo de un usuario pendiente (cuando el enlace no le llega).
+export async function verifyPendingUserApi(userId) {
+  return await fetchApi(`/backoffice/onboarding/pending-users/${userId}/verify`, { method: 'POST' });
+}

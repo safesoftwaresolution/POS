@@ -4,6 +4,9 @@ import { useNavigate, Link } from 'react-router-dom';
 import { User, KeyRound, ArrowRight, AlertCircle } from 'lucide-react';
 import { LANDING_URL } from '../constants/site';
 import { resendVerificationApi } from '../services/authApi';
+import WelcomeSplash from '../components/brand/WelcomeSplash';
+import { welcomeGreeting } from '../utils/greeting';
+import { isEmailNotVerified } from '../utils/authFlow';
 
 export default function LoginBento() {
   const { login, loading } = useAuth();
@@ -14,6 +17,7 @@ export default function LoginBento() {
   const [needsVerification, setNeedsVerification] = useState(false);
   const [resendEmail, setResendEmail] = useState('');
   const [resendState, setResendState] = useState('idle');
+  const [welcome, setWelcome] = useState(null); // { greeting, destination } mientras suena la animación de bienvenida
 
   const handleResend = async () => {
     setResendState('sending');
@@ -32,16 +36,20 @@ export default function LoginBento() {
     setResendState('idle');
     try {
       const loggedInUser = await login(username, password);
-      navigate(loggedInUser?.role === 'SUPER_ADMIN' ? '/backoffice' : '/');
+      setWelcome({
+        greeting: welcomeGreeting(loggedInUser?.fullName),
+        destination: loggedInUser?.role === 'SUPER_ADMIN' ? '/backoffice' : '/',
+      });
     } catch (err) {
       const message = err.message || 'Error de autenticación. Verifica tu usuario y contraseña.';
       setError(message);
-      setNeedsVerification(/verificar tu correo/i.test(message));
+      setNeedsVerification(isEmailNotVerified(err));
     }
   };
 
   return (
     <div className="min-h-screen bg-[#0E0E12] text-white flex items-center justify-center p-4 relative overflow-hidden select-none">
+      {welcome && <WelcomeSplash greeting={welcome.greeting} onDone={() => navigate(welcome.destination, { replace: true })} />}
       <div className="max-w-md w-full bento-card bg-[#17171B] border-[#272730] p-8 rounded-3xl shadow-2xl space-y-6 relative z-10">
 
         {/* Brand Header */}

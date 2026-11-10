@@ -236,6 +236,56 @@ class NativeSqlDaosTest {
         assertEquals(1L, count("SELECT COUNT(*) FROM products WHERE store_id = " + keep));
     }
 
+    @Test
+    void storePurge_alsoRemovesExtraTemplatesAppointmentsAndServices_leavingOtherStoresUntouched() {
+        long keep = store("Appt Keep", "appt-keep@test.com", "ACTIVE");
+        long victim = store("Appt Victim", "appt-victim@test.com", "ACTIVE");
+        jdbc.sql("INSERT INTO service_categories (name, active, created_at, updated_at) "
+                + "SELECT :c, TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP WHERE NOT EXISTS (SELECT 1 FROM service_categories WHERE name = :c)")
+                .param("c", "Cat Purge").update();
+        for (long storeId : new long[]{keep, victim}) {
+            jdbc.sql("INSERT INTO store_templates (store_id, template) VALUES (:s, 'APPOINTMENTS')").param("s", storeId).update();
+            jdbc.sql("INSERT INTO customers (full_name, identification, store_id, active, created_at, updated_at) "
+                    + "VALUES ('Cliente', :i, :s, TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+                    .param("i", "appt-c-" + storeId).param("s", storeId).update();
+            jdbc.sql("INSERT INTO services (store_id, code, name, category_id, price, active, created_at, updated_at) "
+                    + "VALUES (:s, 'SRV', 'Corte', (SELECT id FROM service_categories WHERE name = 'Cat Purge'), 10, TRUE, "
+                    + "CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)").param("s", storeId).update();
+            jdbc.sql("INSERT INTO appointments (store_id, customer_id, customer_name, service_id, service_name, start_at, "
+                    + "end_at, status, created_at, updated_at) VALUES (:s, "
+                    + "(SELECT id FROM customers WHERE identification = :i), 'Cliente', "
+                    + "(SELECT id FROM services WHERE store_id = :s AND code = 'SRV'), 'Corte', "
+                    + "TIMESTAMP '2026-11-10 15:00:00', TIMESTAMP '2026-11-10 15:45:00', 'SCHEDULED', "
+                    + "CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)").param("s", storeId).param("i", "appt-c-" + storeId).update();
+        }
+
+        // Fiado y auditoría del local: tienen FK a stores (y a customers / credit_accounts) y también deben purgarse.
+        for (long storeId : new long[]{keep, victim}) {
+            jdbc.sql("INSERT INTO credit_accounts (store_id, customer_id, balance, created_at, updated_at) VALUES (:s, "
+                    + "(SELECT id FROM customers WHERE identification = :i), 5, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+                    .param("s", storeId).param("i", "appt-c-" + storeId).update();
+            jdbc.sql("INSERT INTO credit_movements (store_id, account_id, customer_id, type, amount, balance_after, created_at) "
+                    + "VALUES (:s, (SELECT id FROM credit_accounts WHERE store_id = :s), "
+                    + "(SELECT id FROM customers WHERE identification = :i), 'CHARGE', 5, 5, CURRENT_TIMESTAMP)")
+                    .param("s", storeId).param("i", "appt-c-" + storeId).update();
+            jdbc.sql("INSERT INTO audit_log (store_id, entity_type, entity_id, action, created_at) "
+                    + "VALUES (:s, 'CUSTOMER', 1, 'CREATE', CURRENT_TIMESTAMP)").param("s", storeId).update();
+        }
+
+        StorePurgeDao dao = new StorePurgeDao(jdbc);
+        assertTrue(dao.findBusinessData(victim).containsAll(List.of("customers", "services", "appointments", "credit_accounts", "audit_log")));
+
+        dao.purge(victim);
+
+        for (String table : List.of("appointments", "services", "customers", "store_templates", "credit_movements", "credit_accounts", "audit_log")) {
+            assertEquals(0L, count("SELECT COUNT(*) FROM " + table + " WHERE store_id = " + victim), table);
+        }
+        assertEquals(0L, count("SELECT COUNT(*) FROM stores WHERE id = " + victim));
+        for (String table : List.of("appointments", "services", "customers", "store_templates", "credit_movements", "credit_accounts", "audit_log")) {
+            assertEquals(1L, count("SELECT COUNT(*) FROM " + table + " WHERE store_id = " + keep), table + " del otro local");
+        }
+    }
+
     /** Un producto, un cliente y una venta con un renglón, más una compra y un movimiento de inventario. */
     private static long operate(long storeId, long userId, String tag) {
         jdbc.sql("INSERT INTO categories (name, created_at, updated_at) "

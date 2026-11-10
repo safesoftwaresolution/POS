@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Save, Store, Key, AlertCircle, ImagePlus, Mail, Phone, MapPin, Hash, Globe, IdCard } from 'lucide-react';
 import { getSettingsApi, updateSettingsApi, uploadCompanyLogoApi } from '../services/settingsApi';
 import { getOwnStoreApi, updateOwnStoreApi } from '../services/storesApi';
+import usePermissions from '../hooks/usePermissions';
 
 const EMPTY_CONFIG = { businessName: '', taxId: '', address: '', phone: '', email: '', logoUrl: '' };
 const EMPTY_STORE_FORM = { name: '', phone: '', website: '', address: '', taxId: '' };
@@ -23,6 +24,8 @@ const STORE_STATUS_STYLES = {
 };
 
 export default function SettingsBento() {
+  // El SUPERVISOR solo consulta: GET /settings le está permitido, pero editar y el registro legal (/stores/me) son del ADMINISTRATOR.
+  const { isAdmin } = usePermissions();
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
@@ -73,8 +76,8 @@ export default function SettingsBento() {
       }
     }
     loadSettings();
-    loadStore();
-  }, []);
+    if (isAdmin) loadStore();
+  }, [isAdmin]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -124,6 +127,9 @@ export default function SettingsBento() {
       <div>
         <h1 className="text-2xl font-black text-ink">Configuración</h1>
         <p className="text-xs text-ink-soft font-medium">Nombre, logo y datos de contacto de tu negocio</p>
+        {!isAdmin && (
+          <p className="mt-2 text-[11px] text-ink-muted font-semibold">Solo lectura: solo el administrador del local puede modificar estos datos.</p>
+        )}
       </div>
 
       {loading ? (
@@ -132,7 +138,8 @@ export default function SettingsBento() {
         </div>
       ) : (
         <div className="space-y-8">
-          {/* Registro legal del local */}
+          {/* Registro legal del local (solo ADMINISTRATOR: /stores/me) */}
+          {isAdmin && (
           <form onSubmit={handleStoreSubmit} className="space-y-6">
             <div className="flex items-center justify-between">
               <h2 className="font-black text-sm text-ink uppercase tracking-wide">Registro Legal del Local</h2>
@@ -228,9 +235,11 @@ export default function SettingsBento() {
               </button>
             </div>
           </form>
+          )}
 
           {/* Ajustes operativos / de facturación */}
           <form onSubmit={handleSubmit} className="space-y-6">
+            <fieldset disabled={!isAdmin} className="space-y-6 min-w-0">
             <div className="flex items-center justify-between">
               <h2 className="font-black text-sm text-ink uppercase tracking-wide">Datos de Facturas y Tickets</h2>
               {saved && (
@@ -266,6 +275,7 @@ export default function SettingsBento() {
                   )}
                 </div>
                 <div className="space-y-1.5">
+                  {isAdmin && (
                   <button
                     type="button"
                     disabled={uploadingLogo}
@@ -274,6 +284,7 @@ export default function SettingsBento() {
                   >
                     {uploadingLogo ? 'Subiendo...' : config.logoUrl ? 'Cambiar logo' : 'Subir logo'}
                   </button>
+                  )}
                   <p className="text-[10px] text-ink-muted font-semibold">PNG o JPG, máx. 200 KB y 300×300 px. Se usa en facturas y reportes.</p>
                   {logoNotice && <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">{logoNotice}</p>}
                   <input ref={logoInputRef} type="file" accept="image/png,image/jpeg" className="hidden" onChange={handleLogoChange} />
@@ -367,12 +378,16 @@ export default function SettingsBento() {
               </p>
             </div>
 
+            </fieldset>
+
+            {isAdmin && (
             <button
               type="submit"
               className="w-full py-3.5 bg-solid hover:bg-solid-hover text-solid-ink font-extrabold text-xs rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-[#0A0A0A]/10 cursor-pointer transition-all active:scale-[0.99]"
             >
               <Save className="w-4 h-4" /> Guardar Datos de Facturas y Tickets
             </button>
+            )}
           </form>
         </div>
       )}

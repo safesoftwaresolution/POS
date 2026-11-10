@@ -14,6 +14,8 @@ public interface StoreFacade {
     StoreDto changeStatus(Long id, String newStatus);
     StoreDto verifyEmail(Long id);
     StoreDto getById(Long id);
+    /** Estado del local (ACTIVE, PENDING_VERIFICATION...) o null si no existe; consulta liviana para el filtro JWT. */
+    String getStoreStatus(Long storeId);
     /** Auto-registro self-service: crea el local del ADMINISTRATOR autenticado (que aun no tiene uno). */
     StoreDto registerOwnStore(String ownerUsername, CreateStoreCommand command);
     /** Local del ADMINISTRATOR autenticado. */
@@ -26,6 +28,8 @@ public interface StoreFacade {
     StoreDocumentDto uploadOwnDocument(String ownerUsername, String documentType, MultipartFile file);
     /** Rechaza un local pendiente con un motivo obligatorio. */
     StoreDto rejectStore(Long id, String reason);
+    /** Reenvía a revisión el local rechazado del ADMINISTRATOR autenticado: vuelve a PENDING_VERIFICATION sin motivo. */
+    StoreDto resubmitOwnStore(String ownerUsername);
     /**
      * Elimina definitivamente un local con todos sus datos; sus administradores quedan sin local (no se borran).
      * Rechaza locales con facturas electrónicas validadas. Salvo un rechazado sin operación, exige el nombre exacto
@@ -44,6 +48,10 @@ public interface StoreFacade {
     Page<StoreStatusAuditDto> getStatusAudit(String newStatus, String q, Pageable pageable);
     List<StoreDocumentDto> getDocuments(Long storeId);
     StoreDocumentDto reviewDocument(Long storeId, Long docId, ReviewDocumentCommand command);
+    /** Templates the given store runs with: its category's plus its extras (RETAIL when it has none). */
+    java.util.Set<StoreTemplate> getTemplatesForStore(Long storeId);
+    /** Replaces the extra templates of a store (SUPER_ADMIN); an empty list removes them. */
+    StoreDto updateExtraTemplates(Long storeId, UpdateStoreTemplatesCommand command);
     List<StoreCategoryDto> listCategories();
     StoreCategoryDto createCategory(CreateStoreCategoryCommand command);
     StoreCategoryDto updateCategory(Long id, CreateStoreCategoryCommand command);

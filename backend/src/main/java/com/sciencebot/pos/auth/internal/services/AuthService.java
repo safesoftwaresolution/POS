@@ -1,6 +1,7 @@
 package com.sciencebot.pos.auth.internal.services;
 
 import com.sciencebot.pos.auth.AuthFacade;
+import com.sciencebot.pos.auth.EmailNotVerifiedException;
 import com.sciencebot.pos.auth.LoginResponse;
 import com.sciencebot.pos.config.security.JwtService;
 import com.sciencebot.pos.config.security.PosUserDetails;
@@ -195,6 +196,19 @@ public class AuthService implements AuthFacade {
     }
 
     @Override
+    @Transactional
+    public void verifyAccountManually(Long userId) {
+        UserDto user = userFacade.getById(userId);
+        if (user.emailVerified()) {
+            throw new IllegalArgumentException("La cuenta ya tiene el correo verificado.");
+        }
+        // Los enlaces pendientes ya no hacen falta: la cuenta queda verificada por la plataforma.
+        emailVerificationService.deleteForUser(userId);
+        userFacade.markEmailVerified(userId);
+        log.info("Correo de la cuenta {} verificado manualmente desde el backoffice", user.username());
+    }
+
+    @Override
     public void resendVerificationToUser(Long userId) {
         UserDto user = userFacade.getById(userId);
         if (user.emailVerified()) {
@@ -269,7 +283,7 @@ public class AuthService implements AuthFacade {
 
     public LoginResponse login(String username, String password) {
         if (username == null || password == null) {
-            throw new BadCredentialsException("Usuario o contrasena incorrectos");
+            throw new BadCredentialsException("Usuario o contraseña incorrectos");
         }
 
         String cleanUsername = username.trim().toLowerCase();
@@ -281,7 +295,7 @@ public class AuthService implements AuthFacade {
             userDetails = userDetailsService.loadUserByUsername(cleanUsername);
         } catch (Exception e) {
             recordFailedAttempt(cleanUsername);
-            throw new BadCredentialsException("Usuario o contrasena incorrectos");
+            throw new BadCredentialsException("Usuario o contraseña incorrectos");
         }
 
         if (!userDetails.isEnabled()) {
@@ -289,14 +303,14 @@ public class AuthService implements AuthFacade {
                     .map(u -> !u.emailVerified())
                     .orElse(false);
             if (unverified) {
-                throw new DisabledException("Debes verificar tu correo electronico antes de iniciar sesion.");
+                throw new EmailNotVerifiedException("Debes verificar tu correo electrónico antes de iniciar sesión.");
             }
             throw new DisabledException("Cuenta de usuario desactivada");
         }
 
         if (!passwordEncoder.matches(password, userDetails.getPassword())) {
             recordFailedAttempt(cleanUsername);
-            throw new BadCredentialsException("Usuario o contrasena incorrectos");
+            throw new BadCredentialsException("Usuario o contraseña incorrectos");
         }
 
         lockoutCache.remove(cleanUsername);
@@ -312,7 +326,7 @@ public class AuthService implements AuthFacade {
         }
 
         UserDto account = userFacade.findByUsername(userDetails.getUsername())
-                .orElseThrow(() -> new BadCredentialsException("Usuario o contrasena incorrectos"));
+                .orElseThrow(() -> new BadCredentialsException("Usuario o contraseña incorrectos"));
         Long userId = account.id();
 
         String token = jwtService.generateToken(userDetails, role, storeId);
@@ -372,7 +386,7 @@ public class AuthService implements AuthFacade {
     private void checkLockout(String username) {
         LockoutDetails details = lockoutCache.get(username);
         if (details != null && details.isLocked()) {
-            throw new LockedException("Cuenta bloqueada temporalmente por intentos fallidos. Intente de nuevo mas tarde.");
+            throw new LockedException("Cuenta bloqueada temporalmente por intentos fallidos. Intenta de nuevo más tarde.");
         }
     }
 

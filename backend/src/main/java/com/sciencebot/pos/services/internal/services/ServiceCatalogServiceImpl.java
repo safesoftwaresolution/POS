@@ -1,7 +1,5 @@
 package com.sciencebot.pos.services.internal.services;
 
-import com.sciencebot.pos.categories.CategoryDeleteValidator;
-import com.sciencebot.pos.categories.CategoryFacade;
 import com.sciencebot.pos.config.tenant.TenantContext;
 import com.sciencebot.pos.services.CreateServiceCommand;
 import com.sciencebot.pos.services.ServiceDto;
@@ -11,7 +9,6 @@ import com.sciencebot.pos.services.internal.entities.ServiceItem;
 import com.sciencebot.pos.services.internal.mappers.ServiceMapper;
 import com.sciencebot.pos.services.internal.repositories.ServiceItemRepository;
 import jakarta.persistence.EntityNotFoundException;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -22,22 +19,22 @@ import java.util.Optional;
 
 @Service
 @Transactional(readOnly = true)
-public class ServiceCatalogServiceImpl implements ServiceFacade, CategoryDeleteValidator {
+public class ServiceCatalogServiceImpl implements ServiceFacade {
 
     private static final String DEFAULT_UNIT_MEASURE_CODE = "94";
     private static final BigDecimal MAX_TAX_RATE = BigDecimal.valueOf(100);
 
     private final ServiceItemRepository serviceRepository;
     private final ServiceMapper serviceMapper;
-    private final CategoryFacade categoryFacade;
+    private final ServiceCategoryServiceImpl categoryService;
 
     public ServiceCatalogServiceImpl(
             ServiceItemRepository serviceRepository,
             ServiceMapper serviceMapper,
-            @Lazy CategoryFacade categoryFacade) {
+            ServiceCategoryServiceImpl categoryService) {
         this.serviceRepository = serviceRepository;
         this.serviceMapper = serviceMapper;
-        this.categoryFacade = categoryFacade;
+        this.categoryService = categoryService;
     }
 
     @Override
@@ -57,7 +54,7 @@ public class ServiceCatalogServiceImpl implements ServiceFacade, CategoryDeleteV
             throw new IllegalArgumentException("Ya existe un servicio con el código: " + code);
         }
         requireName(command.name());
-        requireCategory(command.categoryId());
+        categoryService.requireAvailableForCurrentStore(command.categoryId());
         BigDecimal taxRate = command.taxRate() != null ? command.taxRate() : BigDecimal.ZERO;
         validatePriceAndTax(command.price(), taxRate);
         validateDuration(command.durationMinutes());
@@ -89,7 +86,9 @@ public class ServiceCatalogServiceImpl implements ServiceFacade, CategoryDeleteV
             service.setDescription(blankToNull(command.description()));
         }
         if (command.categoryId() != null) {
-            requireCategory(command.categoryId());
+            if (!command.categoryId().equals(service.getCategoryId())) {
+                categoryService.requireAvailableForCurrentStore(command.categoryId());
+            }
             service.setCategoryId(command.categoryId());
         }
         BigDecimal price = command.price() != null ? command.price() : service.getPrice();
@@ -131,24 +130,9 @@ public class ServiceCatalogServiceImpl implements ServiceFacade, CategoryDeleteV
                 .map(serviceMapper::toDto);
     }
 
-    @Override
-    public void validateBeforeDelete(Long categoryId) {
-        if (serviceRepository.existsByCategoryIdAndActiveTrue(categoryId)) {
-            throw new IllegalStateException("No se puede eliminar la categoría porque tiene servicios asociados activos");
-        }
-    }
-
     private ServiceItem requireOwnService(Long id) {
         return serviceRepository.findByIdAndStoreId(id, requireCurrentStoreId())
                 .orElseThrow(() -> new EntityNotFoundException("Servicio no encontrado con ID: " + id));
-    }
-
-    private void requireCategory(Long categoryId) {
-        if (categoryId == null) {
-            throw new IllegalArgumentException("La categoría es obligatoria");
-        }
-        categoryFacade.getById(categoryId)
-                .orElseThrow(() -> new IllegalArgumentException("La categoría especificada no existe"));
     }
 
     private static void requireName(String name) {

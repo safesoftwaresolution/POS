@@ -170,7 +170,8 @@ class BillingSetupServiceImplTest {
 
     private static StoreDto store(String taxId) {
         return new StoreDto(STORE, "Tienda La Esquina", 1L, "Minimercado", "3001234567", "hola@esquina.co", null,
-                "Calle 10 # 5-20", taxId, "ACTIVE", true, null, null, "BASIC");
+                "Calle 10 # 5-20", taxId, "ACTIVE", true, null, null, "BASIC",
+                "RETAIL", "DEFAULT", java.util.List.of("RETAIL"), java.util.List.of());
     }
 
     private static FiscalProfileRequest request() {

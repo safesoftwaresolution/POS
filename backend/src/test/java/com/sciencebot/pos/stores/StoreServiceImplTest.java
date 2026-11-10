@@ -44,6 +44,7 @@ class StoreServiceImplTest {
     @Mock private com.sciencebot.pos.stores.internal.repositories.StoreUserAuditRepository storeUserAuditRepository;
     @Mock private com.sciencebot.pos.stores.internal.repositories.PlanRepository planRepository;
     @Mock private com.sciencebot.pos.stores.internal.services.StoreApprovalMailer approvalMailer;
+    @Mock private com.sciencebot.pos.settings.SettingsFacade settingsFacade;
     @InjectMocks private StoreServiceImpl storeService;
 
     @BeforeEach
@@ -82,7 +83,7 @@ class StoreServiceImplTest {
         saved.setEmail("tienda1@test.com");
         when(storeRepository.save(any(StoreEntity.class))).thenReturn(saved);
 
-        StoreDto dto = new StoreDto(1L, "Tienda 1", 1L, "Retail", "3001234567", "tienda1@test.com", "https://tienda1.com", "Calle 1", "900123", "PENDING_VERIFICATION", false, null, null, "BASIC");
+        StoreDto dto = new StoreDto(1L, "Tienda 1", 1L, "Retail", "3001234567", "tienda1@test.com", "https://tienda1.com", "Calle 1", "900123", "PENDING_VERIFICATION", false, null, null, "BASIC", "RETAIL", "DEFAULT", java.util.List.of("RETAIL"), java.util.List.of());
         when(storeMapper.toDto(any(), any())).thenReturn(dto);
 
         StoreDto result = storeService.createStore(command);
@@ -100,7 +101,7 @@ class StoreServiceImplTest {
 
         when(storeRepository.findById(1L)).thenReturn(Optional.of(entity));
         when(storeRepository.save(any())).thenReturn(entity);
-        when(storeMapper.toDto(any(), any())).thenReturn(new StoreDto(1L, "Tienda", null, null, null, "t@test.com", null, null, null, "ACTIVE", false, null, null, "BASIC"));
+        when(storeMapper.toDto(any(), any())).thenReturn(new StoreDto(1L, "Tienda", null, null, null, "t@test.com", null, null, null, "ACTIVE", false, null, null, "BASIC", "RETAIL", "DEFAULT", java.util.List.of("RETAIL"), java.util.List.of()));
 
         StoreDto result = storeService.changeStatus(1L, "ACTIVE");
         assertNotNull(result);
@@ -115,7 +116,7 @@ class StoreServiceImplTest {
         entity.setStatus(status);
         when(storeRepository.findById(1L)).thenReturn(Optional.of(entity));
         when(storeRepository.save(any())).thenReturn(entity);
-        when(storeMapper.toDto(any(), any())).thenReturn(new StoreDto(1L, "Arqueo", null, null, null, "local@test.com", null, null, null, "ACTIVE", false, null, null, "BASIC"));
+        when(storeMapper.toDto(any(), any())).thenReturn(new StoreDto(1L, "Arqueo", null, null, null, "local@test.com", null, null, null, "ACTIVE", false, null, null, "BASIC", "RETAIL", "DEFAULT", java.util.List.of("RETAIL"), java.util.List.of()));
         return entity;
     }
 
@@ -169,13 +170,15 @@ class StoreServiceImplTest {
         saved.setName("Tienda 1");
         when(storeRepository.save(any(StoreEntity.class))).thenReturn(saved);
         when(storeMapper.toDto(any(), any())).thenReturn(
-                new StoreDto(9L, "Tienda 1", 1L, "Retail", "3001234567", "tienda1@test.com", "https://tienda1.com", "Calle 1", "900123", "PENDING_VERIFICATION", false, null, null, "BASIC"));
+                new StoreDto(9L, "Tienda 1", 1L, "Retail", "3001234567", "tienda1@test.com", "https://tienda1.com", "Calle 1", "900123", "PENDING_VERIFICATION", false, null, null, "BASIC", "RETAIL", "DEFAULT", java.util.List.of("RETAIL"), java.util.List.of()));
 
         StoreDto result = storeService.registerOwnStore("carlos", command);
 
         assertNotNull(result);
         assertEquals(9L, result.id());
         verify(userFacade, times(1)).assignStore(5L, 9L);
+        verify(settingsFacade).seedSettings(9L, new com.sciencebot.pos.settings.SettingsDto(
+                "Tienda 1", "Calle 1", "3001234567", "900123", "tienda1@test.com", null));
     }
 
     @Test
@@ -206,13 +209,53 @@ class StoreServiceImplTest {
         when(storeRepository.findById(1L)).thenReturn(Optional.of(entity));
         when(storeRepository.save(any())).thenReturn(entity);
         when(storeMapper.toDto(any(), any())).thenReturn(
-                new StoreDto(1L, "Tienda", null, null, null, "t@test.com", null, null, null, "REJECTED", false, "Documentos incompletos", null, "BASIC"));
+                new StoreDto(1L, "Tienda", null, null, null, "t@test.com", null, null, null, "REJECTED", false, "Documentos incompletos", null, "BASIC", "RETAIL", "DEFAULT", java.util.List.of("RETAIL"), java.util.List.of()));
 
         StoreDto result = storeService.rejectStore(1L, "Documentos incompletos");
 
         assertNotNull(result);
         assertEquals("REJECTED", result.status());
         assertEquals("Documentos incompletos", result.rejectionReason());
+    }
+
+    @Test
+    void rejectStore_EmailsItsAdministratorsWithTheReason() {
+        storeInStatus("PENDING_VERIFICATION");
+        when(userFacade.listActiveByStoreAndRoles(1L, List.of("ADMINISTRATOR"))).thenReturn(List.of(
+                new UserDto(7L, "Dueno", "dueno", "dueno@test.com", "ADMINISTRATOR", true, 1L, true)));
+
+        storeService.rejectStore(1L, "Falta el NIT");
+
+        verify(approvalMailer).sendRejected("Arqueo", "Falta el NIT", List.of("dueno@test.com"));
+    }
+
+    @Test
+    void resubmitOwnStore_RejectedStore_GoesBackToPendingClearsTheReasonAndAudits() {
+        StoreEntity store = storeInStatus("REJECTED");
+        store.setRejectionReason("Falta el NIT");
+        when(userFacade.findByUsername("dueno")).thenReturn(Optional.of(
+                new UserDto(7L, "Dueno", "dueno", "dueno@test.com", "ADMINISTRATOR", true, 1L, true)));
+
+        storeService.resubmitOwnStore("dueno");
+
+        assertEquals("PENDING_VERIFICATION", store.getStatus());
+        assertNull(store.getRejectionReason());
+        verify(storeRepository).save(store);
+        verify(statusAuditRepository).save(argThat(a -> "REJECTED".equals(a.getPreviousStatus())
+                && "PENDING_VERIFICATION".equals(a.getNewStatus())));
+    }
+
+    @Test
+    void resubmitOwnStore_StoreThatIsNotRejected_IsRefused() {
+        StoreEntity store = storeInStatus("PENDING_VERIFICATION");
+        when(userFacade.findByUsername("dueno")).thenReturn(Optional.of(
+                new UserDto(7L, "Dueno", "dueno", "dueno@test.com", "ADMINISTRATOR", true, 1L, true)));
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> storeService.resubmitOwnStore("dueno"));
+
+        assertEquals("Solo un local rechazado se puede reenviar a revisión.", ex.getMessage());
+        assertEquals("PENDING_VERIFICATION", store.getStatus());
+        verify(storeRepository, never()).save(any());
     }
 
     private StoreEntity storeWithStatus(String status) {
@@ -469,7 +512,7 @@ class StoreServiceImplTest {
         when(storeRepository.save(any(StoreEntity.class))).thenAnswer(inv -> inv.getArgument(0));
         when(storeMapper.toDto(any(), any())).thenAnswer(inv -> {
             StoreEntity e = inv.getArgument(0);
-            return new StoreDto(e.getId(), e.getName(), null, null, e.getPhone(), e.getEmail(), e.getWebsite(), e.getAddress(), e.getTaxId(), e.getStatus(), e.isEmailVerified(), null, null, "BASIC");
+            return new StoreDto(e.getId(), e.getName(), null, null, e.getPhone(), e.getEmail(), e.getWebsite(), e.getAddress(), e.getTaxId(), e.getStatus(), e.isEmailVerified(), null, null, "BASIC", "RETAIL", "DEFAULT", java.util.List.of("RETAIL"), java.util.List.of());
         });
 
         UpdateOwnStoreCommand command = new UpdateOwnStoreCommand("Tienda Nueva", "3009999999", "https://nueva.com", "Calle Nueva 1", "900999999-1");
@@ -549,5 +592,170 @@ class StoreServiceImplTest {
         MockMultipartFile file = new MockMultipartFile("file", "doc.pdf", "application/pdf", "x".getBytes());
 
         assertThrows(jakarta.persistence.EntityNotFoundException.class, () -> storeService.uploadOwnDocument("carlos", "RUT", file));
+    }
+
+    @Test
+    void createCategory_StoresTheTemplateAndDefaultsToRetail() {
+        when(categoryRepository.existsByNameIgnoreCase(anyString())).thenReturn(false);
+        when(categoryRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        storeService.createCategory(new CreateStoreCategoryCommand("Barbería", "x", "APPOINTMENTS", "BEAUTY"));
+        storeService.createCategory(new CreateStoreCategoryCommand("Otra", "x"));
+
+        var captor = org.mockito.ArgumentCaptor.forClass(com.sciencebot.pos.stores.internal.entities.StoreCategoryEntity.class);
+        verify(categoryRepository, times(2)).save(captor.capture());
+        assertEquals(java.util.Set.of(StoreTemplate.APPOINTMENTS), captor.getAllValues().get(0).getTemplates());
+        assertEquals(java.util.Set.of(StoreTemplate.RETAIL), captor.getAllValues().get(1).getTemplates());
+        assertEquals(StoreTheme.BEAUTY, captor.getAllValues().get(0).getTheme());
+        assertEquals(StoreTheme.DEFAULT, captor.getAllValues().get(1).getTheme());
+    }
+
+    @Test
+    void createCategory_UnknownTheme_IsRefused() {
+        when(categoryRepository.existsByNameIgnoreCase(anyString())).thenReturn(false);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> storeService.createCategory(new CreateStoreCategoryCommand("X", "x", "RETAIL", "NEON")));
+        verify(categoryRepository, never()).save(any());
+    }
+
+    @Test
+    void updateCategory_ChangesTheThemeAndKeepsItWhenOmitted() {
+        var entity = new com.sciencebot.pos.stores.internal.entities.StoreCategoryEntity();
+        entity.setName("Salón");
+        entity.setTheme(StoreTheme.DEFAULT);
+        when(categoryRepository.findById(3L)).thenReturn(Optional.of(entity));
+        when(categoryRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        storeService.updateCategory(3L, new CreateStoreCategoryCommand("Salón", "x", null, "BEAUTY"));
+        assertEquals(StoreTheme.BEAUTY, entity.getTheme());
+
+        storeService.updateCategory(3L, new CreateStoreCategoryCommand("Salón", "x"));
+        assertEquals(StoreTheme.BEAUTY, entity.getTheme());
+    }
+
+    @Test
+    void createCategory_UnknownTemplate_IsRefused() {
+        when(categoryRepository.existsByNameIgnoreCase(anyString())).thenReturn(false);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> storeService.createCategory(new CreateStoreCategoryCommand("X", "x", "SPA")));
+        verify(categoryRepository, never()).save(any());
+    }
+
+    @Test
+    void updateCategory_ChangesTheTemplateAndKeepsItWhenOmitted() {
+        var entity = new com.sciencebot.pos.stores.internal.entities.StoreCategoryEntity();
+        entity.setName("Salón");
+        entity.setTemplates(new java.util.LinkedHashSet<>(java.util.Set.of(StoreTemplate.RETAIL)));
+        when(categoryRepository.findById(3L)).thenReturn(Optional.of(entity));
+        when(categoryRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        storeService.updateCategory(3L, new CreateStoreCategoryCommand("Salón", "x", "APPOINTMENTS"));
+        assertEquals(java.util.Set.of(StoreTemplate.APPOINTMENTS), entity.getTemplates());
+
+        storeService.updateCategory(3L, new CreateStoreCategoryCommand("Salón", "x"));
+        assertEquals(java.util.Set.of(StoreTemplate.APPOINTMENTS), entity.getTemplates());
+    }
+
+    private void givenStoreWithCategory(Long storeId, Long categoryId, StoreTemplate... categoryTemplates) {
+        var category = new com.sciencebot.pos.stores.internal.entities.StoreCategoryEntity();
+        category.setName("Boutique");
+        category.setTemplates(new java.util.LinkedHashSet<>(java.util.List.of(categoryTemplates)));
+        StoreEntity store = new StoreEntity();
+        store.setId(storeId);
+        store.setStoreCategoryId(categoryId);
+        when(storeRepository.findById(storeId)).thenReturn(Optional.of(store));
+        when(categoryRepository.findById(categoryId)).thenReturn(Optional.of(category));
+        when(storeMapper.toDto(any(), any())).thenAnswer(inv -> {
+            var c = (com.sciencebot.pos.stores.internal.entities.StoreCategoryEntity) inv.getArgument(1);
+            StoreEntity st = inv.getArgument(0);
+            var all = new java.util.TreeSet<StoreTemplate>(c.getTemplates());
+            all.addAll(st.getExtraTemplates());
+            return new StoreDto(storeId, "S", categoryId, c.getName(), null, "s@t.com", null, null, null, "ACTIVE", true, null, null, "BASIC",
+                    StoreTemplate.primary(all).name(), "DEFAULT", all.stream().map(Enum::name).toList(),
+                    st.getExtraTemplates().stream().map(Enum::name).toList());
+        });
+    }
+
+    @Test
+    void getTemplatesForStore_ReturnsCategoryTemplatesPlusExtras() {
+        givenStoreWithCategory(4L, 9L, StoreTemplate.RETAIL);
+        storeRepository.findById(4L).get().setExtraTemplates(new java.util.LinkedHashSet<>(java.util.Set.of(StoreTemplate.APPOINTMENTS)));
+
+        assertEquals(java.util.Set.of(StoreTemplate.RETAIL, StoreTemplate.APPOINTMENTS), storeService.getTemplatesForStore(4L));
+    }
+
+    @Test
+    void getTemplatesForStore_UnknownStore_ThrowsNotFound() {
+        when(storeRepository.findById(404L)).thenReturn(Optional.empty());
+
+        assertThrows(jakarta.persistence.EntityNotFoundException.class, () -> storeService.getTemplatesForStore(404L));
+    }
+
+    @Test
+    void createCategory_AcceptsSeveralTemplates_AndTheLegacySingleTemplateField() {
+        when(categoryRepository.existsByNameIgnoreCase(anyString())).thenReturn(false);
+        when(categoryRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        storeService.createCategory(new CreateStoreCategoryCommand("Boutique", "x", null, "FASHION", java.util.List.of("RETAIL", "APPOINTMENTS", "retail")));
+        storeService.createCategory(new CreateStoreCategoryCommand("Barbería", "x", "APPOINTMENTS", "BEAUTY", null));
+
+        var captor = org.mockito.ArgumentCaptor.forClass(com.sciencebot.pos.stores.internal.entities.StoreCategoryEntity.class);
+        verify(categoryRepository, times(2)).save(captor.capture());
+        assertEquals(java.util.Set.of(StoreTemplate.RETAIL, StoreTemplate.APPOINTMENTS), captor.getAllValues().get(0).getTemplates());
+        assertEquals(java.util.Set.of(StoreTemplate.APPOINTMENTS), captor.getAllValues().get(1).getTemplates());
+    }
+
+    @Test
+    void createCategory_UnknownTemplateInTheList_IsRefused() {
+        when(categoryRepository.existsByNameIgnoreCase(anyString())).thenReturn(false);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> storeService.createCategory(new CreateStoreCategoryCommand("X", "x", null, null, java.util.List.of("RETAIL", "SPA"))));
+        verify(categoryRepository, never()).save(any());
+    }
+
+    @Test
+    void updateCategory_ReplacesTheTemplateSet_AndKeepsItWhenNoneIsSent() {
+        var entity = new com.sciencebot.pos.stores.internal.entities.StoreCategoryEntity();
+        entity.setName("Boutique");
+        entity.setTemplates(new java.util.LinkedHashSet<>(java.util.Set.of(StoreTemplate.RETAIL)));
+        when(categoryRepository.findById(3L)).thenReturn(Optional.of(entity));
+        when(categoryRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        storeService.updateCategory(3L, new CreateStoreCategoryCommand("Boutique", "x", null, null, java.util.List.of("RETAIL", "APPOINTMENTS")));
+        assertEquals(java.util.Set.of(StoreTemplate.RETAIL, StoreTemplate.APPOINTMENTS), entity.getTemplates());
+
+        storeService.updateCategory(3L, new CreateStoreCategoryCommand("Boutique", "x"));
+        assertEquals(java.util.Set.of(StoreTemplate.RETAIL, StoreTemplate.APPOINTMENTS), entity.getTemplates());
+
+        storeService.updateCategory(3L, new CreateStoreCategoryCommand("Boutique", "x", null, null, java.util.List.of()));
+        assertEquals(java.util.Set.of(StoreTemplate.RETAIL, StoreTemplate.APPOINTMENTS), entity.getTemplates());
+    }
+
+    @Test
+    void updateExtraTemplates_SavesTheExtrasWithoutDuplicates_AndCanClearThem() {
+        givenStoreWithCategory(4L, 9L, StoreTemplate.RETAIL);
+        StoreEntity store = storeRepository.findById(4L).get();
+        when(storeRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        StoreDto dto = storeService.updateExtraTemplates(4L, new UpdateStoreTemplatesCommand(java.util.List.of("APPOINTMENTS", "appointments")));
+        assertEquals(java.util.Set.of(StoreTemplate.APPOINTMENTS), store.getExtraTemplates());
+        assertEquals(java.util.List.of("RETAIL", "APPOINTMENTS"), dto.templates());
+
+        storeService.updateExtraTemplates(4L, new UpdateStoreTemplatesCommand(java.util.List.of()));
+        assertTrue(store.getExtraTemplates().isEmpty());
+    }
+
+    @Test
+    void updateExtraTemplates_UnknownTemplateNullListOrUnknownStore_IsRefused() {
+        givenStoreWithCategory(4L, 9L, StoreTemplate.RETAIL);
+        when(storeRepository.findById(404L)).thenReturn(Optional.empty());
+
+        assertThrows(IllegalArgumentException.class, () -> storeService.updateExtraTemplates(4L, new UpdateStoreTemplatesCommand(java.util.List.of("SPA"))));
+        assertThrows(IllegalArgumentException.class, () -> storeService.updateExtraTemplates(4L, new UpdateStoreTemplatesCommand(null)));
+        assertThrows(jakarta.persistence.EntityNotFoundException.class, () -> storeService.updateExtraTemplates(404L, new UpdateStoreTemplatesCommand(java.util.List.of())));
+        verify(storeRepository, never()).save(any());
     }
 }

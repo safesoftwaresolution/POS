@@ -1,11 +1,15 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import useAutoRefresh from './hooks/useAutoRefresh';
+import useLoad from './hooks/useLoad';
 import { AuthProvider } from './context/AuthContext';
 import useAuth from './hooks/useAuth';
+import useStoreTemplate from './hooks/useStoreTemplate';
 import { ThemeProvider } from './context/ThemeContext';
 import { ModalProvider } from './context/ModalContext';
-import { getOwnStoreApi } from './services/storesApi';
+import { StoreTemplateProvider } from './context/StoreTemplateContext';
+import { getOwnStoreApi, getOwnStoreStatusApi } from './services/storesApi';
+import { STORE_NOT_ACTIVE_EVENT } from './services/http';
 
 import Sidebar from './components/layout/Sidebar';
 import Header from './components/layout/Header';
@@ -25,6 +29,7 @@ const POSBento = lazy(() => import('./pages/POSBento'));
 const InventoryBento = lazy(() => import('./pages/InventoryBento'));
 const ProductsBento = lazy(() => import('./pages/ProductsBento'));
 const ServicesBento = lazy(() => import('./pages/ServicesBento'));
+const AppointmentsBento = lazy(() => import('./pages/AppointmentsBento'));
 const CustomersBento = lazy(() => import('./pages/CustomersBento'));
 const CreditBento = lazy(() => import('./pages/CreditBento'));
 const InvoicingBento = lazy(() => import('./pages/InvoicingBento'));
@@ -39,6 +44,7 @@ const StoresBento = lazy(() => import('./pages/backoffice/StoresBento'));
 const BillingBento = lazy(() => import('./pages/backoffice/BillingBento'));
 const CategoriesBento = lazy(() => import('./pages/backoffice/CategoriesBento'));
 const ProductCategoriesBento = lazy(() => import('./pages/backoffice/ProductCategoriesBento'));
+const ServiceCategoriesBento = lazy(() => import('./pages/backoffice/ServiceCategoriesBento'));
 const ParametersBento = lazy(() => import('./pages/backoffice/ParametersBento'));
 const LegalDocumentsBento = lazy(() => import('./pages/backoffice/LegalDocumentsBento'));
 const SupportTicketsBento = lazy(() => import('./pages/backoffice/SupportTicketsBento'));
@@ -62,30 +68,51 @@ function RequireRole({ roles, children }) {
   return roles.includes(user?.role) ? children : <Navigate to="/" replace />;
 }
 
-/** Mientras el ADMINISTRATOR no tenga un local ACTIVE, bloquea el POS y muestra el estado. */
-function RequireActiveStore({ children }) {
-  const [store, setStore] = useState(undefined); // undefined = cargando
+/**
+ * Restringe una ruta a los locales cuya plantilla habilita la función (p. ej. `appointments`). El backend responde 403
+ * al resto; esto evita ver la pantalla vacía escribiendo la URL. Mientras la plantilla carga no redirige.
+ */
+function RequireFeature({ feature, children }) {
+  const { features, loading } = useStoreTemplate();
+  if (loading) return null;
+  return features[feature] ? children : <Navigate to="/" replace />;
+}
 
-  useEffect(() => {
-    let cancelled = false;
-    getOwnStoreApi()
-      .then(data => { if (!cancelled) setStore(data); })
-      .catch(() => { if (!cancelled) setStore(null); });
-    return () => { cancelled = true; };
-  }, []);
+/**
+ * Mientras el local no esté ACTIVE, bloquea el POS para cualquier rol del local y muestra su estado (el backend
+ * responde 403 `StoreNotActive` al resto de la API). El ADMINISTRATOR ve su local completo para corregirlo; el
+ * resto del personal solo su estado (`/stores/me` es solo para el administrador).
+ */
+function RequireActiveStore({ canManage, children }) {
+  const { data: store, loading, error, reload, setData } = useLoad(
+    canManage ? getOwnStoreApi : getOwnStoreStatusApi,
+    [canManage],
+  );
 
-  // Mientras el local sigue en revisión, consulta su estado cada cierto tiempo: al aprobarse, el POS se
+  // Mientras el local no está activo, consulta su estado cada cierto tiempo: al aprobarse, el POS se
   // abre solo sin que la persona tenga que recargar.
-  useAutoRefresh(() => {
-    if (store && store.status === 'ACTIVE') return;
-    getOwnStoreApi().then(setStore).catch(() => {});
-  });
+  useAutoRefresh(reload, 15000, Boolean(error) || (Boolean(store) && store.status !== 'ACTIVE'));
 
-  if (store === undefined) {
+  // Si el local deja de estar activo mientras se trabaja, la primera respuesta 403 lo detecta.
+  useEffect(() => {
+    const onNotActive = () => reload();
+    window.addEventListener(STORE_NOT_ACTIVE_EVENT, onNotActive);
+    return () => window.removeEventListener(STORE_NOT_ACTIVE_EVENT, onNotActive);
+  }, [reload]);
+
+  if (loading) {
     return null;
   }
-  if (!store || store.status !== 'ACTIVE') {
-    return <PendingStoreReviewBento store={store} />;
+  if (error || !store || store.status !== 'ACTIVE') {
+    return (
+      <PendingStoreReviewBento
+        store={store}
+        loadError={Boolean(error) || !store}
+        canManage={canManage}
+        onRetry={() => reload({ silent: false })}
+        onStoreChange={setData}
+      />
+    );
   }
   return children;
 }
@@ -117,31 +144,21 @@ function ProtectedLayout() {
     return <Navigate to="/onboarding/store" replace />;
   }
 
-  if (user?.role === 'ADMINISTRATOR') {
-    return (
-      <RequireActiveStore>
-        <ProtectedLayoutContent
-          mobileSidebarOpen={mobileSidebarOpen}
-          setMobileSidebarOpen={setMobileSidebarOpen}
-          sidebarCollapsed={sidebarCollapsed}
-          toggleSidebarCollapse={toggleSidebarCollapse}
-        />
-      </RequireActiveStore>
-    );
-  }
-
   return (
-    <ProtectedLayoutContent
-      mobileSidebarOpen={mobileSidebarOpen}
-      setMobileSidebarOpen={setMobileSidebarOpen}
-      sidebarCollapsed={sidebarCollapsed}
-      toggleSidebarCollapse={toggleSidebarCollapse}
-    />
+    <RequireActiveStore canManage={user?.role === 'ADMINISTRATOR'}>
+      <ProtectedLayoutContent
+        mobileSidebarOpen={mobileSidebarOpen}
+        setMobileSidebarOpen={setMobileSidebarOpen}
+        sidebarCollapsed={sidebarCollapsed}
+        toggleSidebarCollapse={toggleSidebarCollapse}
+      />
+    </RequireActiveStore>
   );
 }
 
 function ProtectedLayoutContent({ mobileSidebarOpen, setMobileSidebarOpen, sidebarCollapsed, toggleSidebarCollapse }) {
   return (
+    <StoreTemplateProvider>
     <div className="min-h-screen bg-page text-ink flex transition-colors duration-300">
       {/* Expandable / Collapsible Sidebar */}
       <Sidebar
@@ -169,7 +186,7 @@ function ProtectedLayoutContent({ mobileSidebarOpen, setMobileSidebarOpen, sideb
             <Route path="/products" element={<ProductsBento />} />
             {/* Todos los roles de tienda ven el catálogo (GET /services); crear y editar lo limita la propia pantalla. */}
             <Route path="/services" element={<ServicesBento />} />
-            <Route path="/categories" element={<CategoriesBento />} />
+            <Route path="/appointments" element={<RequireFeature feature="appointments"><AppointmentsBento /></RequireFeature>} />
             <Route path="/customers" element={<CustomersBento />} />
             <Route path="/credit" element={<CreditBento />} />
             <Route path="/invoicing" element={<InvoicingBento />} />
@@ -186,6 +203,7 @@ function ProtectedLayoutContent({ mobileSidebarOpen, setMobileSidebarOpen, sideb
         </main>
       </div>
     </div>
+    </StoreTemplateProvider>
   );
 }
 
@@ -235,6 +253,7 @@ function BackofficeProtectedLayout() {
             <Route path="/billing" element={<BillingBento />} />
             <Route path="/categories" element={<CategoriesBento />} />
             <Route path="/product-categories" element={<ProductCategoriesBento />} />
+            <Route path="/service-categories" element={<ServiceCategoriesBento />} />
             <Route path="/parameters" element={<ParametersBento />} />
             <Route path="/legal-documents" element={<LegalDocumentsBento />} />
             <Route path="/support" element={<SupportTicketsBento />} />

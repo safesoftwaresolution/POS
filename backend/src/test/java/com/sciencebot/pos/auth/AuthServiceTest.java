@@ -141,7 +141,7 @@ class AuthServiceTest {
         when(userDetailsService.loadUserByUsername("admin")).thenReturn(userDetails);
         when(userFacade.findByUsername("admin")).thenReturn(Optional.of(unverifiedUserDto()));
 
-        DisabledException ex = assertThrows(DisabledException.class, () -> authService.login("admin", "Password123"));
+        EmailNotVerifiedException ex = assertThrows(EmailNotVerifiedException.class, () -> authService.login("admin", "Password123"));
         assertTrue(ex.getMessage().contains("verificar tu correo"));
     }
 
@@ -226,6 +226,28 @@ class AuthServiceTest {
 
         assertThrows(IllegalStateException.class, () -> authService.resendVerificationToUser(3L));
         assertDoesNotThrow(() -> authService.resendVerificationToUser(3L)); // el fallo no bloquea el reintento
+    }
+
+    @Test
+    void verifyAccountManually_PendingAccount_DropsItsLinksAndMarksItVerified() {
+        when(userFacade.getById(3L)).thenReturn(unverifiedUserDto());
+
+        authService.verifyAccountManually(3L);
+
+        var order = inOrder(emailVerificationService, userFacade);
+        order.verify(emailVerificationService).deleteForUser(3L);
+        order.verify(userFacade).markEmailVerified(3L);
+    }
+
+    @Test
+    void verifyAccountManually_AlreadyVerified_IsRefused() {
+        UserDto verified = new UserDto(3L, "Dueno", "dueno", "dueno@test.com", "ADMINISTRATOR", true, null, true);
+        when(userFacade.getById(3L)).thenReturn(verified);
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> authService.verifyAccountManually(3L));
+
+        assertEquals("La cuenta ya tiene el correo verificado.", ex.getMessage());
+        verify(userFacade, never()).markEmailVerified(any());
     }
 
     @Test

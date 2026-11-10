@@ -17,4 +17,8 @@ public interface StoreRepository extends JpaRepository<StoreEntity, Long> {
     long countByStatus(String status);
     long countByEmailVerifiedTrue();
     boolean existsByEmail(String email);
+
+    /** Solo el estado, sin cargar la entidad: se consulta en cada petición autenticada. */
+    @Query("SELECT s.status FROM StoreEntity s WHERE s.id = :id")
+    java.util.Optional<String> findStatusById(@Param("id") Long id);
 }

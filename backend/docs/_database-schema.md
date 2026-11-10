@@ -60,7 +60,8 @@ erDiagram
 | categories | `categories` | V1 | **Global** (sin `store_id`) |
 | categories | `product_subcategories` | V12 | Por local; única por (`store_id`, `category_id`, `name`) |
 | products | `products`, `product_lots` | V1, V2 (`tax_rate`, `unspsc_code`), V3, V12 (`subcategory_id`), V27 (`product_lots`: lotes de vencimiento) | Único por local: `internal_code` y `barcode` (V9) |
-| services | `services` | V29 | Catálogo sin stock; único por local: `code` (`UK_services_store_code`) |
+| appointments | `appointments` | V34 | Agenda de citas por local (solo plantilla `APPOINTMENTS`); copia `customer_name`/`service_name`; `CK_appointments_range` (`end_at > start_at`) |
+| services | `services`, `service_categories`, `service_category_store_categories` | V29, V37 (categorías de servicios propias; `services.category_id` apunta a `service_categories`; la tabla de enlace ofrece cada categoría a categorías de local, sin enlaces = todas) | Catálogo sin stock; único por local: `code` (`UK_services_store_code`); `service_categories.name` único |
 | customers | `customers` | V1, V2 (campos DIAN), V3, V30 (`created_by`, `updated_by` y sus nombres de usuario) | Un "Cliente General" por local |
 | audit | `audit_log` | V30 | Bitácora genérica por entidad; sin FK a `users` |
 | credit | `credit_accounts`, `credit_movements` | V31 | Fiado: saldo atómico por cliente y libro inmutable; único por local: `customer_id` (`UK_credit_accounts_store_customer`) |
@@ -71,7 +72,7 @@ erDiagram
 | sales | `sale_returns`, `sale_return_items` | V10, V29 (`service_id`; `product_id` opcional) | Cada ítem apunta al `sale_item` exacto |
 | settings | `settings` | V1, V3, V16 (se quitan columnas Factus) | PK = id del local |
 | settings | `parameter_topics`, `parameter_values` | V6 | Catálogos dinámicos (`PAYMENT_METHODS`, …) |
-| stores | `store_categories`, `stores`, `store_documents` | V3, V7 (`rejection_reason`, estado `REJECTED`) | Onboarding y KYC |
+| stores | `store_categories`, `store_category_templates`, `store_templates`, `stores`, `store_documents` | V3, V7 (`rejection_reason`, estado `REJECTED`), V33 (`store_categories.template`), V35 (`store_categories.theme`), V36 (`store_category_templates`: plantillas de la categoría; `store_templates`: extras por local; ambas PK compuesta) | Onboarding y KYC |
 | legal | `legal_documents` | V3 | `slug` único |
 | support | `support_tickets` | V3 | `ticket_number` único |
 | notifications | `notifications` | V11 | Por local; `read` |
@@ -201,6 +202,7 @@ Bitácora de cambios sobre rangos de numeración DIAN (`V15`, ampliada en `V17`)
 | IDX_electronic_debit_notes_store / _store_status / _bill | electronic_debit_notes | V19 |
 | IDX_product_lots_product, IDX_product_lots_store_expiration | product_lots(product_id), product_lots(store_id, expiration_date) | V27 |
 | IDX_services_store_active | services(store_id, active) | V29 |
+| IDX_appointments_store_start | appointments(store_id, start_at) | V34 |
 | IDX_audit_log_entity | audit_log(store_id, entity_type, entity_id, created_at) | V30 |
 | IDX_credit_accounts_store_balance | credit_accounts(store_id, balance) | V31 |
 | IDX_credit_movements_account | credit_movements(account_id, created_at) | V31 |

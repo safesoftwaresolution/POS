@@ -1,5 +1,6 @@
 package com.sciencebot.pos.stores.internal.controllers;
 
+import jakarta.validation.Valid;
 import com.sciencebot.pos.stores.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -60,7 +61,7 @@ public class StoreController {
     @PostMapping("/api/v1/backoffice/stores")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     @Operation(summary = "Crear un nuevo local")
-    public ResponseEntity<StoreDto> createStore(@RequestBody CreateStoreCommand command) {
+    public ResponseEntity<StoreDto> createStore(@Valid @RequestBody CreateStoreCommand command) {
         return ResponseEntity.status(HttpStatus.CREATED).body(storeFacade.createStore(command));
     }
 
@@ -91,6 +92,14 @@ public class StoreController {
             description = "Bajar de plan no desactiva usuarios: el local conserva los que ya tiene pero no puede crear ni reactivar mas hasta estar dentro del limite.")
     public ResponseEntity<StoreDto> changePlan(@PathVariable Long id, @RequestBody Map<String, String> body) {
         return ResponseEntity.ok(storeFacade.changePlan(id, body == null ? null : body.get("planCode")));
+    }
+
+    @PutMapping("/api/v1/backoffice/stores/{id}/templates")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @Operation(summary = "Plantillas extra de un local",
+            description = "Reemplaza las plantillas extra del local (RETAIL, FOOD, APPOINTMENTS), que se suman a las de su categoria. Una lista vacia las quita.")
+    public ResponseEntity<StoreDto> updateExtraTemplates(@PathVariable Long id, @RequestBody UpdateStoreTemplatesCommand command) {
+        return ResponseEntity.ok(storeFacade.updateExtraTemplates(id, command));
     }
 
     @PostMapping("/api/v1/backoffice/stores/{storeId}/assign-owner")

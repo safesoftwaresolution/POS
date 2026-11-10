@@ -40,6 +40,16 @@ function notifySessionExpired() {
   }
 }
 
+// Aviso para que RequireActiveStore vuelva a consultar el local: el backend respondió 403 `StoreNotActive`
+// (el local dejó de estar ACTIVE mientras la persona trabajaba).
+export const STORE_NOT_ACTIVE_EVENT = 'store:not-active';
+
+function notifyStoreNotActive(error) {
+  if (error?.status === 403 && error.data?.error === 'StoreNotActive' && typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent(STORE_NOT_ACTIVE_EVENT, { detail: { status: error.data.status ?? null } }));
+  }
+}
+
 export function getAuthToken() {
   return authToken;
 }
@@ -115,6 +125,7 @@ async function httpError(response) {
   const error = new Error(errorData.message || `Error HTTP ${response.status}`);
   error.status = response.status;
   error.data = errorData;
+  notifyStoreNotActive(error);
   return error;
 }
 
@@ -137,7 +148,11 @@ export async function fetchApi(endpoint, options = {}, _retried = false) {
     // Endpoints publicos: un 401 aqui es un rechazo del servidor (credenciales, token vencido), no una sesion que expiro.
     if (endpoint === '/auth/login' || PUBLIC_AUTH_ENDPOINT.test(endpoint)) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || (endpoint === '/auth/login' ? 'Usuario o contraseña incorrectos' : 'El enlace no es válido o ya venció.'));
+      const error = new Error(errorData.message || (endpoint === '/auth/login' ? 'Usuario o contraseña incorrectos' : 'El enlace no es válido o ya venció.'));
+      // Igual que httpError: el código (`error`) del backend deja a la pantalla distinguir el caso sin leer el texto.
+      error.status = response.status;
+      error.data = errorData;
+      throw error;
     }
     if (!_retried && endpoint !== '/auth/refresh') {
       const refreshed = await refreshAccessToken();

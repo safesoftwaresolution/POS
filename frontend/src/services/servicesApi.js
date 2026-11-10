@@ -35,3 +35,9 @@ export async function changeServiceStatusApi(id, active) {
 export async function deleteServiceApi(id) {
   return await fetchApi(`/services/${id}`, { method: 'DELETE' });
 }
+
+// Categorías de servicios que el local actual puede usar (las de su tipo de local más las generales).
+export async function getServiceCategoriesApi() {
+  const data = await fetchApi('/service-categories');
+  return data.content || data || [];
+}

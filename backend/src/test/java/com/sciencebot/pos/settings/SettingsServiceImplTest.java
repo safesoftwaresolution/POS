@@ -98,4 +98,28 @@ class SettingsServiceImplTest {
         assertEquals("Nuevo Nombre", result.businessName());
         verify(settingsRepository, times(1)).save(any(Setting.class));
     }
+
+    @Test
+    void seedSettings_ForAnExplicitStore_CopiesTheStoreDataWithoutATenantInContext() {
+        TenantContext.clear();
+        when(settingsRepository.existsById(9L)).thenReturn(false);
+
+        settingsService.seedSettings(9L, new SettingsDto("Tienda 1", "Calle 1", "3001234567", "900123", "tienda1@test.com", null));
+
+        verify(settingsRepository).save(argThat(s -> Long.valueOf(9L).equals(s.getId())
+                && "Tienda 1".equals(s.getBusinessName()) && "Calle 1".equals(s.getAddress())
+                && "3001234567".equals(s.getPhone()) && "900123".equals(s.getTaxId())
+                && "tienda1@test.com".equals(s.getEmail())));
+    }
+
+    @Test
+    void seedSettings_ForAnExplicitStore_FillsTheRequiredBlanksAndNeverOverwrites() {
+        when(settingsRepository.existsById(9L)).thenReturn(false);
+        settingsService.seedSettings(9L, new SettingsDto("Tienda 1", " ", null, null, "tienda1@test.com", null));
+        verify(settingsRepository).save(argThat(s -> "Por definir".equals(s.getAddress()) && "Por definir".equals(s.getPhone())));
+
+        when(settingsRepository.existsById(10L)).thenReturn(true);
+        settingsService.seedSettings(10L, new SettingsDto("Otra", "Calle 2", "300", null, null, null));
+        verify(settingsRepository, never()).save(argThat(s -> Long.valueOf(10L).equals(s.getId())));
+    }
 }

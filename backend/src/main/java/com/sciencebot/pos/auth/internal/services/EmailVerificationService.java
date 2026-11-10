@@ -3,7 +3,7 @@ package com.sciencebot.pos.auth.internal.services;
 import com.sciencebot.pos.auth.internal.entities.EmailVerificationToken;
 import com.sciencebot.pos.auth.internal.repositories.EmailVerificationTokenRepository;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.authentication.BadCredentialsException;
+import com.sciencebot.pos.auth.InvalidVerificationTokenException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -57,17 +57,19 @@ public class EmailVerificationService {
     @Transactional
     public Long consume(String rawToken) {
         if (rawToken == null || rawToken.isBlank()) {
-            throw new BadCredentialsException("Token de verificacion requerido");
+            throw new InvalidVerificationTokenException("El enlace de verificación no es válido. Revisa que lo hayas copiado completo.");
         }
 
         EmailVerificationToken token = repository.findByTokenHash(hash(rawToken))
-                .orElseThrow(() -> new BadCredentialsException("Token de verificacion invalido"));
+                .orElseThrow(() -> new InvalidVerificationTokenException(
+                        "El enlace de verificación no es válido o fue reemplazado por uno más reciente. Pide un enlace nuevo."));
 
         if (token.isUsed()) {
-            throw new BadCredentialsException("El token de verificacion ya fue utilizado");
+            throw new InvalidVerificationTokenException(
+                    "Este enlace de verificación ya fue utilizado. Si ya verificaste tu correo, inicia sesión.");
         }
         if (token.isExpired()) {
-            throw new BadCredentialsException("El token de verificacion expiro");
+            throw new InvalidVerificationTokenException("El enlace de verificación venció. Pide un enlace nuevo.");
         }
 
         token.setUsedAt(LocalDateTime.now());

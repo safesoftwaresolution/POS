@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { Plus, Search, Sparkles, Edit3, Trash2, Power, PowerOff } from 'lucide-react';
 import {
-  getServicesApi, createServiceApi, updateServiceApi, changeServiceStatusApi, deleteServiceApi,
+  getServicesApi, createServiceApi, updateServiceApi, changeServiceStatusApi, deleteServiceApi, getServiceCategoriesApi,
 } from '../services/servicesApi';
-import { getCategoriesApi } from '../services/categoriesApi';
+import { categoryOptionsFor } from '../utils/serviceCategories';
 import ServiceFormModal from '../components/services/ServiceFormModal';
 import { Badge, Button, Card, EmptyState, PageHeader } from '../components/ui';
 import useModal from '../hooks/useModal';
@@ -43,18 +43,20 @@ export default function ServicesBento() {
     [showInactive],
     { initial: [], autoRefresh: true },
   );
-  const { data: categories } = useLoad(() => asList(getCategoriesApi()), [], { initial: [] });
+  const { data: availableCategories } = useLoad(() => asList(getServiceCategoriesApi()), [], { initial: [] });
+  const [editing, setEditing] = useState(null);
+  const categories = categoryOptionsFor(availableCategories, editing);
 
-  const openCreate = () => { setForm(EMPTY_SERVICE); setErrorMsg(''); };
+  const openCreate = () => { setEditing(null); setForm(EMPTY_SERVICE); setErrorMsg(''); };
 
   const openEdit = (s) => {
-    const category = categories.find((c) => c.name === s.categoryName);
+    setEditing(s.categoryId ? { id: s.categoryId, name: s.categoryName } : null);
     setForm({
       id: s.id,
       code: s.code,
       name: s.name || '',
       description: s.description || '',
-      categoryId: category ? String(category.id) : '',
+      categoryId: s.categoryId ? String(s.categoryId) : '',
       price: s.price != null ? String(Math.round(s.price)) : '',
       taxRate: String(s.taxRate ?? 0),
       unspscCode: s.unspscCode || '',

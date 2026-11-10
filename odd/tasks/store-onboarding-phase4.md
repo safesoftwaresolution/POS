@@ -1,0 +1,27 @@
+# Store onboarding phase 4 (alta del local)
+Objective: remove the dead ends of register → verify email → create store → SUPER_ADMIN approval.
+Branch: feature/store-onboarding-phase4 (from main). Runner: `.\mvnw.cmd test` in backend; `npm test`, `npm run lint`, `npm run build` in frontend.
+
+## Specs
+- S1 Rejected store gets a way out: `StoreApprovalMailer.sendRejected(storeName, reason, recipients)` sent after commit from `rejectStore`; `POST /api/v1/stores/me/resubmit` (ADMINISTRATOR) REJECTED → PENDING_VERIFICATION clearing `rejectionReason`; `PendingStoreReviewBento` per-status copy (PENDING_VERIFICATION, REJECTED, SUSPENDED, INACTIVE, load error) and, for REJECTED, an edit form shared with `StoreOnboardingBento` (`PUT /stores/me`) + "Reenviar a revisión".
+- S2 Optional KYC upload while pending: `DocumentCard` + upload logic extracted from `DocumentsBento` into `components/`, shown on the pending screen as optional ("ayuda a aprobar más rápido").
+- S3 Backend enforces store status: any store role of a non-ACTIVE store gets 403 `{"error":"StoreNotActive"}` from `JwtAuthenticationFilter`, except onboarding paths, `GET/PUT /stores/me`, `/stores/me/documents`, `/stores/me/resubmit`, `/auth/**`. Status read through `StoreFacade` in `UserServiceImpl.loadUserByUsername` into `PosUserDetails`. Frontend: `RequireActiveStore` wraps all store roles; `http.js` reacts to `StoreNotActive`.
+- S4 Email verification: invalid/used/expired tokens → dedicated exception, 400 with a clear Spanish message; `VerifyEmailBento` offers resend on error and navigates correctly when the user already has a store; login detects unverified by `error` code `EmailNotVerified` (keep `data` on public auth endpoint errors); accents fixed in user-facing backend messages.
+- S5 Email misconfiguration: startup validator fails when `email.provider=smtp` and `email.from` or `spring.mail.host` is blank; email mode in `GET /backoffice/onboarding/stats`; SUPER_ADMIN endpoint to mark a pending user as verified.
+- S6 Less re-typing: `registerOwnStore` seeds settings via `SettingsFacade.seedSettings(storeId, ...)`; `GettingStarted` adds "Completa los datos de tu negocio" and "Activa la facturación electrónica (opcional)" (`/invoicing?tab=activation`).
+- S7 Route guards: `/settings` read-only for SUPERVISOR (no admin-only `getOwnStoreApi`); `/categories` store route removed; `/onboarding/store` requires a session, redirects if the user already has a store, offers logout, handles `refreshSession()` failure; `createStore` validated with `@Valid` (name ≤100, phone ≤20, email format) and inputs get `maxLength`.
+
+## Tasks
+- [x] T1 S1 inline — ca9f6ef
+- [x] T2 S2 inline — 24f3efd
+- [x] T3 S3 inline (Risk: item 2, security guard) — 89e027a
+- [x] T4 S4 inline — ef1932b
+- [x] T5 S5 inline — 4a9d521
+- [x] T6 S6 inline — b5cf789
+- [x] T7 S7 inline — c3ae6c7
+
+## Log
+L1 (session brief, 2026-11-05): "Implement "Fase 4: alta del local" in its own branch, one work-unit commit per item (tests with code), then report." Items 1-7 as quoted in Specs. Do not touch billing files (`billing/`, `POSBento.jsx`, `CheckoutModal.jsx`, `components/invoicing/`, `InvoicingBento.jsx`, `pages/backoffice/BillingBento.jsx`); V37 is taken by the billing session, use V38 if needed.
+L2 Verified per item: focused backend tests and frontend Vitest per commit; independent read-only verifier on T3 found no blockers (advisories: users↔stores dependency via ObjectProvider, one extra status query per request, prefix allow-lists rely on the default Spring Security firewall). Final checks: see L3.
+L3 Final checks (2026-11-05): backend `mvnw test` 926 tests, 0 failures; frontend `npm test` 97 passed, `npm run lint` 0 warnings, `npm run build` ok. Not exercised in a running app.
+L4 Native review (2026-11-06): the whole branch exceeded the reviewer context budget, so only the security commit 89e027a was reviewed (lenses risk + reliability, lineage review-083b68be3ef31bb4): approved and acknowledged. Advisories, non-blocking: no test asserts the wrong-method rejections on the other allow-listed paths; an exception in the store status query leaves the request unauthenticated (generic 401/403, fails closed) without a test.

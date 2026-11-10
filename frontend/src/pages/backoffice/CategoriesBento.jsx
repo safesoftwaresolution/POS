@@ -9,8 +9,13 @@ import {
 import useModal from '../../hooks/useModal';
 import useLoad from '../../hooks/useLoad';
 import asList from '../../utils/asList';
+import { DEFAULT_STORE_TEMPLATE } from '../../constants/storeTemplates';
+import { templatesOf } from '../../utils/templateSelection';
+import TemplateCheckboxes from '../../components/backoffice/TemplateCheckboxes';
+import TemplateChips from '../../components/backoffice/TemplateChips';
+import { DEFAULT_STORE_THEME, STORE_THEME_OPTIONS, storeThemeFor } from '../../constants/storeThemes';
 
-const EMPTY_FORM = { id: null, name: '', description: '' };
+const EMPTY_FORM = { id: null, name: '', description: '', templates: [DEFAULT_STORE_TEMPLATE], theme: DEFAULT_STORE_THEME };
 
 export default function CategoriesBento() {
   const { confirm, notify } = useModal();
@@ -26,7 +31,7 @@ export default function CategoriesBento() {
   };
 
   const openEdit = (cat) => {
-    setForm({ id: cat.id, name: cat.name, description: cat.description || '' });
+    setForm({ id: cat.id, name: cat.name, description: cat.description || '', templates: templatesOf(cat).length ? templatesOf(cat) : [DEFAULT_STORE_TEMPLATE], theme: cat.theme || DEFAULT_STORE_THEME });
     setError('');
     setShowForm(true);
   };
@@ -34,11 +39,15 @@ export default function CategoriesBento() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    if (form.templates.length === 0) {
+      setError('Elige al menos una plantilla.');
+      return;
+    }
     try {
       if (form.id) {
-        await updateBackofficeStoreCategoryApi(form.id, form.name, form.description);
+        await updateBackofficeStoreCategoryApi(form.id, form.name, form.description, form.templates, form.theme);
       } else {
-        await createBackofficeStoreCategoryApi(form.name, form.description);
+        await createBackofficeStoreCategoryApi(form.name, form.description, form.templates, form.theme);
       }
       setShowForm(false);
       setForm(EMPTY_FORM);
@@ -96,6 +105,14 @@ export default function CategoriesBento() {
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-extrabold">
                       Activa
+                    </span>
+                    <TemplateChips entity={cat} />
+                    <span
+                      className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border font-extrabold"
+                      style={{ color: storeThemeFor(cat.theme).accent, borderColor: `${storeThemeFor(cat.theme).accent}55`, backgroundColor: `${storeThemeFor(cat.theme).accent}1A` }}
+                    >
+                      {React.createElement(storeThemeFor(cat.theme).icon, { className: 'w-3 h-3' })}
+                      {storeThemeFor(cat.theme).label}
                     </span>
                   </div>
                   <h3 className="font-extrabold text-sm text-ink mt-2">{cat.name}</h3>
@@ -168,6 +185,28 @@ export default function CategoriesBento() {
                   placeholder="Locales de comida"
                   className="w-full p-2.5 bg-page border border-line rounded-2xl text-xs text-ink focus:outline-none focus:border-ink dark:focus:border-brand"
                 />
+              </div>
+              <div>
+                <TemplateCheckboxes
+                  legend="Plantillas del local:"
+                  value={form.templates}
+                  onChange={templates => setForm({ ...form, templates })}
+                />
+                <p className="text-[11px] text-ink-muted mt-1">Los locales de esta categoría usan estas plantillas automáticamente.</p>
+              </div>
+              <div>
+                <label htmlFor="category-theme" className="font-bold text-gray-700 dark:text-gray-300 block mb-1">Tema visual:</label>
+                <select
+                  id="category-theme"
+                  value={form.theme}
+                  onChange={e => setForm({ ...form, theme: e.target.value })}
+                  className="w-full p-2.5 bg-page border border-line rounded-2xl text-xs font-semibold text-ink focus:outline-none focus:border-ink dark:focus:border-brand"
+                >
+                  {STORE_THEME_OPTIONS.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+                <p className="text-[11px] text-ink-muted mt-1">Color de acento e icono con los que se ven los locales de esta categoría.</p>
               </div>
             </div>
 

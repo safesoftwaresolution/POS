@@ -1,6 +1,7 @@
 package com.sciencebot.pos.stores;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 public record StoreDto(
     Long id,
@@ -16,5 +17,9 @@ public record StoreDto(
     boolean emailVerified,
     String rejectionReason,
     LocalDateTime createdAt,
-    String planCode
+    String planCode,
+    String template,
+    String theme,
+    List<String> templates,
+    List<String> extraTemplates
 ) {}

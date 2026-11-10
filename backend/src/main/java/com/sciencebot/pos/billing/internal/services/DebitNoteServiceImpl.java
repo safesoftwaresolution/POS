@@ -194,11 +194,12 @@ public class DebitNoteServiceImpl implements DebitNoteService {
             return reservation.note();
         }
 
-        DebitNoteProvider provider = resolveProvider(reservation.context());
-
-        // Paso B: proveedor, sin transacción abierta.
+        // Paso B: proveedor, sin transacción abierta. El proveedor se resuelve dentro del try: si el del contexto
+        // original ya no existe, la nota queda en error y libera la reserva en vez de esperar a que venza el lease.
+        DebitNoteProvider provider = null;
         DebitNoteResult result;
         try {
+            provider = resolveProvider(reservation.context());
             if ("alegra".equalsIgnoreCase(provider.getProviderName())) {
                 if (reservation.context() == null) throw new IllegalStateException("La nota no tiene su contexto fiscal original; requiere revisión manual");
                 result = reservation.reconcileProviderDocumentId() != null
@@ -208,8 +209,9 @@ public class DebitNoteServiceImpl implements DebitNoteService {
                 result = provider.emitDebitNote(request, storeId);
             }
         } catch (Exception ex) {
-            log.error("Error al procesar emisión de nota débito con proveedor {}: {}", provider.getProviderName(), ex.getMessage(), ex);
-            result = DebitNoteResult.error("Error en proveedor " + provider.getProviderName() + ": " + ex.getMessage());
+            String providerName = provider != null ? provider.getProviderName() : providerNameOf(reservation.context());
+            log.error("Error al procesar emisión de nota débito con proveedor {}: {}", providerName, ex.getMessage(), ex);
+            result = DebitNoteResult.error("Error en proveedor " + providerName + ": " + ex.getMessage());
         }
 
         // Paso C: registrar el resultado.
@@ -251,15 +253,19 @@ public class DebitNoteServiceImpl implements DebitNoteService {
         Long storeId = requireStoreId();
         var reservation = emissionTransactions.reserveRetry(id, storeId);
         if (reservation.outcome() != ElectronicInvoice.ReserveOutcome.RESERVED) return reservation.note();
-        var provider = resolveProvider(reservation.context());
         DebitNoteResult result;
         try {
             if (reservation.context() == null) throw new IllegalStateException("La nota no tiene un contexto fiscal verificable");
+            var provider = resolveProvider(reservation.context());
             result = provider.retryDebitNote(reservation.note().referenceCode(), reservation.context());
         } catch (Exception ex) {
             result = DebitNoteResult.pending("No se pudo recuperar la nota: " + ex.getMessage());
         }
         return emissionTransactions.complete(reservation.note().referenceCode(), storeId, result);
+    }
+
+    private String providerNameOf(BillingDocumentContext context) {
+        return context != null ? context.providerName() : activeProviderName;
     }
 
     private DebitNoteProvider resolveProvider() {

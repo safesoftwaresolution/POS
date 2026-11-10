@@ -36,6 +36,7 @@ import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
 import java.io.IOException;
+import com.sciencebot.pos.billing.internal.adapters.dto.InvoiceItemData;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -214,6 +215,30 @@ class AlegraNoteClientTest {
         assertEquals("cude-xyz", result.cude());
         assertEquals("note-9", result.providerDocumentId());
         verify(allocator).allocate(5L, BillingEnvironment.SANDBOX, "92", "ND-FAC-1-C1");
+    }
+
+    @Test
+    void debitNoteWithCanonicalItems_SendsThoseItemsLikeTheCreditNoteDoes() {
+        saleCustomer();
+        when(allocator.allocate(eq(5L), eq(BillingEnvironment.SANDBOX), eq("92"), anyString())).thenReturn(allocation(false, "key-1"));
+        var context = new BillingDocumentContext(5L, BillingEnvironment.SANDBOX, "alegra", "company-1");
+        ElectronicInvoice source = ElectronicInvoice.initialize(7L, 5L);
+        source.assignDocumentContext(context);
+        source.markAsValidated("SETP993836500", "cufe-abc", "qr", null, LocalDateTime.of(2026, 11, 4, 10, 30));
+        source.trackProviderDocument("inv-1");
+        when(invoiceRepository.findByStoreIdAndLegalNumber(5L, "SETP993836500")).thenReturn(Optional.of(source));
+        InvoiceItemData canonical = new InvoiceItemData("REF-C", "Recargo canónico", new BigDecimal("1"), new BigDecimal("500"),
+                new BigDecimal("19"), new BigDecimal("500"), "94", "999", "01", BigDecimal.ZERO, false);
+        server.expect(once(), requestTo(URL + "/debit-notes"))
+                .andExpect(method(HttpMethod.POST))
+                .andExpect(jsonPath("$.items.length()").value(1))
+                .andExpect(jsonPath("$.items[0].description").value("Recargo canónico"))
+                .andRespond(withSuccess(response("debitNote", "SENT", "ACCEPTED"), MediaType.APPLICATION_JSON));
+
+        DebitNoteResult result = client.emitDebitNote(debit(), 5L, context, List.of(canonical));
+
+        assertTrue(result.isSuccess(), result.errorMessage());
+        server.verify();
     }
 
     @Test

@@ -108,11 +108,12 @@ public class CreditNoteServiceImpl implements CreditNoteService {
             return reservation.note();
         }
 
-        CreditNoteProvider provider = resolveProvider(reservation.context());
-
-        // Paso B: proveedor, sin transacción abierta.
+        // Paso B: proveedor, sin transacción abierta. El proveedor se resuelve dentro del try: si el del contexto
+        // original ya no existe, la nota queda en error y libera la reserva en vez de esperar a que venza el lease.
+        CreditNoteProvider provider = null;
         CreditNoteResult result;
         try {
+            provider = resolveProvider(reservation.context());
             if ("alegra".equalsIgnoreCase(provider.getProviderName())) {
                 if (reservation.context() == null) throw new IllegalStateException("La nota no tiene su contexto fiscal original; requiere revisión manual");
                 result = reservation.reconcileProviderDocumentId() != null
@@ -122,8 +123,9 @@ public class CreditNoteServiceImpl implements CreditNoteService {
                 result = provider.emitCreditNote(request, storeId);
             }
         } catch (Exception ex) {
-            log.error("Error al procesar emisión de nota crédito con proveedor {}: {}", provider.getProviderName(), ex.getMessage(), ex);
-            result = CreditNoteResult.error("Error en proveedor " + provider.getProviderName() + ": " + ex.getMessage());
+            String providerName = provider != null ? provider.getProviderName() : providerNameOf(reservation.context());
+            log.error("Error al procesar emisión de nota crédito con proveedor {}: {}", providerName, ex.getMessage(), ex);
+            result = CreditNoteResult.error("Error en proveedor " + providerName + ": " + ex.getMessage());
         }
 
         // Paso C: registrar el resultado.
@@ -313,15 +315,19 @@ public class CreditNoteServiceImpl implements CreditNoteService {
         Long storeId = requireStoreId();
         var reservation = emissionTransactions.reserveRetry(id, storeId);
         if (reservation.outcome() != ElectronicInvoice.ReserveOutcome.RESERVED) return reservation.note();
-        var provider = resolveProvider(reservation.context());
         CreditNoteResult result;
         try {
             if (reservation.context() == null) throw new IllegalStateException("La nota no tiene un contexto fiscal verificable");
+            var provider = resolveProvider(reservation.context());
             result = provider.retryCreditNote(reservation.note().referenceCode(), reservation.context());
         } catch (Exception ex) {
             result = CreditNoteResult.pending("No se pudo recuperar la nota: " + ex.getMessage());
         }
         return emissionTransactions.complete(reservation.note().referenceCode(), storeId, result);
+    }
+
+    private String providerNameOf(BillingDocumentContext context) {
+        return context != null ? context.providerName() : activeProviderName;
     }
 
     private CreditNoteProvider resolveProvider() {

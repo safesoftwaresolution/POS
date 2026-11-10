@@ -224,4 +224,55 @@ class CreditNoteServiceImplTest {
         assertTrue(service.getById(1L).isEmpty());
         assertThrows(IllegalStateException.class, () -> service.downloadCreditNotePDF(1L));
     }
+    @Test
+    void createAndValidateCreditNote_ProviderOfTheOriginalContextIsGone_EndsInErrorInsteadOfStayingReserved() {
+        CreateCreditNoteRequest request = createSampleRequest();
+        ElectronicInvoice legacy = ElectronicInvoice.initialize(10L, 1L);
+        legacy.assignDocumentContext(new BillingDocumentContext(1L, BillingEnvironment.SANDBOX, "factus", null));
+        legacy.markAsValidated("SETP990002519", "cufe", "qr", null, LocalDateTime.now());
+        when(invoiceRepository.findByStoreIdAndLegalNumber(1L, "SETP990002519")).thenReturn(Optional.of(legacy));
+        givenTheNoteIsStoredOnceCreated();
+        when(repository.save(any(ElectronicCreditNote.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        CreditNoteDTO result = service.createAndValidateCreditNote(request);
+
+        assertEquals("ERROR", result.status());
+        assertTrue(result.errorMessage().contains("factus"), result.errorMessage());
+        verify(factusProvider, never()).emitCreditNote(any(), any());
+    }
+
+    private ElectronicCreditNote storedFailedNote(String providerName, String companyId) {
+        ElectronicCreditNote note = ElectronicCreditNote.initialize(1L, null, "NOTA-2026-0015", "SETP990002519", "2", "20");
+        note.setId(5L);
+        note.assignDocumentContext(new BillingDocumentContext(1L, BillingEnvironment.SANDBOX, providerName, companyId));
+        note.markAsError("timeout");
+        when(repository.findById(5L)).thenReturn(Optional.of(note));
+        when(repository.findByReferenceCodeForUpdate("NOTA-2026-0015")).thenReturn(Optional.of(note));
+        when(repository.save(any(ElectronicCreditNote.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        return note;
+    }
+
+    @Test
+    void retry_ReplaysTheStoredNoteWithItsOriginalContextAndRecordsTheResult() {
+        storedFailedNote("alegra", "original-company");
+        BillingDocumentContext original = new BillingDocumentContext(1L, BillingEnvironment.SANDBOX, "alegra", "original-company");
+        when(factusProvider.retryCreditNote("NOTA-2026-0015", original))
+                .thenReturn(CreditNoteResult.success("NC990000009", "cude-r", "qr", "pdf"));
+
+        CreditNoteDTO result = service.retry(5L);
+
+        assertEquals("VALIDATED", result.status());
+        assertEquals("NC990000009", result.creditNoteNumber());
+        verify(factusProvider).retryCreditNote("NOTA-2026-0015", original);
+    }
+
+    @Test
+    void retry_ProviderOfTheOriginalContextIsGone_RecordsItInsteadOfThrowing() {
+        storedFailedNote("factus", null);
+
+        CreditNoteDTO result = assertDoesNotThrow(() -> service.retry(5L));
+
+        assertNotEquals("VALIDATED", result.status());
+        assertTrue(result.errorMessage().contains("factus"), result.errorMessage());
+    }
 }

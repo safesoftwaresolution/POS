@@ -101,11 +101,7 @@ public class AlegraNoteClient {
                                            BillingDocumentContext context, List<InvoiceItemData> canonicalItems) {
         Draft draft;
         try {
-            draft = draftOf(request);
-            if (canonicalItems != null) {
-                draft = new Draft(draft.referenceCode(), draft.billNumber(), draft.conceptCode(), draft.observation(),
-                        draft.paymentForm(), draft.paymentMethod(), draft.dueDate(), draft.customer(), canonicalItems);
-            }
+            draft = withCanonicalItems(draftOf(request), canonicalItems);
         } catch (RuntimeException invalid) {
             return CreditNoteResult.error("La nota crédito no se puede enviar: " + invalid.getMessage());
         }
@@ -122,13 +118,20 @@ public class AlegraNoteClient {
                                          BillingDocumentContext context, List<InvoiceItemData> canonicalItems) {
         Draft draft;
         try {
-            draft = draftOf(request);
+            draft = withCanonicalItems(draftOf(request), canonicalItems);
         } catch (RuntimeException invalid) {
             return DebitNoteResult.error("La nota débito no se puede enviar: " + invalid.getMessage());
         }
         InvoiceResult result = emit("92", "/debit-notes", draft, storeId, context);
         return withId(new DebitNoteResult(result.isSuccess(), result.legalInvoiceNumber(), result.cufe(), result.qrCode(),
                 result.pdfUrl(), result.status(), result.validatedAt(), result.errorMessage()), result.providerDocumentId());
+    }
+
+    /** Los ítems canónicos (los de la venta, ya calculados) reemplazan los de la solicitud cuando vienen. */
+    private static Draft withCanonicalItems(Draft draft, List<InvoiceItemData> canonicalItems) {
+        if (canonicalItems == null) return draft;
+        return new Draft(draft.referenceCode(), draft.billNumber(), draft.conceptCode(), draft.observation(),
+                draft.paymentForm(), draft.paymentMethod(), draft.dueDate(), draft.customer(), canonicalItems);
     }
 
     private static CreditNoteResult withId(CreditNoteResult result, String providerDocumentId) {

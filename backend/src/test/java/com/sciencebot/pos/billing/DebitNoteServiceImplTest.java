@@ -357,4 +357,53 @@ class DebitNoteServiceImplTest {
 
     // --- Eliminación de borradores ---
 
+
+    @Test
+    void createAndValidateDebitNote_ProviderOfTheOriginalContextIsGone_EndsInErrorInsteadOfStayingReserved() {
+        ElectronicInvoice legacy = ElectronicInvoice.initialize(10L, 1L);
+        legacy.assignDocumentContext(new BillingDocumentContext(1L, BillingEnvironment.SANDBOX, "factus", null));
+        legacy.markAsValidated("SETP990002519", "cufe", "qr", null, LocalDateTime.now());
+        when(invoiceRepository.findByStoreIdAndLegalNumber(1L, "SETP990002519")).thenReturn(Optional.of(legacy));
+        stubNewNotePersistence();
+
+        DebitNoteDTO result = service.createAndValidateDebitNote(createSampleRequest());
+
+        assertEquals("ERROR", result.status());
+        assertTrue(result.errorMessage().contains("factus"), result.errorMessage());
+        verify(factusProvider, never()).emitDebitNote(any(), any());
+    }
+
+    private void storedFailedNote(String providerName, String companyId) {
+        ElectronicDebitNote note = ElectronicDebitNote.initialize(1L, null, "ND-2026-0001", "SETP990002519", "1", "30");
+        note.setId(7L);
+        note.assignDocumentContext(new BillingDocumentContext(1L, BillingEnvironment.SANDBOX, providerName, companyId));
+        note.markAsError("timeout");
+        when(repository.findById(7L)).thenReturn(Optional.of(note));
+        when(repository.findByReferenceCodeForUpdate("ND-2026-0001")).thenReturn(Optional.of(note));
+        when(repository.save(any(ElectronicDebitNote.class))).thenAnswer(i -> i.getArgument(0));
+    }
+
+    @Test
+    void retry_ReplaysTheStoredNoteWithItsOriginalContextAndRecordsTheResult() {
+        storedFailedNote("alegra", "original-company");
+        BillingDocumentContext original = new BillingDocumentContext(1L, BillingEnvironment.SANDBOX, "alegra", "original-company");
+        when(factusProvider.retryDebitNote("ND-2026-0001", original))
+                .thenReturn(DebitNoteResult.success("ND990000009", "cude-r", "qr", "pdf"));
+
+        DebitNoteDTO result = service.retry(7L);
+
+        assertEquals("VALIDATED", result.status());
+        assertEquals("ND990000009", result.debitNoteNumber());
+        verify(factusProvider).retryDebitNote("ND-2026-0001", original);
+    }
+
+    @Test
+    void retry_ProviderOfTheOriginalContextIsGone_RecordsItInsteadOfThrowing() {
+        storedFailedNote("factus", null);
+
+        DebitNoteDTO result = assertDoesNotThrow(() -> service.retry(7L));
+
+        assertNotEquals("VALIDATED", result.status());
+        assertTrue(result.errorMessage().contains("factus"), result.errorMessage());
+    }
 }

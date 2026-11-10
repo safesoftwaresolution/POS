@@ -19,6 +19,20 @@ Fuentes: [entornos](https://e-provider-docs.alegra.com/docs/entornos), [creació
 
 La rama `feature/billing-self-service`, con base `f5c8b55`, contiene una historia Flyway V33–V37 distinta de la referencia local conocida de `origin/main`. Las migraciones posteriores de endurecimiento solo amplían la historia de esta rama; **no reconcilian las dos historias**.
 
+Comparación verificada el 2026-11-10 contra `main`, `develop`, `origin/main` y `origin/develop` (las cuatro tienen la misma historia):
+
+| Versión | `main` / `develop` | `feature/billing-self-service` |
+|---|---|---|
+| V33 | `Store_Category_Template` | `Alegra_Local_Numbering` |
+| V34 | `Appointments` | `Invoice_Emission_Lease` |
+| V35 | `Store_Category_Theme` | `Note_Emission_Lease` |
+| V36 | `Store_Multiple_Templates` | `Retire_Factus_Leftovers` |
+| V37 | `Service_Categories` | `Billing_Self_Service` |
+| V38 | — | `Billing_Document_Context_And_Receipts` |
+| V39 | — | `Billing_Company_Registration_Journal` |
+
+Las cinco versiones compartidas tienen contenido distinto. Si producción corre `main`, ya aplicó las V33–V37 de `main`, y desplegar esta rama tal como está haría fallar la validación de Flyway al arrancar. La salida probable es renumerar las siete migraciones de facturación a V38–V44 sobre la historia de `main`, pero **solo después** de confirmar con la consulta siguiente que ninguna base persistente aplicó las versiones de esta rama.
+
 Antes de desplegar, una persona con acceso autorizado debe comparar la rama elegida con el historial real de cada base:
 
 ```sql
@@ -34,6 +48,8 @@ No editar migraciones aplicadas, renombrarlas como si nunca se hubieran ejecutad
 - Cada documento nuevo conserva su entorno, proveedor y empresa. Cambiar el entorno del local no debe redirigir las operaciones de documentos anteriores.
 - Conservar el token sandbox mientras existan documentos QA que deban consultarse; nunca usar el token de producción como respaldo.
 - Un documento histórico sin contexto fiscal verificable requiere revisión. No completar su empresa o entorno desde la configuración actual por suposición.
+  - Consecuencia conocida (revisión nativa 2026-11-10): las facturas y notas de Alegra emitidas antes de V38 no tienen `provider_name`, así que no se pueden reenviar por correo ni descargar su PDF o XML desde la app. Se acepta porque producción todavía factura con Factus (no hay documentos de Alegra anteriores a V38 fuera de los entornos de prueba). Si alguna base persistente sí los tiene, su contexto se completa con un script revisado a mano, documento por documento, nunca con un relleno masivo.
+- Si el proveedor guardado en el contexto de una nota ya no está registrado, la emisión y el reintento la dejan en error y liberan la reserva; no queda bloqueada hasta que venza el lease.
 - Una respuesta incierta o aceptada no autoriza una nueva emisión con otra llave. Primero se recupera la solicitud o el resultado persistido y se concilia.
 - La creación incierta de una empresa no se repite a ciegas. Una recepción ya guardada se reutiliza; si no se puede demostrar la pertenencia de una empresa encontrada, debe revisarse mediante el back office autorizado.
 - Una nota fiscal no reemplaza el registro operativo de una devolución, un reembolso o un ajuste de inventario.

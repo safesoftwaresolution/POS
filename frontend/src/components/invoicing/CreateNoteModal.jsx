@@ -3,6 +3,7 @@ import { Badge, Button, Input, Modal, Select } from '../ui';
 import { getSaleInvoiceApi } from '../../services/billingApi';
 import { createCreditNoteApi, createDebitNoteApi } from '../../services/billingNotesApi';
 import { INVOICE_STATUS_LABELS } from './constants';
+import { buildDebitNoteRequest, isDefiniteRejection } from './notePayload';
 
 export default function CreateNoteModal({ type, onClose, onCreated }) {
   const credit = type === 'credit';
@@ -47,18 +48,17 @@ export default function CreateNoteModal({ type, onClose, onCreated }) {
     setLocked(true);
     setError('');
     try {
-      const note = credit ? await createCreditNoteApi(invoice.saleId, observation.trim())
-        : await createDebitNoteApi(invoice.saleId, {
-          reference_code: reference, correction_concept_code: concept, customization_id: '30',
-          bill_number: invoice.legalNumber, observation: observation.trim(), customer: null,
-          payment_details: [{ payment_form: '1', payment_method_code: '10' }],
-          items: [{ code_reference: 'ADJUSTMENT', name: description.trim(), quantity, price,
-            discount_rate: '0', unit_measure_code: '94', standard_code: '999', taxes: [{ code: '01', rate: taxRate }] }],
-        });
+      const note = credit
+        ? await createCreditNoteApi(invoice.saleId, observation.trim())
+        : await createDebitNoteApi(invoice.saleId, buildDebitNoteRequest({
+          reference, concept, invoice, observation, description, quantity, price, taxRate,
+        }));
       setResult(note);
       onCreated?.(note);
     } catch (err) {
       setError(err.message);
+      // Nothing was created: the values can be corrected and sent again with the same reference.
+      if (isDefiniteRejection(err)) setLocked(false);
     } finally {
       inFlight.current = false;
       setBusy(false);

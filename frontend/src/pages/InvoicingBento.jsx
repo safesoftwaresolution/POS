@@ -21,9 +21,14 @@ export default function InvoicingBento() {
   const role = user?.role;
   const canSeeActivation = role === 'ADMINISTRATOR' || role === 'SUPERVISOR';
   // `/invoicing?tab=activation` (enlaces del POS y de las notificaciones) abre directo la habilitación.
+  // Notas: todo rol del local las ve (el backend filtra lo que cada uno puede hacer); habilitación: solo admin y supervisor.
   const [searchParams] = useSearchParams();
-  const [tab, setTab] = useState(searchParams.get('tab') === 'notes' ? 'notes'
-    : searchParams.get('tab') === 'activation' && canSeeActivation ? 'activation' : 'invoices');
+  const requestedTab = searchParams.get('tab');
+  const initialTab = requestedTab === 'notes' || (requestedTab === 'activation' && canSeeActivation)
+    ? requestedTab
+    : 'invoices';
+  const [tab, setTab] = useState(initialTab);
+  const showActivation = tab === 'activation' && canSeeActivation;
   const [refreshKey, setRefreshKey] = useState(0);
 
   // Cuántas facturas hay en cada estado; si un estado no se puede consultar queda en null (se muestra "—").
@@ -131,9 +136,11 @@ export default function InvoicingBento() {
           {canSeeActivation && <TabButton active={tab === 'activation'} onClick={() => setTab('activation')} icon={Building2} label="Habilitación y rangos" count={ranges.length || null} />}
       </div>
 
-      {tab === 'notes' ? <NotesTab role={role} refreshKey={refreshKey} onChanged={() => reloadTotals()} /> : tab === 'invoices' || !canSeeActivation ? (
+      {tab === 'notes' && <NotesTab role={role} refreshKey={refreshKey} onChanged={() => reloadTotals()} />}
+      {tab !== 'notes' && !showActivation && (
         <InvoicesTab role={role} refreshKey={refreshKey} onChanged={() => reloadTotals()} />
-      ) : (
+      )}
+      {showActivation && (
         <ActivationTab
           role={role}
           activation={activation}

@@ -9,6 +9,7 @@ import { deliverBlob } from '../../utils/downloadBlob';
 import { formatDateTime } from '../../utils/format';
 import { INVOICE_STATUSES, INVOICE_STATUS_LABELS } from './constants';
 import CreateNoteModal from './CreateNoteModal';
+import { noteNumber } from './notePayload';
 
 export default function NotesTab({ role, refreshKey, onChanged }) {
   const canManage = role === 'ADMINISTRATOR' || role === 'SUPERVISOR';
@@ -25,7 +26,7 @@ export default function NotesTab({ role, refreshKey, onChanged }) {
   const download = async (note, format) => {
     try {
       const blob = await downloadNoteApi(type, note.id, format);
-      const number = note.creditNoteNumber || note.debitNoteNumber || note.id;
+      const number = noteNumber(note).replace('#', '');
       deliverBlob(blob, `nota-${number}.${format}`, { openInTab: format === 'pdf' });
     } catch (err) {
       notify(`No se pudo descargar la nota: ${err.message}`);
@@ -66,7 +67,7 @@ export default function NotesTab({ role, refreshKey, onChanged }) {
       {loading ? <p className="py-8 text-sm text-ink-muted">Consultando notas...</p> : data.content?.length ? (
         <div className="space-y-3">
           {data.content.map(note => {
-            const number = note.creditNoteNumber || note.debitNoteNumber || note.referenceCode || `#${note.id}`;
+            const number = noteNumber(note);
             return (
               <div key={note.id} className="bento-card p-4 space-y-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">

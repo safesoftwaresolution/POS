@@ -23,6 +23,8 @@ export default function BillingSetupWizard({ canEdit, refreshKey, onChanged }) {
   });
   const [selectedKey, setSelectedKey] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
+  // Lo que trajo la última importación de rangos: sobrevive al salto de paso (al activarse, el asistente pasa a "Listo").
+  const [importResult, setImportResult] = useState(null);
 
   if (loading && !setup) {
     return <Card><p className="text-xs font-bold text-ink-muted text-center py-6">Consultando tu facturación electrónica...</p></Card>;
@@ -97,9 +99,16 @@ export default function BillingSetupWizard({ canEdit, refreshKey, onChanged }) {
             <DianEnablementStep step={step} canEdit={canEdit} onSaved={applySetup} onRefresh={refresh} refreshing={refreshing} />
           )}
           {step.key === 'NUMBERING' && (
-            <NumberingStep step={step} canEdit={canEdit} onSaved={applySetup} onRangesChanged={onRangesChanged} />
+            <NumberingStep
+              step={step}
+              canEdit={canEdit}
+              onSaved={applySetup}
+              onRangesChanged={onRangesChanged}
+              importResult={importResult}
+              onImported={setImportResult}
+            />
           )}
-          {step.key === 'READY' && <ReadyStep setup={setup} step={step} />}
+          {step.key === 'READY' && <ReadyStep setup={setup} step={step} importResult={importResult} />}
         </section>
       )}
 

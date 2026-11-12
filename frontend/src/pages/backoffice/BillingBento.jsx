@@ -110,6 +110,15 @@ export default function BillingBento() {
     }
   };
 
+  // Tras cualquier cambio del local se vuelven a pedir sus pasos: informativo, si falla se conserva lo que ya se veía.
+  const refreshSetup = async (storeId) => {
+    try {
+      setSetup(await getStoreBillingSetupApi(storeId));
+    } catch {
+      // el detalle sigue siendo válido sin el avance del asistente
+    }
+  };
+
   const closeDetail = () => {
     setDetail(null);
   };
@@ -124,6 +133,7 @@ export default function BillingBento() {
       setDetail(updated);
       setCompanyIdForm('');
       reloadRows();
+      refreshSetup(detail.storeId);
     } catch (err) {
       notify('Error guardando el company.id: ' + err.message);
     } finally {
@@ -162,6 +172,7 @@ export default function BillingBento() {
       const updated = await switchBackofficeBillingEnvironmentApi(detail.storeId, environment);
       setDetail(updated);
       reloadRows();
+      refreshSetup(detail.storeId);
     } catch (err) {
       notify('Error cambiando el entorno activo: ' + err.message);
     }
@@ -188,6 +199,7 @@ export default function BillingBento() {
       setReasonTarget(null);
       setReasonText('');
       reloadRows();
+      refreshSetup(detail.storeId);
     } catch (err) {
       notify('Error cambiando la etapa: ' + err.message);
     } finally {

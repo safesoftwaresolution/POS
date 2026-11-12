@@ -54,26 +54,10 @@ Los valores de §2.2 y §2.3 viven como variables CSS en `frontend/src/index.css
 No escribir hex ni pares `bg-white dark:bg-[#17171B]` en componentes nuevos. Las pantallas de acceso (`/login`, `/register`, `/verify-email`, onboarding) son siempre oscuras por diseño y conservan sus colores fijos. Componentes base reutilizables: `frontend/src/components/ui/` (`Button`, `Badge`, `Card`, `Modal`, `Input`/`Select`, `EmptyState`, `PageHeader`).
 
 ### 2.1a Animación de bienvenida (login)
-Tras iniciar sesión, `WelcomeSplash` (`components/brand/`) cubre la pantalla sobre `#0E0E12` unos 2,8 s: el cuadro del isotipo aparece con rebote, los cuatro bloques bento llegan volando desde las esquinas y se acomodan, el punto de marca salta con una onda, el logotipo "POS Bento" se revela de izquierda a derecha y sube el saludo "¡Hola, {primer nombre}!"; una barra naranja inferior marca el avance. Clic, Enter o Escape la saltan. Con `prefers-reduced-motion` no anima y dura 0,9 s. Los keyframes (`ws-*`) viven en `index.css`; usa el naranja de marca porque el tema del local aún no se ha cargado.
+Tras iniciar sesión, `WelcomeSplash` (`components/brand/`) cubre la pantalla sobre `#0E0E12` unos 2,8 s: el cuadro del isotipo aparece con rebote, los cuatro bloques bento llegan volando desde las esquinas y se acomodan, el punto de marca salta con una onda, el logotipo "POS Bento" se revela de izquierda a derecha y sube el saludo "¡Hola, {primer nombre}!"; una barra naranja inferior marca el avance. Clic, Enter o Escape la saltan. Con `prefers-reduced-motion` no anima y dura 0,9 s. Los keyframes (`ws-*`) viven en `index.css`; usa el naranja de marca.
 
-### 2.1b Temas por categoría de local
-**Logo por tipo de local.** El header del sidebar dibuja `StoreBrandLogo` (`components/brand/`): el mismo isotipo de PosBento (cuadro `#0A0A0A` de radio 32, punto de marca arriba a la derecha) pero con el pictograma del tipo de negocio en lugar del bento 2x2 (carrito, cruz y pastilla, gorro de panadero, lápiz, martillo, cloche, copa, huella, tijeras, bolsa), dibujado con el acento del tema y el gris `#DADADA`. "POS" toma el acento del tema, "Bento" el color del texto, y bajo el logo va la etiqueta del tipo de local; el fondo del header lleva un degradado del acento al 10 %. El menú colapsado muestra solo el isotipo. Sin tema reconocido cae al bento original. Las pantallas de acceso y las públicas conservan el logo estándar.
-
-El acento de marca puede cambiar según la categoría del local (el backend deriva el tema de la categoría; ver `RN-STORE-007`). Solo se sustituyen `--color-primary` y `--color-primary-hover`; neutros, formas, tipografía y modo claro/oscuro no cambian. Sin categoría, "Otros" y el tema `DEFAULT` conservan el naranja `#FF5520`. Los valores viven en `frontend/src/constants/storeThemes.js` y cada acento debe contrastar al menos como el naranja (texto blanco >= 3,2:1) y llegar a 4,5:1 sobre la tarjeta oscura; `storeThemes.test.js` lo comprueba.
-
-| Tema | Acento | Hover | Categorías |
-|------|--------|-------|-----------|
-| `DEFAULT` | `#FF5520` | `#E64712` | Otros, sin categoría |
-| `GROCERY` | `#23964D` | `#1F8444` | Minimercado, Supermercado |
-| `PHARMACY` | `#1A9386` | `#178176` | Droguería / Farmacia |
-| `BAKERY` | `#C66B1C` | `#AE5E19` | Panadería |
-| `STATIONERY` | `#3A80EF` | `#3371D2` | Papelería |
-| `HARDWARE` | `#A47D09` | `#906E08` | Ferretería |
-| `FOOD` | `#E84B45` | `#CC423D` | Restaurante / Cafetería |
-| `LIQUOR` | `#9E69DC` | `#8B5CC2` | Licorera |
-| `PETS` | `#E14694` | `#C63E82` | Tienda de mascotas |
-| `BEAUTY` | `#C551D6` | `#AD47BC` | Barbería, Peluquería, Salón de uñas y pies |
-| `FASHION` | `#EA436D` | `#CE3B60` | Boutique |
+### 2.1b Marca única
+Todos los locales ven la misma marca de PosBento: el header del sidebar dibuja `StoreBrandLogo` (`components/brand/`) con el isotipo bento 2x2 (cuadro `#0A0A0A` de radio 32, punto de marca arriba a la derecha), "POS" en el naranja de marca `#FF5520` y "Bento" con el color del texto. El menú colapsado muestra solo el isotipo. No hay temas por categoría ni por local: `--color-primary` es siempre el naranja de marca. Las plantillas del local solo habilitan módulos (por ejemplo Citas), no cambian la apariencia.
 
 ### 2.4 Estados y Semántica Funcional
 - **Éxito (Validado / En Stock / Activo)**:

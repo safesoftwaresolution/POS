@@ -1,16 +1,14 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { StoreTemplateContext } from './contexts';
 import useLoad from '../hooks/useLoad';
 import { getOwnStoreTemplateApi } from '../services/storesApi';
 import { DEFAULT_STORE_TEMPLATE } from '../constants/storeTemplates';
-import { DEFAULT_STORE_THEME, storeThemeFor } from '../constants/storeThemes';
 import { templateFeaturesFor } from '../utils/templateFeatures';
 
 /**
- * Plantillas y tema del local de la sesión. Los deriva el backend (las plantillas de la categoría del local más sus
- * extras, y el tema de la categoría); aquí solo se leen una vez para todos los roles. Si la consulta falla se usan los
- * predeterminados (RETAIL y el naranja de marca), así el POS sigue viéndose y funcionando como siempre. El tema se
- * aplica cambiando el acento (`--color-primary`); con el predeterminado no se toca nada.
+ * Plantillas del local de la sesión (solo habilitan módulos como Citas; la apariencia es siempre la de PosBento). Las
+ * deriva el backend; aquí se leen una vez para todos los roles. Si la consulta falla se usa RETAIL, así el POS sigue
+ * funcionando como siempre.
  */
 export function StoreTemplateProvider({ children }) {
   const { data, loading } = useLoad(() => getOwnStoreTemplateApi().catch(() => null), [], { initial: null });
@@ -19,25 +17,10 @@ export function StoreTemplateProvider({ children }) {
     () => (data?.templates?.length ? data.templates : [data?.template ?? DEFAULT_STORE_TEMPLATE]),
     [data],
   );
-  const theme = data?.theme ?? DEFAULT_STORE_THEME;
-
-  useEffect(() => {
-    if (theme === DEFAULT_STORE_THEME) return undefined;
-    const { accent, hover } = storeThemeFor(theme);
-    const root = document.documentElement;
-    root.style.setProperty('--color-primary', accent);
-    root.style.setProperty('--color-primary-hover', hover);
-    root.dataset.storeTheme = theme;
-    return () => {
-      root.style.removeProperty('--color-primary');
-      root.style.removeProperty('--color-primary-hover');
-      delete root.dataset.storeTheme;
-    };
-  }, [theme]);
 
   const value = useMemo(() => {
     const features = templateFeaturesFor(templates);
-    return { template: features.template, templates: features.templates, theme, loading, features };
-  }, [templates, theme, loading]);
+    return { template: features.template, templates: features.templates, loading, features };
+  }, [templates, loading]);
   return <StoreTemplateContext.Provider value={value}>{children}</StoreTemplateContext.Provider>;
 }

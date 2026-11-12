@@ -26,7 +26,6 @@ import {
 } from 'lucide-react';
 import useAuth from '../../hooks/useAuth';
 import useStoreTemplate from '../../hooks/useStoreTemplate';
-import { DEFAULT_STORE_THEME, storeThemeFor } from '../../constants/storeThemes';
 import useTheme from '../../hooks/useTheme';
 import { getProductsApi } from '../../services/productsApi';
 import useLoad from '../../hooks/useLoad';
@@ -39,8 +38,7 @@ import useAvatarUpload from '../../hooks/useAvatarUpload';
 
 export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }) {
   const { logout, user } = useAuth();
-  const { features, theme } = useStoreTemplate();
-  const storeTheme = storeThemeFor(theme);
+  const { features } = useStoreTemplate();
   const { darkMode, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [profileOpen, setProfileOpen] = useState(false);
@@ -131,20 +129,15 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
           className={`shrink-0 flex items-center gap-3 w-full pb-4 border-b border-line ${
             isCollapsed ? 'px-3 justify-center' : 'px-5 justify-between'
           }`}
-          style={theme !== DEFAULT_STORE_THEME ? { backgroundImage: 'linear-gradient(to bottom, color-mix(in srgb, var(--color-primary) 10%, transparent), transparent)' } : undefined}
         >
           <div className="flex items-center gap-3 min-w-0">
             {(!isCollapsed || isOpen) ? (
               <div className="min-w-0 space-y-1">
-                <StoreBrandLogo theme={theme} className="h-10" />
-                {theme !== DEFAULT_STORE_THEME ? (
-                  <p className="text-[11px] font-extrabold tracking-wide truncate text-brand">{storeTheme.label}</p>
-                ) : (
-                  <p className="text-[10px] text-gray-400 font-semibold tracking-wide truncate">Tu negocio, en equilibrio</p>
-                )}
+                <StoreBrandLogo className="h-10" />
+                <p className="text-[10px] text-gray-400 font-semibold tracking-wide truncate">Tu negocio, en equilibrio</p>
               </div>
             ) : (
-              <StoreBrandLogo theme={theme} compact className="h-10" />
+              <StoreBrandLogo compact className="h-10" />
             )}
           </div>
         </div>

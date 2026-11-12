@@ -53,6 +53,8 @@ class StoreBillingConfigServiceImplTest {
     void setUp() {
         repository = mock(StoreBillingConfigRepository.class);
         when(repository.findById(any())).thenAnswer(inv -> Optional.ofNullable(db.get(inv.<Long>getArgument(0))));
+        // Las transiciones leen la fila con lock (probado con H2 real en StoreBillingActivationConcurrencyTest).
+        when(repository.findByIdForUpdate(any())).thenAnswer(inv -> Optional.ofNullable(db.get(inv.<Long>getArgument(0))));
         when(repository.save(any())).thenAnswer(inv -> {
             StoreBillingConfig saved = inv.getArgument(0);
             db.put(saved.getStoreId(), saved);
@@ -265,6 +267,13 @@ class StoreBillingConfigServiceImplTest {
     }
 
     // --- transition SÍ notifica al local (lo origina el super admin), salvo IN_SETUP ---
+
+    @Test
+    void everyTransitionReadsTheStoreConfigWithTheWriteLock() {
+        service.transition(STORE, BillingActivationStatus.IN_SETUP, null, "sa");
+
+        verify(repository).findByIdForUpdate(STORE);
+    }
 
     @Test
     void movingToInSetupDoesNotNotifyTheStore() {

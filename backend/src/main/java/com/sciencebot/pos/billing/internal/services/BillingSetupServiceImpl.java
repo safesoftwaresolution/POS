@@ -416,7 +416,15 @@ public class BillingSetupServiceImpl implements BillingSetupService {
                 configService.transition(storeId, BillingActivationStatus.ACTIVE, null, SYSTEM_ACTOR);
                 status = BillingActivationStatus.ACTIVE;
             } catch (IllegalStateException | IllegalArgumentException ex) {
-                problems.putIfAbsent(Key.READY, ex.getMessage());
+                // Otra solicitud simultánea pudo activar el local primero (la transición toma el lock de la fila):
+                // si ya está ACTIVE, el objetivo se cumplió y no es un error del dueño.
+                boolean activatedMeanwhile = configRepository.findById(storeId)
+                        .map(config -> config.getStatus() == BillingActivationStatus.ACTIVE).orElse(false);
+                if (activatedMeanwhile) {
+                    status = BillingActivationStatus.ACTIVE;
+                } else {
+                    problems.putIfAbsent(Key.READY, ex.getMessage());
+                }
             }
         }
         if (status == BillingActivationStatus.SUSPENDED) {

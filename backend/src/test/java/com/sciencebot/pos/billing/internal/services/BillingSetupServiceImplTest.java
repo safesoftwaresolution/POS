@@ -313,6 +313,25 @@ class BillingSetupServiceImplTest {
     }
 
     @Test
+    void whenAnotherRequestActivatedTheStoreFirstTheWizardShowsItActiveWithoutAnError() {
+        storeWithCompany(BillingActivationStatus.IN_SETUP);
+        dianSays("AUTHORIZED");
+        when(provider.hasUsableInvoiceRange(STORE, PROD)).thenReturn(true);
+        // La otra solicitud ganó el lock: cuando esta llega, el local ya está ACTIVE y la transición se rechaza.
+        doAnswer(inv -> {
+            configs.get(STORE).setStatus(BillingActivationStatus.ACTIVE);
+            throw new IllegalStateException("No se puede pasar la facturación de ACTIVE a ACTIVE");
+        }).when(configService).transition(eq(STORE), eq(BillingActivationStatus.ACTIVE), any(), anyString());
+
+        BillingSetupDto dto = service.getSetup(STORE);
+
+        assertEquals(BillingActivationStatus.ACTIVE, dto.status());
+        assertEquals(State.DONE, step(dto, Key.READY).state());
+        assertTrue(dto.steps().stream().noneMatch(step -> step.state() == State.ERROR),
+                "perder la carrera no es un error del dueño");
+    }
+
+    @Test
     void anActivationRefusalIsShownOnTheReadyStep() {
         storeWithCompany(BillingActivationStatus.IN_SETUP);
         dianSays("AUTHORIZED");

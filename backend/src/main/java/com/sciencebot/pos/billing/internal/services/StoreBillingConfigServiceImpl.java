@@ -149,7 +149,8 @@ public class StoreBillingConfigServiceImpl implements StoreBillingConfigService 
     private BillingActivationDto applyTransition(Long storeId, BillingActivationStatus target, String reason,
                                                  String actor, boolean notify, DianEnablementStatus enablement) {
         Objects.requireNonNull(target, "El estado destino es obligatorio");
-        StoreBillingConfig config = getOrCreate(storeId);
+        // Con lock: si otra solicitud está cambiando la etapa del mismo local, esta espera y ve el resultado.
+        StoreBillingConfig config = repository.findByIdForUpdate(storeId).orElseGet(() -> getOrCreate(storeId));
         BillingActivationStatus current = config.getStatus();
 
         if (!current.canTransitionTo(target)) {

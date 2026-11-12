@@ -572,7 +572,7 @@ Datos fiscales del local (los de su RUT) con los que se crea y actualiza su empr
 
 ## Pendiente / no verificado
 
-- **Despliegue**: las migraciones de facturación van de V38 a V44, después de las V33–V37 que `main` usa para otros módulos. Esta rama se despliega solo después de unirla con `main` (sin sus V33–V37, Flyway rechaza arrancar sobre una base que ya las aplicó). Ver [preproducción](preproduction.md).
+- **Despliegue**: las migraciones de facturación van de V38 a V44, después de las V33–V37 que `main` usa para otros módulos. Esta rama ya incluye `main`, por lo que la historia es continua V1–V44; una base que solo tenga las migraciones de `main` hasta V37 se actualiza aplicando V38–V44. Ver [preproducción](preproduction.md).
 - **Producción real**: token, empresa habilitada, resoluciones/numeración y ensayo controlado de factura, notas, archivos y correo pendientes. Los tests HTTP simulados no sustituyen esa verificación.
 - **Documentos históricos**: contexto fiscal desconocido requiere asociación verificada; no hay backfill especulativo. Una asignación antigua con `completed=true` no demuestra aceptación.
 - **Notas**: existe recuperación explícita por `POST /{id}/retry`, conciliación por identificador y estado PENDING conservado. No hay job automático de notas ni webhook. Un rechazo que necesita cambios se corrige explícitamente, sin alterar una solicitud incierta.

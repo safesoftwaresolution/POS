@@ -21,7 +21,7 @@ Fuentes: [entornos](https://e-provider-docs.alegra.com/docs/entornos), [creació
 
 | Versión | `main` / `develop` | Esta rama |
 |---|---|---|
-| V33–V37 | `Store_Category_Template`, `Appointments`, `Store_Category_Theme`, `Store_Multiple_Templates`, `Service_Categories` | (no existen aquí; llegan al unir con `main`) |
+| V33–V37 | `Store_Category_Template`, `Appointments`, `Store_Category_Theme`, `Store_Multiple_Templates`, `Service_Categories` | (llegaron a esta rama al unir con `main` el 2026-11-10) |
 | V38 | — | `Alegra_Local_Numbering` (antes V33) |
 | V39 | — | `Invoice_Emission_Lease` (antes V34) |
 | V40 | — | `Note_Emission_Lease` (antes V35) |
@@ -36,7 +36,7 @@ Probado en H2 (modo PostgreSQL) sobre una base con la historia completa de `main
 
 Una copia local que ya compiló la rama con la numeración vieja conserva en `target/classes/db/migration` los archivos V33–V39 junto a los nuevos, y Flyway falla por versiones duplicadas: hay que correr `mvn clean` (`.\mvnw.cmd clean`) una vez. Las imágenes Docker y la CI compilan desde cero y no se ven afectadas.
 
-Por eso **esta rama solo se despliega después de unirla con `main`**. Antes del despliegue, conviene confirmar igualmente el historial real de cada base persistente:
+Esta rama **ya incluye `main`** (unida el 2026-11-10 y de nuevo con `origin/main` el 2026-11-12), así que su historial Flyway es continuo, V1–V44. Antes del despliegue conviene confirmar igualmente el historial real de cada base persistente:
 
 ```sql
 SELECT installed_rank, version, description, script, checksum, success

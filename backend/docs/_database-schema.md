@@ -1,7 +1,7 @@
 <!-- doc-version: 1.8 | last-updated: 2026-11-06 -->
 # Esquema de Base de Datos — Vista Global
 
-Fuente de verdad: las migraciones Flyway en `src/main/resources/db/migration/` (hoy `V1` … `V32` y `V38` … `V44`; las `V33` … `V37` existen en `main` para otros módulos y llegan al unir las ramas). Este documento es el mapa;
+Fuente de verdad: las migraciones Flyway en `src/main/resources/db/migration/` (hoy `V1` … `V44`, continuas; las `V33` … `V37` son de otros módulos y las `V38` … `V44` de facturación). Este documento es el mapa;
 el DDL columna a columna vive en las migraciones y, para los módulos con tablas propias complejas, en su `spec.md`.
 
 ## Diagrama Entidad-Relación

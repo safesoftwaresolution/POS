@@ -37,20 +37,10 @@ function formatHeaderDate(date) {
   return `${date.getDate()} ${MONTHS_ES[date.getMonth()]}, ${date.getFullYear()}`;
 }
 
+// Solo las pantallas que NO pintan su propio encabezado (h1/PageHeader) usan el título de la barra;
+// en el resto se omite para no repetirlo justo debajo.
 const PAGE_TITLES = {
-  '/': { title: 'Dashboard', subtitle: 'Resumen y analíticas de tu negocio' },
   '/pos': { title: 'Punto de Venta', subtitle: 'Registra ventas, escanea productos y cobra' },
-  '/products': { title: 'Productos', subtitle: 'Catálogo, precios y subcategorías' },
-  '/services': { title: 'Servicios', subtitle: 'Servicios que ofreces y cobras sin inventario' },
-  '/inventory': { title: 'Inventario', subtitle: 'Stock, movimientos, devoluciones y proveedores' },
-  '/customers': { title: 'Clientes', subtitle: 'Base de datos de clientes frecuentes' },
-  '/credit': { title: 'Fiado', subtitle: 'Quién debe cuánto y los abonos a su cuenta' },
-  '/invoicing': { title: 'Facturación DIAN', subtitle: 'Facturas electrónicas y su estado ante la DIAN' },
-  '/documents': { title: 'Documentos', subtitle: 'Documentos legales de tu tienda' },
-  '/sales': { title: 'Ventas', subtitle: 'Historial de todas las ventas de tu local' },
-  '/cash': { title: 'Caja', subtitle: 'Arqueo y recaudo por cajero y método de pago' },
-  '/users': { title: 'Usuarios', subtitle: 'Personal con acceso a tu local y sus permisos' },
-  '/settings': { title: 'Configuración', subtitle: 'Preferencias y datos de tu negocio' },
 };
 
 function formatRelativeTime(isoDate) {
@@ -71,7 +61,7 @@ export default function Header({ onToggleMobileMenu }) {
   const location = useLocation();
   const { user } = useAuth();
   const { darkMode, toggleTheme } = useTheme();
-  const pageInfo = PAGE_TITLES[location.pathname] || { title: 'PosBento', subtitle: 'Tu negocio, en equilibrio' };
+  const pageInfo = PAGE_TITLES[location.pathname] || null;
   const isOnPos = location.pathname === '/pos';
 
   const [notifOpen, setNotifOpen] = useState(false);
@@ -146,14 +136,14 @@ export default function Header({ onToggleMobileMenu }) {
           <Menu className="w-5 h-5 text-brand" />
         </button>
 
-        <div className="min-w-0">
-          <div className="flex items-center gap-2.5">
+        {pageInfo && (
+          <div className="min-w-0">
             <h1 className="text-xl font-bold text-ink tracking-tight truncate">
               {pageInfo.title}
             </h1>
+            <p className="text-xs text-ink-soft truncate hidden sm:block">{pageInfo.subtitle}</p>
           </div>
-          <p className="text-xs text-ink-soft truncate hidden sm:block">{pageInfo.subtitle}</p>
-        </div>
+        )}
       </div>
 
       {/* Right Action Tools: Date, Dark/Light Mode, Bell, Terminal, Profile, + Nueva Venta */}

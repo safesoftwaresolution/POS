@@ -168,4 +168,4 @@ Reversa: devolver `posbento.com` al `frontend` y restaurar el valor anterior de 
 
 ## Facturación: control previo al despliegue
 
-Consultar [la guía de preproducción](modules/billing/preproduction.md) antes de actualizar esta rama. Las migraciones de facturación (V38–V44) van después de las V33–V37 de `main`: desplegar solo después de unir esta rama con `main`. No desplegar sobre una base de historial distinto ni ejecutar repair para ocultar la diferencia. La activación real requiere credenciales y configuración del emisor, no solo cambiar un token.
+Consultar [la guía de preproducción](modules/billing/preproduction.md) antes de actualizar esta rama. Las migraciones de facturación (V38–V44) van después de las V33–V37 de `main`; esta rama ya incluye `main`, por lo que la historia Flyway es continua (V1–V44). No desplegar sobre una base de historial distinto ni ejecutar repair para ocultar la diferencia. La activación real requiere credenciales y configuración del emisor, no solo cambiar un token.

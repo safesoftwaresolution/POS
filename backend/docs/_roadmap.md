@@ -65,7 +65,7 @@ Una revisión del arnés, los specs y el código encontró desajustes. **Ya corr
 11. Descontar devoluciones en reportes; guardar el costo en `sale_items` para la rentabilidad.
 
 **Facturación** (ver `modules/billing/spec.md`, "Pendiente")
-12. Facturación: habilitación y notas con frontend, contexto fiscal por documento, recibos recuperables y totales coherentes implementados en esta rama. Pendientes: validación integrada/revisión, conciliación por webhook, alertas de numeración y ensayo productivo. Ver `modules/billing/preproduction.md`; unir con main antes de desplegar (migraciones de facturación en V38–V44, después de las V33–V37 de main).
+12. Facturación: habilitación y notas con frontend, contexto fiscal por documento, recibos recuperables y totales coherentes implementados en esta rama. Pendientes: validación integrada/revisión, conciliación por webhook, alertas de numeración y ensayo productivo. Ver `modules/billing/preproduction.md`; migraciones de facturación en V38–V44, ya unidas con main; falta confirmar el historial real de producción antes de desplegar.
 
 **Arquitectura**
 13. ~~Sacar `FactusTokenManager` de `settings`~~ — resuelto al retirar Factus (el logo ya no se sincroniza con el proveedor). Añadir ArchUnit para que la regla de encapsulación se verifique.

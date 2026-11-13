@@ -7,7 +7,6 @@ import {
   Tag,
   Users,
   FileText,
-  FileCheck2,
   Receipt,
   Wallet,
   Settings,
@@ -84,7 +83,6 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
         { path: '/customers', label: 'Clientes', icon: Users },
         { path: '/credit', label: 'Fiado', icon: HandCoins },
         { path: '/invoicing', label: 'Facturación DIAN', icon: FileText },
-        ...(user?.role === 'ADMINISTRATOR' ? [{ path: '/documents', label: 'Documentos', icon: FileCheck2 }] : []),
       ],
     },
     {

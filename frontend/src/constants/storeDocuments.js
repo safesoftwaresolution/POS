@@ -1,9 +1,7 @@
 // Tipos de documento KYC de un local — deben coincidir con el CHECK de BD
 // (CK_store_docs_type en V3__Multitenancy_And_Backoffice.sql) y con la validación
-// de StoreServiceImpl#uploadOwnDocument. Compartido entre la vista self-service del
-// local (pages/DocumentsBento.jsx) y la revisión del backoffice (pages/backoffice/StoresBento.jsx).
-
-export const DOCUMENT_TYPES = ['RUT', 'COMMERCE_CHAMBER', 'ID_CARD', 'BANK_CERTIFICATE', 'OTHER'];
+// de StoreServiceImpl#uploadOwnDocument. Los usa la revisión del backoffice
+// (pages/backoffice/StoresBento.jsx); el local ya no tiene pantalla para subirlos.
 
 export const DOC_TYPE_LABELS = {
   RUT: 'RUT',
@@ -11,12 +9,6 @@ export const DOC_TYPE_LABELS = {
   ID_CARD: 'Cédula',
   BANK_CERTIFICATE: 'Certificación Bancaria',
   OTHER: 'Otro',
-};
-
-export const DOC_STATUS_LABELS = {
-  PENDING: 'En revisión',
-  APPROVED: 'Aprobado',
-  REJECTED: 'Rechazado',
 };
 
 export const DOC_STATUS_STYLES = {

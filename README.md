@@ -183,7 +183,6 @@ La especificación de cada módulo está en [`backend/docs/modules/`](./backend/
 | `/cash` | Caja | Arqueo (esperado vs contado), efectivo por cajero y recaudo por método de pago (solo `ADMINISTRATOR`). |
 
 Las analíticas (ventas por vendedor, top de productos, rentabilidad, compras, estado de inventario) viven en el Dashboard (`/`); `/reports` redirige allí.
-| `/documents` | Documentos | Documentos KYC del local. |
 | `/settings` | Configuración | Datos del negocio, logo y parámetros. |
 
 ### Back office (`SUPER_ADMIN`, bajo `/backoffice`)

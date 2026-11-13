@@ -39,7 +39,6 @@ const SettingsBento = lazy(() => import('./pages/SettingsBento'));
 const UsersBento = lazy(() => import('./pages/UsersBento'));
 const LegalPage = lazy(() => import('./pages/public/LegalPage'));
 const SupportPage = lazy(() => import('./pages/public/SupportPage'));
-const DocumentsBento = lazy(() => import('./pages/DocumentsBento'));
 const StoresBento = lazy(() => import('./pages/backoffice/StoresBento'));
 const BillingBento = lazy(() => import('./pages/backoffice/BillingBento'));
 const CategoriesBento = lazy(() => import('./pages/backoffice/CategoriesBento'));
@@ -194,7 +193,6 @@ function ProtectedLayoutContent({ mobileSidebarOpen, setMobileSidebarOpen, sideb
             <Route path="/cash" element={<RequireRole roles={['ADMINISTRATOR']}><CashBento /></RequireRole>} />
             <Route path="/reports" element={<Navigate to="/" replace />} />
             <Route path="/returns" element={<Navigate to="/inventory?tab=returns" replace />} />
-            <Route path="/documents" element={<RequireRole roles={['ADMINISTRATOR']}><DocumentsBento /></RequireRole>} />
             <Route path="/users" element={<RequireRole roles={['ADMINISTRATOR']}><UsersBento /></RequireRole>} />
             <Route path="/settings" element={<RequireRole roles={['ADMINISTRATOR', 'SUPERVISOR']}><SettingsBento /></RequireRole>} />
             <Route path="*" element={<Navigate to="/" replace />} />

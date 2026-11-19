@@ -37,7 +37,7 @@ function ResendVerification() {
         <button
           type="submit"
           disabled={!email.trim() || state === 'sending'}
-          className="px-3 py-2 bg-solid hover:bg-solid-hover text-solid-ink rounded-xl text-xs font-black cursor-pointer disabled:opacity-50"
+          className="px-3 py-2 bg-[#F4F4F6] hover:bg-white text-[#0A0A0A] rounded-xl text-xs font-black cursor-pointer disabled:opacity-50"
         >
           {state === 'sending' ? 'Enviando...' : 'Reenviar'}
         </button>

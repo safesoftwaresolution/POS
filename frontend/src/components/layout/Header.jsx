@@ -16,7 +16,6 @@ import {
 import { useNavigate, useLocation } from 'react-router-dom';
 import useAuth from '../../hooks/useAuth';
 import useNow from '../../hooks/useNow';
-import useUnreadNotifications from '../../hooks/useUnreadNotifications';
 import useTheme from '../../hooks/useTheme';
 import UserMenu from '../UserMenu';
 import {
@@ -56,7 +55,7 @@ function formatRelativeTime(isoDate) {
   return new Date(isoDate).toLocaleDateString('es-CO');
 }
 
-export default function Header({ onToggleMobileMenu }) {
+export default function Header({ onToggleMobileMenu, unreadCount, setUnreadCount }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
@@ -66,7 +65,6 @@ export default function Header({ onToggleMobileMenu }) {
 
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
-  const [unreadCount, setUnreadCount] = useUnreadNotifications();
   const now = useNow();
   const notifRef = useRef(null);
 

@@ -27,27 +27,25 @@ import {
 import useAuth from '../../hooks/useAuth';
 import useStoreTemplate from '../../hooks/useStoreTemplate';
 import useTheme from '../../hooks/useTheme';
-import { getProductsApi } from '../../services/productsApi';
+import { getAllProductsApi } from '../../services/productsApi';
 import useLoad from '../../hooks/useLoad';
-import useUnreadNotifications from '../../hooks/useUnreadNotifications';
 import asList from '../../utils/asList';
 import { ROLE_LABELS } from '../../constants/roles';
 import StoreBrandLogo from '../brand/StoreBrandLogo';
 import Avatar from '../ui/Avatar';
 import useAvatarUpload from '../../hooks/useAvatarUpload';
 
-export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }) {
+export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse, unreadCount = 0 }) {
   const { logout, user } = useAuth();
   const { features } = useStoreTemplate();
   const { darkMode, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [profileOpen, setProfileOpen] = useState(false);
-  const [unreadCount] = useUnreadNotifications();
   const { data: lowStockCount } = useLoad(
     async () => {
       // La alerta de stock bajo es para quien repone inventario; el vendedor no la ve.
       if (user?.role === 'SELLER') return 0;
-      const products = await asList(getProductsApi());
+      const products = await asList(getAllProductsApi());
       return products.filter((p) => (p.quantityAvailable ?? p.stock ?? 0) <= (p.minStock || 5)).length;
     },
     [user?.role],
@@ -351,14 +349,14 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
                 )}
               </div>
 
-              {/* Settings */}
-              <button
+              {/* Settings: el vendedor no tiene acceso (RequireRole lo devolvería a /) */}
+              {user?.role !== 'SELLER' && <button
                 onClick={() => { setProfileOpen(false); navigate('/settings'); }}
                 className="w-full flex items-center gap-3 pl-[30px] pr-4 py-3.5 rounded-xl text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-line cursor-pointer text-left transition-colors"
               >
                 <Settings className="w-4 h-4 text-gray-400 shrink-0" />
                 Configuración
-              </button>
+              </button>}
             </div>
 
             <div className="ml-[60px] mr-4 border-t border-line" />

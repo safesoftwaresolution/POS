@@ -4,6 +4,7 @@ import useAutoRefresh from './hooks/useAutoRefresh';
 import useLoad from './hooks/useLoad';
 import { AuthProvider } from './context/AuthContext';
 import useAuth from './hooks/useAuth';
+import useUnreadNotifications from './hooks/useUnreadNotifications';
 import useStoreTemplate from './hooks/useStoreTemplate';
 import { ThemeProvider } from './context/ThemeContext';
 import { ModalProvider } from './context/ModalContext';
@@ -157,6 +158,8 @@ function ProtectedLayout() {
 }
 
 function ProtectedLayoutContent({ mobileSidebarOpen, setMobileSidebarOpen, sidebarCollapsed, toggleSidebarCollapse }) {
+  // Una sola consulta periódica compartida por la barra lateral y la cabecera.
+  const [unreadCount, setUnreadCount] = useUnreadNotifications();
   return (
     <StoreTemplateProvider>
     <div className="min-h-screen bg-page text-ink flex transition-colors duration-300">
@@ -166,6 +169,7 @@ function ProtectedLayoutContent({ mobileSidebarOpen, setMobileSidebarOpen, sideb
         onClose={() => setMobileSidebarOpen(false)}
         isCollapsed={sidebarCollapsed}
         onToggleCollapse={toggleSidebarCollapse}
+        unreadCount={unreadCount}
       />
 
       {/* Main Workspace Area with Dynamic Padding (lg:pl-20 or lg:pl-64) */}
@@ -173,6 +177,8 @@ function ProtectedLayoutContent({ mobileSidebarOpen, setMobileSidebarOpen, sideb
         sidebarCollapsed ? 'lg:pl-20' : 'lg:pl-64'
       }`}>
         <Header
+          unreadCount={unreadCount}
+          setUnreadCount={setUnreadCount}
           onToggleMobileMenu={() => setMobileSidebarOpen(prev => !prev)}
         />
 

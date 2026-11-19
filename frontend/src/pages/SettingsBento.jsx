@@ -1,4 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
+import { Link } from 'react-router-dom';
+import useLoad from '../hooks/useLoad';
 import { Save, Store, Key, AlertCircle, ImagePlus, Mail, Phone, MapPin, Hash, Globe, IdCard } from 'lucide-react';
 import { getSettingsApi, updateSettingsApi, uploadCompanyLogoApi } from '../services/settingsApi';
 import { getOwnStoreApi, updateOwnStoreApi } from '../services/storesApi';
@@ -27,57 +29,62 @@ export default function SettingsBento() {
   // El SUPERVISOR solo consulta: GET /settings le está permitido, pero editar y el registro legal (/stores/me) son del ADMINISTRATOR.
   const { isAdmin } = usePermissions();
   const [saved, setSaved] = useState(false);
-  const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [logoNotice, setLogoNotice] = useState('');
-  const [config, setConfig] = useState(EMPTY_CONFIG);
+  const [configDraft, setConfigDraft] = useState(null);
   const logoInputRef = useRef(null);
 
-  const [storeForm, setStoreForm] = useState(EMPTY_STORE_FORM);
-  const [storeStatus, setStoreStatus] = useState(null);
+  const [storeFormDraft, setStoreFormDraft] = useState(null);
+  const [storeStatusDraft, setStoreStatusDraft] = useState(null);
   const [storeSaved, setStoreSaved] = useState(false);
   const [storeErrorMsg, setStoreErrorMsg] = useState('');
 
-  useEffect(() => {
-    async function loadSettings() {
-      setLoading(true);
-      try {
-        const data = await getSettingsApi();
-        if (data && data.businessName) {
-          setConfig({
-            businessName: data.businessName || '',
-            taxId: data.taxId || '',
-            address: data.address || '',
-            phone: data.phone || '',
-            email: data.email || '',
-            logoUrl: data.logoUrl || ''
-          });
-        }
-      } catch (e) {
-        console.warn('Cargando valores por defecto de configuración:', e);
-      } finally {
-        setLoading(false);
+  // Lo cargado del servidor es la base; lo que el usuario edita queda en el borrador y lo tapa.
+  const { data: loaded, loading } = useLoad(
+    async () => {
+      const [settings, store] = await Promise.all([
+        getSettingsApi().catch((e) => {
+          console.warn('Cargando valores por defecto de configuración:', e);
+          return null;
+        }),
+        isAdmin
+          ? getOwnStoreApi().catch((e) => {
+              console.warn('Error cargando el registro legal del local:', e);
+              return null;
+            })
+          : null,
+      ]);
+      return { settings, store };
+    },
+    [isAdmin],
+    { initial: { settings: null, store: null } },
+  );
+  const loadedConfig = loaded.settings?.businessName
+    ? {
+        businessName: loaded.settings.businessName || '',
+        taxId: loaded.settings.taxId || '',
+        address: loaded.settings.address || '',
+        phone: loaded.settings.phone || '',
+        email: loaded.settings.email || '',
+        logoUrl: loaded.settings.logoUrl || '',
       }
-    }
-    async function loadStore() {
-      try {
-        const store = await getOwnStoreApi();
-        setStoreForm({
-          name: store.name || '',
-          phone: store.phone || '',
-          website: store.website || '',
-          address: store.address || '',
-          taxId: store.taxId || ''
-        });
-        setStoreStatus(store.status);
-      } catch (e) {
-        console.warn('Error cargando el registro legal del local:', e);
+    : EMPTY_CONFIG;
+  const loadedStoreForm = loaded.store
+    ? {
+        name: loaded.store.name || '',
+        phone: loaded.store.phone || '',
+        website: loaded.store.website || '',
+        address: loaded.store.address || '',
+        taxId: loaded.store.taxId || '',
       }
-    }
-    loadSettings();
-    if (isAdmin) loadStore();
-  }, [isAdmin]);
+    : EMPTY_STORE_FORM;
+  const config = configDraft ?? loadedConfig;
+  const storeForm = storeFormDraft ?? loadedStoreForm;
+  const storeStatus = storeStatusDraft ?? loaded.store?.status ?? null;
+  const setConfig = (update) => setConfigDraft(typeof update === 'function' ? update(config) : update);
+  const setStoreForm = setStoreFormDraft;
+  const setStoreStatus = setStoreStatusDraft;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -374,7 +381,7 @@ export default function SettingsBento() {
               </h3>
               <p className="text-xs text-ink-soft font-medium">
                 El estado de habilitación y los rangos de numeración DIAN de tu local se gestionan desde{' '}
-                <a href="/invoicing" className="text-brand font-bold underline">Facturación DIAN → Habilitación DIAN</a>.
+                <Link to="/invoicing" className="text-brand font-bold underline">Facturación DIAN → Habilitación DIAN</Link>.
               </p>
             </div>
 

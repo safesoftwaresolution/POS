@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { Plus, Search, Package, Layers, FileSpreadsheet } from 'lucide-react';
-import { getProductsApi, createProductApi, updateProductApi, deleteProductApi, changeProductStatusApi, deleteStorageFileApi } from '../services/productsApi';
+import { getAllProductsApi, createProductApi, updateProductApi, deleteProductApi, changeProductStatusApi, deleteStorageFileApi } from '../services/productsApi';
 import { getCategoriesApi } from '../services/categoriesApi';
 import {
   getSubcategoriesApi,
@@ -71,7 +71,7 @@ export default function ProductsBento() {
   const [subErrorMsg, setSubErrorMsg] = useState('');
 
   const { data: products, loading, reload: reloadProducts } = useLoad(
-    () => asList(getProductsApi('', null, 0, 50, !showInactive)),
+    () => asList(getAllProductsApi(!showInactive)),
     [showInactive],
     { initial: [], autoRefresh: true },
   );
@@ -170,6 +170,10 @@ export default function ProductsBento() {
     e.preventDefault();
     setErrorMsg('');
     if (!newProduct.name || !newProduct.price || !newProduct.categoryId) return;
+    if (newProduct.purchasePrice == null || newProduct.purchasePrice === '') {
+      setErrorMsg('Indica el precio de compra: se usa para calcular la rentabilidad.');
+      return;
+    }
 
     try {
       if (newProduct.id) {
@@ -178,7 +182,7 @@ export default function ProductsBento() {
           description: newProduct.name,
           categoryId: Number(newProduct.categoryId),
           subcategoryId: newProduct.subcategoryId ? Number(newProduct.subcategoryId) : null,
-          purchasePrice: parseFloat(newProduct.purchasePrice ?? newProduct.price * 0.7),
+          purchasePrice: parseFloat(newProduct.purchasePrice),
           salePrice: parseFloat(newProduct.price),
           barcode: newProduct.barcode,
           minStock: parseInt(newProduct.minStock) || 5,
@@ -193,10 +197,11 @@ export default function ProductsBento() {
         const created = await createProductApi({
           name: newProduct.name,
           barcode: newProduct.barcode || `${Math.floor(1000000000000 + Math.random() * 9000000000000)}`,
-          internalCode: newProduct.internalCode || `PROD-00${products.length + 1}`,
+          internalCode: newProduct.internalCode || `PROD-${Date.now().toString(36).toUpperCase()}`,
           categoryId: Number(newProduct.categoryId),
           subcategoryId: newProduct.subcategoryId ? Number(newProduct.subcategoryId) : null,
           price: parseFloat(newProduct.price),
+          purchasePrice: parseFloat(newProduct.purchasePrice),
           minStock: parseInt(newProduct.minStock) || 5,
           imageUrl: newProduct.imageUrl || null
         });

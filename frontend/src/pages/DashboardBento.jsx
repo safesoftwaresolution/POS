@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import useAuth from '../hooks/useAuth';
-import { getProductsApi } from '../services/productsApi';
+import { getAllProductsApi } from '../services/productsApi';
 import { searchSalesApi } from '../services/salesApi';
 import { listInvoicesApi } from '../services/billingApi';
 import {
@@ -64,7 +64,7 @@ export default function DashboardBento() {
     // Cada bloque falla por separado: un reporte caído no deja el panel en blanco.
     const safe = (promise, fallback) => promise.catch(() => fallback);
     const [prods, salesPage, anySale, dian, report, previousReport, previousPage, heat, top, profit, purch, stockRows, expiringRows] = await Promise.all([
-      canSeeStock ? safe(getProductsApi(), null) : null,
+      canSeeStock ? safe(getAllProductsApi(), null) : null,
       safe(searchSalesApi({ dateFrom: from, dateTo: to, size: salesSample }), null),
       safe(searchSalesApi({ size: 1 }), null),
       safe(listInvoicesApi('VALIDATED', 0, 1), null),

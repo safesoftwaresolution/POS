@@ -1,8 +1,11 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, lazy, Suspense } from 'react';
 import { createPortal } from 'react-dom';
 import { AlertCircle, Camera, ImagePlus, Images, Plus, ScanLine, Trash2 } from 'lucide-react';
 import { Button, Field, Input, Modal, MoneyInput, Select, inputClass } from '../ui';
-import { BarcodeScanner } from '../scanner';
+const LazyBarcodeScanner = lazy(() => import('../scanner/BarcodeScanner'));
+function BarcodeScanner(props) {
+  return <Suspense fallback={null}><LazyBarcodeScanner {...props} /></Suspense>;
+}
 import ProductLotsSection from './ProductLotsSection';
 
 /**
@@ -156,12 +159,13 @@ export default function ProductFormModal({
           <Input label="Código Interno" className="font-mono" value={product.internalCode} onChange={e => set({ internalCode: e.target.value })} placeholder="PROD-101" disabled={isEdit} />
         </div>
 
-        <div className={isEdit ? '' : 'grid grid-cols-2 gap-3'}>
+        <div className="grid grid-cols-2 gap-3">
+          <MoneyInput label="Precio Compra ($ COP)" value={product.purchasePrice ?? ''} onChange={purchasePrice => set({ purchasePrice })} placeholder="8.000" required />
           <MoneyInput label="Precio Venta ($ COP)" value={product.price} onChange={price => set({ price })} placeholder="12.000" required />
-          {!isEdit && (
-            <Input label="Stock Inicial" type="number" value={product.stock} onChange={e => set({ stock: e.target.value })} placeholder="50" />
-          )}
         </div>
+        {!isEdit && (
+          <Input label="Stock Inicial" type="number" value={product.stock} onChange={e => set({ stock: e.target.value })} placeholder="50" />
+        )}
         {isEdit && <p className="text-[10px] text-ink-muted">Para ajustar el stock ve al módulo de Inventario.</p>}
 
         {!isEdit && (

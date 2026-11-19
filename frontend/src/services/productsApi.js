@@ -10,6 +10,23 @@ export async function getProductsApi(search = '', categoryId = null, page = 0, s
   return data.content || data || [];
 }
 
+/**
+ * Trae TODO el catálogo recorriendo las páginas del backend. `getProductsApi()` solo devuelve la primera página
+ * (50 ítems): para filtrar en memoria, escanear códigos o sumar métricas hay que usar esta.
+ */
+export async function getAllProductsApi(active = true, pageSize = 200) {
+  const all = [];
+  for (let page = 0; ; page += 1) {
+    const params = new URLSearchParams({ page, size: pageSize });
+    if (active !== null) params.append('active', active);
+    const data = await fetchApi(`/products?${params.toString()}`);
+    const items = data.content || data || [];
+    all.push(...items);
+    if (data.last !== false || items.length === 0) break;
+  }
+  return all;
+}
+
 export async function createProductApi(productData) {
   return await fetchApi('/products', {
     method: 'POST',
@@ -20,7 +37,7 @@ export async function createProductApi(productData) {
       barcode: productData.barcode,
       categoryId: productData.categoryId,
       subcategoryId: productData.subcategoryId || null,
-      purchasePrice: parseFloat(productData.purchasePrice || productData.price * 0.7),
+      purchasePrice: parseFloat(productData.purchasePrice),
       salePrice: parseFloat(productData.price || productData.salePrice),
       minStock: parseInt(productData.minStock || 5),
       imageUrl: productData.imageUrl || null,

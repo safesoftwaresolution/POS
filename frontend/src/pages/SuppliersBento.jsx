@@ -8,16 +8,19 @@ import {
 } from '../services/suppliersApi';
 import useModal from '../hooks/useModal';
 import useLoad from '../hooks/useLoad';
+import usePermissions from '../hooks/usePermissions';
 import asList from '../utils/asList';
 
 const EMPTY_FORM = { id: null, companyName: '', taxId: '', contactName: '', email: '', phone: '', address: '' };
 
 export default function SuppliersBento() {
   const { confirm, notify } = useModal();
+  // DELETE /suppliers es solo de ADMINISTRATOR; leer y escribir, de ADMINISTRATOR y SUPERVISOR.
+  const { isAdmin, canManageStock } = usePermissions();
   const { data: suppliers, loading, reload } = useLoad(
     () => asList(getSuppliersApi()),
     [],
-    { initial: [], autoRefresh: true },
+    { initial: [], autoRefresh: true, enabled: canManageStock },
   );
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
@@ -157,13 +160,13 @@ export default function SuppliersBento() {
                   >
                     <Edit3 className="w-4 h-4" />
                   </button>
-                  <button
+                  {isAdmin && <button
                     onClick={() => handleDelete(s)}
                     title="Eliminar proveedor"
                     className="p-1.5 text-ink-muted hover:text-red-600 dark:hover:text-red-400 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer"
                   >
                     <Trash2 className="w-4 h-4" />
-                  </button>
+                  </button>}
                 </div>
               </div>
             ))}

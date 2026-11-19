@@ -14,7 +14,7 @@ import {
   History,
   ArrowLeftRight
 } from 'lucide-react';
-import { getProductsApi } from '../services/productsApi';
+import { getAllProductsApi } from '../services/productsApi';
 import { getSuppliersApi } from '../services/suppliersApi';
 import useAuth from '../hooks/useAuth';
 import { SegmentedControl } from '../components/ui';
@@ -43,14 +43,16 @@ export default function InventoryBento() {
   const canMoveStock = user?.role === 'ADMINISTRATOR' || user?.role === 'SUPERVISOR';
   const [showCountModal, setShowCountModal] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
-  const activeTab = TABS.some(t => t.id === searchParams.get('tab')) ? searchParams.get('tab') : 'stock';
+  // /suppliers exige ADMINISTRATOR o SUPERVISOR en el backend: el vendedor no ve esa pestaña.
+  const tabs = canMoveStock ? TABS : TABS.filter(t => t.id !== 'suppliers');
+  const activeTab = tabs.some(t => t.id === searchParams.get('tab')) ? searchParams.get('tab') : 'stock';
   const setActiveTab = (tab) => setSearchParams(tab === 'stock' ? {} : { tab }, { replace: true });
   const { data: productsList, loading, reload: reloadInventory } = useLoad(
-    () => asList(getProductsApi()),
+    () => asList(getAllProductsApi()),
     [],
     { initial: [], autoRefresh: true },
   );
-  const { data: suppliers } = useLoad(() => asList(getSuppliersApi()), [], { initial: [], autoRefresh: true });
+  const { data: suppliers } = useLoad(() => asList(getSuppliersApi()), [], { initial: [], autoRefresh: true, enabled: canMoveStock });
   const [search, setSearch] = useState('');
   // null = cerrado; { product } = abierto (product puede ser null: el producto se elige dentro del modal).
   const [moveModal, setMoveModal] = useState(null);
@@ -98,7 +100,7 @@ export default function InventoryBento() {
       </div>
 
       {/* Tab Switcher */}
-      <SegmentedControl options={TABS} value={activeTab} onChange={setActiveTab} ariaLabel="Secciones de inventario" pill scrollable equal={false} className="w-fit max-w-full" />
+      <SegmentedControl options={tabs} value={activeTab} onChange={setActiveTab} ariaLabel="Secciones de inventario" pill scrollable equal={false} className="w-fit max-w-full" />
 
       {activeTab === 'movements' && <MovementsPanel />}
       {activeTab === 'returns' && <ReturnsBento />}

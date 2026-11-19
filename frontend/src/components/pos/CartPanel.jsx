@@ -135,7 +135,7 @@ export default function CartPanel({
             }`}
           >
             <Banknote className="w-5 h-5" />
-            <span>COBRAR EN EFECTIVO [F4]</span>
+            <span>COBRAR [F4]</span>
           </button>
         </div>
       </div>

@@ -32,6 +32,7 @@ import {
   downloadInvoiceXmlApi
 } from '../../services/billingApi';
 import { deliverBlob } from '../../utils/downloadBlob';
+import { printSaleTicket } from '../../utils/printTicket';
 import useModal from '../../hooks/useModal';
 import useLoad from '../../hooks/useLoad';
 import usePermissions from '../../hooks/usePermissions';
@@ -331,8 +332,8 @@ export default function CheckoutModal({
               type="button"
               onClick={onConfirm}
               disabled={blocked}
-              className={`w-2/3 py-3.5 rounded-2xl font-black text-xs flex items-center justify-center gap-2 text-white shadow-md ${
-                blocked ? 'bg-gray-300 dark:bg-gray-700 cursor-not-allowed' : 'bg-solid hover:bg-solid-hover shadow-[#0A0A0A]/10 cursor-pointer'
+              className={`w-2/3 py-3.5 rounded-2xl font-black text-xs flex items-center justify-center gap-2 shadow-md ${
+                blocked ? 'text-white bg-gray-300 dark:bg-gray-700 cursor-not-allowed' : 'text-solid-ink bg-solid hover:bg-solid-hover shadow-[#0A0A0A]/10 cursor-pointer'
               }`}
             >
               {isSubmitting ? (
@@ -577,7 +578,11 @@ export function SaleResultModal({ sale, onClose }) {
         <div className="flex gap-2">
           <button
             type="button"
-            onClick={() => notify(`Imprimiendo tiquete térmico para la venta ${sale.number}...`, { title: 'Imprimir tiquete', danger: false })}
+            onClick={() => {
+              if (!printSaleTicket(sale)) {
+                notify('El navegador bloqueó la ventana de impresión. Permite las ventanas emergentes e inténtalo de nuevo.', { title: 'Imprimir tiquete' });
+              }
+            }}
             className="w-1/2 py-3 bg-gray-100 dark:bg-line hover:bg-gray-200 dark:hover:bg-line-strong text-ink rounded-2xl font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer"
           >
             <Printer className="w-4 h-4" /> Imprimir tiquete

@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
 import { ShoppingCart } from 'lucide-react';
-import { getProductsApi } from '../services/productsApi';
+import { getAllProductsApi } from '../services/productsApi';
 import { getServicesApi } from '../services/servicesApi';
 import { getCustomersApi } from '../services/customersApi';
 import { createSaleApi } from '../services/salesApi';
@@ -9,7 +9,11 @@ import CheckoutModal, { SaleResultModal } from '../components/pos/CheckoutModal'
 import ScanToasts from '../components/pos/ScanToasts';
 import ProductCatalog from '../components/pos/ProductCatalog';
 import CartPanel from '../components/pos/CartPanel';
-import { BarcodeScanner } from '../components/scanner';
+// zxing pesa ~480 kB: solo se descarga al abrir la cámara.
+const LazyBarcodeScanner = lazy(() => import('../components/scanner/BarcodeScanner'));
+function BarcodeScanner(props) {
+  return <Suspense fallback={null}><LazyBarcodeScanner {...props} /></Suspense>;
+}
 import { getCategoriesApi } from '../services/categoriesApi';
 import { getParameterValuesApi } from '../services/parametersApi';
 import { newIdempotencyKey } from '../services/http';
@@ -26,7 +30,7 @@ export default function POSBento() {
   const { data: productsList, loading: productsLoading, reload: reloadProducts } = useLoad(
     async () => {
       const [products, services] = await Promise.all([
-        asList(getProductsApi()),
+        asList(getAllProductsApi()),
         asList(getServicesApi()).catch(() => []),
       ]);
       return [
@@ -128,6 +132,19 @@ export default function POSBento() {
   useEffect(() => {
     focusBarcodeInput();
   }, [focusBarcodeInput]);
+
+  // Atajo [F4]: abre el cobro cuando hay algo en el ticket y no hay otro modal abierto.
+  const canOpenCheckout = cart.length > 0 && !showCheckoutModal && !saleCompleted;
+  useEffect(() => {
+    if (!canOpenCheckout) return undefined;
+    const onKeyDown = (e) => {
+      if (e.key !== 'F4') return;
+      e.preventDefault();
+      setShowCheckoutModal(true);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [canOpenCheckout]);
 
   const filteredProducts = productsList.filter(p => {
     const matchesCategory = selectedCategory === 'Todos' || p.categoryName === selectedCategory;
@@ -264,6 +281,7 @@ export default function POSBento() {
       saleId: result?.id,
       number: result?.invoiceNumber || (result?.id ? `#${result.id}` : ''),
       total,
+      items: cart.map(i => ({ name: i.name, quantity: i.quantity, unitPrice: i.price })),
       change: paymentIsCash ? Math.max(0, change) : 0,
       onCredit: paymentIsCredit,
       customerName: selectedCustomer?.fullName || selectedCustomer?.name || 'Consumidor final',

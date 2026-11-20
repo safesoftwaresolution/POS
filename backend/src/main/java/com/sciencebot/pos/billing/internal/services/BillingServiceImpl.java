@@ -41,6 +41,11 @@ public class BillingServiceImpl implements BillingFacade {
         this.debitNoteService = debitNoteService;
     }
 
+    @Override
+    public boolean hasValidatedInvoices(Long storeId) {
+        return invoiceService.hasValidatedInvoices(storeId);
+    }
+
     // --- Facturación de Ventas ---
 
     @Override

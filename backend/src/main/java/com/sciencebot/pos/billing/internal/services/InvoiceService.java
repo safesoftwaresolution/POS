@@ -12,6 +12,8 @@ public interface InvoiceService {
 
     ElectronicInvoiceDto processElectronicInvoice(SaleDto sale);
 
+    boolean hasValidatedInvoices(Long storeId);
+
     Optional<ElectronicInvoiceDto> getBySaleId(Long saleId);
 
     ElectronicInvoiceDto retryInvoice(Long saleId);

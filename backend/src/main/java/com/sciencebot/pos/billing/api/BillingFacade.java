@@ -14,6 +14,8 @@ import java.util.Optional;
 
 public interface BillingFacade {
     ElectronicInvoiceDto processElectronicInvoice(SaleDto sale);
+    /** Whether the store has at least one invoice validated by the DIAN (fiscal documents that must be kept). */
+    boolean hasValidatedInvoices(Long storeId);
     Optional<ElectronicInvoiceDto> getBySaleId(Long saleId);
     ElectronicInvoiceDto retryInvoice(Long saleId);
 

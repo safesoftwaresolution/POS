@@ -69,6 +69,13 @@ public class InvoiceServiceImpl implements InvoiceService {
                 ));
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public boolean hasValidatedInvoices(Long storeId) {
+        return storeId != null && repository.existsByStoreIdAndStatus(storeId,
+                com.sciencebot.pos.billing.dto.ElectronicInvoiceStatus.VALIDATED);
+    }
+
     /**
      * Emite la factura de la venta en tres pasos: reservar (transacción corta con lock), llamar al proveedor SIN
      * transacción y registrar el resultado (transacción corta). Así ninguna llamada de red retiene una conexión

@@ -96,6 +96,7 @@ Sesiones de refresh token rotativas (`V4__Refresh_Tokens.sql`).
 | token_hash | VARCHAR(64) UNIQUE | SHA-256 del token opaco (nunca se guarda en claro) |
 | user_id | BIGINT | `FK_refresh_tokens_user` → `users(id)` |
 | family_id | VARCHAR(36) | Agrupa los tokens rotados de una sesión (revocación en cadena) |
+| store_id | BIGINT NULL | Sucursal activa de la sesión (`V46`); NULL = el local del usuario. Sin FK a propósito: se valida al renovar. La rotación la hereda |
 | expires_at | TIMESTAMP | |
 | revoked | BOOLEAN | |
 | created_at / updated_at | TIMESTAMP | |
@@ -150,6 +151,12 @@ Historial inmutable de asignaciones de usuarios a locales hechas por el SUPER_AD
 | action | VARCHAR(20) | `OWNER_ASSIGNED` |
 | performed_by | VARCHAR(100) | SUPER_ADMIN que la hizo |
 | created_at | TIMESTAMP | |
+
+## Tablas `businesses` y `business_audit`, columna `stores.business_id` (módulo businesses, V45)
+`V45__Businesses.sql`. `businesses` agrupa varios locales (sucursales) de un mismo dueño: `owner_user_id` (FK `users`, `UNIQUE`: un usuario es dueño de un solo negocio), `main_store_id` (FK `stores`, `UNIQUE`), `billing_mode` (`SEPARATE_TAX_ID` / `SHARED_TAX_ID`), `catalog_mode` (`INDEPENDENT`; `SHARED` reservado para la fase 2) y `max_branches`. Los modos son `VARCHAR` sin `CHECK … IN` (bug de H2): los valida el enum de Java. `stores.business_id` es nullable (`FK_stores_business`, índice `IDX_stores_business`); un local sin negocio no cambia. `business_audit` es un historial inmutable sin FKs (copia de datos) con `action` (`CREATED`, `UPDATED`, `BRANCH_ADDED`, `BRANCH_REMOVED`, `BRANCH_CREATED`, `DISSOLVED`, `BILLING_MODE`), `affected_store_id`, `detail` y `performed_by`.
+
+## Columna `billing_store_id` en los documentos de facturación (módulo billing, V47)
+`V47__Billing_Document_Billing_Store.sql` agrega `billing_store_id BIGINT NULL` a `electronic_invoices`, `electronic_credit_notes` y `electronic_debit_notes`: el local de cuya empresa y numeración salió el documento cuando no es el suyo (negocio con NIT compartido, ver `modules/businesses/spec.md`). `NULL` = el propio local, que es lo que tienen todos los documentos existentes. Se fija al reservar la emisión y no cambia. Sin FK a propósito (dato histórico del documento).
 
 ## Tabla `password_reset_tokens` (módulo auth)
 Tokens de recuperación de contraseña (`V19__Password_Reset_Tokens.sql`), mismo esquema que `email_verification_tokens`: `token_hash` (SHA-256, único), `user_id` (FK `users`), `expires_at`, `used_at`, `created_at`. Índice `IDX_prt_user(user_id)`.

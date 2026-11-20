@@ -105,6 +105,14 @@ Todos los correos (verificación, recuperación de contraseña y aprobación de 
 - **Response 200**: mismo formato que login, con access + refresh token rotados (setea ambas cookies).
 - **Errores**: `401` si el refresh token es inválido, expirado o reutilizado fuera de la ventana de gracia (reuso → revoca la sesión); `403` si el usuario fue desactivado.
 
+Si la sesión tiene una sucursal activa (`refresh_tokens.store_id`, V46), el nuevo access token lleva ese `storeId` solo mientras el usuario siga siendo el dueño del negocio de esa sucursal; si perdió el acceso, vuelve a su propio local (`users.store_id`).
+
+### POST /api/v1/auth/switch-store
+- **Permisos**: `ADMINISTRATOR` autenticado que sea dueño de un negocio (ver `modules/businesses/spec.md`, RN-BIZ-004).
+- **Request**: `{ "storeId": n, "refreshToken": "..." }`; el `refreshToken` es opcional si viaja la cookie `HttpOnly`.
+- **Response 200**: mismo formato que login, con un access token cuyo `storeId` es la sucursal elegida y un refresh token rotado que la recuerda (setea ambas cookies). Las demás sesiones del usuario no cambian.
+- **Errores**: `403` si no es `ADMINISTRATOR` o la sucursal no es de su negocio (sí puede volver a su propio local); `401` si el refresh token es inválido o es de otro usuario (en ese caso se revoca esa sesión).
+
 ### POST /api/v1/auth/logout
 - **Permisos**: Cualquier rol autenticado
 - **Request**: opcional `{ "refreshToken": "..." }` (por defecto lee la cookie)

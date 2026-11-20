@@ -590,4 +590,6 @@ Los documentos nuevos fijan entorno, proveedor y empresa, sin guardar tokens. La
 
 Las solicitudes y recepciones fiscales se guardan por separado del cierre local. Una respuesta incierta no autoriza cambiar la llave ni emitir a ciegas. El alta de empresa usa un registro transaccional por local/entorno/proveedor; una recepción conocida se reutiliza y una creación incierta exige soporte, sin asociación automática solo por NIT.
 
+Con NIT compartido (`modules/businesses/spec.md`, RN-BIZ-005) las sucursales de un negocio facturan con la empresa, el estado de activación y los rangos de la sucursal principal. El documento fija esa fuente al reservar la emisión (`billing_store_id`, `V47`), la copian las notas y el consecutivo se asigna bloqueando los rangos de la fuente (`AlegraNumberAllocator.allocate(storeId, billingStoreId, …)`). Un local sin negocio se comporta igual que antes. `BillingFacade.hasValidatedInvoices(storeId)` permite a `businesses` bloquear el cambio de modo.
+
 El mapeo fiscal conserva el importe bruto persistido de cada línea de venta. Las notas automáticas reciben el mismo snapshot; los ajustes manuales mantienen precios antes de impuestos. Una nota fiscal no registra por sí misma un reembolso ni movimientos de inventario.

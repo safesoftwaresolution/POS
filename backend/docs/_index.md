@@ -22,6 +22,7 @@
 | settings | modules/settings/spec.md | settings, parameter_topics, parameter_values | /api/v1/settings |
 | billing | modules/billing/spec.md | electronic_invoices, electronic_credit_notes, electronic_debit_notes, store_billing_config, numbering_range_audit | /api/v1/billing, /api/v1/backoffice/billing, /api/v1/backoffice/stores/{id}/billing |
 | stores | modules/stores/spec.md | stores, store_categories, store_documents | /api/v1/stores, /api/v1/backoffice/stores |
+| businesses | modules/businesses/spec.md | businesses, business_audit | /api/v1/backoffice/businesses |
 | legal | modules/legal/spec.md | legal_documents | /api/v1/legal, /api/v1/backoffice/legal-documents |
 | support | modules/support/spec.md | support_tickets | /api/v1/support, /api/v1/backoffice/support |
 | notifications | modules/notifications/spec.md | notifications | /api/v1/notifications |

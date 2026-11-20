@@ -3,6 +3,7 @@ package com.sciencebot.pos.auth.internal.services;
 import com.sciencebot.pos.auth.AuthFacade;
 import com.sciencebot.pos.auth.EmailNotVerifiedException;
 import com.sciencebot.pos.auth.LoginResponse;
+import com.sciencebot.pos.businesses.BusinessFacade;
 import com.sciencebot.pos.config.security.JwtService;
 import com.sciencebot.pos.config.security.PosUserDetails;
 import com.sciencebot.pos.shared.email.EmailSender;
@@ -12,6 +13,7 @@ import com.sciencebot.pos.users.UserDto;
 import com.sciencebot.pos.users.UserFacade;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
@@ -36,6 +38,8 @@ public class AuthService implements AuthFacade {
     private final EmailSender emailSender;
     private final PasswordResetService passwordResetService;
     private final PasswordResetMailer passwordResetMailer;
+    /** Lazy: businesses depends on users, which already depends on auth's facade. */
+    private final ObjectProvider<BusinessFacade> businessFacadeProvider;
 
     @Value("${app.frontend-url:http://localhost:3000}")
     private String frontendUrl;
@@ -50,7 +54,9 @@ public class AuthService implements AuthFacade {
     public AuthService(UserDetailsService userDetailsService, PasswordEncoder passwordEncoder,
                        JwtService jwtService, RefreshTokenService refreshTokenService, UserFacade userFacade,
                        EmailVerificationService emailVerificationService, EmailSender emailSender,
-                       PasswordResetService passwordResetService, PasswordResetMailer passwordResetMailer) {
+                       PasswordResetService passwordResetService, PasswordResetMailer passwordResetMailer,
+                       ObjectProvider<BusinessFacade> businessFacadeProvider) {
+        this.businessFacadeProvider = businessFacadeProvider;
         this.userDetailsService = userDetailsService;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
@@ -157,6 +163,13 @@ public class AuthService implements AuthFacade {
         UserDto user = userFacade.getById(userId);
         if ("SUPER_ADMIN".equals(user.role())) {
             throw new IllegalArgumentException("No se puede eliminar a un super administrador.");
+        }
+        BusinessFacade businessFacade = businessFacadeProvider == null ? null : businessFacadeProvider.getIfAvailable();
+        if (businessFacade != null) {
+            businessFacade.businessNameOwnedBy(userId).ifPresent(name -> {
+                throw new IllegalArgumentException("Es el dueño del negocio \"" + name
+                        + "\". Disuelve el negocio antes de eliminar su cuenta.");
+            });
         }
         refreshTokenService.deleteAllForUser(userId);
         emailVerificationService.deleteForUser(userId);
@@ -364,18 +377,68 @@ public class AuthService implements AuthFacade {
             throw new DisabledException("Cuenta de usuario desactivada");
         }
 
-        String token = jwtService.generateToken(user.username(), user.role(), user.storeId());
+        // La sesion recuerda la sucursal activa; se respeta solo si el usuario aun tiene acceso a ella
+        // (p. ej. no la sacaron del negocio), y si no se vuelve a su propio local.
+        Long storeId = activeStoreOf(user, rotation.storeId());
+        String token = jwtService.generateToken(user.username(), user.role(), storeId);
 
         return new LoginResponse(
                 token,
                 rotation.newRawToken(),
                 user.username(),
                 user.role(),
-                user.storeId(),
+                storeId,
                 jwtService.getExpirationTime(),
                 user.fullName(),
                 user.avatarUrl()
         );
+    }
+
+    /**
+     * Cambia la sucursal activa de la sesion de un dueño: valida que la sucursal sea de su negocio, rota el
+     * refresh token fijando esa sucursal y emite un access token con ese {@code storeId}. Otras sesiones del
+     * mismo usuario no cambian.
+     */
+    public LoginResponse switchStore(String username, String rawRefreshToken, Long targetStoreId) {
+        UserDto user = userFacade.findByUsername(username)
+                .orElseThrow(() -> new BadCredentialsException("Usuario o contraseña incorrectos"));
+        if (!"ADMINISTRATOR".equals(user.role()) || !user.active() || targetStoreId == null) {
+            throw new org.springframework.security.access.AccessDeniedException("No puedes cambiar de sucursal.");
+        }
+        if (!targetStoreId.equals(user.storeId()) && !canAccessBranch(user, targetStoreId)) {
+            throw new org.springframework.security.access.AccessDeniedException("No tienes acceso a esa sucursal.");
+        }
+
+        RefreshTokenService.RotationResult rotation = refreshTokenService.rotateToStore(rawRefreshToken, targetStoreId);
+        if (!user.id().equals(rotation.userId())) {
+            // El refresh token no es de quien pide el cambio: se cierra esa sesion por seguridad.
+            refreshTokenService.revokeFamily(rotation.familyId());
+            throw new BadCredentialsException("Refresh token invalido");
+        }
+
+        String token = jwtService.generateToken(user.username(), user.role(), targetStoreId);
+        return new LoginResponse(
+                token,
+                rotation.newRawToken(),
+                user.username(),
+                user.role(),
+                targetStoreId,
+                jwtService.getExpirationTime(),
+                user.fullName(),
+                user.avatarUrl()
+        );
+    }
+
+    private Long activeStoreOf(UserDto user, Long sessionStoreId) {
+        if (sessionStoreId == null || sessionStoreId.equals(user.storeId()) || !canAccessBranch(user, sessionStoreId)) {
+            return user.storeId();
+        }
+        return sessionStoreId;
+    }
+
+    private boolean canAccessBranch(UserDto user, Long storeId) {
+        BusinessFacade businessFacade = businessFacadeProvider == null ? null : businessFacadeProvider.getIfAvailable();
+        return businessFacade != null && businessFacade.accessibleBranchStatus(user.username(), storeId).isPresent();
     }
 
     /** Cierra la sesion revocando el refresh token asociado (si se envia). */

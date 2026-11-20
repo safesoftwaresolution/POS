@@ -15,6 +15,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import com.sciencebot.pos.auth.LoginRequest;
 import com.sciencebot.pos.auth.LoginResponse;
+import com.sciencebot.pos.auth.SwitchStoreRequest;
+import org.springframework.security.core.Authentication;
 
 import java.util.Map;
 
@@ -145,6 +147,30 @@ public class AuthController {
     ) {
         String rawRefreshToken = extractRefreshToken(body, request);
         LoginResponse response = authService.refresh(rawRefreshToken);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, accessCookie(response.token(), response.expiresIn()).toString())
+                .header(HttpHeaders.SET_COOKIE, refreshCookie(response.refreshToken(), refreshExpirationMs / 1000).toString())
+                .body(response);
+    }
+
+    @PostMapping("/switch-store")
+    @Operation(
+            summary = "Cambiar de sucursal",
+            description = "Solo para el dueño de un negocio (ADMINISTRATOR). Emite un access token con el storeId de la "
+                    + "sucursal elegida y rota el refresh token fijando esa sucursal en la sesion."
+    )
+    public ResponseEntity<LoginResponse> switchStore(
+            @RequestBody SwitchStoreRequest body,
+            Authentication authentication,
+            HttpServletRequest request
+    ) {
+        if (authentication == null || body == null) {
+            throw new IllegalArgumentException("storeId es requerido");
+        }
+        Map<String, String> tokenBody = body.refreshToken() == null ? null : Map.of("refreshToken", body.refreshToken());
+        LoginResponse response = authService.switchStore(
+                authentication.getName(), extractRefreshToken(tokenBody, request), body.storeId());
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, accessCookie(response.token(), response.expiresIn()).toString())

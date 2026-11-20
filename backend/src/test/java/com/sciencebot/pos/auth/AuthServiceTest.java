@@ -41,11 +41,14 @@ class AuthServiceTest {
     @Mock private EmailSender emailSender;
     @Mock private com.sciencebot.pos.auth.internal.services.PasswordResetService passwordResetService;
     @Mock private PasswordResetMailer passwordResetMailer;
+    @Mock private org.springframework.beans.factory.ObjectProvider<com.sciencebot.pos.businesses.BusinessFacade> businessFacadeProvider;
+    @Mock private com.sciencebot.pos.businesses.BusinessFacade businessFacade;
     @InjectMocks private AuthService authService;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
+        when(businessFacadeProvider.getIfAvailable()).thenReturn(businessFacade);
     }
 
     private static UserDto userDto(boolean active) {
@@ -109,6 +112,90 @@ class AuthServiceTest {
 
         assertThrows(DisabledException.class, () -> authService.refresh("oldRefresh"));
         verify(refreshTokenService).revokeFamily("fam-1");
+    }
+
+    @Test
+    void refresh_KeepsTheSessionBranch_whenTheOwnerStillHasAccess() {
+        when(refreshTokenService.rotate("old")).thenReturn(new RefreshTokenService.RotationResult("new", 7L, "fam-1", 2L));
+        when(userFacade.getById(7L)).thenReturn(userDto(true));
+        when(businessFacade.accessibleBranchStatus("admin", 2L)).thenReturn(Optional.of("ACTIVE"));
+        when(jwtService.generateToken("admin", "ADMINISTRATOR", 2L)).thenReturn("branchToken");
+
+        LoginResponse response = authService.refresh("old");
+
+        assertEquals("branchToken", response.token());
+        assertEquals(2L, response.storeId());
+    }
+
+    @Test
+    void refresh_FallsBackToTheHomeStore_whenTheBranchAccessWasLost() {
+        when(refreshTokenService.rotate("old")).thenReturn(new RefreshTokenService.RotationResult("new", 7L, "fam-1", 2L));
+        when(userFacade.getById(7L)).thenReturn(userDto(true));
+        when(businessFacade.accessibleBranchStatus("admin", 2L)).thenReturn(Optional.empty());
+        when(jwtService.generateToken("admin", "ADMINISTRATOR", 1L)).thenReturn("homeToken");
+
+        LoginResponse response = authService.refresh("old");
+
+        assertEquals("homeToken", response.token());
+        assertEquals(1L, response.storeId());
+    }
+
+    @Test
+    void switchStore_issuesATokenForTheBranch_andPinsItInTheSession() {
+        when(userFacade.findByUsername("admin")).thenReturn(Optional.of(userDto(true)));
+        when(businessFacade.accessibleBranchStatus("admin", 2L)).thenReturn(Optional.of("ACTIVE"));
+        when(refreshTokenService.rotateToStore("old", 2L))
+                .thenReturn(new RefreshTokenService.RotationResult("new", 7L, "fam-1", 2L));
+        when(jwtService.generateToken("admin", "ADMINISTRATOR", 2L)).thenReturn("branchToken");
+
+        LoginResponse response = authService.switchStore("admin", "old", 2L);
+
+        assertEquals("branchToken", response.token());
+        assertEquals("new", response.refreshToken());
+        assertEquals(2L, response.storeId());
+    }
+
+    @Test
+    void switchStore_toTheHomeStoreNeedsNoBusinessLookup() {
+        when(userFacade.findByUsername("admin")).thenReturn(Optional.of(userDto(true)));
+        when(refreshTokenService.rotateToStore("old", 1L))
+                .thenReturn(new RefreshTokenService.RotationResult("new", 7L, "fam-1", 1L));
+        when(jwtService.generateToken("admin", "ADMINISTRATOR", 1L)).thenReturn("homeToken");
+
+        assertEquals(1L, authService.switchStore("admin", "old", 1L).storeId());
+        verify(businessFacade, never()).accessibleBranchStatus(any(), any());
+    }
+
+    @Test
+    void switchStore_deniesABranchTheUserDoesNotOwn() {
+        when(userFacade.findByUsername("admin")).thenReturn(Optional.of(userDto(true)));
+        when(businessFacade.accessibleBranchStatus("admin", 99L)).thenReturn(Optional.empty());
+
+        assertThrows(org.springframework.security.access.AccessDeniedException.class,
+                () -> authService.switchStore("admin", "old", 99L));
+        verify(refreshTokenService, never()).rotateToStore(any(), any());
+    }
+
+    @Test
+    void switchStore_deniesNonAdministrators() {
+        when(userFacade.findByUsername("seller")).thenReturn(Optional.of(
+                new UserDto(8L, "Seller", "seller", "s@pos.com", "SELLER", true, 1L, true)));
+
+        assertThrows(org.springframework.security.access.AccessDeniedException.class,
+                () -> authService.switchStore("seller", "old", 2L));
+        verify(refreshTokenService, never()).rotateToStore(any(), any());
+    }
+
+    @Test
+    void switchStore_revokesTheSession_whenTheRefreshTokenBelongsToAnotherUser() {
+        when(userFacade.findByUsername("admin")).thenReturn(Optional.of(userDto(true)));
+        when(businessFacade.accessibleBranchStatus("admin", 2L)).thenReturn(Optional.of("ACTIVE"));
+        when(refreshTokenService.rotateToStore("stolen", 2L))
+                .thenReturn(new RefreshTokenService.RotationResult("new", 99L, "fam-9", 2L));
+
+        assertThrows(BadCredentialsException.class, () -> authService.switchStore("admin", "stolen", 2L));
+        verify(refreshTokenService).revokeFamily("fam-9");
+        verify(jwtService, never()).generateToken(anyString(), anyString(), any());
     }
 
     @Test
@@ -352,6 +439,18 @@ class AuthServiceTest {
         order.verify(emailVerificationService).deleteForUser(7L);
         order.verify(passwordResetService).deleteForUser(7L);
         order.verify(userFacade).deleteUserPermanently(7L);
+    }
+
+    @Test
+    void deleteAccount_TheOwnerOfABusiness_IsRefusedBeforeTouchingAnything() {
+        when(userFacade.getById(7L)).thenReturn(userDto(true));
+        when(businessFacade.businessNameOwnedBy(7L)).thenReturn(Optional.of("Mi Negocio"));
+
+        var ex = assertThrows(IllegalArgumentException.class, () -> authService.deleteAccount(7L));
+
+        assertTrue(ex.getMessage().contains("Mi Negocio"));
+        verify(refreshTokenService, never()).deleteAllForUser(anyLong());
+        verify(userFacade, never()).deleteUserPermanently(anyLong());
     }
 
     @Test

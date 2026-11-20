@@ -55,9 +55,21 @@ public class RefreshTokenService {
         repository.purgeInactiveForUser(userId, LocalDateTime.now());
 
         String rawToken = generateRawToken();
-        RefreshToken entity = newToken(rawToken, userId, UUID.randomUUID().toString());
+        RefreshToken entity = newToken(rawToken, userId, UUID.randomUUID().toString(), null);
         repository.save(entity);
         return rawToken;
+    }
+
+    /** Rota el token conservando la sucursal activa de la sesion. */
+    @Transactional
+    public RotationResult rotate(String rawToken) {
+        return rotateInternal(rawToken, false, null);
+    }
+
+    /** Rota el token y fija la sucursal activa de la sesion (cambio de sucursal). */
+    @Transactional
+    public RotationResult rotateToStore(String rawToken, Long storeId) {
+        return rotateInternal(rawToken, true, storeId);
     }
 
     /**
@@ -65,8 +77,7 @@ public class RefreshTokenService {
      * revoca el actual y emite uno nuevo dentro de la misma familia.
      * Lanza {@link BadCredentialsException} si es invalido, expirado o reutilizado.
      */
-    @Transactional
-    public RotationResult rotate(String rawToken) {
+    private RotationResult rotateInternal(String rawToken, boolean changeStore, Long newStoreId) {
         if (rawToken == null || rawToken.isBlank()) {
             throw new BadCredentialsException("Refresh token requerido");
         }
@@ -90,10 +101,11 @@ public class RefreshTokenService {
         current.setRevoked(true);
         repository.save(current);
 
+        Long storeId = changeStore ? newStoreId : current.getActiveStoreId();
         String newRawToken = generateRawToken();
-        repository.save(newToken(newRawToken, current.getUserId(), current.getFamilyId()));
+        repository.save(newToken(newRawToken, current.getUserId(), current.getFamilyId(), storeId));
 
-        return new RotationResult(newRawToken, current.getUserId(), current.getFamilyId());
+        return new RotationResult(newRawToken, current.getUserId(), current.getFamilyId(), storeId);
     }
 
     /** Cierra la sesion: revoca la familia completa del token presentado (si existe). */
@@ -143,8 +155,9 @@ public class RefreshTokenService {
         return token.getUpdatedAt().isAfter(threshold);
     }
 
-    private RefreshToken newToken(String rawToken, Long userId, String familyId) {
+    private RefreshToken newToken(String rawToken, Long userId, String familyId, Long storeId) {
         RefreshToken entity = new RefreshToken();
+        entity.setActiveStoreId(storeId);
         entity.setTokenHash(hash(rawToken));
         entity.setUserId(userId);
         entity.setFamilyId(familyId);
@@ -169,6 +182,13 @@ public class RefreshTokenService {
         }
     }
 
-    /** Resultado de una rotacion: nuevo token opaco + a quien pertenece. */
-    public record RotationResult(String newRawToken, Long userId, String familyId) {}
+    /**
+     * Resultado de una rotacion: nuevo token opaco + a quien pertenece + sucursal activa de la sesion
+     * (null = el local del usuario).
+     */
+    public record RotationResult(String newRawToken, Long userId, String familyId, Long storeId) {
+        public RotationResult(String newRawToken, Long userId, String familyId) {
+            this(newRawToken, userId, familyId, null);
+        }
+    }
 }

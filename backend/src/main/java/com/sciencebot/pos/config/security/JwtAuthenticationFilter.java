@@ -1,5 +1,6 @@
 package com.sciencebot.pos.config.security;
 
+import com.sciencebot.pos.businesses.BusinessFacade;
 import com.sciencebot.pos.config.tenant.TenantContext;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -7,6 +8,7 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.jspecify.annotations.NonNull;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -27,9 +29,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Value("${security.jwt.cookie-name:jwt_token}")
     private String cookieName = "jwt_token";
 
-    public JwtAuthenticationFilter(JwtService jwtService, UserDetailsService userDetailsService) {
+    /** Lazy, to avoid a cycle with the users module that already provides {@code userDetailsService}. */
+    private final ObjectProvider<BusinessFacade> businessFacadeProvider;
+
+    public JwtAuthenticationFilter(JwtService jwtService, UserDetailsService userDetailsService,
+                                   ObjectProvider<BusinessFacade> businessFacadeProvider) {
         this.jwtService = jwtService;
         this.userDetailsService = userDetailsService;
+        this.businessFacadeProvider = businessFacadeProvider;
     }
 
     public void setCookieName(String cookieName) {
@@ -82,13 +89,33 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                             return;
                         }
 
+                        // Sucursal activa distinta del local del usuario (cambio de sucursal del dueño de un negocio):
+                        // el JWT firmado no basta, porque lo pudieron sacar del negocio después de emitirlo. Se
+                        // comprueba en cada petición y el estado que cuenta es el de esa sucursal, no el del local de origen.
+                        String effectiveStatus = userDetails instanceof PosUserDetails p ? p.getStoreStatus() : null;
+                        if (storeId != null && userDetails instanceof PosUserDetails posUser
+                                && posUser.getStoreId() != null && !storeId.equals(posUser.getStoreId())
+                                && !"SUPER_ADMIN".equals(jwtService.extractRole(jwt))
+                                && !isAuthPath(request)) {
+                            java.util.Optional<String> branchStatus = branchStatus(username, storeId);
+                            if (branchStatus.isEmpty()) {
+                                response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                                response.setContentType("application/json");
+                                response.setCharacterEncoding("UTF-8");
+                                response.getWriter().write("{\"error\":\"StoreAccessDenied\","
+                                        + "\"message\":\"Ya no tienes acceso a esa sucursal. Vuelve a elegir una.\"}");
+                                return;
+                            }
+                            effectiveStatus = branchStatus.get();
+                        }
+
                         // Un local que no está ACTIVE (en revisión, rechazado, suspendido, inactivo) no opera:
                         // su personal solo puede consultar o corregir el local y usar autenticación y soporte.
-                        if (storeId != null && userDetails instanceof PosUserDetails posUser
+                        if (storeId != null && userDetails instanceof PosUserDetails
                                 && !"SUPER_ADMIN".equals(jwtService.extractRole(jwt))
-                                && !"ACTIVE".equals(posUser.getStoreStatus())
+                                && !"ACTIVE".equals(effectiveStatus)
                                 && !isStoreSetupPath(request)) {
-                            String status = posUser.getStoreStatus();
+                            String status = effectiveStatus;
                             response.setStatus(HttpServletResponse.SC_FORBIDDEN);
                             response.setContentType("application/json");
                             response.setCharacterEncoding("UTF-8");
@@ -107,6 +134,25 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         } finally {
             TenantContext.clear();
         }
+    }
+
+    private java.util.Optional<String> branchStatus(String username, Long storeId) {
+        BusinessFacade businessFacade = businessFacadeProvider == null ? null : businessFacadeProvider.getIfAvailable();
+        if (businessFacade == null) {
+            return java.util.Optional.empty();
+        }
+        try {
+            return businessFacade.accessibleBranchStatus(username, storeId);
+        } catch (RuntimeException e) {
+            // El catch general de doFilterInternal ignora errores y deja pasar la petición ya autenticada: aquí un
+            // fallo al verificar el acceso debe negarlo, no permitirlo.
+            logger.warn("No se pudo verificar el acceso a la sucursal " + storeId + "; se niega.", e);
+            return java.util.Optional.empty();
+        }
+    }
+
+    private boolean isAuthPath(HttpServletRequest request) {
+        return request.getRequestURI().startsWith(request.getContextPath() + "/api/v1/auth/");
     }
 
     /**
@@ -141,6 +187,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String v1 = api + "v1";
         if (path.startsWith(v1 + "/legal/") || path.startsWith(v1 + "/support/")) {
             return true;
+        }
+        // Para poder volver a otra sucursal estando en una que no opera, el dueño debe poder listarlas.
+        if (path.equals(v1 + "/business/me")) {
+            return "GET".equalsIgnoreCase(method);
         }
         String me = v1 + "/stores/me";
         if (path.equals(me)) {

@@ -28,6 +28,10 @@ public class RefreshToken {
     @Column(name = "family_id", nullable = false, length = 36)
     private String familyId;
 
+    /** Sucursal activa de la sesion (V46); null = el local del usuario. Se hereda en cada rotacion. */
+    @Column(name = "store_id")
+    private Long activeStoreId;
+
     @Column(name = "expires_at", nullable = false)
     private LocalDateTime expiresAt;
 

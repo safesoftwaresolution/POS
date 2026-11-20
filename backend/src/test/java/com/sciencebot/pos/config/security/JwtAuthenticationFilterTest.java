@@ -36,6 +36,12 @@ class JwtAuthenticationFilterTest {
     @Mock
     private FilterChain filterChain;
 
+    @Mock
+    private org.springframework.beans.factory.ObjectProvider<com.sciencebot.pos.businesses.BusinessFacade> businessFacadeProvider;
+
+    @Mock
+    private com.sciencebot.pos.businesses.BusinessFacade businessFacade;
+
     @InjectMocks
     private JwtAuthenticationFilter jwtAuthenticationFilter;
 
@@ -44,6 +50,7 @@ class JwtAuthenticationFilterTest {
         MockitoAnnotations.openMocks(this);
         SecurityContextHolder.clearContext();
         jwtAuthenticationFilter.setCookieName("jwt_token");
+        when(businessFacadeProvider.getIfAvailable()).thenReturn(businessFacade);
     }
 
     @AfterEach
@@ -109,6 +116,114 @@ class JwtAuthenticationFilterTest {
         when(jwtService.extractStoreId("tok")).thenReturn(9L);
         when(jwtService.extractRole("tok")).thenReturn(role);
         return request;
+    }
+
+    /** Sesión de un dueño (local de origen 9, ACTIVE) que está trabajando en la sucursal 10. */
+    private MockHttpServletRequest branchSessionOf(String method, String path) {
+        MockHttpServletRequest request = requestOf("owner", "ADMINISTRATOR", "ACTIVE", method, path);
+        when(jwtService.extractStoreId("tok")).thenReturn(10L);
+        return request;
+    }
+
+    @Test
+    void doFilterInternal_Branch_OfTheOwnersBusiness_Passes() throws ServletException, IOException {
+        MockHttpServletRequest request = branchSessionOf("GET", "/api/v1/sales");
+        when(businessFacade.accessibleBranchStatus("owner", 10L)).thenReturn(java.util.Optional.of("ACTIVE"));
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        jwtAuthenticationFilter.doFilterInternal(request, response, filterChain);
+
+        assertEquals(200, response.getStatus());
+        verify(filterChain).doFilter(request, response);
+    }
+
+    @Test
+    void doFilterInternal_Branch_NotOfTheUsersBusiness_Gets403StoreAccessDenied() throws ServletException, IOException {
+        MockHttpServletRequest request = branchSessionOf("GET", "/api/v1/sales");
+        when(businessFacade.accessibleBranchStatus("owner", 10L)).thenReturn(java.util.Optional.empty());
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        jwtAuthenticationFilter.doFilterInternal(request, response, filterChain);
+
+        assertEquals(403, response.getStatus());
+        assertTrue(response.getContentAsString().contains("\"error\":\"StoreAccessDenied\""));
+        verify(filterChain, never()).doFilter(any(), any());
+    }
+
+    @Test
+    void doFilterInternal_Branch_NotActive_Gets403StoreNotActiveEvenIfTheHomeStoreIsActive() throws ServletException, IOException {
+        MockHttpServletRequest request = branchSessionOf("GET", "/api/v1/sales");
+        when(businessFacade.accessibleBranchStatus("owner", 10L)).thenReturn(java.util.Optional.of("PENDING_VERIFICATION"));
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        jwtAuthenticationFilter.doFilterInternal(request, response, filterChain);
+
+        assertEquals(403, response.getStatus());
+        assertTrue(response.getContentAsString().contains("\"error\":\"StoreNotActive\""));
+        assertTrue(response.getContentAsString().contains("\"status\":\"PENDING_VERIFICATION\""));
+        verify(filterChain, never()).doFilter(any(), any());
+    }
+
+    @Test
+    void doFilterInternal_Branch_ActiveWorksEvenIfTheHomeStoreIsSuspended() throws ServletException, IOException {
+        MockHttpServletRequest request = requestOf("owner", "ADMINISTRATOR", "SUSPENDED", "GET", "/api/v1/sales");
+        when(jwtService.extractStoreId("tok")).thenReturn(10L);
+        when(businessFacade.accessibleBranchStatus("owner", 10L)).thenReturn(java.util.Optional.of("ACTIVE"));
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        jwtAuthenticationFilter.doFilterInternal(request, response, filterChain);
+
+        assertEquals(200, response.getStatus());
+        verify(filterChain).doFilter(request, response);
+    }
+
+    @Test
+    void doFilterInternal_Branch_LetsTheOwnerListBranchesWhileTheBranchDoesNotOperate() throws ServletException, IOException {
+        MockHttpServletRequest request = branchSessionOf("GET", "/api/v1/business/me");
+        when(businessFacade.accessibleBranchStatus("owner", 10L)).thenReturn(java.util.Optional.of("SUSPENDED"));
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        jwtAuthenticationFilter.doFilterInternal(request, response, filterChain);
+
+        assertEquals(200, response.getStatus());
+        verify(filterChain).doFilter(request, response);
+    }
+
+    @Test
+    void doFilterInternal_Branch_AuthPathsStayReachable_WithoutAskingTheBusiness() throws ServletException, IOException {
+        MockHttpServletRequest request = branchSessionOf("POST", "/api/v1/auth/switch-store");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        jwtAuthenticationFilter.doFilterInternal(request, response, filterChain);
+
+        assertEquals(200, response.getStatus());
+        verify(businessFacade, never()).accessibleBranchStatus(any(), any());
+        verify(filterChain).doFilter(request, response);
+    }
+
+    @Test
+    void doFilterInternal_Branch_WhenTheAccessCheckThrows_FailsClosed() throws ServletException, IOException {
+        MockHttpServletRequest request = branchSessionOf("GET", "/api/v1/sales");
+        when(businessFacade.accessibleBranchStatus("owner", 10L)).thenThrow(new IllegalStateException("db down"));
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        jwtAuthenticationFilter.doFilterInternal(request, response, filterChain);
+
+        assertEquals(403, response.getStatus());
+        assertTrue(response.getContentAsString().contains("\"error\":\"StoreAccessDenied\""));
+        verify(filterChain, never()).doFilter(any(), any());
+    }
+
+    @Test
+    void doFilterInternal_Branch_WithoutTheBusinessModule_FailsClosed() throws ServletException, IOException {
+        MockHttpServletRequest request = branchSessionOf("GET", "/api/v1/sales");
+        when(businessFacadeProvider.getIfAvailable()).thenReturn(null);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        jwtAuthenticationFilter.doFilterInternal(request, response, filterChain);
+
+        assertEquals(403, response.getStatus());
+        verify(filterChain, never()).doFilter(any(), any());
     }
 
     @ParameterizedTest

@@ -45,6 +45,17 @@ class RefreshTokenServiceTest {
     }
 
     @Test
+    void rotateToStore_PinsTheBranch_andLaterRotationsKeepIt() {
+        String raw = refreshTokenService.issue(userId);
+        assertNull(refreshTokenService.rotate(raw).storeId(), "a new session has no branch of its own");
+
+        String second = refreshTokenService.issue(userId);
+        RefreshTokenService.RotationResult switched = refreshTokenService.rotateToStore(second, 5L);
+        assertEquals(5L, switched.storeId());
+        assertEquals(5L, refreshTokenService.rotate(switched.newRawToken()).storeId());
+    }
+
+    @Test
     void rotate_ReusedTokenAfterGrace_DetectsReuseAndRevokesFamily() {
         // Ventana de gracia en 0 => deteccion de reuso estricta (comportamiento de robo).
         ReflectionTestUtils.setField(refreshTokenService, "reuseGraceMs", 0L);

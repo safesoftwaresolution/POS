@@ -6,3 +6,4 @@ export const AuthContext = createContext();
 export const ModalContext = createContext(null);
 export const ThemeContext = createContext();
 export const StoreTemplateContext = createContext(null);
+export const BusinessContext = createContext(null);

@@ -14,6 +14,8 @@ public interface StoreRepository extends JpaRepository<StoreEntity, Long> {
     @Query("SELECT s FROM StoreEntity s WHERE (:status IS NULL OR s.status = :status) AND (:q IS NULL OR LOWER(s.name) LIKE LOWER(CONCAT(\'%\',CAST(:q AS string),\'%\')) OR LOWER(s.email) LIKE LOWER(CONCAT(\'%\',CAST(:q AS string),\'%\')) OR LOWER(s.phone) LIKE LOWER(CONCAT(\'%\',CAST(:q AS string),\'%\')) OR LOWER(s.taxId) LIKE LOWER(CONCAT(\'%\',CAST(:q AS string),\'%\')))")
     Page<StoreEntity> searchStores(@Param("status") String status, @Param("q") String q, Pageable pageable);
 
+    java.util.List<StoreEntity> findByBusinessIdOrderByIdAsc(Long businessId);
+
     long countByStatus(String status);
     long countByEmailVerifiedTrue();
     boolean existsByEmail(String email);

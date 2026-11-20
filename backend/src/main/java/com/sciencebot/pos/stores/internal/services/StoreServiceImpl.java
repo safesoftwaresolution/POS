@@ -127,6 +127,51 @@ public class StoreServiceImpl implements StoreFacade {
     }
 
     @Override
+    public Long getBusinessId(Long storeId) {
+        return storeId == null ? null : storeRepository.findById(storeId).map(StoreEntity::getBusinessId).orElse(null);
+    }
+
+    @Override
+    public List<StoreDto> listByBusiness(Long businessId) {
+        return storeRepository.findByBusinessIdOrderByIdAsc(businessId).stream().map(this::toStoreDto).toList();
+    }
+
+    @Override
+    @Transactional
+    public void attachToBusiness(Long storeId, Long businessId) {
+        StoreEntity store = storeRepository.findById(storeId)
+                .orElseThrow(() -> new EntityNotFoundException("Local no encontrado con ID: " + storeId));
+        if (store.getBusinessId() != null) {
+            throw new IllegalStateException("El local ya pertenece a un negocio.");
+        }
+        store.setBusinessId(businessId);
+        storeRepository.save(store);
+    }
+
+    @Override
+    @Transactional
+    public StoreDto createBranch(Long businessId, CreateStoreCommand command) {
+        StoreDto created = createStore(command);
+        attachToBusiness(created.id(), businessId);
+        // Igual que el alta del propio local: la configuración (recibos, facturas) arranca con los datos de la sucursal.
+        settingsFacade.seedSettings(created.id(), new SettingsDto(
+                command.name(), command.address(), command.phone(), command.taxId(), command.email(), null));
+        return getById(created.id());
+    }
+
+    @Override
+    @Transactional
+    public void detachFromBusiness(Long storeId, Long businessId) {
+        StoreEntity store = storeRepository.findById(storeId)
+                .orElseThrow(() -> new EntityNotFoundException("Local no encontrado con ID: " + storeId));
+        if (!java.util.Objects.equals(store.getBusinessId(), businessId)) {
+            throw new IllegalArgumentException("El local no pertenece a este negocio.");
+        }
+        store.setBusinessId(null);
+        storeRepository.save(store);
+    }
+
+    @Override
     @Transactional
     public StoreDto createStore(CreateStoreCommand command) {
         if (storeRepository.existsByEmail(command.email())) {
@@ -268,7 +313,16 @@ public class StoreServiceImpl implements StoreFacade {
         if (owner.storeId() == null) {
             throw new EntityNotFoundException("Aún no has registrado un local.");
         }
-        return getById(owner.storeId());
+        return getById(activeStoreIdOf(owner));
+    }
+
+    /**
+     * El local con el que trabaja la sesión: la sucursal activa de un dueño de negocio (el filtro JWT ya comprobó que
+     * es suya) o, en cualquier otro caso, el local del usuario. Sin local propio no hay sucursal activa que valga.
+     */
+    private static Long activeStoreIdOf(UserDto owner) {
+        Long active = com.sciencebot.pos.config.tenant.TenantContext.getStoreId();
+        return active != null ? active : owner.storeId();
     }
 
     @Override
@@ -327,7 +381,7 @@ public class StoreServiceImpl implements StoreFacade {
         if (owner.storeId() == null) {
             throw new EntityNotFoundException("Aún no has registrado un local.");
         }
-        return owner.storeId();
+        return activeStoreIdOf(owner);
     }
 
     @Override
@@ -375,6 +429,14 @@ public class StoreServiceImpl implements StoreFacade {
     public void deleteStore(Long id, String confirmName) {
         StoreEntity store = storeRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Local no encontrado con ID: " + id));
+        storePurgeDao.findBusinessNameByMainStore(id).ifPresent(name -> {
+            throw new IllegalArgumentException("Es la sucursal principal del negocio \"" + name
+                    + "\". Disuelve el negocio antes de eliminarla.");
+        });
+        if (storePurgeDao.countDocumentsBilledForOtherStores(id) > 0) {
+            throw new IllegalArgumentException("Otras sucursales emitieron documentos con la empresa y la numeración de "
+                    + "este local; deben conservarse. Suspende o inactiva el local en lugar de eliminarlo.");
+        }
         if (storePurgeDao.countValidatedInvoices(id) > 0) {
             throw new IllegalArgumentException("El local tiene facturas electronicas validadas ante la DIAN, que son "
                     + "documentos fiscales y deben conservarse. Suspende o inactiva el local en lugar de eliminarlo.");

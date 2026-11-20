@@ -418,6 +418,75 @@ class StoreServiceImplTest {
     }
 
     @Test
+    void getOwnStore_ReturnsTheActiveBranchOfTheSession_WhenTheOwnerSwitchedBranch() {
+        when(userFacade.findByUsername("dueno")).thenReturn(Optional.of(
+                new UserDto(5L, "Dueño", "dueno", "d@x.co", "ADMINISTRATOR", true, 1L, true)));
+        when(storeRepository.findById(2L)).thenReturn(Optional.of(storeWithStatus("PENDING_VERIFICATION")));
+        com.sciencebot.pos.config.tenant.TenantContext.setStoreId(2L);
+        try {
+            storeService.getOwnStore("dueno");
+        } finally {
+            com.sciencebot.pos.config.tenant.TenantContext.clear();
+        }
+
+        verify(storeRepository).findById(2L);
+        verify(storeRepository, never()).findById(1L);
+    }
+
+    @Test
+    void getOwnStore_ReturnsTheUsersOwnStore_WhenThereIsNoActiveBranch() {
+        when(userFacade.findByUsername("dueno")).thenReturn(Optional.of(
+                new UserDto(5L, "Dueño", "dueno", "d@x.co", "ADMINISTRATOR", true, 1L, true)));
+        when(storeRepository.findById(1L)).thenReturn(Optional.of(storeWithStatus("ACTIVE")));
+
+        storeService.getOwnStore("dueno");
+
+        verify(storeRepository).findById(1L);
+    }
+
+    @Test
+    void getOwnStore_IgnoresALeftoverTenantWhenTheUserHasNoStoreAnymore() {
+        when(userFacade.findByUsername("dueno")).thenReturn(Optional.of(
+                new UserDto(5L, "Dueño", "dueno", "d@x.co", "ADMINISTRATOR", true, null, true)));
+        com.sciencebot.pos.config.tenant.TenantContext.setStoreId(2L);
+        try {
+            assertThrows(jakarta.persistence.EntityNotFoundException.class, () -> storeService.getOwnStore("dueno"));
+        } finally {
+            com.sciencebot.pos.config.tenant.TenantContext.clear();
+        }
+        verify(storeRepository, never()).findById(anyLong());
+    }
+
+    @Test
+    void deleteStore_TheMainStoreOfABusiness_IsRefusedWithAClearMessage() {
+        when(storeRepository.findById(5L)).thenReturn(Optional.of(storeWithStatus("REJECTED")));
+        when(storePurgeDao.findBusinessNameByMainStore(5L)).thenReturn(Optional.of("Mi Negocio"));
+
+        var ex = assertThrows(IllegalArgumentException.class, () -> storeService.deleteStore(5L, null));
+
+        assertTrue(ex.getMessage().contains("Mi Negocio"));
+        verify(storePurgeDao, never()).purge(anyLong());
+        verifyNoInteractions(statusAuditRepository, storageFacade);
+    }
+
+    @Test
+    void createBranch_CreatesAPendingStoreInsideTheBusiness_AndSeedsItsSettings() {
+        StoreEntity saved = storeWithStatus("PENDING_VERIFICATION");
+        saved.setId(8L);
+        when(storeRepository.existsByEmail("sucursal@test.com")).thenReturn(false);
+        when(storeRepository.save(any(StoreEntity.class))).thenReturn(saved);
+        when(storeRepository.findById(8L)).thenReturn(Optional.of(saved));
+        when(storeMapper.toDto(any(), any())).thenReturn(new StoreDto(8L, "Sucursal", null, null, "300", "sucursal@test.com", null,
+                "Calle 1", "900111", "PENDING_VERIFICATION", false, null, null, "BASIC", "RETAIL", "DEFAULT", List.of("RETAIL"), List.of()));
+
+        storeService.createBranch(3L, new CreateStoreCommand("Sucursal", null, "300", "sucursal@test.com", null, "Calle 1", "900111"));
+
+        assertEquals(3L, saved.getBusinessId());
+        assertEquals("PENDING_VERIFICATION", saved.getStatus());
+        verify(settingsFacade).seedSettings(eq(8L), any());
+    }
+
+    @Test
     void deleteStore_ActiveStoreWithOperation_RequiresTheExactName() {
         when(storeRepository.findById(5L)).thenReturn(Optional.of(storeWithStatus("ACTIVE")));
         when(storePurgeDao.findBusinessData(5L)).thenReturn(List.of("sales", "products"));

@@ -16,6 +16,16 @@ public interface StoreFacade {
     StoreDto getById(Long id);
     /** Estado del local (ACTIVE, PENDING_VERIFICATION...) o null si no existe; consulta liviana para el filtro JWT. */
     String getStoreStatus(Long storeId);
+    /** Business the store belongs to, or null when it is standalone (or does not exist). */
+    Long getBusinessId(Long storeId);
+    /** Branches (stores) of a business, oldest first. */
+    List<StoreDto> listByBusiness(Long businessId);
+    /** Puts a standalone store into a business. Fails if the store does not exist or already has a business. */
+    void attachToBusiness(Long storeId, Long businessId);
+    /** Creates a pending-review store that already belongs to the business, with its settings seeded. */
+    StoreDto createBranch(Long businessId, CreateStoreCommand command);
+    /** Takes a store out of the given business without deleting it. Fails if it belongs to a different one. */
+    void detachFromBusiness(Long storeId, Long businessId);
     /** Auto-registro self-service: crea el local del ADMINISTRATOR autenticado (que aun no tiene uno). */
     StoreDto registerOwnStore(String ownerUsername, CreateStoreCommand command);
     /** Local del ADMINISTRATOR autenticado. */

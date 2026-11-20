@@ -49,6 +49,26 @@ public class StorePurgeDao {
                 .param("storeId", storeId).query(String.class).list();
     }
 
+    /** Nombre del negocio del que este local es la sucursal principal, si lo es (el negocio depende de ella). */
+    public java.util.Optional<String> findBusinessNameByMainStore(Long storeId) {
+        return jdbcClient.sql("SELECT name FROM businesses WHERE main_store_id = :storeId")
+                .param("storeId", storeId).query(String.class).optional();
+    }
+
+    /**
+     * Documentos de OTRAS sucursales que se emitieron con la empresa y la numeración de este local (negocio con NIT
+     * compartido). Su historial depende de estos datos: el local no se puede eliminar mientras existan.
+     */
+    public long countDocumentsBilledForOtherStores(Long storeId) {
+        long total = 0;
+        for (String table : List.of("electronic_invoices", "electronic_credit_notes", "electronic_debit_notes")) {
+            total += jdbcClient.sql("SELECT COUNT(*) FROM " + table
+                            + " WHERE billing_store_id = :storeId AND store_id <> :storeId")
+                    .param("storeId", storeId).query(Long.class).single();
+        }
+        return total;
+    }
+
     /** Facturas electrónicas ya validadas ante la DIAN: son documentos fiscales y deben conservarse. */
     public long countValidatedInvoices(Long storeId) {
         return jdbcClient.sql("SELECT COUNT(*) FROM electronic_invoices WHERE store_id = :storeId AND status = 'VALIDATED'")

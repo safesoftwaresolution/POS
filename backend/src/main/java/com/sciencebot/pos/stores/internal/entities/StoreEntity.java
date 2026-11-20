@@ -37,6 +37,9 @@ public class StoreEntity {
     private boolean emailVerified = false;
     @Column(name = "plan_code", nullable = false, length = 20)
     private String planCode = "BASIC";
+    /** Business (group of branches) this store belongs to; null for a standalone store (V45). */
+    @Column(name = "business_id")
+    private Long businessId;
     @Column(name = "rejection_reason")
     private String rejectionReason;
     @Column(name = "created_at", nullable = false, updatable = false)

@@ -112,7 +112,7 @@ public class AlegraInvoiceClient {
             return fromProviderError(ex, null);
         }
 
-        Allocation allocation = allocator.allocate(access.storeId(), access.environment(), INVOICE_DOCUMENT, reference);
+        Allocation allocation = allocator.allocate(access.storeId(), access.billingStoreId(), access.environment(), INVOICE_DOCUMENT, reference);
         if ("ACCEPTED".equals(allocation.outcome())) {
             return allocator.receipt(allocation);
         }

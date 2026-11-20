@@ -41,14 +41,17 @@ public class InvoiceEmissionTransactions {
     /** De aquí sale el entorno del local que se anota en la factura al reservar su emisión. */
     private final StoreBillingConfigRepository configRepository;
     private final Duration lease;
+    private final BillingSourceResolver billingSources;
 
     @Autowired
     public InvoiceEmissionTransactions(ElectronicInvoiceRepository repository, ElectronicInvoiceMapper mapper,
                                        StoreBillingConfigRepository configRepository,
+                                       BillingSourceResolver billingSources,
                                        @Value("${billing.emission.lease:PT5M}") Duration lease) {
         this.repository = repository;
         this.mapper = mapper;
         this.configRepository = configRepository;
+        this.billingSources = billingSources;
         this.lease = lease;
     }
 
@@ -119,12 +122,16 @@ public class InvoiceEmissionTransactions {
         }
         // Only a first, never-sent attempt may adopt today's configuration. Historical context is never guessed.
         if (invoice.getAttempts() != 1 || invoice.getProviderDocumentId() != null) return;
-        configRepository.findById(invoice.getStoreId()).ifPresent(config -> {
+        // Con NIT compartido la empresa y el entorno son los de la sucursal principal; el documento lo recuerda.
+        Long sourceStoreId = billingSources.sourceStoreOf(invoice.getStoreId());
+        invoice.pinBillingStore(sourceStoreId);
+        configRepository.findById(sourceStoreId).ifPresent(config -> {
             BillingEnvironment environment = invoice.getEnvironment() != null ? invoice.getEnvironment() : config.getEnvironment();
             invoice.assignEnvironmentIfMissing(environment);
             String companyId = config.companyIdFor(environment);
             if (companyId != null && (invoice.getEnvironment() == null || invoice.getEnvironment() == config.getEnvironment())) {
-                invoice.assignDocumentContext(new BillingDocumentContext(invoice.getStoreId(), environment, activeProviderName, companyId));
+                invoice.assignDocumentContext(new BillingDocumentContext(invoice.getStoreId(), environment,
+                        activeProviderName, companyId, sourceStoreId));
             }
         });
     }

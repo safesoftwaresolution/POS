@@ -69,7 +69,7 @@ public interface ElectronicInvoiceRepository extends JpaRepository<ElectronicInv
      * y las de los demás locales nunca se reintentarían.
      */
     @Query("SELECT e FROM ElectronicInvoice e WHERE e.attempts < :maxAttempts "
-            + "AND EXISTS (SELECT c FROM StoreBillingConfig c WHERE c.storeId = e.storeId "
+            + "AND EXISTS (SELECT c FROM StoreBillingConfig c WHERE c.storeId = COALESCE(e.billingStoreId, e.storeId) "
             + "AND c.status = com.sciencebot.pos.billing.dto.BillingActivationStatus.ACTIVE) AND ("
             + "(e.status IN (com.sciencebot.pos.billing.dto.ElectronicInvoiceStatus.ERROR, "
             + "com.sciencebot.pos.billing.dto.ElectronicInvoiceStatus.PENDING) "

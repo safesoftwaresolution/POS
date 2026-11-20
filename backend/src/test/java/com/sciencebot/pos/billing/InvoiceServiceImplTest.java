@@ -83,7 +83,7 @@ class InvoiceServiceImplTest {
                 canonicalMapper,
                 invoiceMapper,
                 saleFacade,
-                new InvoiceEmissionTransactions(repository, invoiceMapper, configRepository, Duration.ofMinutes(5)),
+                new InvoiceEmissionTransactions(repository, invoiceMapper, configRepository, ownSources(), Duration.ofMinutes(5)),
                 List.of(mockAdapter, customProvider)
         );
     }
@@ -432,5 +432,12 @@ class InvoiceServiceImplTest {
 
         verify(customProvider, never()).sendInvoiceEmailByProviderId(any(), any());
         verify(customProvider, never()).downloadInvoiceXMLByProviderId(any());
+    }
+
+    /** No businesses module: every store invoices with its own company, as before. */
+    @SuppressWarnings("unchecked")
+    private static com.sciencebot.pos.billing.internal.services.BillingSourceResolver ownSources() {
+        return new com.sciencebot.pos.billing.internal.services.BillingSourceResolver(
+                org.mockito.Mockito.mock(org.springframework.beans.factory.ObjectProvider.class));
     }
 }

@@ -67,7 +67,7 @@ class AlegraInvoiceClientTest {
         when(resolver.resolve(null)).thenReturn(access);
         when(companyProvider.get(access)).thenReturn(new AlegraCompany("company-1", "Empresa", null, "900559088", "2",
                 "R-99-PN", 1, "31", "a@b.co", null, null, Map.of()));
-        when(allocator.allocate(eq(5L), eq(BillingEnvironment.SANDBOX), eq("01"), anyString())).thenReturn(allocation(false, "key-1"));
+        when(allocator.allocate(eq(5L), eq(5L), eq(BillingEnvironment.SANDBOX), eq("01"), anyString())).thenReturn(allocation(false, "key-1"));
     }
 
     @AfterEach
@@ -90,7 +90,7 @@ class AlegraInvoiceClientTest {
 
     @Test
     void legacyCompletedAllocationDoesNotRotateOrBlindlyReissue() {
-        when(allocator.allocate(eq(5L), eq(BillingEnvironment.SANDBOX), eq("01"), anyString()))
+        when(allocator.allocate(eq(5L), eq(5L), eq(BillingEnvironment.SANDBOX), eq("01"), anyString()))
                 .thenReturn(new Allocation(11L, 2L, "SETP", 990_000_101L, "18760000001", 990_000_000L,
                         995_000_000L, LocalDate.of(2019, 1, 19), LocalDate.of(2030, 1, 19),
                         "technical-key", "old-key", true));
@@ -132,7 +132,7 @@ class AlegraInvoiceClientTest {
         assertEquals("cufe-abc", recovered.cufe());
         verifyNoInteractions(resolver, companyProvider);
         verify(allocator, never()).rotateIdempotencyKey(any());
-        verify(allocator, never()).allocate(any(), any(), any(), any());
+        verify(allocator, never()).allocate(any(), any(), any(), any(), any());
         server.verify();
     }
 
@@ -286,7 +286,7 @@ class AlegraInvoiceClientTest {
     @Test
     void afterAFinalNonAcceptedOutcomeTheNumberIsKeptButTheKeyIsRotatedBeforeSending() {
         Allocation old = allocation(true, "old-key");
-        when(allocator.allocate(eq(5L), eq(BillingEnvironment.SANDBOX), eq("01"), anyString()))
+        when(allocator.allocate(eq(5L), eq(5L), eq(BillingEnvironment.SANDBOX), eq("01"), anyString()))
                 .thenReturn(new Allocation(old.id(), old.rangeId(), old.prefix(), old.number(), old.resolutionNumber(),
                         old.minNumber(), old.maxNumber(), old.startDate(), old.endDate(), old.technicalKey(),
                         old.idempotencyKey(), true, "REJECTED", "rejected-id", null, null));
@@ -306,12 +306,12 @@ class AlegraInvoiceClientTest {
 
         client.emitInvoice(request());
 
-        verify(allocator).allocate(5L, BillingEnvironment.SANDBOX, "01", "FAC-1-7");
+        verify(allocator).allocate(5L, 5L, BillingEnvironment.SANDBOX, "01", "FAC-1-7");
     }
 
     @Test
     void aRangeWithoutDatesFailsAsAnErrorWithoutCallingAlegra() {
-        when(allocator.allocate(eq(5L), eq(BillingEnvironment.SANDBOX), eq("01"), anyString()))
+        when(allocator.allocate(eq(5L), eq(5L), eq(BillingEnvironment.SANDBOX), eq("01"), anyString()))
                 .thenReturn(new Allocation(11L, 2L, "SETP", 1L, "1876", 1L, 10L, null, null, null, "key-1", false));
 
         InvoiceResult result = client.emitInvoice(request());

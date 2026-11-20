@@ -87,7 +87,7 @@ public class InvoiceRetryJob {
     private boolean retryOne(ElectronicInvoice invoice) {
         Long previousStoreId = TenantContext.getStoreId();
         try {
-            if (!billingIsActive(invoice.getStoreId())) {
+            if (!billingIsActive(invoice.effectiveBillingStoreId())) {
                 log.debug("Local {} sin facturación activa: se omite la factura de la venta {}",
                         invoice.getStoreId(), invoice.getSaleId());
                 return false;

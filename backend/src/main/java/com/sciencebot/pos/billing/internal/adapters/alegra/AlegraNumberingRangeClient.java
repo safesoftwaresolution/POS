@@ -159,7 +159,7 @@ public class AlegraNumberingRangeClient {
     public void deleteNumberingRange(Long numberingRangeId) {
         transaction.executeWithoutResult(status -> {
             NumberingRange range = lockedRange(numberingRangeId);
-            if (allocationRepository.existsByStoreIdAndRangeId(range.getStoreId(), range.getId())) {
+            if (allocationRepository.existsByRangeId(range.getId())) {
                 range.markDeleted();
                 rangeRepository.save(range);
             } else {
@@ -180,7 +180,7 @@ public class AlegraNumberingRangeClient {
     public NumberingRangeDto updateNumberingRangeCurrent(Long numberingRangeId, Long current) {
         return transaction.execute(status -> {
             NumberingRange range = lockedRange(numberingRangeId);
-            Long maxAssigned = allocationRepository.findMaxNumberByStoreIdAndRangeId(range.getStoreId(), range.getId());
+            Long maxAssigned = allocationRepository.findMaxNumberByRangeId(range.getId());
             if (maxAssigned != null && current <= maxAssigned) {
                 throw new IllegalArgumentException("El consecutivo " + current + " ya fue asignado a un documento "
                         + "(el último número usado es " + maxAssigned + ")");

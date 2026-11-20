@@ -43,7 +43,7 @@ class ElectronicInvoiceEmissionTest {
         config.assignCompanyId(BillingEnvironment.PRODUCTION, "production-company");
         when(repository.findBySaleIdForUpdate(1L)).thenReturn(Optional.of(invoice));
         when(configRepository.findById(1L)).thenReturn(Optional.of(config));
-        var emissions = new InvoiceEmissionTransactions(repository, new ElectronicInvoiceMapper(), configRepository, LEASE);
+        var emissions = new InvoiceEmissionTransactions(repository, new ElectronicInvoiceMapper(), configRepository, ownSources(), LEASE);
 
         var first = emissions.reserve(1L, 1L);
         config.setEnvironment(BillingEnvironment.PRODUCTION);
@@ -194,7 +194,7 @@ class ElectronicInvoiceEmissionTest {
         when(configs.findById(1L)).thenReturn(Optional.of(configIn(BillingEnvironment.PRODUCTION)));
 
         InvoiceEmissionTransactions.Reservation reservation =
-                new InvoiceEmissionTransactions(invoices, new ElectronicInvoiceMapper(), configs, LEASE).reserve(10L, 1L);
+                new InvoiceEmissionTransactions(invoices, new ElectronicInvoiceMapper(), configs, ownSources(), LEASE).reserve(10L, 1L);
 
         assertEquals(ReserveOutcome.RESERVED, reservation.outcome());
         assertEquals(BillingEnvironment.PRODUCTION, reservation.invoice().environment());
@@ -209,7 +209,7 @@ class ElectronicInvoiceEmissionTest {
         when(configs.findById(1L)).thenReturn(Optional.of(configIn(BillingEnvironment.PRODUCTION)));
 
         InvoiceEmissionTransactions.Reservation reservation =
-                new InvoiceEmissionTransactions(invoices, new ElectronicInvoiceMapper(), configs, LEASE).reserve(10L, 1L);
+                new InvoiceEmissionTransactions(invoices, new ElectronicInvoiceMapper(), configs, ownSources(), LEASE).reserve(10L, 1L);
 
         assertEquals(BillingEnvironment.SANDBOX, reservation.invoice().environment());
         assertNull(reservation.context(), "An environment alone is not proof of the original provider company");
@@ -222,7 +222,7 @@ class ElectronicInvoiceEmissionTest {
         when(configs.findById(1L)).thenReturn(Optional.empty());
 
         InvoiceEmissionTransactions.Reservation reservation =
-                new InvoiceEmissionTransactions(invoices, new ElectronicInvoiceMapper(), configs, LEASE).reserve(10L, 1L);
+                new InvoiceEmissionTransactions(invoices, new ElectronicInvoiceMapper(), configs, ownSources(), LEASE).reserve(10L, 1L);
 
         assertEquals(ReserveOutcome.RESERVED, reservation.outcome());
         assertNull(reservation.invoice().environment());
@@ -242,5 +242,12 @@ class ElectronicInvoiceEmissionTest {
         config.setStoreId(1L);
         config.setEnvironment(environment);
         return config;
+    }
+
+    /** No businesses module: every store invoices with its own company, as before. */
+    @SuppressWarnings("unchecked")
+    private static com.sciencebot.pos.billing.internal.services.BillingSourceResolver ownSources() {
+        return new com.sciencebot.pos.billing.internal.services.BillingSourceResolver(
+                org.mockito.Mockito.mock(org.springframework.beans.factory.ObjectProvider.class));
     }
 }

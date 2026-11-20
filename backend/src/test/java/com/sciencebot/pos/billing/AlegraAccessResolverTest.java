@@ -65,6 +65,44 @@ class AlegraAccessResolverTest {
     }
 
     @Test
+    void aSharedBranchEmitsWithTheActiveBillingOfItsSourceStore_notItsOwn() {
+        config(1L, BillingActivationStatus.ACTIVE, "company-main", null); // main store; the branch (7) has no config
+        var context = new BillingDocumentContext(7L, BillingEnvironment.SANDBOX, "alegra", "company-main", 1L);
+
+        AlegraAccess access = resolver.resolveDocumentForEmission(context);
+
+        assertEquals(7L, access.storeId(), "the document stays under the branch");
+        assertEquals(1L, access.billingStoreId());
+        assertEquals("company-main", access.companyId());
+    }
+
+    @Test
+    void aSharedBranchCannotEmitWhenItsSourceBillingIsNotActive() {
+        config(1L, BillingActivationStatus.SUSPENDED, "company-main", null);
+        var context = new BillingDocumentContext(7L, BillingEnvironment.SANDBOX, "alegra", "company-main", 1L);
+
+        assertThrows(BillingNotEnabledException.class, () -> resolver.resolveDocumentForEmission(context));
+    }
+
+    @Test
+    void aBranchsOwnActiveConfigDoesNotUnlockEmissionThroughAnInactiveSource() {
+        config(7L, BillingActivationStatus.ACTIVE, "company-branch", null);
+        config(1L, BillingActivationStatus.SUSPENDED, "company-main", null);
+        var context = new BillingDocumentContext(7L, BillingEnvironment.SANDBOX, "alegra", "company-main", 1L);
+
+        assertThrows(BillingNotEnabledException.class, () -> resolver.resolveDocumentForEmission(context));
+    }
+
+    @Test
+    void aDocumentWithoutAnExplicitSourceBillsWithItsOwnStoreAsBefore() {
+        config(5L, BillingActivationStatus.ACTIVE, "company-5", null);
+        var context = new BillingDocumentContext(5L, BillingEnvironment.SANDBOX, "alegra", "company-5");
+
+        assertEquals(5L, context.billingStoreId());
+        assertEquals(5L, resolver.resolveDocumentForEmission(context).billingStoreId());
+    }
+
+    @Test
     void historicalContextCannotBeUsedByAnotherStore() {
         TenantContext.setStoreId(6L);
         var context = new BillingDocumentContext(5L, BillingEnvironment.SANDBOX, "alegra", "company-5");

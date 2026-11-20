@@ -93,7 +93,7 @@ class AlegraNoteClientTest {
         invoice.markAsValidated("SETP993836500", "cufe-abc", "qr", null, LocalDateTime.of(2026, 11, 4, 10, 30));
         invoice.trackProviderDocument("inv-1");
         when(invoiceRepository.findByStoreIdAndLegalNumber(5L, "SETP993836500")).thenReturn(Optional.of(invoice));
-        when(allocator.allocate(eq(5L), eq(BillingEnvironment.SANDBOX), anyString(), anyString()))
+        when(allocator.allocate(eq(5L), eq(5L), eq(BillingEnvironment.SANDBOX), anyString(), anyString()))
                 .thenReturn(allocation(false, "key-1"));
     }
 
@@ -198,7 +198,7 @@ class AlegraNoteClientTest {
         assertEquals("cude-xyz", result.cude());
         assertEquals("qr-note", result.qrCode());
         assertEquals("note-9", result.providerDocumentId());
-        verify(allocator).allocate(5L, BillingEnvironment.SANDBOX, "91", "NC-FAC-1-C2");
+        verify(allocator).allocate(5L, 5L, BillingEnvironment.SANDBOX, "91", "NC-FAC-1-C2");
         verify(allocator).markCompleted(11L);
         server.verify();
     }
@@ -206,7 +206,7 @@ class AlegraNoteClientTest {
     @Test
     void debitNoteAccepted_UsesTheDebitEndpointAndTheDocument92() {
         saleCustomer();
-        when(allocator.allocate(eq(5L), eq(BillingEnvironment.SANDBOX), eq("92"), anyString())).thenReturn(allocation(false, "key-1"));
+        when(allocator.allocate(eq(5L), eq(5L), eq(BillingEnvironment.SANDBOX), eq("92"), anyString())).thenReturn(allocation(false, "key-1"));
         expectPost("/debit-notes", withSuccess(response("debitNote", "SENT", "ACCEPTED_WITH_OBSERVATIONS", "Regla: DAK55"), MediaType.APPLICATION_JSON));
 
         DebitNoteResult result = client.emitDebitNote(debit(), 5L);
@@ -214,13 +214,13 @@ class AlegraNoteClientTest {
         assertTrue(result.isSuccess());
         assertEquals("cude-xyz", result.cude());
         assertEquals("note-9", result.providerDocumentId());
-        verify(allocator).allocate(5L, BillingEnvironment.SANDBOX, "92", "ND-FAC-1-C1");
+        verify(allocator).allocate(5L, 5L, BillingEnvironment.SANDBOX, "92", "ND-FAC-1-C1");
     }
 
     @Test
     void debitNoteWithCanonicalItems_SendsThoseItemsLikeTheCreditNoteDoes() {
         saleCustomer();
-        when(allocator.allocate(eq(5L), eq(BillingEnvironment.SANDBOX), eq("92"), anyString())).thenReturn(allocation(false, "key-1"));
+        when(allocator.allocate(eq(5L), eq(5L), eq(BillingEnvironment.SANDBOX), eq("92"), anyString())).thenReturn(allocation(false, "key-1"));
         var context = new BillingDocumentContext(5L, BillingEnvironment.SANDBOX, "alegra", "company-1");
         ElectronicInvoice source = ElectronicInvoice.initialize(7L, 5L);
         source.assignDocumentContext(context);
@@ -335,7 +335,7 @@ class AlegraNoteClientTest {
     void afterAFinalNonAcceptedOutcomeTheKeyIsRotatedBeforeSending() {
         saleCustomer();
         Allocation old = allocation(true, "old");
-        when(allocator.allocate(eq(5L), eq(BillingEnvironment.SANDBOX), eq("91"), anyString()))
+        when(allocator.allocate(eq(5L), eq(5L), eq(BillingEnvironment.SANDBOX), eq("91"), anyString()))
                 .thenReturn(new Allocation(old.id(), old.rangeId(), old.prefix(), old.number(), old.resolutionNumber(),
                         old.minNumber(), old.maxNumber(), old.startDate(), old.endDate(), old.technicalKey(),
                         old.idempotencyKey(), true, "REJECTED", "rejected-note", null, null));

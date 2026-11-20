@@ -91,14 +91,26 @@ public class AlegraNumberAllocator {
      * vigente o agotado.
      */
     public Allocation allocate(Long storeId, BillingEnvironment environment, String document, String referenceCode) {
+        return allocate(storeId, storeId, environment, document, referenceCode);
+    }
+
+    /**
+     * Igual, pero el número sale de los rangos de {@code billingStoreId} (la sucursal principal de un negocio con NIT
+     * compartido). Todas las sucursales de ese negocio bloquean las mismas filas de rango, así que sus consecutivos
+     * se serializan y nunca se repiten; la asignación queda a nombre del local del documento, que es su llave de
+     * idempotencia.
+     */
+    public Allocation allocate(Long storeId, Long billingStoreId, BillingEnvironment environment, String document,
+                               String referenceCode) {
         Objects.requireNonNull(storeId, "El ID del local es obligatorio");
+        Objects.requireNonNull(billingStoreId, "El local de facturación es obligatorio");
         Objects.requireNonNull(environment, "El entorno es obligatorio");
         Objects.requireNonNull(document, "El tipo de documento es obligatorio");
         if (referenceCode == null || referenceCode.isBlank()) {
             throw new IllegalArgumentException("La referencia es obligatoria");
         }
         String reference = referenceCode.trim();
-        return requiresNew.execute(status -> doAllocate(storeId, environment, document, reference));
+        return requiresNew.execute(status -> doAllocate(storeId, billingStoreId, environment, document, reference));
     }
 
     /** Marca que el proveedor ya recibió el documento con el número asignado. */
@@ -163,13 +175,14 @@ public class AlegraNumberAllocator {
         }
     }
 
-    private Allocation doAllocate(Long storeId, BillingEnvironment environment, String document, String reference) {
+    private Allocation doAllocate(Long storeId, Long billingStoreId, BillingEnvironment environment, String document,
+                                  String reference) {
         Optional<DocumentNumberAllocation> existing = find(storeId, environment, document, reference);
         if (existing.isPresent()) {
             return toAllocation(existing.get());
         }
 
-        List<NumberingRange> ranges = rangeRepository.findActiveForUpdate(storeId, environment, document);
+        List<NumberingRange> ranges = rangeRepository.findActiveForUpdate(billingStoreId, environment, document);
 
         // Con el lock tomado otra llamada con la misma referencia pudo haber confirmado antes: se revisa de nuevo.
         existing = find(storeId, environment, document, reference);
@@ -177,7 +190,7 @@ public class AlegraNumberAllocator {
             return toAllocation(existing.get());
         }
 
-        NumberingRange range = usableRange(defaultFirst(ranges, storeId, environment), environment, document);
+        NumberingRange range = usableRange(defaultFirst(ranges, billingStoreId, environment), environment, document);
         long number = range.takeNextNumber();
         rangeRepository.save(range);
         DocumentNumberAllocation saved = allocationRepository.save(new DocumentNumberAllocation(

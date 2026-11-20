@@ -176,7 +176,7 @@ public class AlegraNoteClient {
             return invoiceClient.fromProviderError(ex, null);
         }
 
-        Allocation allocation = allocator.allocate(access.storeId(), access.environment(), document, draft.referenceCode());
+        Allocation allocation = allocator.allocate(access.storeId(), access.billingStoreId(), access.environment(), document, draft.referenceCode());
         if ("ACCEPTED".equals(allocation.outcome())) return allocator.receipt(allocation);
         if (allocation.completed() && allocation.outcome() == null && allocation.requestPayload() == null) {
             return InvoiceResult.pending("Asignación histórica sin resultado verificable; requiere conciliación manual");

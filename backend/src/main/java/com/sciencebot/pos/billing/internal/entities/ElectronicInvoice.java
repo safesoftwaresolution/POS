@@ -56,6 +56,13 @@ public class ElectronicInvoice {
     @Column(name = "provider_company_id", length = 64)
     private String providerCompanyId;
 
+    /**
+     * Store whose company and numbering ranges this document used when they are not its own (business with a
+     * shared tax id, V47). Null = its own store. Fixed when the emission is reserved and never changes.
+     */
+    @Column(name = "billing_store_id")
+    private Long billingStoreId;
+
     @Column(name = "validated_at")
     private LocalDateTime validatedAt;
 
@@ -312,7 +319,7 @@ public class ElectronicInvoice {
     /** Setter exclusivo para soporte de identificadores en pruebas o infraestructura. */
     public void setId(Long id) { this.id = id; }
     public BillingDocumentContext documentContext() {
-        return new BillingDocumentContext(storeId, environment, providerName, providerCompanyId);
+        return new BillingDocumentContext(storeId, environment, providerName, providerCompanyId, effectiveBillingStoreId());
     }
 
     public void assignDocumentContext(BillingDocumentContext context) {
@@ -320,7 +327,8 @@ public class ElectronicInvoice {
             throw new IllegalStateException("El contexto fiscal pertenece a otro local");
         }
         if (providerName != null && (!providerName.equals(context.providerName())
-                || !Objects.equals(providerCompanyId, context.companyId()) || environment != context.environment())) {
+                || !Objects.equals(providerCompanyId, context.companyId()) || environment != context.environment()
+                || !Objects.equals(effectiveBillingStoreId(), context.billingStoreId()))) {
             throw new IllegalStateException("El contexto fiscal de un documento no puede cambiar");
         }
         if (environment != null && environment != context.environment()) {
@@ -329,6 +337,21 @@ public class ElectronicInvoice {
         providerName = context.providerName();
         providerCompanyId = context.companyId();
         environment = context.environment();
+        billingStoreId = context.billingStoreId().equals(storeId) ? null : context.billingStoreId();
+    }
+
+    /** Store whose company and ranges the document uses: its own unless it was billed through another store. */
+    public Long effectiveBillingStoreId() { return billingStoreId != null ? billingStoreId : storeId; }
+    public Long getBillingStoreId() { return billingStoreId; }
+
+    /**
+     * Fija de qué local sale la empresa y la numeración de esta factura cuando no son los suyos. Solo antes de
+     * que tenga contexto fiscal: después no puede cambiar.
+     */
+    public void pinBillingStore(Long sourceStoreId) {
+        if (providerName == null && billingStoreId == null && sourceStoreId != null && !sourceStoreId.equals(storeId)) {
+            billingStoreId = sourceStoreId;
+        }
     }
 
     public String getProviderName() { return providerName; }

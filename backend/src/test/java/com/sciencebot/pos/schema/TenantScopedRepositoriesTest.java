@@ -49,6 +49,11 @@ class TenantScopedRepositoriesTest {
             // no borrar de R2 la foto de otro. Solo devuelve URLs, no se expone por ningún endpoint.
             "ProductRepository.findAllImageUrls",
             // invoice_seq es una secuencia global a proposito: el numero FACT-%06d es unico en toda la plataforma.
+            // Un rango es de un local, pero con NIT compartido las sucursales emiten contra el rango de la principal y
+            // sus asignaciones quedan a nombre de cada sucursal; las guardas del rango (en uso, el consecutivo no
+            // retrocede) deben verlas todas. El rango ya se obtuvo y se bloqueó por su local.
+            "DocumentNumberAllocationRepository.existsByRangeId",
+            "DocumentNumberAllocationRepository.findMaxNumberByRangeId",
             "SaleRepository.getNextInvoiceSeq",
             // Se invocan solo despues de validar la venta/factura del local actual (id ya verificado).
             "ElectronicCreditNoteRepository.findBySaleId",

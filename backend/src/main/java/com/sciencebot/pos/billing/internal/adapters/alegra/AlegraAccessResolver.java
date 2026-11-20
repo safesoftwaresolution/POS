@@ -60,12 +60,14 @@ public class AlegraAccessResolver {
         if (isBlank(token)) {
             throw new BillingNotEnabledException("Falta el token del entorno original de " + context.environment().label());
         }
-        return new AlegraAccess(context.storeId(), context.environment(), urlFor(context.environment()), token.trim(), context.companyId());
+        return new AlegraAccess(context.storeId(), context.environment(), urlFor(context.environment()), token.trim(),
+                context.companyId(), context.billingStoreId());
     }
 
     public AlegraAccess resolveDocumentForEmission(BillingDocumentContext context) {
         AlegraAccess access = resolveDocument(context);
-        StoreBillingConfig config = repository.findById(context.storeId()).orElseThrow(
+        // La facturación activa es la del local de cuya empresa sale el documento (el propio, o la sucursal principal).
+        StoreBillingConfig config = repository.findById(context.billingStoreId()).orElseThrow(
                 () -> new BillingNotEnabledException("El local no tiene la facturación electrónica habilitada"));
         if (config.getStatus() != BillingActivationStatus.ACTIVE) {
             throw new BillingNotEnabledException("La facturación electrónica del local no está activa");

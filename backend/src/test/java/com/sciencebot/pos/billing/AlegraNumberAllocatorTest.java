@@ -274,6 +274,90 @@ class AlegraNumberAllocatorTest {
         assertThrows(IllegalStateException.class, () -> allocator.rotateIdempotencyKey(recovered.id()));
     }
 
+    @Test
+    void branchesOfASharedTaxIdBusiness_shareOneRangeWithoutDuplicatesOrGaps() throws Exception {
+        NumberingRange range = createRange(700_000L, 800_000L, null, null); // the main store's range
+        long branchA = storeId + 1;
+        long branchB = storeId + 2;
+        int threads = 24;
+        try {
+            ExecutorService pool = Executors.newFixedThreadPool(threads);
+            CountDownLatch start = new CountDownLatch(1);
+            List<Future<Allocation>> futures = new ArrayList<>();
+            for (int i = 0; i < threads; i++) {
+                long branch = i % 2 == 0 ? branchA : branchB;
+                String ref = "SALE-" + i;
+                futures.add(pool.submit(() -> {
+                    start.await();
+                    return allocator.allocate(branch, storeId, ENV, INVOICE, ref);
+                }));
+            }
+            start.countDown();
+            Set<Long> numbers = new TreeSet<>();
+            for (Future<Allocation> future : futures) {
+                numbers.add(future.get().number());
+            }
+            pool.shutdown();
+
+            assertEquals(threads, numbers.size(), "two branches must never get the same number");
+            assertEquals(700_000L, ((TreeSet<Long>) numbers).first());
+            assertEquals(700_000L + threads - 1, ((TreeSet<Long>) numbers).last(), "no gaps");
+            assertEquals(700_000L + threads, rangeRepository.findById(range.getId()).orElseThrow().getNextNumber());
+            // Each allocation stays under the store of the document and points at the main store's range.
+            assertEquals(threads / 2, allocationRepository.findAll().stream()
+                    .filter(a -> a.getStoreId().equals(branchA) && range.getId().equals(a.getRangeId())).count());
+            assertEquals(threads / 2, allocationRepository.findAll().stream()
+                    .filter(a -> a.getStoreId().equals(branchB) && range.getId().equals(a.getRangeId())).count());
+        } finally {
+            allocationRepository.deleteAll(allocationRepository.findAll().stream()
+                    .filter(a -> a.getStoreId().equals(branchA) || a.getStoreId().equals(branchB)).toList());
+        }
+    }
+
+    @Test
+    void aBranchRetryWithTheSameReference_returnsItsNumberInsteadOfConsumingAnother() {
+        NumberingRange range = createRange(10L, 20L, null, null);
+        long branch = storeId + 1;
+        try {
+            Allocation first = allocator.allocate(branch, storeId, ENV, INVOICE, "SALE-9");
+            Allocation again = allocator.allocate(branch, storeId, ENV, INVOICE, "SALE-9");
+
+            assertEquals(10L, first.number());
+            assertEquals(first.id(), again.id());
+            assertEquals(11L, rangeRepository.findById(range.getId()).orElseThrow().getNextNumber());
+        } finally {
+            allocationRepository.deleteAll(allocationRepository.findAll().stream()
+                    .filter(a -> a.getStoreId().equals(branch)).toList());
+        }
+    }
+
+    @Test
+    void theRangeGuardsSeeNumbersAssignedByBranches_notOnlyByTheRangesOwnStore() {
+        NumberingRange range = createRange(30L, 90L, null, null);
+        long branch = storeId + 1;
+        try {
+            Allocation made = allocator.allocate(branch, storeId, ENV, INVOICE, "SALE-B1");
+
+            assertTrue(allocationRepository.findAll().stream().noneMatch(a -> a.getStoreId().equals(storeId)),
+                    "the allocation is stored under the branch, not under the range's store");
+            assertTrue(allocationRepository.existsByRangeId(range.getId()), "the range is in use");
+            assertEquals(made.number(), allocationRepository.findMaxNumberByRangeId(range.getId()),
+                    "the consecutive must not be movable below a number a branch already used");
+        } finally {
+            allocationRepository.deleteAll(allocationRepository.findAll().stream()
+                    .filter(a -> a.getStoreId().equals(branch)).toList());
+        }
+    }
+
+    @Test
+    void aBranchWithoutASharedSource_cannotUseTheRangesOfAnotherStore() {
+        createRange(1L, 100L, null, null);
+        long unrelatedStore = storeId + 50;
+
+        assertThrows(BillingNotEnabledException.class,
+                () -> allocator.allocate(unrelatedStore, unrelatedStore, ENV, INVOICE, "SALE-1"));
+    }
+
     /** Lanza {@code threads} asignaciones a la vez; falla el test si alguna lanza excepcion. */
     private List<Allocation> runParallel(int threads, java.util.function.IntFunction<String> reference) throws Exception {
         ExecutorService pool = Executors.newFixedThreadPool(threads);

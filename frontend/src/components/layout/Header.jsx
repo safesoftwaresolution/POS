@@ -18,6 +18,7 @@ import useAuth from '../../hooks/useAuth';
 import useNow from '../../hooks/useNow';
 import useTheme from '../../hooks/useTheme';
 import UserMenu from '../UserMenu';
+import BranchSwitcher from '../business/BranchSwitcher';
 import {
   getNotificationsApi,
   markNotificationReadApi,
@@ -146,6 +147,9 @@ export default function Header({ onToggleMobileMenu, unreadCount, setUnreadCount
 
       {/* Right Action Tools: Date, Dark/Light Mode, Bell, Terminal, Profile, + Nueva Venta */}
       <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+        {/* Sucursal activa (solo dueños de un negocio con varias sucursales) */}
+        <BranchSwitcher />
+
         {/* Current Date */}
         <div className="hidden md:flex items-center gap-2 h-10 px-3.5 text-gray-600 dark:text-gray-300 bg-card border border-line rounded-xl text-xs font-semibold">
           <Calendar className="w-4 h-4" />

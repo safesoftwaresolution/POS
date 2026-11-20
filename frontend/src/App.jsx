@@ -9,6 +9,7 @@ import useStoreTemplate from './hooks/useStoreTemplate';
 import { ThemeProvider } from './context/ThemeContext';
 import { ModalProvider } from './context/ModalContext';
 import { StoreTemplateProvider } from './context/StoreTemplateContext';
+import { BusinessProvider } from './context/BusinessContext';
 import { getOwnStoreApi, getOwnStoreStatusApi } from './services/storesApi';
 import { STORE_NOT_ACTIVE_EVENT } from './services/http';
 
@@ -41,6 +42,7 @@ const UsersBento = lazy(() => import('./pages/UsersBento'));
 const LegalPage = lazy(() => import('./pages/public/LegalPage'));
 const SupportPage = lazy(() => import('./pages/public/SupportPage'));
 const DocumentsBento = lazy(() => import('./pages/DocumentsBento'));
+const BusinessBento = lazy(() => import('./pages/BusinessBento'));
 const StoresBento = lazy(() => import('./pages/backoffice/StoresBento'));
 const BillingBento = lazy(() => import('./pages/backoffice/BillingBento'));
 const CategoriesBento = lazy(() => import('./pages/backoffice/CategoriesBento'));
@@ -54,6 +56,7 @@ const OnboardingBento = lazy(() => import('./pages/backoffice/OnboardingBento'))
 const StoreAuditBento = lazy(() => import('./pages/backoffice/StoreAuditBento'));
 const UsersDirectoryBento = lazy(() => import('./pages/backoffice/UsersDirectoryBento'));
 const StatsBento = lazy(() => import('./pages/backoffice/StatsBento'));
+const BusinessesBento = lazy(() => import('./pages/backoffice/BusinessesBento'));
 
 // Las páginas se cargan bajo demanda: el bundle inicial solo trae login, registro y los layouts.
 function PageFallback() {
@@ -146,14 +149,16 @@ function ProtectedLayout() {
   }
 
   return (
-    <RequireActiveStore canManage={user?.role === 'ADMINISTRATOR'}>
-      <ProtectedLayoutContent
-        mobileSidebarOpen={mobileSidebarOpen}
-        setMobileSidebarOpen={setMobileSidebarOpen}
-        sidebarCollapsed={sidebarCollapsed}
-        toggleSidebarCollapse={toggleSidebarCollapse}
-      />
-    </RequireActiveStore>
+    <BusinessProvider>
+      <RequireActiveStore canManage={user?.role === 'ADMINISTRATOR'}>
+        <ProtectedLayoutContent
+          mobileSidebarOpen={mobileSidebarOpen}
+          setMobileSidebarOpen={setMobileSidebarOpen}
+          sidebarCollapsed={sidebarCollapsed}
+          toggleSidebarCollapse={toggleSidebarCollapse}
+        />
+      </RequireActiveStore>
+    </BusinessProvider>
   );
 }
 
@@ -201,6 +206,8 @@ function ProtectedLayoutContent({ mobileSidebarOpen, setMobileSidebarOpen, sideb
             <Route path="/reports" element={<Navigate to="/" replace />} />
             <Route path="/returns" element={<Navigate to="/inventory?tab=returns" replace />} />
             <Route path="/documents" element={<RequireRole roles={['ADMINISTRATOR']}><DocumentsBento /></RequireRole>} />
+            {/* Solo el dueño de un negocio con sucursales; para el resto la pantalla explica que no aplica. */}
+            <Route path="/business" element={<RequireRole roles={['ADMINISTRATOR']}><BusinessBento /></RequireRole>} />
             <Route path="/users" element={<RequireRole roles={['ADMINISTRATOR']}><UsersBento /></RequireRole>} />
             <Route path="/settings" element={<RequireRole roles={['ADMINISTRATOR', 'SUPERVISOR']}><SettingsBento /></RequireRole>} />
             <Route path="*" element={<Navigate to="/" replace />} />
@@ -268,6 +275,7 @@ function BackofficeProtectedLayout() {
             <Route path="/audit" element={<StoreAuditBento />} />
             <Route path="/users" element={<UsersDirectoryBento />} />
             <Route path="/stats" element={<StatsBento />} />
+            <Route path="/businesses" element={<BusinessesBento />} />
             <Route path="*" element={<Navigate to="/backoffice" replace />} />
           </Routes>
           </Suspense>

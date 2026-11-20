@@ -22,7 +22,8 @@ import {
   Camera,
   Sparkles,
   HandCoins,
-  CalendarDays
+  CalendarDays,
+  Network
 } from 'lucide-react';
 import useAuth from '../../hooks/useAuth';
 import useStoreTemplate from '../../hooks/useStoreTemplate';
@@ -34,10 +35,12 @@ import { ROLE_LABELS } from '../../constants/roles';
 import StoreBrandLogo from '../brand/StoreBrandLogo';
 import Avatar from '../ui/Avatar';
 import useAvatarUpload from '../../hooks/useAvatarUpload';
+import useBusiness from '../../hooks/useBusiness';
 
 export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse, unreadCount = 0 }) {
   const { logout, user } = useAuth();
   const { features } = useStoreTemplate();
+  const { business } = useBusiness();
   const { darkMode, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [profileOpen, setProfileOpen] = useState(false);
@@ -62,6 +65,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
       title: 'Principal',
       items: [
         { path: '/', label: 'Dashboard', icon: LayoutDashboard },
+        ...(business ? [{ path: '/business', label: 'Mi negocio', icon: Network }] : []),
       ],
     },
     {

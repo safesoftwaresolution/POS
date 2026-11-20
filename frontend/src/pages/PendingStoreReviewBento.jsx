@@ -5,6 +5,7 @@ import useAuth from '../hooks/useAuth';
 import { updateOwnStoreApi, resubmitOwnStoreApi } from '../services/storesApi';
 import StoreProfileFields from '../components/store/StoreProfileFields';
 import StoreDocumentsGrid from '../components/store/StoreDocumentsGrid';
+import BranchSwitcher from '../components/business/BranchSwitcher';
 
 const STATUS_COPY = {
   PENDING_VERIFICATION: {
@@ -152,6 +153,8 @@ export default function PendingStoreReviewBento({ store, loadError = false, canM
         <div className={`w-16 h-16 rounded-2xl bg-gray-100 dark:bg-white/10 flex items-center justify-center mx-auto ${copy.iconClass}`}>
           <Icon className="w-9 h-9" />
         </div>
+        {/* Un dueño con varias sucursales puede volver a una que sí opera mientras esta se revisa. */}
+        <div className="flex justify-center"><BranchSwitcher align="left" /></div>
         <h1 className="text-lg font-black">{copy.title}</h1>
         <p className="text-xs text-ink-soft font-semibold leading-relaxed">
           {message}

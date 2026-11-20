@@ -14,6 +14,7 @@ import {
   Users,
   BarChart3,
   Receipt,
+  Network,
   LogOut,
   ChevronLeft,
   ChevronRight
@@ -35,6 +36,7 @@ export default function BackofficeSidebar({ isOpen, onClose, isCollapsed, onTogg
       items: [
         { path: '/backoffice/stats', label: 'Estadísticas', icon: BarChart3 },
         { path: '/backoffice', label: 'Locales', icon: Store, end: true },
+        { path: '/backoffice/businesses', label: 'Negocios', icon: Network },
         { path: '/backoffice/onboarding', label: 'Pendientes', icon: Clock },
         { path: '/backoffice/users', label: 'Usuarios', icon: Users },
         { path: '/backoffice/audit', label: 'Auditoría', icon: History },

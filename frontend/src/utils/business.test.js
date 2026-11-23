@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { branchStatusLabel, branchStatusTone, canAddBranch, fillDailySeries } from './business';
+import { additionalBranches, branchStatusLabel, branchStatusTone, canAddBranch, fillDailySeries } from './business';
 
 describe('fillDailySeries', () => {
   it('has one point per day, including the first and last, with 0 on days without sales', () => {
@@ -34,9 +34,12 @@ describe('branch helpers', () => {
     expect(branchStatusTone('NEW_ONE')).toBe('neutral');
   });
 
-  it('counts the main store against the branch limit', () => {
-    expect(canAddBranch({ branches: [{}], maxBranches: 2 })).toBe(true);
-    expect(canAddBranch({ branches: [{}, {}], maxBranches: 2 })).toBe(false);
+  it('does not count the main store against the branch limit', () => {
+    expect(canAddBranch({ branches: [{}], maxBranches: 1 })).toBe(true); // main store only, one branch allowed
+    expect(canAddBranch({ branches: [{}, {}], maxBranches: 1 })).toBe(false);
+    expect(canAddBranch({ branches: [{}, {}], maxBranches: 2 })).toBe(true);
     expect(canAddBranch(null)).toBe(false);
+    expect(additionalBranches({ branches: [{}, {}, {}] })).toBe(2);
+    expect(additionalBranches({ branches: [{}] })).toBe(0);
   });
 });

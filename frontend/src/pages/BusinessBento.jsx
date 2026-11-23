@@ -11,7 +11,7 @@ import NewBranchModal from '../components/business/NewBranchModal';
 import { getBranchesStatsApi, getBusinessOverviewApi, switchStoreApi } from '../services/businessApi';
 import { formatNumber, isoDaysAgo, money, paymentLabel } from '../utils/format';
 import {
-  BILLING_MODE_HINTS, BILLING_MODE_LABELS, branchStatusLabel, branchStatusTone, canAddBranch, fillDailySeries,
+  BILLING_MODE_HINTS, BILLING_MODE_LABELS, additionalBranches, branchStatusLabel, branchStatusTone, canAddBranch, fillDailySeries,
 } from '../utils/business';
 
 function Kpi({ title, value, hint }) {
@@ -77,13 +77,13 @@ export default function BusinessBento() {
     <div className="space-y-6 pb-12">
       <PageHeader
         title={business.name}
-        subtitle={`${business.branches.length} de ${business.maxBranches} sucursales · ${BILLING_MODE_LABELS[business.billingMode]}`}
+        subtitle={`${additionalBranches(business)} de ${business.maxBranches} sucursales adicionales · ${BILLING_MODE_LABELS[business.billingMode]}`}
         actions={(
           <Button
             icon={Plus}
             onClick={() => { setCreated(null); setCreating(true); }}
             disabled={!canAdd}
-            title={canAdd ? undefined : 'Tu negocio alcanzó su máximo de sucursales'}
+            title={canAdd ? undefined : 'Tu negocio alcanzó su máximo de sucursales adicionales'}
           >
             Nueva sucursal
           </Button>

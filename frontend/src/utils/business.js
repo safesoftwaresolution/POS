@@ -29,8 +29,11 @@ const BRANCH_STATUS_TONES = {
 export const branchStatusLabel = (status) => BRANCH_STATUS_LABELS[status] || status || '—';
 export const branchStatusTone = (status) => BRANCH_STATUS_TONES[status] || 'neutral';
 
-/** ¿Puede crear otra sucursal? El tope del negocio incluye la sucursal principal. */
-export const canAddBranch = (business) => Boolean(business) && business.branches.length < business.maxBranches;
+/** Sucursales del negocio sin contar la principal. */
+export const additionalBranches = (business) => Math.max(0, (business?.branches.length ?? 0) - 1);
+
+/** ¿Puede crear otra sucursal? El tope del negocio no cuenta la sucursal principal. */
+export const canAddBranch = (business) => Boolean(business) && additionalBranches(business) < business.maxBranches;
 
 const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
 const pad = (n) => String(n).padStart(2, '0');

@@ -7,7 +7,7 @@ import Pager from '../../components/ui/Pager';
 import NewBusinessModal from '../../components/backoffice/NewBusinessModal';
 import BusinessDetailModal from '../../components/backoffice/BusinessDetailModal';
 import { getBusinessesApi } from '../../services/backoffice/businessesApi';
-import { BILLING_MODE_LABELS } from '../../utils/business';
+import { BILLING_MODE_LABELS, additionalBranches } from '../../utils/business';
 
 const EMPTY_PAGE = { content: [], totalPages: 0, totalElements: 0 };
 
@@ -70,7 +70,7 @@ export default function BusinessesBento() {
             >
               <div className="flex items-start justify-between gap-3">
                 <h3 className="text-sm font-extrabold text-ink truncate">{b.name}</h3>
-                <Badge tone="brand">{b.branches.length} de {b.maxBranches}</Badge>
+                <Badge tone="brand">{additionalBranches(b)} de {b.maxBranches} adicionales</Badge>
               </div>
               <p className="text-[11px] font-semibold text-ink-soft">{BILLING_MODE_LABELS[b.billingMode]}</p>
               <p className="text-[11px] font-medium text-ink-muted truncate">

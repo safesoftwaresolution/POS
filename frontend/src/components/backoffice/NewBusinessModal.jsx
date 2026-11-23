@@ -99,8 +99,8 @@ export default function NewBusinessModal({ onClose, onCreated }) {
             <option value="INDEPENDENT">Independiente por sucursal</option>
             <option value="SHARED" disabled>Compartido (próximamente)</option>
           </Select>
-          <Input label="Máximo de sucursales" type="number" min="1" value={form.maxBranches} onChange={set('maxBranches')}
-            hint="Incluye la sucursal principal." required />
+          <Input label="Sucursales adicionales (máx.)" type="number" min="1" value={form.maxBranches} onChange={set('maxBranches')}
+            hint="Sin contar la sucursal principal." required />
         </div>
 
         {error && <p className="text-xs font-bold text-red-500">{error}</p>}

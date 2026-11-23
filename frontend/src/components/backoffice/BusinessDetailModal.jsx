@@ -7,7 +7,9 @@ import { getBackofficeStoresApi } from '../../services/backoffice/storesApi';
 import {
   addBusinessBranchApi, changeBusinessBillingModeApi, dissolveBusinessApi, removeBusinessBranchApi, updateBusinessApi,
 } from '../../services/backoffice/businessesApi';
-import { BILLING_MODE_HINTS, BILLING_MODE_LABELS, branchStatusLabel, branchStatusTone } from '../../utils/business';
+import {
+  BILLING_MODE_HINTS, BILLING_MODE_LABELS, additionalBranches, branchStatusLabel, branchStatusTone,
+} from '../../utils/business';
 
 const BILLING_MODES = Object.keys(BILLING_MODE_LABELS);
 
@@ -83,7 +85,7 @@ export default function BusinessDetailModal({ business: initial, onClose, onChan
     if (await run(() => dissolveBusinessApi(business.id).then(() => null))) onDissolved(business);
   };
 
-  const full = business.branches.length >= business.maxBranches;
+  const full = additionalBranches(business) >= business.maxBranches;
 
   return (
     <Modal title={business.name} subtitle="Administración del negocio" onClose={onClose} size="lg" dismissible={!busy}>
@@ -98,7 +100,7 @@ export default function BusinessDetailModal({ business: initial, onClose, onChan
           <h4 className="text-[11px] font-extrabold uppercase tracking-wider text-ink-muted">Datos</h4>
           <div className="grid grid-cols-1 sm:grid-cols-[1fr_10rem_auto] gap-3 items-end">
             <Input label="Nombre" value={name} onChange={(e) => setName(e.target.value)} maxLength={100} />
-            <Input label="Máx. sucursales" type="number" min="1" value={maxBranches} onChange={(e) => setMaxBranches(e.target.value)} />
+            <Input label="Sucursales adicionales (máx.)" type="number" min="1" value={maxBranches} onChange={(e) => setMaxBranches(e.target.value)} />
             <Button variant="outline" onClick={saveBasics} disabled={busy}>Guardar</Button>
           </div>
         </section>
@@ -118,7 +120,7 @@ export default function BusinessDetailModal({ business: initial, onClose, onChan
 
         <section className="space-y-3">
           <h4 className="text-[11px] font-extrabold uppercase tracking-wider text-ink-muted">
-            Sucursales ({business.branches.length} de {business.maxBranches})
+            Sucursales (principal + {additionalBranches(business)} de {business.maxBranches})
           </h4>
           <ul className="divide-y divide-line border border-line rounded-2xl">
             {business.branches.map((branch) => (
@@ -144,7 +146,7 @@ export default function BusinessDetailModal({ business: initial, onClose, onChan
           </ul>
           <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 items-end">
             <Select label="Agregar un local existente" value={storeToAdd} onChange={(e) => setStoreToAdd(e.target.value)}
-              disabled={full} hint={full ? 'El negocio alcanzó su máximo de sucursales.' : 'El local no debe pertenecer a otro negocio.'}>
+              disabled={full} hint={full ? 'El negocio alcanzó su máximo de sucursales adicionales.' : 'El local no debe pertenecer a otro negocio.'}>
               <option value="">Selecciona un local…</option>
               {addable.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
             </Select>

@@ -35,6 +35,7 @@ public class BusinessEntity {
     @Column(name = "catalog_mode", nullable = false, length = 20)
     private CatalogMode catalogMode;
 
+    /** Branches allowed besides the main store (the main store does not count). */
     @Column(name = "max_branches", nullable = false)
     private int maxBranches;
 

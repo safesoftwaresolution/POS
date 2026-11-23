@@ -87,7 +87,7 @@ public class BusinessServiceImpl implements BusinessFacade {
 
         storeFacade.attachToBusiness(command.mainStoreId(), saved.getId());
         audit(saved, "CREATED", command.mainStoreId(),
-                "Modo de facturación: " + saved.getBillingMode() + ", máximo de sucursales: " + saved.getMaxBranches());
+                "Modo de facturación: " + saved.getBillingMode() + ", sucursales adicionales permitidas: " + saved.getMaxBranches());
         return toDto(saved);
     }
 
@@ -136,13 +136,13 @@ public class BusinessServiceImpl implements BusinessFacade {
             detail.append("Nombre: ").append(business.getName()).append(". ");
         }
         if (command.maxBranches() != null) {
-            int current = storeFacade.listByBusiness(id).size();
+            int current = additionalBranches(id);
             if (command.maxBranches() < current) {
-                throw new IllegalArgumentException(
-                        "El máximo de sucursales no puede ser menor a las que ya tiene el negocio (" + current + ").");
+                throw new IllegalArgumentException("El máximo no puede ser menor a las sucursales adicionales que ya "
+                        + "tiene el negocio (" + current + ").");
             }
             business.setMaxBranches(command.maxBranches());
-            detail.append("Máximo de sucursales: ").append(command.maxBranches()).append(". ");
+            detail.append("Sucursales adicionales permitidas: ").append(command.maxBranches()).append(". ");
         }
         BusinessEntity saved = businessRepository.save(business);
         audit(saved, "UPDATED", null, detail.toString().trim());
@@ -154,8 +154,9 @@ public class BusinessServiceImpl implements BusinessFacade {
     public BusinessDto addBranch(Long businessId, Long storeId) {
         BusinessEntity business = require(businessId);
         requireUsableStore(storeId);
-        if (storeFacade.listByBusiness(businessId).size() >= business.getMaxBranches()) {
-            throw new IllegalStateException("El negocio ya alcanzó su máximo de sucursales (" + business.getMaxBranches() + ").");
+        if (additionalBranches(businessId) >= business.getMaxBranches()) {
+            throw new IllegalStateException(
+                    "El negocio ya alcanzó su máximo de sucursales adicionales (" + business.getMaxBranches() + ").");
         }
         storeFacade.attachToBusiness(storeId, businessId);
         audit(business, "BRANCH_ADDED", storeId, null);
@@ -221,9 +222,9 @@ public class BusinessServiceImpl implements BusinessFacade {
                 .orElseThrow(() -> new AccessDeniedException("No eres dueño de un negocio."));
         BusinessEntity business = businessRepository.findByIdForUpdate(owned.getId())
                 .orElseThrow(() -> new EntityNotFoundException("Negocio no encontrado con ID: " + owned.getId()));
-        if (storeFacade.listByBusiness(business.getId()).size() >= business.getMaxBranches()) {
+        if (additionalBranches(business.getId()) >= business.getMaxBranches()) {
             throw new IllegalStateException(
-                    "Tu negocio ya alcanzó su máximo de sucursales (" + business.getMaxBranches() + ").");
+                    "Tu negocio ya alcanzó su máximo de sucursales adicionales (" + business.getMaxBranches() + ").");
         }
 
         StoreDto main = storeFacade.getById(business.getMainStoreId());
@@ -254,6 +255,11 @@ public class BusinessServiceImpl implements BusinessFacade {
     public java.util.Optional<String> businessNameOwnedBy(Long userId) {
         return userId == null ? java.util.Optional.empty()
                 : businessRepository.findByOwnerUserId(userId).map(BusinessEntity::getName);
+    }
+
+    /** Sucursales del negocio sin contar la principal, que es la que el tope {@code max_branches} no cuenta. */
+    private int additionalBranches(Long businessId) {
+        return Math.max(0, storeFacade.listByBusiness(businessId).size() - 1);
     }
 
     private void requireUsableStore(Long storeId) {

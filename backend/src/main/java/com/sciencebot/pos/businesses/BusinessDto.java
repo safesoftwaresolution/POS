@@ -10,6 +10,7 @@ public record BusinessDto(
         Long mainStoreId,
         BillingMode billingMode,
         CatalogMode catalogMode,
+        /** How many branches the business may have besides its main store. */
         int maxBranches,
         List<BranchDto> branches,
         LocalDateTime createdAt

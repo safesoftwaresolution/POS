@@ -153,11 +153,23 @@ class BusinessServiceImplTest {
     @Test
     void addBranch_failsWhenTheBranchLimitIsReached() {
         when(businessRepository.findById(7L)).thenReturn(Optional.of(business(1)));
+        when(storeFacade.getById(3L)).thenReturn(store(3L, "ACTIVE"));
+        // The main store plus one branch: the limit of 1 additional branch is already used.
+        when(storeFacade.listByBusiness(7L)).thenReturn(List.of(store(1L, "ACTIVE"), store(2L, "ACTIVE")));
+
+        assertThrows(IllegalStateException.class, () -> service.addBranch(7L, 3L));
+        verify(storeFacade, never()).attachToBusiness(anyLong(), anyLong());
+    }
+
+    @Test
+    void addBranch_theMainStoreDoesNotCountAgainstTheLimit() {
+        when(businessRepository.findById(7L)).thenReturn(Optional.of(business(1)));
         when(storeFacade.getById(2L)).thenReturn(store(2L, "ACTIVE"));
         when(storeFacade.listByBusiness(7L)).thenReturn(List.of(store(1L, "ACTIVE")));
 
-        assertThrows(IllegalStateException.class, () -> service.addBranch(7L, 2L));
-        verify(storeFacade, never()).attachToBusiness(anyLong(), anyLong());
+        service.addBranch(7L, 2L);
+
+        verify(storeFacade).attachToBusiness(2L, 7L);
     }
 
     @Test
@@ -191,8 +203,9 @@ class BusinessServiceImplTest {
     @Test
     void update_cannotLowerTheLimitBelowTheCurrentBranches() {
         when(businessRepository.findById(7L)).thenReturn(Optional.of(business(5)));
-        when(storeFacade.listByBusiness(7L)).thenReturn(List.of(store(1L, "ACTIVE"), store(2L, "ACTIVE")));
+        when(storeFacade.listByBusiness(7L)).thenReturn(List.of(store(1L, "ACTIVE"), store(2L, "ACTIVE"), store(3L, "ACTIVE")));
 
+        // Two additional branches already exist (besides the main store): a limit of 1 is below that.
         assertThrows(IllegalArgumentException.class,
                 () -> service.update(7L, new UpdateBusinessCommand(null, 1)));
         verify(businessRepository, never()).save(any());
@@ -309,9 +322,22 @@ class BusinessServiceImplTest {
     }
 
     @Test
-    void createBranch_failsWhenTheBranchLimitIsReached() {
+    void createBranch_withALimitOfOne_allowsOneBranchBesidesTheMainStore() {
         ownerWithBusiness(business(1));
         when(storeFacade.listByBusiness(7L)).thenReturn(List.of(store(1L, "ACTIVE")));
+        when(storeFacade.getById(1L)).thenReturn(mainStore(4L, "900123"));
+        when(storeFacade.createBranch(eq(7L), any())).thenReturn(store(2L, "PENDING_VERIFICATION"));
+
+        BranchDto branch = service.createBranch("dueno", branchCommand(null, null));
+
+        assertEquals(2L, branch.storeId());
+    }
+
+    @Test
+    void createBranch_failsWhenTheBranchLimitIsReached() {
+        ownerWithBusiness(business(1));
+        // The main store plus one branch already: the limit of 1 additional branch is used.
+        when(storeFacade.listByBusiness(7L)).thenReturn(List.of(store(1L, "ACTIVE"), store(2L, "ACTIVE")));
 
         assertThrows(IllegalStateException.class, () -> service.createBranch("dueno", branchCommand(null, null)));
         verify(storeFacade, never()).createBranch(anyLong(), any());

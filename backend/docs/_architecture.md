@@ -1,7 +1,7 @@
 <!-- doc-version: 1.4 | last-updated: 2026-10-29 -->
 # Arquitectura del Backend: Monolito Modular
 
-El sistema es un **Monolito Modular** con **división vertical**: un único proceso JVM dividido internamente en módulos acotados (Bounded Contexts). Los 21 módulos están en `com.sciencebot.pos`: `auth`, `users`, `categories`, `products`, `services`, `inventory`, `customers`, `credit`, `audit`, `suppliers`, `purchases`, `sales`, `billing`, `reports`, `settings`, `stores`, `legal`, `support`, `notifications`, `storage` y `backoffice`.
+El sistema es un **Monolito Modular** con **división vertical**: un único proceso JVM dividido internamente en módulos acotados (Bounded Contexts). Los 21 módulos están en `com.sciencebot.pos`: `auth`, `users`, `categories`, `products`, `services`, `inventory`, `customers`, `credit`, `audit`, `suppliers`, `purchases`, `sales`, `billing`, `reports`, `finance`, `settings`, `stores`, `legal`, `support`, `notifications`, `storage` y `backoffice`.
 
 ```
                   ┌────────────────────────────────────────────────┐
@@ -33,7 +33,7 @@ El sistema es un **Monolito Modular** con **división vertical**: un único proc
 > **Estado de la regla**: hoy no hay ArchUnit ni Spring Modulith en el proyecto que la haga cumplir, y casi todas las clases de `internal/` son `public`. La regla se respeta por convención y revisión.
 
 ### Excepciones declaradas al aislamiento de datos
-- `reports` usa SQL de solo lectura (`JdbcClient`, parámetros nombrados) sobre tablas de otros módulos (CQRS).
+- `reports` y las lecturas de `finance` (`FinanceReadDao`) usan SQL de solo lectura (`JdbcClient`, parámetros nombrados) sobre tablas de otros módulos (CQRS).
 - `backoffice` (`OnboardingStatsDao`) consulta `users` y `stores` con SQL de solo lectura.
 
 ---

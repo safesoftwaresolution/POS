@@ -65,6 +65,7 @@ erDiagram
 | customers | `customers` | V1, V2 (campos DIAN), V3, V30 (`created_by`, `updated_by` y sus nombres de usuario) | Un "Cliente General" por local |
 | audit | `audit_log` | V30 | Bitácora genérica por entidad; sin FK a `users` |
 | credit | `credit_accounts`, `credit_movements` | V31 | Fiado: saldo atómico por cliente y libro inmutable; único por local: `customer_id` (`UK_credit_accounts_store_customer`) |
+| finance | `finance_movements`, `fixed_costs` | V48 | Egresos e ingresos manuales con fecha real (`type` EXPENSE/INCOME) y costos fijos mensuales con día de cobro opcional; único por local: `name` (`UK_fixed_costs_store_name`) |
 | suppliers | `suppliers` | V1, V3 | |
 | inventory | `inventory_movements` | V1, V9 (`store_id`) | Kardex; `previous_stock` / `new_stock` |
 | purchases | `purchases`, `purchase_items` | V1, V5 (`idempotency_key`), V9 | Única (`supplier_id`, `invoice_number`) |
@@ -214,6 +215,7 @@ Bitácora de cambios sobre rangos de numeración DIAN (`V15`, ampliada en `V17`)
 | IDX_credit_accounts_store_balance | credit_accounts(store_id, balance) | V31 |
 | IDX_credit_movements_account | credit_movements(account_id, created_at) | V31 |
 | IDX_credit_movements_sale | credit_movements(sale_id) | V31 |
+| IDX_finance_movements_store_date | finance_movements(store_id, movement_date) | V48 |
 | IDX_sale_items_service | sale_items(service_id) | V29 |
 
 Búsquedas por `barcode`, `internal_code` e `identification` se resuelven con las restricciones `UNIQUE` por local (V9), no con índices `IDX_` aparte.
@@ -231,7 +233,7 @@ Antes este documento los listaba como existentes; **no hay ninguna migración qu
 Toda modificación al esquema físico (tablas, columnas, datos semilla, índices) **DEBE** gestionarse mediante scripts de Flyway.
 
 - **Ubicación obligatoria**: `src/main/resources/db/migration/`
-- **Nomenclatura**: `V<Versión>__<Descripcion_Breve>.sql` (ej. `V31__Customer_Credit.sql`). La siguiente libre es `V45`.
+- **Nomenclatura**: `V<Versión>__<Descripcion_Breve>.sql` (ej. `V31__Customer_Credit.sql`). La siguiente libre es `V49`.
 - **Inmutabilidad**: una migración ya aplicada **nunca** se modifica; la corrección va en una versión nueva.
 - **Validación**: Hibernate usa `ddl-auto=validate` en dev y prod, por lo que cualquier discrepancia entre entidades y esquema falla el arranque. Solo el perfil `test` deja que Hibernate cree el esquema (`create-drop`, Flyway desactivado); los `V*MigrationSqlTest` ejecutan Flyway a mano contra su propia H2.
 - **Compatibilidad H2**: las migraciones con datos deben ser seguras en H2 (perfil `dev`); H2 2.4.x falla al validar `CHECK … IN (…)` desde una conexión distinta a la que los creó.

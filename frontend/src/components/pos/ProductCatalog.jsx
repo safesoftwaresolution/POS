@@ -76,11 +76,14 @@ function ProductCard({ product, onAdd }) {
   );
 }
 
-/** Columna izquierda del POS: buscador / lector de códigos, chips de categoría y grilla de productos. */
+/**
+ * Columna izquierda del POS: buscador / lector de códigos, chips de categoría y grilla de productos.
+ * `dictation` es el botón de dictado por voz (opcional), junto al buscador.
+ */
 export default function ProductCatalog({
   inputRef, searchQuery, onSearchChange, onSearchKeyDown,
   categories, selectedCategory, onSelectCategory,
-  products, loading, onAdd, onOpenScanner,
+  products, loading, onAdd, onOpenScanner, dictation,
 }) {
   return (
     <div className="flex flex-col gap-4 lg:h-full lg:overflow-hidden lg:pt-8 lg:pl-8 lg:pr-4">
@@ -115,6 +118,7 @@ export default function ProductCatalog({
           <ScanLine className="w-5 h-5" />
         </button>
       )}
+      {dictation}
       </div>
 
       <div className="shrink-0 flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">

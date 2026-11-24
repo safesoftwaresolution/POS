@@ -1,4 +1,4 @@
-<!-- doc-version: 1.8 | last-updated: 2026-10-29 -->
+<!-- doc-version: 1.9 | last-updated: 2026-11-23 -->
 # Roadmap y Estado por Módulo
 
 Este documento complementa los `spec.md` de cada módulo (que describen el comportamiento *actual*). Aquí se registra lo que **falta**, la **deuda técnica** conocida y las **próximas ideas**, para que quede como referencia entre sesiones de trabajo.
@@ -31,6 +31,7 @@ Este documento complementa los `spec.md` de cada módulo (que describen el compo
 | notifications | Bandeja por local (V11) | Listado sin paginar | — |
 | storage | R2: subida/borrado con tipos permitidos, carpeta por local y rol | Sin timeouts S3; cliente con credenciales falsas si falta R2; KYC en bucket público | URLs prefirmadas |
 | backoffice | Staff de plataforma y estadísticas del embudo | Mapeo en el servicio; sin tests | — |
+| voicesales | Borrador de venta a partir de audio, con confirmación manual | Piloto con audios ficticios pendiente; cuotas por instancia | Integración futura con el POS |
 
 ## Auditoría SDD y correcciones (2026-10-16)
 

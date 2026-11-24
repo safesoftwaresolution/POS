@@ -1,6 +1,6 @@
 // Auto-registro self-service del local del ADMINISTRATOR autenticado.
 // Distinto de services/backoffice/storesApi.js, que es 100% para SUPER_ADMIN.
-import { fetchApi, uploadFileApi } from './http';
+import { fetchApi } from './http';
 
 export async function registerOwnStoreApi(payload) {
   return fetchApi('/stores', {
@@ -23,17 +23,6 @@ export async function updateOwnStoreApi(payload) {
     method: 'PUT',
     body: JSON.stringify(payload),
   });
-}
-
-export async function getOwnStoreDocumentsApi() {
-  return fetchApi('/stores/me/documents');
-}
-
-export async function uploadOwnStoreDocumentApi(documentType, file) {
-  const formData = new FormData();
-  formData.append('documentType', documentType);
-  formData.append('file', file);
-  return uploadFileApi('/stores/me/documents', formData);
 }
 
 // Reenvía a revisión un local rechazado (REJECTED → PENDING_VERIFICATION). Devuelve el local actualizado.

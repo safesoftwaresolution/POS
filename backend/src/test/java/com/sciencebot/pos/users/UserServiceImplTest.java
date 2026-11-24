@@ -47,6 +47,8 @@ class UserServiceImplTest {
     @AfterEach
     void tearDown() {
         TenantContext.clear();
+        // Tests above install an authentication on the thread; leaking it makes later integration tests skip JWT login.
+        SecurityContextHolder.clearContext();
     }
 
     private User storeUser(Long storeId) {

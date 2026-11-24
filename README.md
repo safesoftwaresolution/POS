@@ -183,7 +183,6 @@ La especificación de cada módulo está en [`backend/docs/modules/`](./backend/
 | `/cash` | Caja | Arqueo (esperado vs contado), efectivo por cajero y recaudo por método de pago (solo `ADMINISTRATOR`). |
 
 Las analíticas (ventas por vendedor, top de productos, rentabilidad, compras, estado de inventario) viven en el Dashboard (`/`); `/reports` redirige allí.
-| `/documents` | Documentos | Documentos KYC del local. |
 | `/settings` | Configuración | Datos del negocio, logo y parámetros. |
 
 ### Back office (`SUPER_ADMIN`, bajo `/backoffice`)
@@ -308,6 +307,8 @@ npm run lint      # Linter (oxlint)
 ---
 
 ## ⚙️ Variables de Entorno
+
+**Dictado opcional:** [contrato, ejemplo y configuración de ventas por voz](backend/docs/modules/voicesales/spec.md). El backend sigue funcionando sin clave de IA; el dictado se habilita por separado.
 
 Puedes personalizar la configuración del backend mediante variables de entorno en tu sistema o en el archivo `.env` (dentro de `backend/`):
 

@@ -119,6 +119,8 @@ final class VoiceAgentService implements VoiceAgentFacade {
         } catch (RuntimeException failure) {
             // Class name only: messages and causes may carry the dictated text or provider content.
             log.warn("Voice agent provider failure: {}", failure.getClass().getName());
+            // Opt-in diagnosis only (logging.level for this class at DEBUG): the message may echo content.
+            log.debug("Voice agent provider failure detail", failure);
             throw new VoiceProviderException();
         }
     }

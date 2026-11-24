@@ -73,10 +73,30 @@ class SpringAiAgentModel implements AgentModel {
                 return text == null ? "" : text;
             }
             ToolExecutionResult result = toolCalling.executeToolCalls(prompt, response);
-            prompt = new Prompt(result.conversationHistory(), options);
+            prompt = new Prompt(withoutReasoning(result.conversationHistory()), options);
         }
         // The model kept asking for tools: stop here; the ticket already holds whatever the tools applied.
         return "No pude terminar eso del todo. Revisa el ticket y dime qué falta.";
+    }
+
+    /**
+     * Reasoning models (gpt-oss on Groq) return their chain of thought with the assistant message, and the client
+     * sends it back on the next round as {@code reasoning_content}, which the provider rejects with a 400. Only the
+     * text and the tool calls are needed to continue the conversation, so the rest is dropped.
+     */
+    private static List<Message> withoutReasoning(List<Message> history) {
+        List<Message> clean = new ArrayList<>(history.size());
+        for (Message message : history) {
+            if (message instanceof AssistantMessage assistant) {
+                clean.add(AssistantMessage.builder()
+                        .content(assistant.getText())
+                        .toolCalls(assistant.getToolCalls())
+                        .build());
+            } else {
+                clean.add(message);
+            }
+        }
+        return clean;
     }
 
     /**

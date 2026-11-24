@@ -73,7 +73,7 @@ class AgentOpenAiProtocolTest {
 
     private static final String TOOL_CALL = """
             {"id":"c1","object":"chat.completion","created":1,"model":"fixture-model","choices":[{"index":0,
-            "finish_reason":"tool_calls","message":{"role":"assistant","content":null,"tool_calls":[
+            "finish_reason":"tool_calls","message":{"role":"assistant","content":null,"reasoning":"pienso en voz alta","reasoning_content":"pienso en voz alta","tool_calls":[
             {"id":"call_1","type":"function","function":{"name":"agregarArticulo",
             "arguments":"{\\"nombre\\":\\"Café grande\\",\\"cantidad\\":2}"}}]}}],
             "usage":{"prompt_tokens":10,"completion_tokens":5,"total_tokens":15}}""";
@@ -135,6 +135,8 @@ class AgentOpenAiProtocolTest {
                 .contains("agregarArticulo").contains("pedirConfirmacion").contains("vaciarTicket");
         // Round two carries the tool result back; nothing about the store or user ever travels.
         assertThat(BODIES.get(1)).contains("call_1").contains("Agregado");
+        // Reasoning models return their chain of thought; sending it back makes Groq answer 400.
+        assertThat(BODIES.get(1)).doesNotContain("pienso en voz alta").doesNotContain("reasoning");
         assertThat(String.join("", BODIES)).doesNotContain("protocol").doesNotContain("ACTIVE");
     }
 }

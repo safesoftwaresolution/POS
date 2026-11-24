@@ -14,6 +14,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -88,6 +89,13 @@ class VoiceAgentController {
     @ExceptionHandler(AccessDeniedException.class)
     ResponseEntity<Map<String, String>> forbidden() {
         return error(HttpStatus.FORBIDDEN, "No se permite el asistente para esta sesión.");
+    }
+
+    // A body that is not valid JSON (or not valid UTF-8) is the caller's mistake, not a server failure. The parser's
+    // message can quote what was sent, so it is never reflected.
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    ResponseEntity<Map<String, String>> unreadable() {
+        return error(HttpStatus.BAD_REQUEST, "La solicitud no es válida.");
     }
 
     // The global fallback includes the exception message; never reflect or log what the cashier said.

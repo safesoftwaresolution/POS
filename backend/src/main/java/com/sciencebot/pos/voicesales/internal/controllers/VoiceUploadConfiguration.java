@@ -10,7 +10,7 @@ class VoiceUploadConfiguration {
     @Bean
     FilterRegistrationBean<Filter> voiceMultipartGuard() {
         var registration = new FilterRegistrationBean<Filter>(new VoiceMultipartGuard());
-        registration.addUrlPatterns("/api/v1/voice-sales/preview");
+        registration.addUrlPatterns("/api/v1/voice-sales/preview", "/api/v1/voice-sales/agent/*");
         return registration;
     }
 }

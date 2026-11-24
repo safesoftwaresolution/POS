@@ -12,7 +12,15 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
-@SpringBootApplication
+// Spring AI solo se usa para el modelo de chat del agente de voz. Las demas autoconfiguraciones de OpenAI
+// (audio, imagen, embeddings, moderacion) exigen una clave al arrancar, asi que se excluyen siempre.
+@SpringBootApplication(excludeName = {
+		"org.springframework.ai.model.openai.autoconfigure.OpenAiEmbeddingAutoConfiguration",
+		"org.springframework.ai.model.openai.autoconfigure.OpenAiImageAutoConfiguration",
+		"org.springframework.ai.model.openai.autoconfigure.OpenAiAudioSpeechAutoConfiguration",
+		"org.springframework.ai.model.openai.autoconfigure.OpenAiAudioTranscriptionAutoConfiguration",
+		"org.springframework.ai.model.openai.autoconfigure.OpenAiModerationAutoConfiguration"
+})
 @EnableScheduling
 @EnableSpringDataWebSupport(pageSerializationMode = EnableSpringDataWebSupport.PageSerializationMode.VIA_DTO)
 public class Application {

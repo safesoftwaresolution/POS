@@ -13,7 +13,7 @@ import static org.springframework.http.HttpStatus.TOO_MANY_REQUESTS;
 
 @Component
 @ConditionalOnProperty(name = "voice-sales.enabled", havingValue = "true")
-final class VoicePreviewQuota {
+public final class VoicePreviewQuota {
     private static final int MAX_KEYS = 10_000;
     private record Actor(long store, String username) {}
     private final Map<Long, Integer> stores = new HashMap<>();
@@ -29,7 +29,7 @@ final class VoicePreviewQuota {
         this(userLimit, storeLimit, Clock.systemUTC());
     }
 
-    VoicePreviewQuota(int userLimit, int storeLimit, Clock clock) {
+    public VoicePreviewQuota(int userLimit, int storeLimit, Clock clock) {
         if (userLimit < 1 || storeLimit < 1) throw new IllegalArgumentException("Voice quotas must be positive");
         this.userLimit = userLimit;
         this.storeLimit = storeLimit;
@@ -37,7 +37,7 @@ final class VoicePreviewQuota {
     }
 
     /** Both buckets are checked and consumed together, only once per admitted preview. */
-    synchronized void acquire(long store, String username) {
+    public synchronized void acquire(long store, String username) {
         long minute = Math.floorDiv(clock.millis(), 60_000);
         if (minute > window) {
             stores.clear();

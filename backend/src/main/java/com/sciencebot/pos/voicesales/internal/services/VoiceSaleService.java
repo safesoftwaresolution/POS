@@ -1,15 +1,11 @@
 package com.sciencebot.pos.voicesales.internal.services;
 
-import com.sciencebot.pos.config.security.PosUserDetails;
-import com.sciencebot.pos.config.tenant.TenantContext;
 import com.sciencebot.pos.voicesales.VoiceSaleFacade;
 import com.sciencebot.pos.voicesales.VoiceSalePreviewDto;
 import com.sciencebot.pos.voicesales.internal.ports.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.io.InputStream;
@@ -34,18 +30,12 @@ class VoiceSaleService implements VoiceSaleFacade {
 
     @Override
     public VoiceSalePreviewDto preview(InputStream input, String mediaType, long contentLength) {
-        var authentication = SecurityContextHolder.getContext().getAuthentication();
-        Long store = TenantContext.getStoreId();
-        if (store == null || authentication == null || !authentication.isAuthenticated()
-                || !(authentication.getPrincipal() instanceof PosUserDetails user)
-                || !user.isEnabled() || !store.equals(user.getStoreId())) {
-            throw new AccessDeniedException("Se requiere una sesión de tienda.");
-        }
+        var actor = VoiceSession.require();
         String type = VoiceAudio.type(mediaType);
         byte[] audio = VoiceAudio.read(input, type, contentLength);
         SaleIntent intent;
         try {
-            quota.acquire(store, user.getUsername());
+            quota.acquire(actor.store(), actor.username());
             intent = extract(audio, type);
         } finally {
             Arrays.fill(audio, (byte) 0);

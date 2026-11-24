@@ -8,6 +8,8 @@ import { getBillingSummaryApi, getSaleInvoiceApi } from '../services/billingApi'
 import CheckoutModal, { SaleResultModal } from '../components/pos/CheckoutModal';
 import ScanToasts from '../components/pos/ScanToasts';
 import ProductCatalog from '../components/pos/ProductCatalog';
+import VoiceDictationButton from '../components/pos/VoiceDictationButton';
+import VoiceDraftModal from '../components/pos/VoiceDraftModal';
 import CartPanel from '../components/pos/CartPanel';
 import { BarcodeScanner } from '../components/scanner';
 import { getCategoriesApi } from '../services/categoriesApi';
@@ -78,6 +80,8 @@ export default function POSBento() {
   const [showMobileCart, setShowMobileCart] = useState(false);
   const [isSubmittingSale, setIsSubmittingSale] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
+  // Borrador de una venta dictada, en revisión. Solo prepara el ticket: el cobro sigue siendo el de siempre.
+  const [voiceDraft, setVoiceDraft] = useState(null);
 
   const barcodeInputRef = useRef(null);
   // Clave de idempotencia estable para el intento de cobro en curso: se reutiliza en
@@ -209,6 +213,18 @@ export default function POSBento() {
     setCart([]);
   };
 
+  // Aplica al ticket lo que el cajero revisó del dictado (carrito, cliente, pago y efectivo). No crea ninguna venta:
+  // el cobro lo inicia el cajero con el botón de siempre, con su propia clave de idempotencia.
+  const handleApplyDraft = (ticket) => {
+    setCart(ticket.cart);
+    if (ticket.customer) setSelectedCustomer(ticket.customer);
+    if (ticket.paymentMethod) setSelectedPaymentMethod(ticket.paymentMethod);
+    if (ticket.cashTendered !== null) setCashTendered(ticket.cashTendered);
+    setVoiceDraft(null);
+    setShowMobileCart(true);
+    focusBarcodeInput();
+  };
+
   const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const total = subtotal;
 
@@ -318,6 +334,7 @@ export default function POSBento() {
           loading={loading}
           onAdd={addToCart}
           onOpenScanner={() => setShowScanner(true)}
+          dictation={<VoiceDictationButton onDraft={setVoiceDraft} />}
         />
 
         <CartPanel
@@ -358,6 +375,20 @@ export default function POSBento() {
           </span>
         )}
       </button>
+
+      {voiceDraft && (
+        <VoiceDraftModal
+          draft={voiceDraft}
+          productsList={productsList}
+          customersList={customersList}
+          paymentMethods={paymentMethods}
+          cart={cart}
+          customer={selectedCustomer}
+          paymentMethod={selectedPaymentMethod}
+          onApply={handleApplyDraft}
+          onClose={() => { setVoiceDraft(null); focusBarcodeInput(); }}
+        />
+      )}
 
       {showCheckoutModal && (
         <CheckoutModal

@@ -7,11 +7,12 @@ const money = (n) => n.toLocaleString('es-CO');
 /**
  * Ticket de venta (columna derecha en desktop, drawer inferior en mobile): cliente asignado,
  * líneas con stepper de cantidad, totales y botón de cobro. `scanner` es el escáner de cámara
- * que se muestra arriba del ticket en mobile.
+ * que se muestra arriba del ticket en mobile. `assistant` es la barra del asistente de caja (va sobre los totales) y
+ * `confirmation`, cuando existe, ocupa el lugar del botón de cobro: la venta dictada se confirma aquí mismo.
  */
 export default function CartPanel({
   cart, customers, selectedCustomer, onSelectCustomer,
-  subtotal, total, mobileOpen, scanner, onCloseMobile, onClear, onQuantity, onCheckout,
+  subtotal, total, mobileOpen, scanner, assistant, confirmation, onCloseMobile, onClear, onQuantity, onCheckout,
 }) {
   return (
     <div className={
@@ -113,6 +114,8 @@ export default function CartPanel({
           )}
         </div>
 
+        {assistant}
+
         <div className="shrink-0 p-5 border-t border-line space-y-4">
           <div className="space-y-2 text-xs font-semibold text-ink-soft">
             <div className="flex justify-between">
@@ -125,18 +128,20 @@ export default function CartPanel({
             </div>
           </div>
 
-          <button
-            disabled={cart.length === 0}
-            onClick={onCheckout}
-            className={`w-full py-3.5 rounded-2xl font-black text-sm flex items-center justify-center gap-2 shadow-lg transition-all ${
-              cart.length === 0
-                ? 'bg-gray-200 dark:bg-gray-800 text-ink-muted cursor-not-allowed'
-                : 'bg-solid hover:bg-solid-hover text-solid-ink shadow-[#0A0A0A]/10 active:scale-98 cursor-pointer'
-            }`}
-          >
-            <Banknote className="w-5 h-5" />
-            <span>COBRAR [F4]</span>
-          </button>
+          {confirmation ?? (
+            <button
+              disabled={cart.length === 0}
+              onClick={onCheckout}
+              className={`w-full py-3.5 rounded-2xl font-black text-sm flex items-center justify-center gap-2 shadow-lg transition-all ${
+                cart.length === 0
+                  ? 'bg-gray-200 dark:bg-gray-800 text-ink-muted cursor-not-allowed'
+                  : 'bg-solid hover:bg-solid-hover text-solid-ink shadow-[#0A0A0A]/10 active:scale-98 cursor-pointer'
+              }`}
+            >
+              <Banknote className="w-5 h-5" />
+              <span>COBRAR [F4]</span>
+            </button>
+          )}
         </div>
       </div>
     </div>

@@ -308,6 +308,8 @@ npm run lint      # Linter (oxlint)
 
 ## ⚙️ Variables de Entorno
 
+**Dictado opcional:** [contrato, ejemplo y configuración de ventas por voz](backend/docs/modules/voicesales/spec.md). El backend sigue funcionando sin clave de IA; el dictado se habilita por separado.
+
 Puedes personalizar la configuración del backend mediante variables de entorno en tu sistema o en el archivo `.env` (dentro de `backend/`):
 
 | Variable | Valor por Defecto | Descripción |

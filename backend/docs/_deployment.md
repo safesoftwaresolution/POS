@@ -1,4 +1,4 @@
-<!-- doc-version: 1.2 | last-updated: 2026-10-16 -->
+<!-- doc-version: 1.3 | last-updated: 2026-11-23 -->
 # Despliegue y Configuración
 
 ## Requisitos del Servidor
@@ -12,6 +12,8 @@
 | Node (solo para construir el frontend) | 20.19+ o 22.12+ | 22 LTS (lo exige Vite 8) |
 
 ## Variables de Entorno
+
+El [dictado de ventas](modules/voicesales/spec.md#configuración-y-piloto) es opcional y está desactivado por defecto (solo el perfil `dev` lo enciende para trabajar en local). Para un piloto autorizado, inyectar `GROQ_API_KEY` solo en el backend y definir `VOICE_SALES_ENABLED=true`. Consultar en la ficha del módulo los modelos, proveedores y cuotas independientes. Desactivar el registro de cuerpos y el almacenamiento temporal del audio en cualquier proxy de esta ruta.
 Todas se leen con `${VAR:default}` desde `application*.properties`; en local se cargan desde `backend/.env` (ver `.env.example`).
 
 | Variable | Descripción | Por defecto / notas |

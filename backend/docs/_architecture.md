@@ -1,7 +1,7 @@
-<!-- doc-version: 1.4 | last-updated: 2026-10-29 -->
+<!-- doc-version: 1.5 | last-updated: 2026-11-23 -->
 # Arquitectura del Backend: Monolito Modular
 
-El sistema es un **Monolito Modular** con **división vertical**: un único proceso JVM dividido internamente en módulos acotados (Bounded Contexts). Los 21 módulos están en `com.sciencebot.pos`: `auth`, `users`, `categories`, `products`, `services`, `inventory`, `customers`, `credit`, `audit`, `suppliers`, `purchases`, `sales`, `billing`, `reports`, `settings`, `stores`, `legal`, `support`, `notifications`, `storage` y `backoffice`.
+El sistema es un **Monolito Modular** con **división vertical**: un único proceso JVM dividido internamente en módulos acotados (Bounded Contexts). Los módulos están en `com.sciencebot.pos`; consultar el [índice de módulos](./_index.md). El módulo opcional `voicesales` prepara borradores sin registrar ventas; la confirmación continúa bajo `sales`.
 
 ```
                   ┌────────────────────────────────────────────────┐

@@ -60,6 +60,15 @@ services:
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
       # --- Facturacion electronica ---
       BILLING_PROVIDER: ${BILLING_PROVIDER:-alegra}
+      # Dictado opcional; el secreto se inyecta únicamente en el backend.
+      VOICE_SALES_ENABLED: ${VOICE_SALES_ENABLED:-false}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      VOICE_SALES_TRANSCRIPTION_PROVIDER: ${VOICE_SALES_TRANSCRIPTION_PROVIDER:-groq}
+      VOICE_SALES_EXTRACTION_PROVIDER: ${VOICE_SALES_EXTRACTION_PROVIDER:-groq}
+      VOICE_SALES_TRANSCRIPTION_MODEL: ${VOICE_SALES_TRANSCRIPTION_MODEL:-whisper-large-v3-turbo}
+      VOICE_SALES_EXTRACTION_MODEL: ${VOICE_SALES_EXTRACTION_MODEL:-openai/gpt-oss-20b}
+      VOICE_SALES_USER_PER_MINUTE: ${VOICE_SALES_USER_PER_MINUTE:-6}
+      VOICE_SALES_STORE_PER_MINUTE: ${VOICE_SALES_STORE_PER_MINUTE:-30}
       # Alegra (token de plataforma por entorno; nunca va en este archivo, solo en el entorno de despliegue)
       ALEGRA_URL_SANDBOX: ${ALEGRA_URL_SANDBOX:-https://sandbox-api.alegra.com/e-provider/col/v1}
       ALEGRA_API_TOKEN_SANDBOX: ${ALEGRA_API_TOKEN_SANDBOX:-}

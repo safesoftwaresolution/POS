@@ -52,7 +52,7 @@ class TicketToolsTest {
         when(services.getById(31L)).thenReturn(Optional.of(service(31L, "Corte", "15000")));
         when(customers.getById(23L)).thenReturn(Optional.of(customer(23L, "Luis Gómez", "5555555555")));
         tools = new TicketTools(new TicketDraft(), new VoiceSaleResolver(products, services, customers, settings),
-                products, services, customers);
+                products, services, customers, settings);
     }
 
     @AfterEach

@@ -45,6 +45,7 @@ final class VoiceAgentService implements VoiceAgentFacade {
     private final ProductFacade products;
     private final ServiceFacade services;
     private final CustomerFacade customers;
+    private final SettingsFacade settings;
     private final TicketRestorer restorer;
     private final VoicePreviewQuota quota;
 
@@ -67,6 +68,7 @@ final class VoiceAgentService implements VoiceAgentFacade {
         this.products = products;
         this.services = services;
         this.customers = customers;
+        this.settings = settings;
         this.restorer = new TicketRestorer(products, services, customers, settings);
         this.quota = quota;
     }
@@ -106,7 +108,7 @@ final class VoiceAgentService implements VoiceAgentFacade {
 
         var draft = new TicketDraft();
         List<String> warnings = restorer.restore(draft, request.ticket());
-        var tools = new TicketTools(draft, resolver, products, services, customers);
+        var tools = new TicketTools(draft, resolver, products, services, customers, settings);
         String reply = runModel(text, history(request.history()), tools);
         return new VoiceAgentResponse(reply, tools.ticket(), List.copyOf(warnings));
     }

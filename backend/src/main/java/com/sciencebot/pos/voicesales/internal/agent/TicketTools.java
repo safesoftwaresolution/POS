@@ -3,6 +3,7 @@ package com.sciencebot.pos.voicesales.internal.agent;
 import com.sciencebot.pos.customers.CustomerFacade;
 import com.sciencebot.pos.products.ProductFacade;
 import com.sciencebot.pos.services.ServiceFacade;
+import com.sciencebot.pos.settings.SettingsFacade;
 import com.sciencebot.pos.voicesales.VoiceSalePreviewDto.Candidate;
 import com.sciencebot.pos.voicesales.VoiceSalePreviewDto.Kind;
 import com.sciencebot.pos.voicesales.VoiceSalePreviewDto.Reference;
@@ -36,14 +37,16 @@ final class TicketTools {
     private final ProductFacade products;
     private final ServiceFacade services;
     private final CustomerFacade customers;
+    private final SettingsFacade settings;
 
     TicketTools(TicketDraft draft, SaleDraftResolver resolver, ProductFacade products, ServiceFacade services,
-                CustomerFacade customers) {
+                CustomerFacade customers, SettingsFacade settings) {
         this.draft = draft;
         this.resolver = resolver;
         this.products = products;
         this.services = services;
         this.customers = customers;
+        this.settings = settings;
     }
 
     @Tool(description = "Agrega un producto o servicio al ticket. Usa el nombre tal como lo dijo el cajero. "
@@ -55,10 +58,18 @@ final class TicketTools {
         }
         Reference reference = resolver.resolve(new SaleIntent(List.of(new SaleIntent.Item(nombre, cantidad)),
                 null, null, null)).items().getFirst().item();
-        if (reference.status() != Status.RESOLVED) {
-            return notResolved("el artículo", nombre, reference);
+        Candidate candidate;
+        if (reference.status() == Status.RESOLVED) {
+            candidate = reference.candidates().getFirst();
+        } else {
+            // Not an exact name: try the way people talk ("aceite de girasol de un litro") before giving up.
+            var loose = LooseMatcher.items(products, services, nombre);
+            if (!loose.unique()) {
+                return notResolved("el artículo", nombre,
+                        loose.best().isEmpty() ? reference.candidates() : loose.best());
+            }
+            candidate = loose.best().getFirst();
         }
-        Candidate candidate = reference.candidates().getFirst();
         return candidate.kind() == Kind.SERVICE ? addService(candidate, cantidad) : addProduct(candidate, cantidad);
     }
 
@@ -151,10 +162,18 @@ final class TicketTools {
     @Tool(description = "Fija el medio de pago (efectivo, tarjeta, Nequi, crédito...) tal como lo dijo el cajero.")
     public String fijarMedioPago(@ToolParam(description = "Medio de pago") String medio) {
         Reference reference = resolver.resolve(new SaleIntent(null, null, medio, null)).paymentMethod();
-        if (reference.status() != Status.RESOLVED) {
-            return notResolved("el medio de pago", medio, reference);
+        Candidate candidate;
+        if (reference.status() == Status.RESOLVED) {
+            candidate = reference.candidates().getFirst();
+        } else {
+            // A misheard word ("Neki" for "Nequi") is a typo away from a configured method.
+            var loose = LooseMatcher.paymentMethod(settings, medio);
+            if (!loose.unique()) {
+                return notResolved("el medio de pago", medio,
+                        loose.best().isEmpty() ? reference.candidates() : loose.best());
+            }
+            candidate = loose.best().getFirst();
         }
-        Candidate candidate = reference.candidates().getFirst();
         draft.paymentMethod(new VoiceTicketDto.PaymentMethod(candidate.code(), candidate.label()));
         return "Medio de pago: " + candidate.label() + ".";
     }
@@ -220,10 +239,14 @@ final class TicketTools {
     }
 
     private static String notResolved(String what, String mention, Reference reference) {
-        if (reference.candidates().isEmpty()) {
+        return notResolved(what, mention, reference.candidates());
+    }
+
+    private static String notResolved(String what, String mention, List<Candidate> candidates) {
+        if (candidates.isEmpty()) {
             return "No encontré " + what + " «" + mention + "». Pídele al cajero que lo repita o que lo agregue a mano.";
         }
-        String options = reference.candidates().stream().limit(MAX_OPTIONS).map(Candidate::label)
+        String options = candidates.stream().limit(MAX_OPTIONS).map(Candidate::label)
                 .collect(Collectors.joining("; "));
         return "«" + mention + "» no es exacto. Opciones: " + options
                 + ". Pregunta al cajero cuál es o repite la herramienta con el nombre exacto.";

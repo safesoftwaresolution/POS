@@ -46,7 +46,7 @@ class SpringAiAgentModelTest {
         when(products.searchProducts(eq("Café grande"), isNull(), eq(true), any())).thenReturn(new PageImpl<>(List.of(coffee)));
         when(products.getById(11L)).thenReturn(Optional.of(coffee));
         draft = new TicketDraft();
-        tools = new TicketTools(draft, new VoiceSaleResolver(products, services, customers, settings), products, services, customers);
+        tools = new TicketTools(draft, new VoiceSaleResolver(products, services, customers, settings), products, services, customers, settings);
     }
 
     @org.junit.jupiter.api.AfterEach

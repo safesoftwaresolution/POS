@@ -13,7 +13,7 @@
 
 ## Variables de Entorno
 
-El [dictado de ventas](modules/voicesales/spec.md#configuración-y-piloto) es opcional y está desactivado por defecto (solo el perfil `dev` lo enciende para trabajar en local). Para un piloto autorizado, inyectar `GROQ_API_KEY` solo en el backend y definir `VOICE_SALES_ENABLED=true`. Consultar en la ficha del módulo los modelos, proveedores y cuotas independientes. Desactivar el registro de cuerpos y el almacenamiento temporal del audio en cualquier proxy de esta ruta.
+El [dictado de ventas](modules/voicesales/spec.md#configuración-y-piloto) es opcional y está desactivado por defecto (solo el perfil `dev` lo enciende para trabajar en local). Para un piloto autorizado, inyectar `GROQ_API_KEY` solo en el backend y definir `VOICE_SALES_ENABLED=true`. Consultar en la ficha del módulo los modelos, proveedores y cuotas independientes. Desactivar el registro de cuerpos y el almacenamiento temporal del audio en cualquier proxy de esta ruta. El **asistente de caja** que usa el POS se enciende además con `VOICE_SALES_AGENT_ENABLED=true` y `VOICE_SALES_AGENT_PROVIDER=openai` (usa la misma `GROQ_API_KEY`); sin eso el POS no muestra la barra del asistente o responde 503 y la venta manual sigue igual. Sus variables (modelo, URL base, rondas y cuotas) están en la ficha del módulo.
 Todas se leen con `${VAR:default}` desde `application*.properties`; en local se cargan desde `backend/.env` (ver `.env.example`).
 
 | Variable | Descripción | Por defecto / notas |

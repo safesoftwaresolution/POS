@@ -207,7 +207,7 @@ Todas las páginas respetan el tema claro/oscuro seleccionado desde el encabezad
 |---|---|---|
 | `SUPER_ADMIN` | Equipo de la plataforma | Back office (`/api/v1/backoffice/**`): locales y KYC, credenciales de facturación, categorías globales, textos legales, soporte y personal. No pertenece a ningún local. |
 | `ADMINISTRATOR` | Dueño de un local | Control total de **su** local: usuarios, reportes, facturación, rangos de numeración y configuración. |
-| `SUPERVISOR` | Supervisor de Tienda | Compras, inventario, clientes y reintentos de facturas. |
+| `SUPERVISOR` | Supervisor de Tienda | Catálogo, clientes y reintentos de facturas; inventario y compras solo de consulta. |
 | `SELLER` | Vendedor / Cajero | Operación de caja: ventas, consulta de catálogo y tickets. |
 
 Todos los roles excepto `SUPER_ADMIN` están acotados a su propio local. Matriz completa en [`backend/docs/_security.md`](./backend/docs/_security.md).

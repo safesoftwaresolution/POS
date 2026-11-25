@@ -18,12 +18,12 @@ Plataforma multi-tenant de API REST para gestión de ventas, inventario y factur
 |---|---|---|
 | `SUPER_ADMIN` | Equipo de la plataforma SaaS (sin local) | Back office: locales y KYC, categorías globales, textos legales, soporte, credenciales y habilitación de facturación, operadores |
 | Administrador | Dueño del negocio | Control total: usuarios, reportes, configuración, facturación |
-| Supervisor | Encargado de tienda | Compras, inventario, catálogo, clientes, reintento de facturas |
+| Supervisor | Encargado de tienda | Catálogo, clientes, reintento de facturas; inventario y compras solo de consulta |
 | Vendedor | Cajero en mostrador | Ventas, consulta de productos, registro de clientes, consulta de facturas |
 
 ## Flujo del Negocio
 0. **Alta del local**: el dueño se auto-registra, verifica su correo, registra su local y sube documentos KYC; el `SUPER_ADMIN` lo aprueba y carga las credenciales de facturación electrónica del local.
-1. **Abastecimiento**: Supervisor registra compra a proveedor → stock sube automáticamente.
+1. **Abastecimiento**: Administrador registra compra a proveedor → stock sube automáticamente.
 2. **Venta**: Vendedor procesa venta en efectivo → stock baja automáticamente → ticket generado → emisión opcional al proveedor de facturación (DIAN).
 3. **Control**: Administrador consulta reportes de rentabilidad, stock y estado de facturación.
 

@@ -48,9 +48,10 @@ const TABS = [
 
 export default function ProductsBento() {
   const { confirm, notify } = useModal();
-  // Mismo criterio que el backend: crear/editar/importar productos y gestionar subcategorías es de ADMINISTRATOR y
-  // SUPERVISOR; eliminar, solo de ADMINISTRATOR. El vendedor solo consulta el catálogo y los códigos de barras.
-  const { canManageStock: canManageProducts, canModifyStock, isAdmin } = usePermissions();
+  // Mismo criterio que el backend: crear/editar productos y gestionar subcategorías es de ADMINISTRATOR y
+  // SUPERVISOR; eliminar, importar y todo lo que cambia stock (stock inicial, lotes), solo de ADMINISTRATOR. El vendedor
+  // solo consulta el catálogo y los códigos de barras.
+  const { isStoreManager: canManageProducts, canModifyStock, isAdmin } = usePermissions();
   const canManageSubcategories = canManageProducts;
   const [activeTab, setActiveTab] = useState('catalog');
   const [showImportModal, setShowImportModal] = useState(false);

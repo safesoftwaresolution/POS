@@ -2,11 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { permissionsFor } from './usePermissions';
 
 describe('permissionsFor', () => {
-  it('administrador y supervisor gestionan stock; vendedor y super admin no', () => {
-    expect(permissionsFor('ADMINISTRATOR').canManageStock).toBe(true);
-    expect(permissionsFor('SUPERVISOR').canManageStock).toBe(true);
-    expect(permissionsFor('SELLER').canManageStock).toBe(false);
-    expect(permissionsFor('SUPER_ADMIN').canManageStock).toBe(false);
+  it('administrador y supervisor son encargados del local; vendedor y super admin no', () => {
+    expect(permissionsFor('ADMINISTRATOR').isStoreManager).toBe(true);
+    expect(permissionsFor('SUPERVISOR').isStoreManager).toBe(true);
+    expect(permissionsFor('SELLER').isStoreManager).toBe(false);
+    expect(permissionsFor('SUPER_ADMIN').isStoreManager).toBe(false);
   });
 
   it('solo el administrador cambia el stock; el supervisor lo consulta', () => {
@@ -23,7 +23,7 @@ describe('permissionsFor', () => {
 
   it('sin sesión no tiene permisos', () => {
     const p = permissionsFor(undefined);
-    expect(p.canManageStock).toBe(false);
+    expect(p.isStoreManager).toBe(false);
     expect(p.isAdmin).toBe(false);
   });
 });

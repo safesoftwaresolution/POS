@@ -31,7 +31,7 @@ const ICON_BTN = 'p-1.5 text-ink-muted rounded-lg hover:bg-gray-100 dark:hover:b
 export default function ServicesBento() {
   const { confirm, notify } = useModal();
   // Mismo criterio que el backend: crear/editar es de ADMINISTRATOR y SUPERVISOR; dar de baja, solo ADMINISTRATOR.
-  const { isAdmin, canManageStock: canManage } = usePermissions();
+  const { isAdmin, isStoreManager: canManage } = usePermissions();
   const [search, setSearch] = useState('');
   const [showInactive, setShowInactive] = useState(false);
   const [form, setForm] = useState(null);

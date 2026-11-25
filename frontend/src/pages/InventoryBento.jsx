@@ -39,11 +39,11 @@ const TABS = [
 export default function InventoryBento() {
   // Mover stock, comprar y el conteo masivo escriben en el kardex: solo el administrador (mismo permiso que
   // POST /inventory/movements y POST /purchases). El supervisor consulta stock, historial y vencimientos.
-  const { canManageStock, canModifyStock } = usePermissions();
+  const { isStoreManager, canModifyStock } = usePermissions();
   const [showCountModal, setShowCountModal] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
   // /suppliers exige ADMINISTRATOR o SUPERVISOR en el backend: el vendedor no ve esa pestaña.
-  const tabs = canManageStock ? TABS : TABS.filter(t => t.id !== 'suppliers');
+  const tabs = isStoreManager ? TABS : TABS.filter(t => t.id !== 'suppliers');
   const activeTab = tabs.some(t => t.id === searchParams.get('tab')) ? searchParams.get('tab') : 'stock';
   const setActiveTab = (tab) => setSearchParams(tab === 'stock' ? {} : { tab }, { replace: true });
   const { data: productsList, loading, reload: reloadInventory } = useLoad(
@@ -51,7 +51,7 @@ export default function InventoryBento() {
     [],
     { initial: [], autoRefresh: true },
   );
-  const { data: suppliers } = useLoad(() => asList(getSuppliersApi()), [], { initial: [], autoRefresh: true, enabled: canManageStock });
+  const { data: suppliers } = useLoad(() => asList(getSuppliersApi()), [], { initial: [], autoRefresh: true, enabled: isStoreManager });
   const [search, setSearch] = useState('');
   // null = cerrado; { product } = abierto (product puede ser null: el producto se elige dentro del modal).
   const [moveModal, setMoveModal] = useState(null);
@@ -77,7 +77,7 @@ export default function InventoryBento() {
 
         {activeTab === 'stock' && (
           <div className="flex flex-wrap items-center gap-2">
-            {canManageStock && <ExpiringPdfButton />}
+            {isStoreManager && <ExpiringPdfButton />}
             {canModifyStock && (
               <>
                 <button

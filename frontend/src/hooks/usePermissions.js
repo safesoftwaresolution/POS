@@ -16,8 +16,10 @@ export function permissionsFor(role) {
     isAdmin,
     isSupervisor,
     isSeller: role === ROLES.SELLER,
-    /** Administrador y supervisor: ven stock, compras, movimientos y pueden crear productos. */
+    /** Administrador y supervisor: gestionan el catálogo y consultan stock, compras y movimientos. */
     canManageStock: isAdmin || isSupervisor,
+    /** Solo administrador: cambia el stock (movimientos, compras, conteo e importación, lotes, stock inicial). */
+    canModifyStock: isAdmin,
   };
 }
 

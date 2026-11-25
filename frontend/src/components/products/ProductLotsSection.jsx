@@ -11,9 +11,9 @@ const ICON_BTN = 'p-1.5 text-ink-muted rounded-lg hover:bg-gray-100 dark:hover:b
 /**
  * Lotes de vencimiento de un producto (al editarlo): lo que queda de cada lote, corregir una fecha, quitar un lote y
  * ponerle fecha a unidades que entraron sin ella. Los lotes nuevos se crean al registrar una entrada de stock
- * (Inventario → Mover stock, o una compra): aquí solo se gestionan los que ya existen.
+ * (Inventario → Mover stock, o una compra): aquí solo se gestionan los que ya existen. Con `readOnly` solo se consultan.
  */
-export default function ProductLotsSection({ productId, onChanged }) {
+export default function ProductLotsSection({ productId, readOnly = false, onChanged }) {
   const { confirm, notify } = useModal();
   const [state, setState] = useState({ loading: true, data: null, error: '' });
   const [editing, setEditing] = useState(null); // { id, expirationDate, lotCode }
@@ -105,7 +105,7 @@ export default function ProductLotsSection({ productId, onChanged }) {
 
       {!loading && !error && lots.length === 0 && undated === 0 && (
         <p className="text-[11px] text-ink-muted">
-          Este producto no tiene vencimientos. Cuando entre mercancía que vence, indica la fecha en Inventario → Mover stock o en la compra.
+          Este producto no tiene vencimientos.{readOnly ? '' : ' Cuando entre mercancía que vence, indica la fecha en Inventario → Mover stock o en la compra.'}
         </p>
       )}
 
@@ -187,6 +187,7 @@ export default function ProductLotsSection({ productId, onChanged }) {
               </p>
               <Badge tone={TONES[status]}>{formatExpiryDate(lot.expirationDate)} · {expiryLabel(days)}</Badge>
             </div>
+            {!readOnly && (
             <div className="flex items-center gap-1 shrink-0">
               <button
                 type="button"
@@ -211,6 +212,7 @@ export default function ProductLotsSection({ productId, onChanged }) {
                 <Trash2 className="w-4 h-4" />
               </button>
             </div>
+            )}
           </div>
         );
       })}
@@ -220,14 +222,16 @@ export default function ProductLotsSection({ productId, onChanged }) {
           <p className="text-[11px] font-semibold text-ink-soft">
             {undated.toLocaleString('es-CO')} {undated === 1 ? 'unidad' : 'unidades'} sin fecha de vencimiento
           </p>
-          <Button
-            size="sm"
-            variant="soft"
-            icon={Plus}
-            onClick={() => setAssigning({ quantity: String(undated), expirationDate: '', lotCode: '' })}
-          >
-            Asignar vencimiento
-          </Button>
+          {!readOnly && (
+            <Button
+              size="sm"
+              variant="soft"
+              icon={Plus}
+              onClick={() => setAssigning({ quantity: String(undated), expirationDate: '', lotCode: '' })}
+            >
+              Asignar vencimiento
+            </Button>
+          )}
         </div>
       )}
 

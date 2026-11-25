@@ -9,6 +9,13 @@ describe('permissionsFor', () => {
     expect(permissionsFor('SUPER_ADMIN').canManageStock).toBe(false);
   });
 
+  it('solo el administrador cambia el stock; el supervisor lo consulta', () => {
+    expect(permissionsFor('ADMINISTRATOR').canModifyStock).toBe(true);
+    expect(permissionsFor('SUPERVISOR').canModifyStock).toBe(false);
+    expect(permissionsFor('SELLER').canModifyStock).toBe(false);
+    expect(permissionsFor('SUPER_ADMIN').canModifyStock).toBe(false);
+  });
+
   it('solo un rol a la vez', () => {
     const p = permissionsFor('ADMINISTRATOR');
     expect([p.isAdmin, p.isSupervisor, p.isSeller, p.isSuperAdmin]).toEqual([true, false, false, false]);

@@ -13,7 +13,7 @@ import ProductLotsSection from './ProductLotsSection';
  * este componente solo pinta el formulario y delega las acciones en los callbacks.
  */
 export default function ProductFormModal({
-  product, setProduct, categories, subcategories, errorMsg, canManageLots = false, onLotsChanged,
+  product, setProduct, categories, subcategories, errorMsg, canViewLots = false, canModifyStock = false, onLotsChanged,
   uploadingImage, onImageChange, onImageRemove,
   creatingSubcategory, setCreatingSubcategory, newSubcategoryName, setNewSubcategoryName, onCreateSubcategory,
   onSubmit, onClose,
@@ -163,12 +163,15 @@ export default function ProductFormModal({
           <MoneyInput label="Precio Compra ($ COP)" value={product.purchasePrice ?? ''} onChange={purchasePrice => set({ purchasePrice })} placeholder="8.000" required />
           <MoneyInput label="Precio Venta ($ COP)" value={product.price} onChange={price => set({ price })} placeholder="12.000" required />
         </div>
-        {!isEdit && (
+        {!isEdit && canModifyStock && (
           <Input label="Stock Inicial" type="number" value={product.stock} onChange={e => set({ stock: e.target.value })} placeholder="50" />
         )}
-        {isEdit && <p className="text-[10px] text-ink-muted">Para ajustar el stock ve al módulo de Inventario.</p>}
+        {isEdit && canModifyStock && <p className="text-[10px] text-ink-muted">Para ajustar el stock ve al módulo de Inventario.</p>}
+        {!isEdit && !canModifyStock && (
+          <p className="text-[10px] text-ink-muted">El producto se crea sin stock: las existencias las registra el administrador.</p>
+        )}
 
-        {!isEdit && (
+        {!isEdit && canModifyStock && (
           <Field
             label="Vencimiento del stock inicial (opcional)"
             hint={hasInitialStock
@@ -192,8 +195,8 @@ export default function ProductFormModal({
           </Field>
         )}
 
-        {isEdit && canManageLots && (
-          <ProductLotsSection productId={product.id} onChanged={onLotsChanged} />
+        {isEdit && canViewLots && (
+          <ProductLotsSection productId={product.id} readOnly={!canModifyStock} onChanged={onLotsChanged} />
         )}
 
         <div className="flex gap-2 pt-2">

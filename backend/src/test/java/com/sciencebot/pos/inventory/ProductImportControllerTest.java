@@ -20,7 +20,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-/** /api/v1/inventory/import: solo administrador y supervisor, y el rechazo "todo o nada" llega como 422 con el detalle. */
+/** /api/v1/inventory/import: solo administrador, y el rechazo "todo o nada" llega como 422 con el detalle. */
 @SpringBootTest
 class ProductImportControllerTest {
 
@@ -52,8 +52,8 @@ class ProductImportControllerTest {
     }
 
     @Test
-    @WithMockUser(roles = "SUPERVISOR")
-    void preview_returnsTheRowsForASupervisor() throws Exception {
+    @WithMockUser(roles = "ADMINISTRATOR")
+    void preview_returnsTheRows() throws Exception {
         when(productImportFacade.preview(any())).thenReturn(new ProductImportPreviewDto(1, 1, 0, 0, 0,
                 List.of(new ProductImportRowDto(2, "P-1", "Arroz", "CREATE", null, 10, List.of(), List.of()))));
 

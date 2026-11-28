@@ -84,7 +84,7 @@
   ```
 
 ### POST /api/v1/products
-- **Permisos**: Administrator, Supervisor
+- **Permisos**: Administrator, Supervisor (con `quantityAvailable` mayor que cero, solo Administrator)
 - **Request**:
   ```json
   { "internalCode": "PROD-002", "barcode": "7701112223334", "name": "Papas Fritas", "categoryId": 2, "subcategoryId": 7, "purchasePrice": 0.50, "salePrice": 0.90, "minStock": 20, "expirationDate": "2027-03-01" }
@@ -101,15 +101,15 @@
 - **Response 200**: `{ "lots": [{ "id": 7, "lotCode": "L-2210", "quantity": 50, "remainingQuantity": 32, "expirationDate": "2027-01-15", "receivedAt": "…" }], "undatedQuantity": 0 }`. Solo lotes con unidades, del que vence primero al último (RN-PROD-005).
 
 ### POST /api/v1/products/{id}/lots
-- **Permisos**: Administrator, Supervisor
+- **Permisos**: Administrator
 - **Request**: `{ "quantity": 20, "expirationDate": "2027-01-15", "lotCode": "L-2210" }` — le pone fecha a stock que ya existe sin moverlo. **Response 204**. **Errores**: 400 (cantidad mayor a las unidades sin fecha, fecha inválida o > 20 años), 404.
 
 ### PUT /api/v1/products/{id}/lots/{lotId}
-- **Permisos**: Administrator, Supervisor
+- **Permisos**: Administrator
 - **Request**: `{ "expirationDate": "2027-02-01", "lotCode": "L-2211", "quantity": 40 }` — `expirationDate` obligatoria; `quantity` opcional (unidades que le quedan al lote; sin ella no cambian; ver RN-PROD-004); un código en blanco lo borra. **Response 204**. **Errores**: 400 (fecha inválida, unidades ≤ 0 o mayores a las unidades sin fecha), 404 (producto o lote inexistente o ya agotado).
 
 ### DELETE /api/v1/products/{id}/lots/{lotId}
-- **Permisos**: Administrator, Supervisor — quita el lote; el stock no cambia. **Response 204**.
+- **Permisos**: Administrator — quita el lote; el stock no cambia. **Response 204**.
 
 ### PATCH /api/v1/products/{id}/status
 - **Permisos**: Administrator, Supervisor
@@ -164,7 +164,10 @@
 ## Permisos
 | Operación | Administrator | Supervisor | Seller |
 |---|---|---|---|
-| Crear | ✓ | ✓ | - |
+| Crear (sin stock inicial el Supervisor) | ✓ | ✓ | - |
+| Stock inicial al crear | ✓ | - | - |
+| Lotes: consultar | ✓ | ✓ | - |
+| Lotes: crear, corregir, quitar | ✓ | - | - |
 | Leer | ✓ | ✓ | ✓ |
 | Editar | ✓ | ✓ | - |
 | Eliminar | ✓ | - | - |

@@ -92,10 +92,11 @@ public class ProductController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'SUPERVISOR')")
+    // A supervisor may add a product to the catalog, but initial stock is a stock change: administrator only.
+    @PreAuthorize("hasRole('ADMINISTRATOR') or (hasRole('SUPERVISOR') and #command.quantityAvailable() == 0)")
     @Operation(
             summary = "Crear producto",
-            description = "Registra un nuevo producto en el catálogo. Requiere rol **ADMINISTRATOR** o **SUPERVISOR**."
+            description = "Registra un nuevo producto en el catálogo. Requiere rol **ADMINISTRATOR** o **SUPERVISOR**; el stock inicial (`quantityAvailable` mayor que cero) solo **ADMINISTRATOR**."
     )
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Producto creado exitosamente",
@@ -206,13 +207,13 @@ public class ProductController {
     }
 
     @PostMapping("/{id}/lots")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'SUPERVISOR')")
+    @PreAuthorize("hasRole('ADMINISTRATOR')")
     @Operation(
             summary = "Ponerle fecha de vencimiento a stock que ya existe",
             description = """
                     Crea un lote para unidades que ya están en el inventario sin fecha. No mueve stock: la cantidad no
                     puede superar las unidades sin fecha del producto. Las entradas nuevas con vencimiento se
-                    registran desde *Mover stock* o *Compras*. Requiere rol **ADMINISTRATOR** o **SUPERVISOR**.
+                    registran desde *Mover stock* o *Compras*. Solo **ADMINISTRATOR**.
                     """
     )
     @ApiResponses({
@@ -233,13 +234,13 @@ public class ProductController {
     }
 
     @PutMapping("/{id}/lots/{lotId}")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'SUPERVISOR')")
+    @PreAuthorize("hasRole('ADMINISTRATOR')")
     @Operation(
             summary = "Corregir la fecha, el código o las unidades de un lote",
             description = """
                     Cambia la fecha de vencimiento y el código de un lote y, si se envía `quantity`, las unidades que
                     le quedan. El stock del producto no cambia: subir las unidades las toma de las "sin fecha" (falla
-                    si no alcanzan) y bajarlas las devuelve a ese grupo. Requiere rol **ADMINISTRATOR** o **SUPERVISOR**.
+                    si no alcanzan) y bajarlas las devuelve a ese grupo. Solo **ADMINISTRATOR**.
                     """
     )
     @ApiResponses({
@@ -258,12 +259,12 @@ public class ProductController {
     }
 
     @DeleteMapping("/{id}/lots/{lotId}")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'SUPERVISOR')")
+    @PreAuthorize("hasRole('ADMINISTRATOR')")
     @Operation(
             summary = "Quitar un lote",
             description = """
                     Elimina el registro del lote. El stock no cambia: esas unidades pasan a "sin fecha". Para dar de baja
-                    mercancía vencida use una salida por *Vencimiento* en Inventario. Requiere rol **ADMINISTRATOR** o **SUPERVISOR**.
+                    mercancía vencida use una salida por *Vencimiento* en Inventario. Solo **ADMINISTRATOR**.
                     """
     )
     @ApiResponses({

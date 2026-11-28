@@ -5,7 +5,7 @@ import org.springframework.http.HttpStatus;
 public final class PreviewRejected extends RuntimeException {
     private final HttpStatus status;
 
-    PreviewRejected(HttpStatus status, String message) {
+    public PreviewRejected(HttpStatus status, String message) {
         super(message);
         this.status = status;
     }

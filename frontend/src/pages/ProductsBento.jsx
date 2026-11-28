@@ -48,9 +48,10 @@ const TABS = [
 
 export default function ProductsBento() {
   const { confirm, notify } = useModal();
-  // Mismo criterio que el backend: crear/editar/importar productos y gestionar subcategorías es de ADMINISTRATOR y
-  // SUPERVISOR; eliminar, solo de ADMINISTRATOR. El vendedor solo consulta el catálogo y los códigos de barras.
-  const { canManageStock: canManageProducts, isAdmin } = usePermissions();
+  // Mismo criterio que el backend: crear/editar productos y gestionar subcategorías es de ADMINISTRATOR y
+  // SUPERVISOR; eliminar, importar y todo lo que cambia stock (stock inicial, lotes), solo de ADMINISTRATOR. El vendedor
+  // solo consulta el catálogo y los códigos de barras.
+  const { isStoreManager: canManageProducts, canModifyStock, isAdmin } = usePermissions();
   const canManageSubcategories = canManageProducts;
   const [activeTab, setActiveTab] = useState('catalog');
   const [showImportModal, setShowImportModal] = useState(false);
@@ -310,7 +311,9 @@ export default function ProductsBento() {
         actions={
           activeTab === 'catalog' && canManageProducts ? (
             <>
-              <Button variant="outline" icon={FileSpreadsheet} onClick={() => setShowImportModal(true)}>Importar Excel</Button>
+              {canModifyStock && (
+                <Button variant="outline" icon={FileSpreadsheet} onClick={() => setShowImportModal(true)}>Importar Excel</Button>
+              )}
               <Button icon={Plus} onClick={openCreateModal}>Crear Nuevo Producto</Button>
             </>
           ) : activeTab === 'subcategories' && canManageSubcategories ? (
@@ -411,7 +414,8 @@ export default function ProductsBento() {
           categories={categories}
           subcategories={subcategoriesForSelectedCategory}
           errorMsg={errorMsg}
-          canManageLots={canManageProducts}
+          canViewLots={canManageProducts}
+          canModifyStock={canModifyStock}
           onLotsChanged={() => reloadProducts()}
           uploadingImage={uploadingImage}
           onImageChange={handleImageChange}

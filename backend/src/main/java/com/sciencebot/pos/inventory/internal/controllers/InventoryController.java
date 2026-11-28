@@ -34,7 +34,7 @@ public class InventoryController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'SUPERVISOR')")
+    @PreAuthorize("hasRole('ADMINISTRATOR')")
     @Operation(
             summary = "Registrar movimiento de inventario",
             description = """

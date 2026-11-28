@@ -28,7 +28,7 @@
 | notifications | modules/notifications/spec.md | notifications | /api/v1/notifications |
 | storage | modules/storage/spec.md | (Cloudflare R2, sin tablas) | /api/v1/storage |
 | backoffice | modules/backoffice/spec.md | (opera sobre users y stores) | /api/v1/backoffice/staff, /api/v1/backoffice/onboarding |
-| voicesales | [modules/voicesales/spec.md](modules/voicesales/spec.md) | Ninguna | /api/v1/voice-sales/preview |
+| voicesales | [modules/voicesales/spec.md](modules/voicesales/spec.md) | Ninguna | /api/v1/voice-sales/preview, /api/v1/voice-sales/agent/transcribe, /api/v1/voice-sales/agent/turn |
 
 ## Documentos Globales
 

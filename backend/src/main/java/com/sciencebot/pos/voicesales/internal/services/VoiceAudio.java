@@ -10,12 +10,12 @@ import org.springframework.http.InvalidMediaTypeException;
 import org.springframework.http.MediaType;
 
 /** Reads a single binary body, including chunked uploads, without staging a multipart file. */
-final class VoiceAudio {
+public final class VoiceAudio {
     static final int MAX_BYTES = 5 * 1024 * 1024;
 
     private VoiceAudio() {}
 
-    static String type(String header) {
+    public static String type(String header) {
         if (header != null) {
             try {
                 var type = MediaType.parseMediaType(header);
@@ -30,7 +30,7 @@ final class VoiceAudio {
         throw unsupported();
     }
 
-    static byte[] read(InputStream input, String mediaType, long length) {
+    public static byte[] read(InputStream input, String mediaType, long length) {
         if (length > MAX_BYTES) throw tooLarge();
         byte[] bytes;
         try {

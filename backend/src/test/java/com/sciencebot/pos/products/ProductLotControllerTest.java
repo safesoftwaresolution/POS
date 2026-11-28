@@ -17,7 +17,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/** /api/v1/products/{id}/lots: solo administrador y supervisor; el vendedor no puede ni verlos ni tocarlos. */
+/** /api/v1/products/{id}/lots: los ven administrador y supervisor, solo el administrador los cambia; el vendedor no puede ni verlos. */
 @SpringBootTest
 class ProductLotControllerTest {
 
@@ -46,9 +46,9 @@ class ProductLotControllerTest {
 
     @Test
     @WithMockUser(roles = "SUPERVISOR")
-    void supervisor_reachesTheEndpoints_andAnUnknownProductIsNotFound() throws Exception {
+    void supervisor_canReadLotsButNotChangeThem() throws Exception {
         mockMvc.perform(get("/api/v1/products/987654/lots")).andExpect(status().isNotFound());
-        mockMvc.perform(delete("/api/v1/products/987654/lots/1")).andExpect(status().isNotFound());
+        mockMvc.perform(delete("/api/v1/products/987654/lots/1")).andExpect(status().isForbidden());
     }
 
     @Test

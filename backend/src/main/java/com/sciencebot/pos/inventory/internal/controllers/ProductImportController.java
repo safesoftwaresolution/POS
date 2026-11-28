@@ -43,7 +43,7 @@ public class ProductImportController {
     }
 
     @GetMapping("/template")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'SUPERVISOR')")
+    @PreAuthorize("hasRole('ADMINISTRATOR')")
     @Operation(
             summary = "Descargar plantilla de importación masiva",
             description = """
@@ -72,7 +72,7 @@ public class ProductImportController {
     }
 
     @PostMapping(value = "/preview", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'SUPERVISOR')")
+    @PreAuthorize("hasRole('ADMINISTRATOR')")
     @Operation(
             summary = "Vista previa de una importación masiva",
             description = "Valida el archivo y describe qué pasaría con cada fila (CREATE, UPDATE, UNCHANGED o ERROR) sin guardar nada."
@@ -90,7 +90,7 @@ public class ProductImportController {
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'SUPERVISOR')")
+    @PreAuthorize("hasRole('ADMINISTRATOR')")
     @Operation(
             summary = "Importar productos e inventario",
             description = """

@@ -19,7 +19,7 @@ const EMPTY_PAGE = { content: [], totalElements: 0, totalPages: 0, number: 0 };
 
 /** Estado de cuenta de un cliente: cuánto debe, su cupo y el libro de movimientos, con abonar y fijar cupo. */
 export default function CreditAccountModal({ customerId, onClose, onChanged }) {
-  const { canManageStock: canSetLimit } = usePermissions();
+  const { isStoreManager: canSetLimit } = usePermissions();
   const [page, setPage] = useState(0);
   const [paying, setPaying] = useState(false);
   const [editingLimit, setEditingLimit] = useState(false);

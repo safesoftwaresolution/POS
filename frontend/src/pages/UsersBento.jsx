@@ -11,7 +11,7 @@ import useLoad from '../hooks/useLoad';
 
 const ROLES = [
   { value: 'ADMINISTRATOR', label: 'Administrador', hint: 'Control total del local' },
-  { value: 'SUPERVISOR', label: 'Supervisor', hint: 'Compras, inventario, clientes y reintentos de facturas' },
+  { value: 'SUPERVISOR', label: 'Supervisor', hint: 'Catálogo, clientes, facturas e inventario solo de consulta' },
   { value: 'SELLER', label: 'Vendedor', hint: 'Caja: ventas y consulta de catálogo' },
 ];
 const ROLE_LABEL = Object.fromEntries(ROLES.map(r => [r.value, r.label]));

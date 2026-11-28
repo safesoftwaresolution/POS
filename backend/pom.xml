@@ -21,6 +21,8 @@
 		<springdoc.version>3.2.0</springdoc.version>
 		<awssdk.version>2.57.8</awssdk.version>
 		<poi.version>6.0.0</poi.version>
+		<spring-ai.version>2.0.1</spring-ai.version>
+		<swagger.version>2.2.55</swagger.version>
 		<sonar.coverage.jacoco.xmlReportPaths>${project.basedir}/target/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
 	</properties>
 	<dependencies>
@@ -148,10 +150,35 @@
 			<artifactId>openpdf</artifactId>
 			<version>3.0.5</version>
 		</dependency>
+		<!-- Agente de voz (modulo voicesales). Apagado por defecto: spring.ai.model.chat=none. -->
+		<dependency>
+			<groupId>org.springframework.ai</groupId>
+			<artifactId>spring-ai-starter-model-openai</artifactId>
+		</dependency>
 	</dependencies>
 
 	<dependencyManagement>
 		<dependencies>
+			<!-- Spring AI arrastra swagger-annotations 2.2.31/2.2.38, mas viejo que el swagger-core 2.2.55 de springdoc
+			     (sin esto /v3/api-docs falla con NoSuchMethodError Schema.$dynamicRef). Mantener igual a swagger-core. -->
+			<dependency>
+				<groupId>io.swagger.core.v3</groupId>
+				<artifactId>swagger-annotations-jakarta</artifactId>
+				<version>${swagger.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>io.swagger.core.v3</groupId>
+				<artifactId>swagger-annotations</artifactId>
+				<version>${swagger.version}</version>
+			</dependency>
+			<!-- La serie 2.0.x de Spring AI es la que soporta Spring Boot 4.0/4.1. -->
+			<dependency>
+				<groupId>org.springframework.ai</groupId>
+				<artifactId>spring-ai-bom</artifactId>
+				<version>${spring-ai.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
 			<dependency>
 				<groupId>software.amazon.awssdk</groupId>
 				<artifactId>bom</artifactId>

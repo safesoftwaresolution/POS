@@ -40,7 +40,7 @@ public class OpenApiConfig {
                                 | Rol | Descripción |
                                 |-----|-------------|
                                 | `ADMINISTRATOR` | Acceso completo a todos los módulos |
-                                | `SUPERVISOR` | Gestión de productos, inventario, compras, ventas |
+                                | `SUPERVISOR` | Gestión de productos y ventas; inventario y compras solo de consulta |
                                 | `SELLER` | Registro de ventas, consulta de productos y clientes |
                                 
                                 ### Paginación

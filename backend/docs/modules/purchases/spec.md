@@ -38,7 +38,7 @@
 ## API Endpoints
 
 ### POST /api/v1/purchases
-- **Permisos**: Admin, Supervisor
+- **Permisos**: Admin
 - **Request**:
   ```json
   {
@@ -82,7 +82,7 @@
 ## Permisos
 | Operación | Admin | Supervisor | Vendedor |
 |---|---|---|---|
-| Crear | ✓ | ✓ | - |
+| Crear | ✓ | - | - |
 | Leer | ✓ | ✓ | - |
 | Editar | - | - | - |
 | Eliminar | - | - | - |

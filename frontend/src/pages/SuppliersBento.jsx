@@ -16,11 +16,11 @@ const EMPTY_FORM = { id: null, companyName: '', taxId: '', contactName: '', emai
 export default function SuppliersBento() {
   const { confirm, notify } = useModal();
   // DELETE /suppliers es solo de ADMINISTRATOR; leer y escribir, de ADMINISTRATOR y SUPERVISOR.
-  const { isAdmin, canManageStock } = usePermissions();
+  const { isAdmin, isStoreManager } = usePermissions();
   const { data: suppliers, loading, reload } = useLoad(
     () => asList(getSuppliersApi()),
     [],
-    { initial: [], autoRefresh: true, enabled: canManageStock },
+    { initial: [], autoRefresh: true, enabled: isStoreManager },
   );
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);

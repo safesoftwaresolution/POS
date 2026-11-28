@@ -26,7 +26,7 @@
   - Tipo de movimiento: `ENTRADA` (el código también acepta el alias `ENTRY`). En la práctica se escribe `ENTRY`: es la grafía de la importación (RF-INV-005), del "Stock inicial" al crear un producto y de la pantalla *Mover stock*.
   - Stock nuevo = stock actual + quantity.
   - Registrar movimiento con previous_stock y new_stock.
-  - **Desde la UI** (Inventario → *Mover stock* → *Entrada*, solo Admin/Supervisor): sube stock **sin proveedor**, así no cuenta como compra en los reportes ni reescribe el costo (RN-PUR-002). Motivo obligatorio: *Inventario inicial*, *Mercancía que ya tenía*, *Bonificación u obsequio del proveedor* u *Otro* (exige nota). El `reason` se guarda como la etiqueta o `etiqueta: nota` (máx. 255 caracteres; el backend no lo valida). La cantidad es un entero entre 1 y 1.000.000.
+  - **Desde la UI** (Inventario → *Mover stock* → *Entrada*, solo Admin): sube stock **sin proveedor**, así no cuenta como compra en los reportes ni reescribe el costo (RN-PUR-002). Motivo obligatorio: *Inventario inicial*, *Mercancía que ya tenía*, *Bonificación u obsequio del proveedor* u *Otro* (exige nota). El `reason` se guarda como la etiqueta o `etiqueta: nota` (máx. 255 caracteres; el backend no lo valida). La cantidad es un entero entre 1 y 1.000.000.
 
 - **Vencimiento (lote)**: una entrada (`ENTRY`/`ENTRADA`/`COMPRA`) acepta además `expirationDate` (ISO `yyyy-MM-dd`) y `lotCode` opcionales. Con fecha, `registerMovement` guarda un **lote** con esas unidades (`ProductFacade.addLot`) **en la misma transacción** y antes de subir el stock: si el lote es inválido (fecha a más de 20 años, código de más de 50 caracteres) responde 400 y no queda stock subido ni kardex. Una fecha en un movimiento que no es entrada → 400. Sin fecha todo funciona como antes. **Antes de cualquier movimiento que suba el stock** (entrada, compra, ajuste, devolución de cliente) `registerMovement` llama a `ProductFacade.consolidateLots` para fijar en los lotes lo ya vendido (RN-PROD-005); las ventas y las salidas no lo hacen. Ver `products/spec.md` RN-PROD-004/005. **Desde la UI** (*Mover stock* → *Entrada* y *Compra*): campos opcionales "Vencimiento de lo que llega" y "Lote".
 
@@ -73,7 +73,7 @@
 ## API Endpoints
 
 ### POST /api/v1/inventory/movements
-- **Permisos**: Admin, Supervisor
+- **Permisos**: Admin
 - **Request**:
   ```json
   { "productId": 1, "movementType": "SALIDA", "quantity": 3, "reason": "Merma por vencimiento" }
@@ -90,12 +90,12 @@
 - **Query params**: productId, movementType, dateFrom, dateTo, page, size
 
 ### GET /api/v1/inventory/import/template
-- **Permisos**: Admin, Supervisor
+- **Permisos**: Admin
 - **Query params**: `withProducts` (default `false`)
 - **Response 200**: archivo `.xlsx` (`attachment`)
 
 ### POST /api/v1/inventory/import/preview
-- **Permisos**: Admin, Supervisor
+- **Permisos**: Admin
 - **Request**: `multipart/form-data` con `file` (.xlsx)
 - **Response 200** (no guarda nada):
   ```json
@@ -108,7 +108,7 @@
 - **Errores**: 400 (no es un .xlsx válido, falta la columna `Código interno`, hoja vacía, > 2 MB o > 5.000 filas), 413 (supera el límite de subida)
 
 ### POST /api/v1/inventory/import
-- **Permisos**: Admin, Supervisor
+- **Permisos**: Admin
 - **Request**: `multipart/form-data` con `file` (.xlsx)
 - **Response 200**:
   ```json
@@ -137,6 +137,6 @@
 ## Permisos
 | Operación | Admin | Supervisor | Vendedor |
 |---|---|---|---|
-| Crear movimiento | ✓ | ✓ | - |
+| Crear movimiento | ✓ | - | - |
 | Leer historial | ✓ | ✓ | ✓ |
-| Importación masiva / conteo (plantilla, vista previa, importar) | ✓ | ✓ | - |
+| Importación masiva / conteo (plantilla, vista previa, importar) | ✓ | - | - |

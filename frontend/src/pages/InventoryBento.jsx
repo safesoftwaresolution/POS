@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { getAllProductsApi } from '../services/productsApi';
 import { getSuppliersApi } from '../services/suppliersApi';
-import useAuth from '../hooks/useAuth';
+import usePermissions from '../hooks/usePermissions';
 import { SegmentedControl } from '../components/ui';
 import BarcodeModal from '../components/BarcodeModal';
 import ProductImportModal from '../components/products/ProductImportModal';
@@ -37,14 +37,13 @@ const TABS = [
 ];
 
 export default function InventoryBento() {
-  const { user } = useAuth();
-  // Mover stock, comprar y el conteo masivo escriben en el kardex: mismo permiso que POST /inventory/movements
-  // y POST /purchases en el backend (un vendedor solo puede consultar).
-  const canMoveStock = user?.role === 'ADMINISTRATOR' || user?.role === 'SUPERVISOR';
+  // Mover stock, comprar y el conteo masivo escriben en el kardex: solo el administrador (mismo permiso que
+  // POST /inventory/movements y POST /purchases). El supervisor consulta stock, historial y vencimientos.
+  const { isStoreManager, canModifyStock } = usePermissions();
   const [showCountModal, setShowCountModal] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
   // /suppliers exige ADMINISTRATOR o SUPERVISOR en el backend: el vendedor no ve esa pestaña.
-  const tabs = canMoveStock ? TABS : TABS.filter(t => t.id !== 'suppliers');
+  const tabs = isStoreManager ? TABS : TABS.filter(t => t.id !== 'suppliers');
   const activeTab = tabs.some(t => t.id === searchParams.get('tab')) ? searchParams.get('tab') : 'stock';
   const setActiveTab = (tab) => setSearchParams(tab === 'stock' ? {} : { tab }, { replace: true });
   const { data: productsList, loading, reload: reloadInventory } = useLoad(
@@ -52,7 +51,7 @@ export default function InventoryBento() {
     [],
     { initial: [], autoRefresh: true },
   );
-  const { data: suppliers } = useLoad(() => asList(getSuppliersApi()), [], { initial: [], autoRefresh: true, enabled: canMoveStock });
+  const { data: suppliers } = useLoad(() => asList(getSuppliersApi()), [], { initial: [], autoRefresh: true, enabled: isStoreManager });
   const [search, setSearch] = useState('');
   // null = cerrado; { product } = abierto (product puede ser null: el producto se elige dentro del modal).
   const [moveModal, setMoveModal] = useState(null);
@@ -78,9 +77,9 @@ export default function InventoryBento() {
 
         {activeTab === 'stock' && (
           <div className="flex flex-wrap items-center gap-2">
-            {canMoveStock && (
+            {isStoreManager && <ExpiringPdfButton />}
+            {canModifyStock && (
               <>
-                <ExpiringPdfButton />
                 <button
                   onClick={() => setShowCountModal(true)}
                   className="px-4 py-2.5 border border-line hover:border-line-strong text-ink bg-card rounded-2xl text-xs font-bold flex items-center gap-2 cursor-pointer transition-all"
@@ -234,7 +233,7 @@ export default function InventoryBento() {
                           >
                             <Barcode className="w-4 h-4" />
                           </button>
-                          {canMoveStock && (
+                          {canModifyStock && (
                             <button
                               onClick={() => setMoveModal({ product: item })}
                               className="px-2.5 py-1 bg-brand/10 dark:bg-brand/20 hover:bg-solid hover:text-solid-ink text-brand dark:text-brand rounded-xl text-[11px] font-bold transition-all cursor-pointer"

@@ -34,7 +34,7 @@ public class PurchaseController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'SUPERVISOR')")
+    @PreAuthorize("hasRole('ADMINISTRATOR')")
     @Operation(
             summary = "Registrar compra",
             description = """

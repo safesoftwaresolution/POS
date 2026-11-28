@@ -41,6 +41,14 @@ class VoiceMultipartGuardTest {
         assertThat(response.getStatus()).isEqualTo(200);
     }
 
+    @Test
+    void theGuardIsRegisteredForThePreviewAndForEveryAgentEndpoint() {
+        var registration = new VoiceUploadConfiguration().voiceMultipartGuard();
+
+        assertThat(registration.getUrlPatterns())
+                .containsExactlyInAnyOrder("/api/v1/voice-sales/preview", "/api/v1/voice-sales/agent/*");
+    }
+
     private MockFilterChain run(String method, String contentType, MockHttpServletResponse response) throws Exception {
         var request = new MockHttpServletRequest(method, PATH);
         request.setContentType(contentType);

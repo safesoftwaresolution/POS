@@ -40,7 +40,7 @@ Deshabilitado; la sesión viaja en cookies, y la mitigación es `SameSite=Strict
 ## Roles del Sistema (RBAC)
 - **SUPER_ADMIN**: equipo de la plataforma. Control total del Back Office (`/api/v1/backoffice/**`) y único que escribe las categorías globales. Sin local (`store_id = null`). Solo se crea desde `/backoffice/staff` o por el seeder; **ningún endpoint del local puede asignarlo**.
 - **ADMINISTRATOR**: dueño de un local.
-- **SUPERVISOR**: encargado de tienda.
+- **SUPERVISOR**: encargado de tienda. Consulta el stock y su historial, pero no lo cambia por movimientos, compras, importación, lotes ni stock inicial (las ventas y sus devoluciones sí lo mueven).
 - **SELLER**: vendedor / cajero.
 
 ### Matriz de Permisos (verificada contra los `@PreAuthorize`)
@@ -53,11 +53,13 @@ Deshabilitado; la sesión viaja en cookies, y la mitigación es `SameSite=Strict
 | Textos Legales | CRUD / Publicar | - | - | - | R (vigentes) |
 | Soporte / PQRs | CRUD / Resolver | - | - | - | Crear / R estado por radicado |
 | Usuarios del local | - (usa staff) | CRUD | - | - | - |
-| Productos | - | CRUD | CRU (sin borrar) | R | - |
+| Productos | - | CRUD | CRU (sin borrar; sin stock inicial) | R | - |
+| Lotes de vencimiento | - | CRUD | R | - | - |
 | Clientes | - | CRUD | CRU | CRU | - |
 | Proveedores | - | CRUD | CRU | - | - |
-| Compras | - | C R | C R | - | - |
-| Inventario (movimientos) | - | C R | C R | R | - |
+| Compras | - | C R | R | - | - |
+| Inventario (movimientos) | - | C R | R | R | - |
+| Inventario (importación y conteo por Excel) | - | ✓ | - | - | - |
 | Ventas / devoluciones | - | C R | C R | C R | - |
 | Reportes | - | Todos | Solo stock | - | - |
 | Configuración del negocio | - | R / U | R | - | - |

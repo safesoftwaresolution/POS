@@ -69,6 +69,14 @@ services:
       VOICE_SALES_EXTRACTION_MODEL: ${VOICE_SALES_EXTRACTION_MODEL:-openai/gpt-oss-20b}
       VOICE_SALES_USER_PER_MINUTE: ${VOICE_SALES_USER_PER_MINUTE:-6}
       VOICE_SALES_STORE_PER_MINUTE: ${VOICE_SALES_STORE_PER_MINUTE:-30}
+      # Asistente de caja (agente con Spring AI). Apagado por defecto; para encenderlo: AGENT_ENABLED=true y PROVIDER=openai.
+      VOICE_SALES_AGENT_ENABLED: ${VOICE_SALES_AGENT_ENABLED:-false}
+      VOICE_SALES_AGENT_PROVIDER: ${VOICE_SALES_AGENT_PROVIDER:-none}
+      VOICE_SALES_AGENT_BASE_URL: ${VOICE_SALES_AGENT_BASE_URL:-https://api.groq.com/openai/v1}
+      VOICE_SALES_AGENT_MODEL: ${VOICE_SALES_AGENT_MODEL:-openai/gpt-oss-20b}
+      VOICE_SALES_AGENT_MAX_ITERATIONS: ${VOICE_SALES_AGENT_MAX_ITERATIONS:-6}
+      VOICE_SALES_AGENT_USER_PER_MINUTE: ${VOICE_SALES_AGENT_USER_PER_MINUTE:-30}
+      VOICE_SALES_AGENT_STORE_PER_MINUTE: ${VOICE_SALES_AGENT_STORE_PER_MINUTE:-120}
       # Alegra (token de plataforma por entorno; nunca va en este archivo, solo en el entorno de despliegue)
       ALEGRA_URL_SANDBOX: ${ALEGRA_URL_SANDBOX:-https://sandbox-api.alegra.com/e-provider/col/v1}
       ALEGRA_API_TOKEN_SANDBOX: ${ALEGRA_API_TOKEN_SANDBOX:-}

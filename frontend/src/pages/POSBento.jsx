@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback, lazy, Suspense } from 'react';
 import { ShoppingCart } from 'lucide-react';
 import { getAllProductsApi } from '../services/productsApi';
 import { getServicesApi } from '../services/servicesApi';
@@ -8,8 +8,8 @@ import { getBillingSummaryApi, getSaleInvoiceApi } from '../services/billingApi'
 import CheckoutModal, { SaleResultModal } from '../components/pos/CheckoutModal';
 import ScanToasts from '../components/pos/ScanToasts';
 import ProductCatalog from '../components/pos/ProductCatalog';
-import VoiceDictationButton from '../components/pos/VoiceDictationButton';
-import VoiceDraftModal from '../components/pos/VoiceDraftModal';
+import VoiceAssistantBar from '../components/pos/VoiceAssistantBar';
+import AgentConfirmation from '../components/pos/AgentConfirmation';
 import CartPanel from '../components/pos/CartPanel';
 // zxing pesa ~480 kB: solo se descarga al abrir la cámara.
 const LazyBarcodeScanner = lazy(() => import('../components/scanner/BarcodeScanner'));
@@ -21,7 +21,9 @@ import { getParameterValuesApi } from '../services/parametersApi';
 import { newIdempotencyKey } from '../services/http';
 import useModal from '../hooks/useModal';
 import useLoad from '../hooks/useLoad';
+import useVoiceAgent from '../hooks/useVoiceAgent';
 import asList from '../utils/asList';
+import { applyAgentTicket, ticketSignature } from '../utils/agentTicket';
 import { ITEM_PRODUCT, ITEM_SERVICE, cartKey, isService, toSaleLine } from '../utils/cartItem';
 import { defaultCreditDueDate } from '../utils/credit';
 
@@ -84,8 +86,8 @@ export default function POSBento() {
   const [showMobileCart, setShowMobileCart] = useState(false);
   const [isSubmittingSale, setIsSubmittingSale] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
-  // Borrador de una venta dictada, en revisión. Solo prepara el ticket: el cobro sigue siendo el de siempre.
-  const [voiceDraft, setVoiceDraft] = useState(null);
+  // Huella del ticket cuando el asistente pidió confirmar la venta. Solo vale mientras el ticket siga igual.
+  const [agentConfirmSignature, setAgentConfirmSignature] = useState(null);
 
   const barcodeInputRef = useRef(null);
   // Clave de idempotencia estable para el intento de cobro en curso: se reutiliza en
@@ -230,17 +232,28 @@ export default function POSBento() {
     setCart([]);
   };
 
-  // Aplica al ticket lo que el cajero revisó del dictado (carrito, cliente, pago y efectivo). No crea ninguna venta:
-  // el cobro lo inicia el cajero con el botón de siempre, con su propia clave de idempotencia.
-  const handleApplyDraft = (ticket) => {
-    setCart(ticket.cart);
-    if (ticket.customer) setSelectedCustomer(ticket.customer);
-    if (ticket.paymentMethod) setSelectedPaymentMethod(ticket.paymentMethod);
-    if (ticket.cashTendered !== null) setCashTendered(ticket.cashTendered);
-    setVoiceDraft(null);
+  // Asistente de caja: cada turno devuelve el ticket completo y se pinta directo en el panel (carrito, cliente, pago y
+  // efectivo). No crea ninguna venta: si pidió confirmar, se guarda la huella del ticket y la confirmación aparece en el
+  // panel mientras ese ticket siga idéntico.
+  const ticketState = useMemo(
+    () => ({ cart, customer: selectedCustomer, paymentMethod: selectedPaymentMethod, cashTendered }),
+    [cart, selectedCustomer, selectedPaymentMethod, cashTendered],
+  );
+  const handleAgentTurn = useCallback(({ ticket }) => {
+    const applied = applyAgentTicket({
+      ticket, productsList, customersList, currentPaymentMethod: selectedPaymentMethod,
+    });
+    const customer = applied.customer ?? selectedCustomer;
+    setCart(applied.cart);
+    if (applied.customer) setSelectedCustomer(applied.customer);
+    setSelectedPaymentMethod(applied.paymentMethod);
+    setCashTendered(applied.cashTendered);
     setShowMobileCart(true);
-    focusBarcodeInput();
-  };
+    setAgentConfirmSignature(applied.confirmationRequested && applied.cart.length > 0
+      ? ticketSignature({ cart: applied.cart, customer, paymentMethod: applied.paymentMethod, cashTendered: applied.cashTendered })
+      : null);
+  }, [productsList, customersList, selectedPaymentMethod, selectedCustomer]);
+  const agent = useVoiceAgent({ ticketState, onTurn: handleAgentTurn });
 
   const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const total = subtotal;
@@ -250,7 +263,9 @@ export default function POSBento() {
   const paymentIsCash = selectedPaymentMethod === 'CASH';
   const paymentIsCredit = selectedPaymentMethod === 'CREDIT';
 
-  const handleCompleteSale = async () => {
+  // `electronic` decide si se pide factura electrónica: el cobro normal usa lo que eligió el cajero en el cobro;
+  // la confirmación del asistente pasa `false` (una factura por voz es una venta normal, sin DIAN).
+  const handleCompleteSale = async ({ electronic = issueDian && dianAvailable } = {}) => {
     if (cashNumber < total) return;
     if (isSubmittingSale) return; // Evita reenvíos por doble clic mientras hay uno en curso.
 
@@ -259,7 +274,7 @@ export default function POSBento() {
       items: cart.map(toSaleLine),
       cashReceived: paymentIsCredit ? 0 : cashNumber,
       totalAmount: total,
-      sendElectronicInvoice: issueDian && dianAvailable,
+      sendElectronicInvoice: electronic,
       paymentMethod: selectedPaymentMethod,
       ...(paymentIsCredit && { creditDueDate })
     };
@@ -285,7 +300,7 @@ export default function POSBento() {
     // La emisión a la DIAN es asíncrona: si la factura aún no existe, el resultado lo indica
     // y el cajero puede actualizar el estado sin bloquear la venta.
     let invoice = null;
-    if (issueDian && dianAvailable && result?.id) {
+    if (electronic && result?.id) {
       try {
         invoice = await getSaleInvoiceApi(result.id);
       } catch {
@@ -302,9 +317,11 @@ export default function POSBento() {
       onCredit: paymentIsCredit,
       customerName: selectedCustomer?.fullName || selectedCustomer?.name || 'Consumidor final',
       customerEmail: selectedCustomer?.email || '',
-      dianRequested: issueDian && dianAvailable,
+      dianRequested: electronic,
       invoice
     });
+    setAgentConfirmSignature(null);
+    agent.reset();
     setShowCheckoutModal(false);
     setShowMobileCart(false);
     setCart([]);
@@ -316,6 +333,21 @@ export default function POSBento() {
     reloadProducts();
     reloadCustomers();
     focusBarcodeInput();
+  };
+
+  // La confirmación del asistente solo se muestra mientras el ticket sea idéntico al que confirmó: cualquier cambio
+  // (del cajero o del asistente) la retira sin efectos ni temporizadores.
+  const agentConfirmationActive = agentConfirmSignature !== null && !saleCompleted
+    && agentConfirmSignature === ticketSignature(ticketState);
+  const agentSummary = {
+    itemCount: cart.reduce((sum, item) => sum + item.quantity, 0),
+    total,
+    customerName: selectedCustomer?.fullName || selectedCustomer?.name || 'Consumidor final',
+    paymentLabel: paymentMethods.find((m) => m.code === selectedPaymentMethod)?.label ?? selectedPaymentMethod,
+    onCredit: paymentIsCredit,
+    cashReceived: paymentIsCash ? cashNumber : null,
+    change: Math.max(0, change),
+    cashShort: cashNumber < total,
   };
 
   return (
@@ -352,7 +384,6 @@ export default function POSBento() {
           loading={loading}
           onAdd={addToCart}
           onOpenScanner={() => setShowScanner(true)}
-          dictation={<VoiceDictationButton onDraft={setVoiceDraft} />}
         />
 
         <CartPanel
@@ -370,6 +401,15 @@ export default function POSBento() {
               onClose={() => { setShowScanner(false); focusBarcodeInput(); }}
             />
           )}
+          assistant={<VoiceAssistantBar agent={agent} />}
+          confirmation={agentConfirmationActive ? (
+            <AgentConfirmation
+              summary={agentSummary}
+              submitting={isSubmittingSale}
+              onConfirm={() => handleCompleteSale({ electronic: false })}
+              onCancel={() => setAgentConfirmSignature(null)}
+            />
+          ) : null}
           onCloseMobile={() => setShowMobileCart(false)}
           onClear={clearCart}
           onQuantity={updateQuantity}
@@ -393,20 +433,6 @@ export default function POSBento() {
           </span>
         )}
       </button>
-
-      {voiceDraft && (
-        <VoiceDraftModal
-          draft={voiceDraft}
-          productsList={productsList}
-          customersList={customersList}
-          paymentMethods={paymentMethods}
-          cart={cart}
-          customer={selectedCustomer}
-          paymentMethod={selectedPaymentMethod}
-          onApply={handleApplyDraft}
-          onClose={() => { setVoiceDraft(null); focusBarcodeInput(); }}
-        />
-      )}
 
       {showCheckoutModal && (
         <CheckoutModal

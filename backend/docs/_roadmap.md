@@ -31,7 +31,7 @@ Este documento complementa los `spec.md` de cada módulo (que describen el compo
 | notifications | Bandeja por local (V11) | Listado sin paginar | — |
 | storage | R2: subida/borrado con tipos permitidos, carpeta por local y rol | Sin timeouts S3; cliente con credenciales falsas si falta R2; KYC en bucket público | URLs prefirmadas |
 | backoffice | Staff de plataforma y estadísticas del embudo | Mapeo en el servicio; sin tests | — |
-| voicesales | Borrador de venta a partir de audio, con confirmación manual | Piloto con audios ficticios pendiente; cuotas por instancia | Integración futura con el POS |
+| voicesales | Asistente de caja por voz o texto (Spring AI): arma el ticket en el POS y pide confirmar inline; borrador de una sola vez en `/preview` | Piloto con audios ficticios y evaluación en vivo con un modelo real pendientes; cuotas por instancia; sin registro persistente de los turnos del asistente | Decidir si se conserva `/preview` ahora que el POS usa el asistente; evaluar un proveedor alterno de transcripción |
 
 ## Auditoría SDD y correcciones (2026-10-16)
 

@@ -207,7 +207,7 @@ Todas las páginas respetan el tema claro/oscuro seleccionado desde el encabezad
 |---|---|---|
 | `SUPER_ADMIN` | Equipo de la plataforma | Back office (`/api/v1/backoffice/**`): locales y KYC, credenciales de facturación, categorías globales, textos legales, soporte y personal. No pertenece a ningún local. |
 | `ADMINISTRATOR` | Dueño de un local | Control total de **su** local: usuarios, reportes, facturación, rangos de numeración y configuración. |
-| `SUPERVISOR` | Supervisor de Tienda | Compras, inventario, clientes y reintentos de facturas. |
+| `SUPERVISOR` | Supervisor de Tienda | Catálogo, clientes y reintentos de facturas; inventario y compras solo de consulta. |
 | `SELLER` | Vendedor / Cajero | Operación de caja: ventas, consulta de catálogo y tickets. |
 
 Todos los roles excepto `SUPER_ADMIN` están acotados a su propio local. Matriz completa en [`backend/docs/_security.md`](./backend/docs/_security.md).
@@ -308,7 +308,7 @@ npm run lint      # Linter (oxlint)
 
 ## ⚙️ Variables de Entorno
 
-**Dictado opcional:** [contrato, ejemplo y configuración de ventas por voz](backend/docs/modules/voicesales/spec.md). El backend sigue funcionando sin clave de IA; el dictado se habilita por separado.
+**Asistente de caja opcional (voz o texto):** [contrato, ejemplo y configuración](backend/docs/modules/voicesales/spec.md). Arma el ticket del POS en el propio panel y pide confirmar antes de registrar la venta; una «factura» dictada es una venta normal, nunca factura electrónica. El backend sigue funcionando sin clave de IA; el asistente se habilita por separado.
 
 Puedes personalizar la configuración del backend mediante variables de entorno en tu sistema o en el archivo `.env` (dentro de `backend/`):
 

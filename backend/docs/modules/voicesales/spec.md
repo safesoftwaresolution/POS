@@ -1,7 +1,61 @@
-<!-- spec-version: 1.0 | last-updated: 2026-11-23 -->
-# Dictado de ventas
+<!-- spec-version: 1.1 | last-updated: 2026-11-24 -->
+# Dictado de ventas y asistente de caja
 
 El dictado prepara una propuesta editable, no una factura emitida. Solo la confirmación explícita en el flujo normal de ventas registra el cobro, mueve stock y, si se solicita, inicia la emisión electrónica.
+
+El POS usa el **asistente de caja** (sección siguiente): conversa por voz o texto y arma el ticket en el propio panel. El borrador de una sola vez (`/preview`) sigue disponible en el backend como contrato independiente, pero el POS ya no lo usa.
+
+## Asistente de caja (agente conversacional)
+
+El cajero habla o escribe («Hazme una factura con dos cafés grandes y una agua, paga con Nequi») y el asistente edita el ticket del POS con herramientas, en varios turnos si hace falta («quita el agua», «mejor tres cafés», «a nombre de Luis Gómez», «cóbralo»). Los artículos, el cliente, el medio de pago y el efectivo aparecen directo en el panel «Ticket de Venta», sin ventanas. Al pedir cobrar, el panel muestra **una confirmación en el lugar del botón de cobro**; hasta que el cajero la acepta no se registra la venta, no se mueve stock y no se emite nada.
+
+- **«Factura» es una venta normal** dentro del sistema. El asistente nunca solicita factura electrónica DIAN (el POS confirma con `sendElectronicInvoice=false`) y no existe ninguna herramienta para emitirla.
+- **Cliente por defecto:** si no se dicta, se usa el Cliente General de la tienda (identificación `9999999999`). Un nombre homónimo no se adivina: queda Cliente General y el asistente pregunta cuál es.
+- **El modelo no decide datos:** solo pasa menciones literales. Artículos, clientes y medios de pago se resuelven contra la tienda autenticada (mismas reglas que el borrador), los precios y el stock salen del catálogo, y los totales los calcula el servidor. Un artículo ambiguo, inexistente o sin stock no se agrega; el modelo recibe las opciones y pregunta.
+- **Herramientas** (`TicketTools`): `agregarArticulo`, `quitarArticulo`, `cambiarCantidad`, `asignarCliente`, `usarClienteGeneral`, `fijarMedioPago`, `fijarEfectivoRecibido`, `vaciarTicket` y `pedirConfirmacion`. Esta última solo levanta la bandera `confirmationRequested`; ninguna herramienta registra una venta. Cualquier cambio posterior al ticket retira la confirmación pendiente.
+- **Sin estado en el servidor:** cada turno recibe el ticket actual (solo `kind`, `id` y `quantity` por línea, cliente, código de pago y efectivo) y un historial de hasta 6 turnos `user`/`assistant`. Las líneas se vuelven a leer del catálogo del local autenticado; una línea de otro local o que ya no existe se descarta con un aviso en `warnings`. El modelo solo ve el prompt del sistema, el historial y el texto: nunca local, usuario ni permisos.
+- **El POS descarta la respuesta** si el ticket cambió mientras el asistente respondía, en lugar de pisar el cambio del cajero. La confirmación solo se muestra mientras el ticket sea idéntico al que se confirmó.
+
+### Contrato
+
+`POST /api/v1/voice-sales/agent/transcribe` — audio binario (mismos tipos, límite y rechazo de multipart que `/preview`); responde `{"text":"..."}`. No guarda el audio.
+
+`POST /api/v1/voice-sales/agent/turn` — JSON, roles `ADMINISTRATOR`, `SUPERVISOR` y `SELLER` con tienda, respuestas `Cache-Control: no-store`.
+
+```json
+{
+  "text": "dos cafés grandes, paga con Nequi y cobra",
+  "ticket": {
+    "lines": [{"kind": "PRODUCT", "id": 11, "quantity": 1}],
+    "customerId": null, "paymentMethodCode": "CASH", "cashReceived": null
+  },
+  "history": [{"role": "user", "text": "hola"}, {"role": "assistant", "text": "¿Qué necesitas?"}]
+}
+```
+
+```json
+{
+  "reply": "Listo: 2 cafés grandes, pago con Nequi. ¿Confirmas?",
+  "ticket": {
+    "lines": [{"kind": "PRODUCT", "id": 11, "code": "P-11", "name": "Café grande", "unitPrice": 3500, "quantity": 2}],
+    "customer": {"id": 1, "name": "Cliente General"},
+    "paymentMethod": {"code": "NEQUI", "label": "Nequi"},
+    "cashReceived": null, "subtotal": 7000, "confirmationRequested": true
+  },
+  "warnings": []
+}
+```
+
+Límites: texto de 1 a 500 caracteres (400), hasta 100 líneas de ticket y 50 turnos de historial en el cuerpo (413; el servidor considera solo las primeras 30 líneas, con un aviso, y los últimos 6 turnos). Errores: 403 sin sesión de tienda, 429 por cuota, 503 si el proveedor falla o no hay modelo configurado. Si el modelo agota las rondas sin terminar, responde 200 con un aviso y el ticket conserva lo que las herramientas alcanzaron a aplicar. Para confirmar, el POS sigue usando `POST /api/v1/sales` con `Idempotency-Key`, como en el flujo normal.
+
+### Proveedor y modelo (Spring AI)
+
+El ciclo modelo-herramientas se escribe a mano en `SpringAiAgentModel` sobre `ChatModel` de Spring AI 2.0.x (compatible con Spring Boot 4.0/4.1): el número de rondas es configurable (`VOICE_SALES_AGENT_MAX_ITERATIONS`, 6 por defecto) y se prueba con un modelo guionado. Cualquier proveedor compatible con el protocolo de OpenAI (Groq por defecto) se cambia solo con configuración (`spring.ai.openai.*`); otro proveedor de Spring AI se agrega con su starter. Con `spring.ai.model.chat=none` la aplicación arranca igual y el asistente responde 503. Solo se usa el modelo de chat: las demás autoconfiguraciones de OpenAI (audio, imagen, embeddings, moderación) se excluyen en `Application`, porque exigen clave al arrancar. La transcripción sigue siendo el adaptador de Groq descrito en [groq.md](groq.md).
+
+### Pruebas y evaluación
+
+- **Arnés determinista (siempre corre):** `AgentHarnessScriptedTest` reproduce 10 dictados reales en español (factura con productos y pago, cobro con efectivo, artículo ambiguo, sin stock, quitar, cambiar cantidad, cliente nombrado con servicio, cliente homónimo, vaciar, pedir factura electrónica) con un `ChatModel` guionado, a través del servicio, las herramientas y el ciclo reales. `AgentOpenAiProtocolTest` ejecuta el cliente real de Spring AI contra un servidor local con el protocolo de OpenAI, sin clave ni internet.
+- **Evaluación en vivo (opcional):** `AgentHarnessLiveEval` repite los mismos casos con el modelo real. Requiere `VOICE_SALES_LIVE_EVAL=true` y una `GROQ_API_KEY` de prueba; exige una tasa de aciertos mínima (`VOICE_SALES_LIVE_MIN_PASS_RATE`, 0,8 por defecto) porque los modelos no son deterministas. Usa datos ficticios del propio arnés.
 
 ## Contrato y ejemplo
 
@@ -67,7 +121,13 @@ Detalles del [adaptador Groq y su contrato de extracción](groq.md).
 | `VOICE_SALES_TRANSCRIPTION_MODEL` | `whisper-large-v3-turbo` |
 | `VOICE_SALES_EXTRACTION_MODEL` | `openai/gpt-oss-20b` |
 | `GROQ_API_KEY` | Sin valor; inyectar como secreto en el servidor |
-| `VOICE_SALES_USER_PER_MINUTE` / `VOICE_SALES_STORE_PER_MINUTE` | 6 por usuario y 30 por local, por instancia |
+| `VOICE_SALES_USER_PER_MINUTE` / `VOICE_SALES_STORE_PER_MINUTE` | 6 por usuario y 30 por local, por instancia (solo `/preview`) |
+| `VOICE_SALES_AGENT_ENABLED` | `false`; el perfil `dev` lo enciende. Requiere `VOICE_SALES_ENABLED=true` |
+| `VOICE_SALES_AGENT_PROVIDER` | `none` (apagado). `openai` enciende el modelo de chat de Spring AI (Groq y otros compatibles con OpenAI) |
+| `VOICE_SALES_AGENT_BASE_URL` | `https://api.groq.com/openai/v1` |
+| `VOICE_SALES_AGENT_MODEL` / `VOICE_SALES_AGENT_TEMPERATURE` | `openai/gpt-oss-20b` / `0.1`; usa `GROQ_API_KEY` |
+| `VOICE_SALES_AGENT_MAX_ITERATIONS` | 6 rondas modelo-herramientas por turno |
+| `VOICE_SALES_AGENT_USER_PER_MINUTE` / `VOICE_SALES_AGENT_STORE_PER_MINUTE` | 30 por usuario y 120 por local, por instancia (transcripción y turnos juntos) |
 
 Las cuotas se aplican juntas en ventanas fijas de un minuto; no son cuotas distribuidas. Antes de desplegar varias réplicas con un presupuesto compartido, aplicar una cuota agregada en infraestructura. Para desactivar, establecer `VOICE_SALES_ENABLED=false` y reiniciar. Para cambiar de proveedor, implementar y registrar el puerto correspondiente y seleccionar su adaptador; cambiar el nombre del modelo por sí solo no implementa un proveedor nuevo.
 

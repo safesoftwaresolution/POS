@@ -30,6 +30,11 @@ export async function resubmitOwnStoreApi() {
   return fetchApi('/stores/me/resubmit', { method: 'POST' });
 }
 
+// Catálogo de planes con precios y el código del plan actual del local (`{ currentPlanCode, plans }`); solo ADMINISTRATOR.
+export async function getMyPlansApi() {
+  return fetchApi('/stores/me/plans');
+}
+
 // Estado del local (`{ status }`) para cualquier rol del local; responde aunque el local no esté activo.
 export async function getOwnStoreStatusApi() {
   return fetchApi('/stores/me/status');

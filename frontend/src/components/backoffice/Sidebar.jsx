@@ -15,6 +15,7 @@ import {
   BarChart3,
   Receipt,
   Network,
+  BadgeCheck,
   LogOut,
   ChevronLeft,
   ChevronRight
@@ -46,6 +47,7 @@ export default function BackofficeSidebar({ isOpen, onClose, isCollapsed, onTogg
     {
       title: 'Catálogos',
       items: [
+        { path: '/backoffice/plans', label: 'Planes', icon: BadgeCheck },
         { path: '/backoffice/categories', label: 'Categorías de Locales', icon: Tags },
         { path: '/backoffice/product-categories', label: 'Categorías de Producto', icon: Package },
         { path: '/backoffice/service-categories', label: 'Categorías de Servicio', icon: Sparkles },

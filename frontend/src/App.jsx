@@ -40,6 +40,7 @@ const CashBento = lazy(() => import('./pages/CashBento'));
 const FinanceBento = lazy(() => import('./pages/FinanceBento'));
 const SettingsBento = lazy(() => import('./pages/SettingsBento'));
 const UsersBento = lazy(() => import('./pages/UsersBento'));
+const PlanBento = lazy(() => import('./pages/PlanBento'));
 const LegalPage = lazy(() => import('./pages/public/LegalPage'));
 const SupportPage = lazy(() => import('./pages/public/SupportPage'));
 const BusinessBento = lazy(() => import('./pages/BusinessBento'));
@@ -57,6 +58,7 @@ const StoreAuditBento = lazy(() => import('./pages/backoffice/StoreAuditBento'))
 const UsersDirectoryBento = lazy(() => import('./pages/backoffice/UsersDirectoryBento'));
 const StatsBento = lazy(() => import('./pages/backoffice/StatsBento'));
 const BusinessesBento = lazy(() => import('./pages/backoffice/BusinessesBento'));
+const PlansBento = lazy(() => import('./pages/backoffice/PlansBento'));
 
 // Las páginas se cargan bajo demanda: el bundle inicial solo trae login, registro y los layouts.
 function PageFallback() {
@@ -209,6 +211,7 @@ function ProtectedLayoutContent({ mobileSidebarOpen, setMobileSidebarOpen, sideb
             {/* Solo el dueño de un negocio con sucursales; para el resto la pantalla explica que no aplica. */}
             <Route path="/business" element={<RequireRole roles={['ADMINISTRATOR']}><BusinessBento /></RequireRole>} />
             <Route path="/users" element={<RequireRole roles={['ADMINISTRATOR']}><UsersBento /></RequireRole>} />
+            <Route path="/plan" element={<RequireRole roles={['ADMINISTRATOR']}><PlanBento /></RequireRole>} />
             <Route path="/settings" element={<RequireRole roles={['ADMINISTRATOR', 'SUPERVISOR']}><SettingsBento /></RequireRole>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
@@ -264,6 +267,7 @@ function BackofficeProtectedLayout() {
           <Routes>
             <Route path="/" element={<StoresBento />} />
             <Route path="/billing" element={<BillingBento />} />
+            <Route path="/plans" element={<PlansBento />} />
             <Route path="/categories" element={<CategoriesBento />} />
             <Route path="/product-categories" element={<ProductCategoriesBento />} />
             <Route path="/service-categories" element={<ServiceCategoriesBento />} />

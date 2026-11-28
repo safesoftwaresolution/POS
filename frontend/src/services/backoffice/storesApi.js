@@ -47,6 +47,14 @@ export async function getPlansApi() {
   return await fetchApi('/backoffice/plans');
 }
 
+// Reemplaza ambos precios del plan; `null` deja el precio sin definir.
+export async function updatePlanPricesApi(code, { monthlyPrice, yearlyPrice }) {
+  return await fetchApi(`/backoffice/plans/${encodeURIComponent(code)}`, {
+    method: 'PUT',
+    body: JSON.stringify({ monthlyPrice, yearlyPrice }),
+  });
+}
+
 export async function getStorePlanUsageApi() {
   return await fetchApi('/backoffice/store-plan-usage');
 }

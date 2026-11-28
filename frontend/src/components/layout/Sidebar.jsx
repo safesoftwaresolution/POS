@@ -23,7 +23,8 @@ import {
   Sparkles,
   HandCoins,
   CalendarDays,
-  Network
+  Network,
+  BadgeCheck
 } from 'lucide-react';
 import useAuth from '../../hooks/useAuth';
 import useStoreTemplate from '../../hooks/useStoreTemplate';
@@ -93,6 +94,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
       title: 'Sistema',
       items: [
         ...(user?.role === 'ADMINISTRATOR' ? [{ path: '/users', label: 'Usuarios', icon: UserCog }] : []),
+        ...(user?.role === 'ADMINISTRATOR' ? [{ path: '/plan', label: 'Mi plan', icon: BadgeCheck }] : []),
         ...(user?.role !== 'SELLER' ? [{ path: '/settings', label: 'Configuración', icon: Settings }] : []),
       ],
     },

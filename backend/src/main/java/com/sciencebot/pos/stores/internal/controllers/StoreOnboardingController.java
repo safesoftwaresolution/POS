@@ -6,6 +6,7 @@ import com.sciencebot.pos.stores.StoreDocumentDto;
 import com.sciencebot.pos.stores.StoreDto;
 import com.sciencebot.pos.config.tenant.TenantContext;
 import com.sciencebot.pos.stores.StoreFacade;
+import com.sciencebot.pos.stores.StorePlanCatalogDto;
 import com.sciencebot.pos.stores.StoreStatusDto;
 import com.sciencebot.pos.stores.StoreTemplateDto;
 import jakarta.persistence.EntityNotFoundException;
@@ -69,6 +70,13 @@ public class StoreOnboardingController {
             throw new EntityNotFoundException("El usuario no pertenece a un local.");
         }
         return ResponseEntity.ok(new StoreStatusDto(storeFacade.getStoreStatus(storeId)));
+    }
+
+    @GetMapping("/me/plans")
+    @PreAuthorize("hasRole('ADMINISTRATOR')")
+    @Operation(summary = "Mi plan y el catalogo de planes", description = "Plan actual del local en contexto (el de la sucursal activa) y todos los planes con su tope de usuarios y precios (null si no estan definidos). Solo un local ACTIVO llega aqui.")
+    public ResponseEntity<StorePlanCatalogDto> getOwnPlans() {
+        return ResponseEntity.ok(storeFacade.getOwnPlanCatalog());
     }
 
     @PutMapping("/me")

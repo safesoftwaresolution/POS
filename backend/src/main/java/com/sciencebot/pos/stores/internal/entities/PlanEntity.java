@@ -1,6 +1,7 @@
 package com.sciencebot.pos.stores.internal.entities;
 
 import jakarta.persistence.*;
+import java.math.BigDecimal;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -23,4 +24,10 @@ public class PlanEntity {
 
     @Column(name = "sort_order", nullable = false)
     private int sortOrder;
+
+    @Column(name = "monthly_price", precision = 12, scale = 2)
+    private BigDecimal monthlyPrice;
+
+    @Column(name = "yearly_price", precision = 12, scale = 2)
+    private BigDecimal yearlyPrice;
 }

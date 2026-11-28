@@ -7,6 +7,7 @@ import com.sciencebot.pos.stores.internal.entities.PlanEntity;
 import com.sciencebot.pos.stores.internal.entities.StoreEntity;
 import com.sciencebot.pos.stores.internal.entities.StoreStatusAuditEntity;
 import com.sciencebot.pos.stores.internal.entities.StoreUserAuditEntity;
+import com.sciencebot.pos.stores.internal.mappers.PlanMapper;
 import com.sciencebot.pos.stores.internal.mappers.StoreMapper;
 import com.sciencebot.pos.stores.internal.repositories.PlanRepository;
 import com.sciencebot.pos.stores.internal.repositories.StoreCategoryRepository;
@@ -16,6 +17,7 @@ import com.sciencebot.pos.stores.internal.repositories.StorePurgeDao;
 import com.sciencebot.pos.stores.internal.repositories.StoreStatusAuditQueryDao;
 import com.sciencebot.pos.stores.internal.repositories.StoreStatusAuditRepository;
 import com.sciencebot.pos.stores.internal.repositories.StoreUserAuditRepository;
+import com.sciencebot.pos.config.tenant.TenantContext;
 import com.sciencebot.pos.notifications.CreateNotificationCommand;
 import com.sciencebot.pos.notifications.NotificationFacade;
 import com.sciencebot.pos.settings.SettingsDto;
@@ -54,6 +56,7 @@ public class StoreServiceImpl implements StoreFacade {
     private final StoreCategoryRepository categoryRepository;
     private final StoreDocumentRepository documentRepository;
     private final StoreMapper storeMapper;
+    private final PlanMapper planMapper;
     private final UserFacade userFacade;
     private final StorageFacade storageFacade;
     private final NotificationFacade notificationFacade;
@@ -69,6 +72,7 @@ public class StoreServiceImpl implements StoreFacade {
                             StoreCategoryRepository categoryRepository,
                             StoreDocumentRepository documentRepository,
                             StoreMapper storeMapper,
+                            PlanMapper planMapper,
                             UserFacade userFacade,
                             StorageFacade storageFacade,
                             NotificationFacade notificationFacade,
@@ -83,6 +87,7 @@ public class StoreServiceImpl implements StoreFacade {
         this.categoryRepository = categoryRepository;
         this.documentRepository = documentRepository;
         this.storeMapper = storeMapper;
+        this.planMapper = planMapper;
         this.userFacade = userFacade;
         this.storageFacade = storageFacade;
         this.notificationFacade = notificationFacade;
@@ -515,9 +520,39 @@ public class StoreServiceImpl implements StoreFacade {
 
     @Override
     public List<PlanDto> listPlans() {
-        return planRepository.findAllByOrderBySortOrderAsc().stream()
-                .map(p -> new PlanDto(p.getCode(), p.getName(), p.getMaxAdditionalUsers(), 1 + p.getMaxAdditionalUsers()))
-                .toList();
+        return planRepository.findAllByOrderBySortOrderAsc().stream().map(planMapper::toDto).toList();
+    }
+
+    /** Reemplaza ambos precios del plan. No hay tabla de auditoría para catálogos globales: queda en el log. */
+    @Override
+    @Transactional
+    public PlanDto updatePlanPrices(String planCode, UpdatePlanPricesCommand command) {
+        if (planCode == null || planCode.isBlank()) {
+            throw new EntityNotFoundException("Plan no encontrado: " + planCode);
+        }
+        PlanEntity plan = planRepository.findById(planCode.trim().toUpperCase())
+                .orElseThrow(() -> new EntityNotFoundException("Plan no encontrado: " + planCode));
+        var previousMonthly = plan.getMonthlyPrice();
+        var previousYearly = plan.getYearlyPrice();
+        plan.setMonthlyPrice(command == null ? null : command.monthlyPrice());
+        plan.setYearlyPrice(command == null ? null : command.yearlyPrice());
+        PlanEntity saved = planRepository.save(plan);
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        log.info("Plan prices changed by {}: plan={} monthly {} -> {}, yearly {} -> {}",
+                authentication != null ? authentication.getName() : "system", saved.getCode(),
+                previousMonthly, saved.getMonthlyPrice(), previousYearly, saved.getYearlyPrice());
+        return planMapper.toDto(saved);
+    }
+
+    @Override
+    public StorePlanCatalogDto getOwnPlanCatalog() {
+        Long storeId = TenantContext.getStoreId();
+        if (storeId == null) {
+            throw new EntityNotFoundException("El usuario no pertenece a un local.");
+        }
+        StoreEntity store = storeRepository.findById(storeId)
+                .orElseThrow(() -> new EntityNotFoundException("Local no encontrado con ID: " + storeId));
+        return new StorePlanCatalogDto(store.getPlanCode(), listPlans());
     }
 
     /**

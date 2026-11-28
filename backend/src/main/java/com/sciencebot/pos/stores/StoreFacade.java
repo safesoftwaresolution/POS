@@ -54,6 +54,10 @@ public interface StoreFacade {
     List<PlanDto> listPlans();
     /** Cambia el plan de un local (SUPER_ADMIN; auditado). No borra usuarios si el nuevo tope es menor. */
     StoreDto changePlan(Long storeId, String planCode);
+    /** Reemplaza los precios mensual y anual de un plan (SUPER_ADMIN); null limpia el precio. Se registra en el log, no en auditoría. */
+    PlanDto updatePlanPrices(String planCode, UpdatePlanPricesCommand command);
+    /** Catálogo de planes y plan actual del local en contexto (TenantContext). Lanza EntityNotFoundException si no hay local. */
+    StorePlanCatalogDto getOwnPlanCatalog();
     /** Historial de solo lectura de cambios de estado de locales (registro, aprobación, rechazo...). */
     Page<StoreStatusAuditDto> getStatusAudit(String newStatus, String q, Pageable pageable);
     List<StoreDocumentDto> getDocuments(Long storeId);

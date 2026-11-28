@@ -233,6 +233,7 @@ class JwtAuthenticationFilterTest {
             "ADMINISTRATOR, PENDING_VERIFICATION, GET, /api/v1/sales",
             "ADMINISTRATOR, REJECTED, GET, /api/v1/stores/me/template",
             "ADMINISTRATOR, REJECTED, PUT, /api/v1/stores/me/resubmit",
+            "ADMINISTRATOR, SUSPENDED, GET, /api/v1/stores/me/plans",
     })
     void doFilterInternal_StoreRoleOfANonActiveStore_Gets403StoreNotActive(String role, String status, String method, String path)
             throws ServletException, IOException {

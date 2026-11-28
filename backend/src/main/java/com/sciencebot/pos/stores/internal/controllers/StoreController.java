@@ -86,6 +86,14 @@ public class StoreController {
         return ResponseEntity.ok(storeFacade.listPlans());
     }
 
+    @PutMapping("/api/v1/backoffice/plans/{code}")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @Operation(summary = "Definir los precios de un plan",
+            description = "Reemplaza el precio mensual y el anual del plan; un precio null o ausente lo deja sin definir. 400 si es negativo o excede 10 enteros / 2 decimales; 404 si el plan no existe. El cambio queda en el log, no en la auditoria.")
+    public ResponseEntity<PlanDto> updatePlanPrices(@PathVariable String code, @Valid @RequestBody UpdatePlanPricesCommand command) {
+        return ResponseEntity.ok(storeFacade.updatePlanPrices(code, command));
+    }
+
     @PatchMapping("/api/v1/backoffice/stores/{id}/plan")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     @Operation(summary = "Cambiar el plan de un local",

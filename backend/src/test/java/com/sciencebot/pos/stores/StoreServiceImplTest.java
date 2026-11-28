@@ -1,7 +1,10 @@
 package com.sciencebot.pos.stores;
 
+import com.sciencebot.pos.config.tenant.TenantContext;
+import com.sciencebot.pos.stores.internal.entities.PlanEntity;
 import com.sciencebot.pos.stores.internal.entities.StoreDocumentEntity;
 import com.sciencebot.pos.stores.internal.entities.StoreEntity;
+import com.sciencebot.pos.stores.internal.mappers.PlanMapper;
 import com.sciencebot.pos.stores.internal.mappers.StoreMapper;
 import com.sciencebot.pos.stores.internal.repositories.StoreCategoryRepository;
 import com.sciencebot.pos.stores.internal.repositories.StoreDocumentRepository;
@@ -12,14 +15,17 @@ import com.sciencebot.pos.storage.StorageFacade;
 import com.sciencebot.pos.storage.StorageUploadResult;
 import com.sciencebot.pos.users.UserDto;
 import com.sciencebot.pos.users.UserFacade;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.mockito.Spy;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.access.AccessDeniedException;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
@@ -35,6 +41,7 @@ class StoreServiceImplTest {
     @Mock private StoreCategoryRepository categoryRepository;
     @Mock private StoreDocumentRepository documentRepository;
     @Mock private StoreMapper storeMapper;
+    @Spy private PlanMapper planMapper = new PlanMapper();
     @Mock private UserFacade userFacade;
     @Mock private StorageFacade storageFacade;
     @Mock private NotificationFacade notificationFacade;
@@ -46,6 +53,11 @@ class StoreServiceImplTest {
     @Mock private com.sciencebot.pos.stores.internal.services.StoreApprovalMailer approvalMailer;
     @Mock private com.sciencebot.pos.settings.SettingsFacade settingsFacade;
     @InjectMocks private StoreServiceImpl storeService;
+
+    @AfterEach
+    void clearTenant() {
+        TenantContext.clear();
+    }
 
     @BeforeEach
     void setUp() {
@@ -330,8 +342,8 @@ class StoreServiceImplTest {
         assertThrows(jakarta.persistence.EntityNotFoundException.class, () -> storeService.assignOwner(9L, 21L));
     }
 
-    private com.sciencebot.pos.stores.internal.entities.PlanEntity plan(String code, String name, int extra, int order) {
-        var p = new com.sciencebot.pos.stores.internal.entities.PlanEntity();
+    private PlanEntity plan(String code, String name, int extra, int order) {
+        var p = new PlanEntity();
         p.setCode(code);
         p.setName(name);
         p.setMaxAdditionalUsers(extra);
@@ -350,6 +362,92 @@ class StoreServiceImplTest {
         assertEquals(1, plans.get(0).maxAdditionalUsers());
         assertEquals(2, plans.get(0).maxActiveUsers());
         assertEquals(11, plans.get(1).maxActiveUsers());
+    }
+
+
+    @Test
+    void listPlans_ReturnsPricesAndKeepsRepositoryOrder() {
+        var basic = plan("BASIC", "Básico", 1, 1);
+        basic.setMonthlyPrice(new BigDecimal("49000.00"));
+        var pro = plan("PRO", "Pro", 10, 3);
+        when(planRepository.findAllByOrderBySortOrderAsc()).thenReturn(List.of(basic, pro));
+
+        List<PlanDto> plans = storeService.listPlans();
+
+        assertEquals(List.of("BASIC", "PRO"), plans.stream().map(PlanDto::code).toList());
+        assertEquals(new BigDecimal("49000.00"), plans.get(0).monthlyPrice());
+        assertNull(plans.get(0).yearlyPrice());
+        assertNull(plans.get(1).monthlyPrice());
+    }
+
+    @Test
+    void updatePlanPrices_ReplacesBothPrices_NormalizesCode_AndReturnsDto() {
+        var pro = plan("PRO", "Pro", 10, 3);
+        when(planRepository.findById("PRO")).thenReturn(Optional.of(pro));
+        when(planRepository.save(any(PlanEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        PlanDto dto = storeService.updatePlanPrices(" pro ",
+                new UpdatePlanPricesCommand(new BigDecimal("99000.00"), new BigDecimal("990000.00")));
+
+        assertEquals(new BigDecimal("99000.00"), pro.getMonthlyPrice());
+        assertEquals(new BigDecimal("990000.00"), pro.getYearlyPrice());
+        assertEquals("PRO", dto.code());
+        assertEquals(11, dto.maxActiveUsers());
+        assertEquals(new BigDecimal("99000.00"), dto.monthlyPrice());
+        assertEquals(10, pro.getMaxAdditionalUsers());
+        verifyNoInteractions(statusAuditRepository);
+    }
+
+    @Test
+    void updatePlanPrices_NullFieldsClearThePrices() {
+        var pro = plan("PRO", "Pro", 10, 3);
+        pro.setMonthlyPrice(new BigDecimal("1.00"));
+        pro.setYearlyPrice(new BigDecimal("2.00"));
+        when(planRepository.findById("PRO")).thenReturn(Optional.of(pro));
+        when(planRepository.save(any(PlanEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        PlanDto dto = storeService.updatePlanPrices("PRO", new UpdatePlanPricesCommand(null, new BigDecimal("2.00")));
+
+        assertNull(pro.getMonthlyPrice());
+        assertNull(dto.monthlyPrice());
+        assertEquals(new BigDecimal("2.00"), dto.yearlyPrice());
+        storeService.updatePlanPrices("PRO", new UpdatePlanPricesCommand(null, null));
+        assertNull(pro.getYearlyPrice());
+    }
+
+    @Test
+    void updatePlanPrices_UnknownPlan_Is404AndSavesNothing() {
+        when(planRepository.findById("NOPE")).thenReturn(Optional.empty());
+
+        assertThrows(jakarta.persistence.EntityNotFoundException.class,
+                () -> storeService.updatePlanPrices("nope", new UpdatePlanPricesCommand(null, null)));
+        assertThrows(jakarta.persistence.EntityNotFoundException.class,
+                () -> storeService.updatePlanPrices(" ", new UpdatePlanPricesCommand(null, null)));
+        verify(planRepository, never()).save(any(PlanEntity.class));
+    }
+
+    @Test
+    void getOwnPlanCatalog_ReturnsCurrentPlanOfTheTenantStoreAndOrderedCatalog() {
+        StoreEntity store = storeWithStatus("ACTIVE");
+        store.setPlanCode("STANDARD");
+        TenantContext.setStoreId(5L);
+        when(storeRepository.findById(5L)).thenReturn(Optional.of(store));
+        when(planRepository.findAllByOrderBySortOrderAsc()).thenReturn(List.of(plan("BASIC", "Básico", 1, 1), plan("STANDARD", "Estándar", 4, 2)));
+
+        StorePlanCatalogDto catalog = storeService.getOwnPlanCatalog();
+
+        assertEquals("STANDARD", catalog.currentPlanCode());
+        assertEquals(List.of("BASIC", "STANDARD"), catalog.plans().stream().map(PlanDto::code).toList());
+        assertEquals(5, catalog.plans().get(1).maxActiveUsers());
+    }
+
+    @Test
+    void getOwnPlanCatalog_NoStoreInContextOrUnknownStore_Is404() {
+        assertThrows(jakarta.persistence.EntityNotFoundException.class, () -> storeService.getOwnPlanCatalog());
+
+        TenantContext.setStoreId(9L);
+        when(storeRepository.findById(9L)).thenReturn(Optional.empty());
+        assertThrows(jakarta.persistence.EntityNotFoundException.class, () -> storeService.getOwnPlanCatalog());
     }
 
     @Test
@@ -422,11 +520,11 @@ class StoreServiceImplTest {
         when(userFacade.findByUsername("dueno")).thenReturn(Optional.of(
                 new UserDto(5L, "Dueño", "dueno", "d@x.co", "ADMINISTRATOR", true, 1L, true)));
         when(storeRepository.findById(2L)).thenReturn(Optional.of(storeWithStatus("PENDING_VERIFICATION")));
-        com.sciencebot.pos.config.tenant.TenantContext.setStoreId(2L);
+        TenantContext.setStoreId(2L);
         try {
             storeService.getOwnStore("dueno");
         } finally {
-            com.sciencebot.pos.config.tenant.TenantContext.clear();
+            TenantContext.clear();
         }
 
         verify(storeRepository).findById(2L);
@@ -448,11 +546,11 @@ class StoreServiceImplTest {
     void getOwnStore_IgnoresALeftoverTenantWhenTheUserHasNoStoreAnymore() {
         when(userFacade.findByUsername("dueno")).thenReturn(Optional.of(
                 new UserDto(5L, "Dueño", "dueno", "d@x.co", "ADMINISTRATOR", true, null, true)));
-        com.sciencebot.pos.config.tenant.TenantContext.setStoreId(2L);
+        TenantContext.setStoreId(2L);
         try {
             assertThrows(jakarta.persistence.EntityNotFoundException.class, () -> storeService.getOwnStore("dueno"));
         } finally {
-            com.sciencebot.pos.config.tenant.TenantContext.clear();
+            TenantContext.clear();
         }
         verify(storeRepository, never()).findById(anyLong());
     }

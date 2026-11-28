@@ -402,6 +402,23 @@
       "assigned_to": null,
       "completed_at": "2026-10-24",
       "notes": "Hecho con Claude Code fuera del protocolo Leader→Implementer→Reviewer→Committer. Pendientes señalados en _roadmap.md: importar CSV, UNIQUE globales de V1 en PostgreSQL y el rollback-only del InventoryMapper."
+    },
+    {
+      "id": "FEAT-032",
+      "title": "Planes: precios en el catálogo y página Mi plan",
+      "description": "Paso 1 del diseño de suscripciones por local (el plan se cobra por local, decisión del usuario 2026-11-27). V49 agrega a `plans` precio mensual y anual en COP (opcionales: sin precio = 'por definir'). El SUPER_ADMIN edita los precios desde el back office y el ADMINISTRATOR ve en una página 'Mi plan' su plan actual, los usuarios activos que usa frente al tope y el catálogo con precios. Solo lectura para el local: sin solicitud de cambio ni pagos (pasos 2 y 3).",
+      "acceptance_criteria": [
+        "V49 agrega las columnas de precio sin tocar los límites ni el plan de ningún local; probado con Flyway sobre H2",
+        "GET /api/v1/backoffice/plans devuelve los precios (null si no están definidos)",
+        "Solo SUPER_ADMIN puede editar los precios de un plan; un precio negativo responde 400 y un plan inexistente 404",
+        "GET /api/v1/stores/me/plans devuelve el plan actual del local del llamador y el catálogo ordenado; solo ADMINISTRATOR (otros roles 403)",
+        "La página Mi plan solo la ve el ADMINISTRATOR (ruta y enlace del menú) y muestra el plan actual, el uso de usuarios y los precios en COP o 'Precio por definir'",
+        "Documentación actualizada: spec de stores, _database-schema.md y _roadmap.md"
+      ],
+      "status": "done",
+      "assigned_to": "implementer",
+      "notes": "Rama feat/store-plans-catalog desde develop. Pasos siguientes del diseño: solicitudes de plan con aprobación manual en back office y vencimientos (paso 2), proveedor de pago (paso 3). Supuesto abierto: BASIC es el plan gratuito al que cae un local que no paga. Aprobado por el Reviewer en el recheck del rechazo 1 (bloqueantes: tests de validación de ambos precios y de la ruta solo para locales ACTIVE). Avisos abiertos: la respuesta del PUT conserva la escala enviada; el modal redondea centavos al volver a guardar; sin test de frontend para ocultar la página por rol.",
+      "completed_at": "2026-11-28"
     }
   ]
 }
